@@ -8,29 +8,27 @@ set_device('genn')
 
 
 
-
-
-
-#
-
-
-
-
-
 class cortical_module:
     'A customizable model of cortical module for Brian2Genn'
 
     def __init__(self,path):
         options = {
             '#': self.comment,
-            '&': self.neuron_group,
-            '\'' : int,
+            '[G]': self.neuron_group,
+            '[syn]' : int,
             '"' : float,
             '[' : array,
         }
-
+        is_tag = ['[', '\t']
         with open (path, 'r') as f :
             for line in f:
+                if line[0]  in is_tag :
+                    tag = line[line.index('['):line.index(']')+1]
+                    assert tag in options.keys(), 'The tag %s is not defined.'%tag
+                else:
+                    continue
+                line = line.replace(tag, '')
+                line = line.replace('\n', '')
                 args = line.split(' ')
                 for arg in args[1:]:
                     if arg[0] in options.keys() :
@@ -42,7 +40,7 @@ class cortical_module:
     # def __str__(self):
     #     print "A summary of this cortical module: "
     def neuron_group (self, *args):
-        p = customized_neuron (args[0], cell_category= args[1], namespace_type=args[2], eq_category= args[3],layers_idx=args[4]).final_neuron
+        self. = customized_neuron (args[0], cell_category= args[1], namespace_type=args[2], eq_category= args[3],layers_idx=args[4]).final_neuron
     def comment(self, *args):
         pass
 
