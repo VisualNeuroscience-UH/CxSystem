@@ -2,7 +2,7 @@ __author__ = 'V_AD'
 from brian2 import *
 import brian2genn
 import turtle
-
+import os
 
 set_device('genn')
 
@@ -16,10 +16,11 @@ class cortical_module:
             '#': self.comment,
             '[G]': self.neuron_group,
             '[syn]' : int,
-            '"' : float,
-            '[' : array,
+
         }
         is_tag = ['[', '\t']
+        self.customized_neurons = []
+        self.neuron_groups = []
         with open (path, 'r') as f :
             for line in f:
                 if line[0]  in is_tag :
@@ -28,19 +29,21 @@ class cortical_module:
                 else:
                     continue
                 line = line.replace(tag, '')
+
                 line = line.replace('\n', '')
                 args = line.split(' ')
-                for arg in args[1:]:
-                    if arg[0] in options.keys() :
-                        arg = options[arg[0]](arg)
-                if line[0] in options.keys():
-                    options[line[0]](args)
+                options[tag](args)
+
 
         print "Cortical Module initialization Done"
     # def __str__(self):
     #     print "A summary of this cortical module: "
     def neuron_group (self, *args):
-        self. = customized_neuron (args[0], cell_category= args[1], namespace_type=args[2], eq_category= args[3],layers_idx=args[4]).final_neuron
+        args = args[0]
+        current_idx=  len(self.customized_neurons)
+        exec 'layer_idx = array(' + args[5] + ')'
+        self.customized_neurons.append((current_idx,customized_neuron (args[0], cell_category= args[2], namespace_type=args[3], eq_category= args[4],layers_idx=layer_idx).final_neuron))
+
     def comment(self, *args):
         pass
 
@@ -106,10 +109,12 @@ class customized_neuron(object):
 
         #sorting the final dict to be neat
         print "Customized cell initialized"
-    # def __str__(self):
+    def __str__(self):
     #     'Prints a description of the cell'
     #     print "Description of this cell:"
-
+        return 'Customized Neuron Object'
+    def __repr__ (self):
+        return 'Customized Neuron Object'
 
 class namespaces (object):
     'This class embeds all parameter sets associated to all neuron types and will return it as a namespace in form of dictionary'
@@ -280,8 +285,7 @@ class equations (object):
                          I_dendr="Idendr_a%d"%final_neuron['dend_comp_num'] , gapost=1/(final_neuron['namespace']['Ra'][-1]),
                          vmself= "vm_a%d"%final_neuron['dend_comp_num'], vmpost= "vm_a%d"%(final_neuron['dend_comp_num']-1))
 
-
-cortical_module ('/home/corriel/Desktop/test.txt')
+cortical_module (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt')
 p = customized_neuron ('PC', cell_category= 'multi_comp', namespace_type='generic', eq_category= 'multi_comp',layers_idx=array([4,1])).final_neuron
 N1 = NeuronGroup(1000, model=p['equation'], threshold='vm>Vcut', reset='vm=V_res', refractory = '2 * ms', namespace = p['namespace'])
 N2 = NeuronGroup(1000, model=p['equation'], threshold='vm>Vcut', reset='vm=V_res', refractory = '2 * ms', namespace = p['namespace'])
