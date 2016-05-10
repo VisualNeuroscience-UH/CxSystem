@@ -2,11 +2,8 @@ __author__ = 'V_AD'
 import turtle
 
 def module_drawer():
-    frame_drawer()
-
-
-
-
+    def __init__(self):
+        frame_drawer()
 
 def frame_drawer():
     x_size = 1000
@@ -52,3 +49,4 @@ def frame_drawer():
         turtle.fd(30)
         current += 60
 
+frame_drawer()

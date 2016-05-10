@@ -1,0 +1,7 @@
+# this is a test
+
+
+[G]PC 1022 multi_comp generic multi_comp [4,1]
+			
+[G]PC 500 multi_comp generic multi_comp [2,1]
+	[~0->#1~2] STDP
