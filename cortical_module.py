@@ -1,5 +1,5 @@
 __author__ = 'V_AD'
-from brian_genn_version import *
+from brian2 import *
 import brian2genn
 import turtle
 import os
@@ -20,7 +20,9 @@ class cortical_module:
         }
         is_tag = ['[']
         self.customized_neurons = []
+        self.customized_synapse = []
         self.neuron_groups = []
+
         with open (path, 'r') as f :
             for line in f:
                 if line[0]  in is_tag :
@@ -48,7 +50,7 @@ class cortical_module:
 
     def synapse(self, *args):
         args = args[0]
-
+        self.customized_synapse.append()
 
 
 
@@ -60,7 +62,85 @@ class custom_neuron_group:
     #     print "A summary of this neuron group: "
 
 
+class customized_synapse(object):
+    def __init__(self, syn_type, receptors,ref_type , targ_type,ref_comp=0, targ_comp=0):
+        customized_synapse._syntypes = array(['STDP'])
+        assert syn_type in customized_synapse._syntypes, "Error: cell type '%s' is not defined" % syn_type
+        self.output_synapse = {}
+        self.output_synapse['type'] = syn_type
 
+        # self.output_synapse['namespace_type'] = namespace_type
+        self.output_synapse['ref_type'] = ref_type
+        self.output_synapse['ref_comp'] = ref_comp
+        self.output_synapse['targ_type'] = targ_type
+        self.output_synapse['targ_comp'] = targ_comp
+        # self.output_synapse['namespace'] = namespaces(self.output_synapse).final_namespace
+        # self.output_synapse['equation'] = synaptic_equations(self.output_synapse).final_equation
+        getattr(customized_synapse, customized_synapse['type'])(self)
+
+
+        _stdp = {
+            'stdp01_a4': [0, 0, inf, inf],
+            # Plasticity not implemented. Elsewhere assuming connectivity to compartments a3 and a4 only.
+            'stdp01_a3': [0, 0, inf, inf],
+            'stdp01_a2': [0, 0, inf, inf],
+            'stdp01_a1': [20, -21.5, 5.4, 124.7],  # BoD
+            'stdp01_a0': [20, -21.5, 5.4, 124.7],  # BoD
+            'stdp02a': [-46, -56, 39.9, 39.1],  # NBoD
+            'stdp11_a4': [-21, 42, 15, 103.4],  # BoD
+            'stdp11_a3': [7.50, 7.00, 15.00, 103.4],  # BoD
+            'stdp11_a2': [36, -28, 12.5, 103.4],  # BoD
+            'stdp11_a1': [76, -48, 15.9, 19.3],  # BoD
+            'stdp11_a0': [76, -48, 15.9, 19.3],  # BoD
+            'stdp12a': [-46, -56, 39.9, 39.1],  # BoD
+            'stdp12b': [240, -50, 7.1, 39.1],  # BoD
+            'stdp2a1': [0, 0, inf, inf],
+            'stdp2b1': [0, 0, inf, inf],
+            'stdp2a2a': [0, 0, inf, inf],
+            'stdp2b2b': [0, 0, inf, inf],
+            'stdp1Xe': [20, -21.5, 5.4, 124.7],  # NBoD
+            'stdpXeXi': [-46, -56, 39.9, 39.1],  # NBoD
+            'stdpXbasalXe': [0, 0, inf, inf],
+            'stdp1Xi': [-46, -56, 39.9, 39.1],  # NBoD
+            'stdpXiXe': [0, 0, inf, inf],
+            'stdpXe1_a4': [-21, 42, 15, 103.4],  # BoD
+            'stdpXe1_a3': [7.50, 7.00, 15.00, 103.4],  # BoD
+            'stdpXe1_a2': [36, -28, 12.5, 103.4],  # BoD
+            'stdpXe1_a1': [76, -48, 15.9, 19.3],  # BoD
+            'stdpXe1_a0': [76, -48, 15.9, 19.3],  # BoD
+            'stdpXe2a': [-46, -56, 39.9, 39.1],  # NBoD
+            'stdpXe2b': [240, -50, 7.1, 39.1],  # NBoD
+        }
+
+        def STDP(self):
+            self.output_equation['syn_eq'] = '''
+                wght : siemens
+                dapre/dt = -apre/taupre : siemens (event-driven)
+                dapost/dt = -apost/taupost : siemens (event-driven)
+                '''
+            self['A_pre'], self['A_post'], self['tau_pre'], self['tau_post'] = \
+                self._stdp['stdp%s%s' % (self.output_synapse['ref_type']+self.output_synapse['ref_comp'], self.output_synapse['targ_type'] + self.output_synapse['targ_comp'])]
+
+            if self['A_pre'] >= 0:
+                self['pre_eq'] = '''%s+=wght
+                            apre += Apre * wght0 * Cp
+                            wght = clip(wght + apost, 0, wght_max)
+                            ''' % (nw.conn_targets[_conn_ndx] + '_post')
+            else:
+                self['pre_eq'] = '''%s+=wght
+                            apre += Apre * wght * Cd
+                            wght = clip(wght + apost, 0, wght_max)
+                            ''' % (nw.conn_targets[_conn_ndx] + '_post')
+            if self['A_post'] <= 0:
+                self['post_eq'] = '''
+                            apost += Apost * wght * Cd
+                            wght = clip(wght + apre, 0, wght_max)
+                            '''
+            else:
+                self['post_eq'] = '''
+                            apost += Apost * wght0 * Cp
+                            wght = clip(wght + apre, 0, wght_max)
+                            '''
 
 
 
@@ -229,6 +309,7 @@ class neuron_equations (object):
         :param test_param: something here
         :type test_param: some type here
         '''
+
         #: The template for the somatic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
         eq_template_soma = '''
         layers_idx : 1
@@ -239,7 +320,6 @@ class neuron_equations (object):
         dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
         dgi/dt = -gi/tau_i : siemens
         dgialpha/dt = (gi-gialpha)/tau_i : siemens
-
         '''
         #: The template for the dendritic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
         eq_template_dend = '''
@@ -251,6 +331,7 @@ class neuron_equations (object):
         dgi/dt = -gi/tau_i : siemens
         dgialpha/dt = (gi-gialpha)/tau_i : siemens
         '''
+
         self.final_equation =(Equations(eq_template_dend, vm = "vm_basal", ge="ge_basal", gealpha="gealpha_basal",
                 C=output_neuron['namespace']['C'][0], gL=output_neuron['namespace']['gL'][0],
                 gi="gi_basal", geX="geX_basal", gialpha="gialpha_basal", gealphaX="gealphaX_basal",I_dendr="Idendr_basal"))
@@ -287,85 +368,7 @@ class neuron_equations (object):
                          I_dendr="Idendr_a%d"%output_neuron['dend_comp_num'] , gapost=1/(output_neuron['namespace']['Ra'][-1]),
                          vmself= "vm_a%d"%output_neuron['dend_comp_num'], vmpost= "vm_a%d"%(output_neuron['dend_comp_num']-1))
 
-class customized_synapse(object):
-    def __init__(self, syn_type, ref_type , targ_type,ref_comp=0, targ_comp=0):
-        customized_synapse._syntypes = array(['STDP'])
-        assert syn_type in customized_synapse._syntypes, "Error: cell type '%s' is not defined" % syn_type
-        self.output_synapse = {}
-        self.output_synapse['type'] = syn_type
 
-        # self.output_synapse['namespace_type'] = namespace_type
-        self.output_synapse['ref_type'] = ref_type
-        self.output_synapse['ref_comp'] = ref_comp
-        self.output_synapse['targ_type'] = targ_type
-        self.output_synapse['targ_comp'] = targ_comp
-        # self.output_synapse['namespace'] = namespaces(self.output_synapse).final_namespace
-        # self.output_synapse['equation'] = synaptic_equations(self.output_synapse).final_equation
-        self.output_equation = []
-        getattr(customized_synapse, customized_synapse['type'])(self, customized_synapse)
-
-        _stdp = {
-            'stdp01_a4': [0, 0, inf, inf],
-            # Plasticity not implemented. Elsewhere assuming connectivity to compartments a3 and a4 only.
-            'stdp01_a3': [0, 0, inf, inf],
-            'stdp01_a2': [0, 0, inf, inf],
-            'stdp01_a1': [20, -21.5, 5.4, 124.7],  # BoD
-            'stdp01_a0': [20, -21.5, 5.4, 124.7],  # BoD
-            'stdp02a': [-46, -56, 39.9, 39.1],  # NBoD
-            'stdp11_a4': [-21, 42, 15, 103.4],  # BoD
-            'stdp11_a3': [7.50, 7.00, 15.00, 103.4],  # BoD
-            'stdp11_a2': [36, -28, 12.5, 103.4],  # BoD
-            'stdp11_a1': [76, -48, 15.9, 19.3],  # BoD
-            'stdp11_a0': [76, -48, 15.9, 19.3],  # BoD
-            'stdp12a': [-46, -56, 39.9, 39.1],  # BoD
-            'stdp12b': [240, -50, 7.1, 39.1],  # BoD
-            'stdp2a1': [0, 0, inf, inf],
-            'stdp2b1': [0, 0, inf, inf],
-            'stdp2a2a': [0, 0, inf, inf],
-            'stdp2b2b': [0, 0, inf, inf],
-            'stdp1Xe': [20, -21.5, 5.4, 124.7],  # NBoD
-            'stdpXeXi': [-46, -56, 39.9, 39.1],  # NBoD
-            'stdpXbasalXe': [0, 0, inf, inf],
-            'stdp1Xi': [-46, -56, 39.9, 39.1],  # NBoD
-            'stdpXiXe': [0, 0, inf, inf],
-            'stdpXe1_a4': [-21, 42, 15, 103.4],  # BoD
-            'stdpXe1_a3': [7.50, 7.00, 15.00, 103.4],  # BoD
-            'stdpXe1_a2': [36, -28, 12.5, 103.4],  # BoD
-            'stdpXe1_a1': [76, -48, 15.9, 19.3],  # BoD
-            'stdpXe1_a0': [76, -48, 15.9, 19.3],  # BoD
-            'stdpXe2a': [-46, -56, 39.9, 39.1],  # NBoD
-            'stdpXe2b': [240, -50, 7.1, 39.1],  # NBoD
-        }
-
-        def STDP(self, customized_synapse):
-            customized_synapse.output_equation['syn_eq'] = '''
-                wght : siemens
-                dapre/dt = -apre/taupre : siemens (event-driven)
-                dapost/dt = -apost/taupost : siemens (event-driven)
-                '''
-            customized_synapse['A_pre'], customized_synapse['A_post'], customized_synapse['tau_pre'], customized_synapse['tau_post'] = \
-                self._stdp['stdp%s%s' % (self.output_synapse['ref_type']+self.output_synapse['ref_comp'], self.output_synapse['targ_type'] + self.output_synapse['targ_comp'])]
-
-            if customized_synapse['A_pre'] >= 0:
-                customized_synapse['pre_eq'] = '''%s+=wght
-                            apre += Apre * wght0 * Cp
-                            wght = clip(wght + apost, 0, wght_max)
-                            ''' % (nw.conn_targets[_conn_ndx] + '_post')
-            else:
-                customized_synapse['pre_eq'] = '''%s+=wght
-                            apre += Apre * wght * Cd
-                            wght = clip(wght + apost, 0, wght_max)
-                            ''' % (nw.conn_targets[_conn_ndx] + '_post')
-            if customized_synapse['A_post'] <= 0:
-                customized_synapse['post_eq'] = '''
-                            apost += Apost * wght * Cd
-                            wght = clip(wght + apre, 0, wght_max)
-                            '''
-            else:
-                customized_synapse['post_eq'] = '''
-                            apost += Apost * wght0 * Cp
-                            wght = clip(wght + apre, 0, wght_max)
-                            '''
 
 
 
