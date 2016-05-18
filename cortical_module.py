@@ -12,28 +12,28 @@ class cortical_module:
     'A customizable model of cortical module for Brian2Genn'
 
     def __init__(self,path):
-        options = {
+        _options = {
             '#': self.comment,
             '[G]': self.neuron_group,
             '[S]' : self.synapse
-
         }
         is_tag = ['[']
         self.customized_neurons = []
-        self.customized_synapse = []
+        self.customized_synapses = []
         self.neuron_groups = []
 
         with open (path, 'r') as f :
             for line in f:
                 if line[0]  in is_tag :
                     tag = line[line.index('['):line.index(']')+1]
-                    assert tag in options.keys(), 'The tag %s is not defined.'%tag
+                    assert tag in _options.keys(), 'The tag %s is not defined.'%tag
                 else:
                     continue
                 line = line.replace(tag, '')
                 line = line.replace('\n', '')
+                line = line.lstrip()
                 args = line.split(' ')
-                options[tag](args)
+                _options[tag](args)
 
 
         print "Cortical Module initialization Done"
@@ -43,15 +43,38 @@ class cortical_module:
         args = args[0]
         current_idx=  len(self.customized_neurons)
         exec 'layer_idx = array(' + args[5] + ')'
-        self.customized_neurons.append((current_idx,customized_neuron (args[0], cell_category= args[2], namespace_type=args[3], eq_category= args[4],layers_idx=layer_idx).final_neuron))
+        self.customized_neurons.append((current_idx,customized_neuron (args[0], cell_category= args[2], namespace_type=args[3], eq_category= args[4],layers_idx=layer_idx).output_neuron))
 
     def comment(self, *args):
         pass
 
     def synapse(self, *args):
-        args = args[0]
-        self.customized_synapse.append()
+        _options = {
+            '[C]': self.neuron_group,
+        }
+        _is_tag = ['[']
+        # args = args[0]
+        if len(args[0][2])> 1:
+            arg = args[0][2]
+            tag = arg[arg.index('['):arg.index(']') + 1]
+            assert tag in _options.keys(), 'The synaptic tag %s is not defined.' % tag
+            if tag == '[C]':
+                _post_group_idx , _post_com_idx = arg.split('[' + 'C' + ']')
+                args[0][2] = _post_group_idx
+                if int(_post_com_idx) == 0 :
+                    triple_args = []
+                    triple_args.append(args[0].append('_basal'))
+                    triple_args.append(args[0].append('_soma'))
+                    triple_args.append(args[0].append('_a0'))
+                    args = triple_args
+                elif int(_post_com_idx) > 0 :
+                    args[0].append('_a'+str(_post_com_idx))
+        for syn in args :
+            self.customized_synapses.append(customized_synapse(*syn))
 
+
+# if targ_type == 'PC' and targ_comp_idx == 0:
+#     self.output_synapse['targ_comp_name'] = ['_basal', '_soma', '_a0']
 
 
 class custom_neuron_group:
@@ -63,23 +86,26 @@ class custom_neuron_group:
 
 
 class customized_synapse(object):
-    def __init__(self, syn_type, receptors,ref_type , targ_type,ref_comp=0, targ_comp=0):
-        customized_synapse._syntypes = array(['STDP'])
-        assert syn_type in customized_synapse._syntypes, "Error: cell type '%s' is not defined" % syn_type
+    def __init__(self, receptor,pre_group_idx ,post_group_idx, syn_type, post_comp_name='_soma'):
+        customized_synapse.syntypes = array(['STDP'])
+        assert syn_type in customized_synapse.syntypes, "Error: cell type '%s' is not defined" % syn_type
         self.output_synapse = {}
         self.output_synapse['type'] = syn_type
-
+        self.output_synapse['receptor'] = receptor
         # self.output_synapse['namespace_type'] = namespace_type
-        self.output_synapse['ref_type'] = ref_type
-        self.output_synapse['ref_comp'] = ref_comp
-        self.output_synapse['targ_type'] = targ_type
-        self.output_synapse['targ_comp'] = targ_comp
+        # self.output_synapse['pre_type'] = pre_group_type
+        self.output_synapse['pre_group_idx'] = int(pre_group_idx)
+        # self.output_synapse['post_type'] = post_group_type
+        self.output_synapse['post_group_idx'] = int(post_group_idx)
+        self.output_synapse['post_comp_name'] = post_comp_name
+
         # self.output_synapse['namespace'] = namespaces(self.output_synapse).final_namespace
         # self.output_synapse['equation'] = synaptic_equations(self.output_synapse).final_equation
-        getattr(customized_synapse, customized_synapse['type'])(self)
+        getattr(customized_synapse, self.output_synapse['type'])(self)
 
 
-        _stdp = {
+    def STDP(self):
+        customized_synapse.stdp = {
             'stdp01_a4': [0, 0, inf, inf],
             # Plasticity not implemented. Elsewhere assuming connectivity to compartments a3 and a4 only.
             'stdp01_a3': [0, 0, inf, inf],
@@ -111,36 +137,36 @@ class customized_synapse(object):
             'stdpXe2a': [-46, -56, 39.9, 39.1],  # NBoD
             'stdpXe2b': [240, -50, 7.1, 39.1],  # NBoD
         }
+        self.output_synapse['syn_eq'] = '''
+            wght : siemens
+            dapre/dt = -apre/taupre : siemens (event-driven)
+            dapost/dt = -apost/taupost : siemens (event-driven)
+            '''
+        self.output_synapse['A_pre'], self.output_synapse['A_post'], self.output_synapse['tau_pre'], self.output_synapse['tau_post'] = \
+            self.stdp['stdp%d%d%s' % (self.output_synapse['pre_group_idx'],self.output_synapse['post_group_idx'], self.output_synapse['post_comp_name'])]
 
-        def STDP(self):
-            self.output_equation['syn_eq'] = '''
-                wght : siemens
-                dapre/dt = -apre/taupre : siemens (event-driven)
-                dapost/dt = -apost/taupost : siemens (event-driven)
-                '''
-            self['A_pre'], self['A_post'], self['tau_pre'], self['tau_post'] = \
-                self._stdp['stdp%s%s' % (self.output_synapse['ref_type']+self.output_synapse['ref_comp'], self.output_synapse['targ_type'] + self.output_synapse['targ_comp'])]
-
-            if self['A_pre'] >= 0:
-                self['pre_eq'] = '''%s+=wght
-                            apre += Apre * wght0 * Cp
-                            wght = clip(wght + apost, 0, wght_max)
-                            ''' % (nw.conn_targets[_conn_ndx] + '_post')
-            else:
-                self['pre_eq'] = '''%s+=wght
-                            apre += Apre * wght * Cd
-                            wght = clip(wght + apost, 0, wght_max)
-                            ''' % (nw.conn_targets[_conn_ndx] + '_post')
-            if self['A_post'] <= 0:
-                self['post_eq'] = '''
-                            apost += Apost * wght * Cd
-                            wght = clip(wght + apre, 0, wght_max)
-                            '''
-            else:
-                self['post_eq'] = '''
-                            apost += Apost * wght0 * Cp
-                            wght = clip(wght + apre, 0, wght_max)
-                            '''
+        if self.output_synapse['A_pre'] >= 0:
+            self.output_synapse['pre_eq'] = '''
+                        %s+=wght
+                        apre += Apre * wght0 * Cp
+                        wght = clip(wght + apost, 0, wght_max)
+                        ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] +  '_post')
+        else:
+            self.output_synapse['pre_eq'] = '''
+                        %s+=wght
+                        apre += Apre * wght * Cd
+                        wght = clip(wght + apost, 0, wght_max)
+                        ''' % (self.output_synapse['receptor']+self.output_synapse['post_comp_name'] + '_post')
+        if self.output_synapse['A_post'] <= 0:
+            self.output_synapse['post_eq'] = '''
+                        apost += Apost * wght * Cd
+                        wght = clip(wght + apre, 0, wght_max)
+                        '''
+        else:
+            self.output_synapse['post_eq'] = '''
+                        apost += Apost * wght0 * Cp
+                        wght = clip(wght + apre, 0, wght_max)
+                        '''
 
 
 
@@ -390,9 +416,9 @@ class neuron_equations (object):
 #             '''
 
 cortical_module (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt')
-p = customized_neuron ('PC', cell_category= 'multi_comp', namespace_type='generic', eq_category= 'multi_comp',layers_idx=array([4,1])).output_neuron
-N1 = NeuronGroup(1000, model=p['equation'], threshold='vm>Vcut', reset='vm=V_res', refractory = '2 * ms', namespace = p['namespace'])
-N2 = NeuronGroup(1000, model=p['equation'], threshold='vm>Vcut', reset='vm=V_res', refractory = '2 * ms', namespace = p['namespace'])
+# p = customized_neuron ('PC', cell_category= 'multi_comp', namespace_type='generic', eq_category= 'multi_comp',layers_idx=array([4,1])).output_neuron
+# N1 = NeuronGroup(1000, model=p['equation'], threshold='vm>Vcut', reset='vm=V_res', refractory = '2 * ms', namespace = p['namespace'])
+# N2 = NeuronGroup(1000, model=p['equation'], threshold='vm>Vcut', reset='vm=V_res', refractory = '2 * ms', namespace = p['namespace'])
 
 
 
