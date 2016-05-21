@@ -3,6 +3,7 @@ from brian2 import *
 import brian2genn
 import turtle
 import os
+from namespaces import  *
 
 set_device('genn')
 
@@ -20,8 +21,8 @@ class cortical_module:
         is_tag = ['[']
         self.customized_neurons = []
         self.customized_synapses = []
-        self.neuron_groups = []
-
+        self.neurongroups_list = []
+        self.synapses_list = []
         with open (path, 'r') as f :
             for line in f:
                 if line[0]  in is_tag :
@@ -36,14 +37,49 @@ class cortical_module:
                 _options[tag](args)
 
 
-        print "Cortical Module initialization Done"
+        print "Cortical Module initialization Done Create an example connection "
+
+        # indices = array([0, 1, 2])
+        # times = array([1, 2, 3])*ms
+        # G = SpikeGeneratorGroup(3, indices, times)
+        # forward = Synapses(G,self.N0,  connect='i==j')
+        # s_mon1 = SpikeMonitor(G)
+        # s_mon2 = SpikeMonitor(self.N0)
+        # s_mon3 = SpikeMonitor(self.N1)
+
+        # network_obj = Network(collect())
+        # for item in self.neurongroups_list +self.synapses_list:
+        #     network_obj.add(item)
+
+
+        # network_obj.run (1*second)
+        run(101 * ms)
+        device.build(directory='CXModule',
+                    compile=True,
+                     run=True,
+                     use_GPU=True)
+
+        # figure()
+        # plot(s_mon1.t / ms, s_mon1.i, '.k')
+        # figure()
+        # plot(s_mon2.t / ms, s_mon2.i, '.k')
+        # figure()
+        # plot(s_mon3.t / ms, s_mon3.i, '.k')
+        # xlabel('Time (ms)')
+        # ylabel('Neuron index')
+        # show()
     # def __str__(self):
     #     print "A summary of this cortical module: "
     def neuron_group (self, *args):
         args = args[0]
         current_idx=  len(self.customized_neurons)
         exec 'layer_idx = array(' + args[5] + ')'
-        self.customized_neurons.append((current_idx,customized_neuron (args[0], cell_category= args[2], namespace_type=args[3], eq_category= args[4],layers_idx=layer_idx).output_neuron))
+        self.customized_neurons.append(customized_neuron (args[0], cell_category= args[2], namespace_type=args[3], eq_category= args[4],layers_idx=layer_idx).output_neuron) # layer_idx is created by dynamic compiler
+        tmp_str = "self.N%d = NeuronGroup(int(args[1]), model=self.customized_neurons[-1]['equation'], threshold='vm>Vcut', reset='vm=V_res', \
+                    refractory = '4 * ms', namespace =self.customized_neurons[-1]['namespace'])" %current_idx
+        exec tmp_str
+
+    # N1 = NeuronGroup(1000, model=p['equation'], threshold='vm>Vcut', reset='vm=V_res', refractory = '2 * ms', namespace = p['namespace'])
 
     def comment(self, *args):
         pass
@@ -70,8 +106,12 @@ class cortical_module:
                 elif int(_post_com_idx) > 0 :
                     args[0].append('_a'+str(_post_com_idx))
         for syn in args :
+            current_idx = len(self.customized_synapses)
             self.customized_synapses.append(customized_synapse(*syn))
-
+            tmp_str = "self.S%d = Synapses(self.N%d,self.N%d,model = self.customized_synapses[-1].output_synapse['syn_eq'],pre = self.customized_synapses[-1].output_synapse['pre_eq'], post = self.customized_synapses[-1].output_synapse['post_eq'],namespace=self.customized_synapses[-1].output_synapse['namespace'])"%(current_idx,self.customized_synapses[-1].output_synapse['pre_group_idx'],self.customized_synapses[-1].output_synapse['post_group_idx'])
+            exec tmp_str
+            self.S0.connect('i != j')
+            self.S0.wght = 0.72 * nS*8.1
 
 # if targ_type == 'PC' and targ_comp_idx == 0:
 #     self.output_synapse['targ_comp_name'] = ['_basal', '_soma', '_a0']
@@ -98,7 +138,7 @@ class customized_synapse(object):
         # self.output_synapse['post_type'] = post_group_type
         self.output_synapse['post_group_idx'] = int(post_group_idx)
         self.output_synapse['post_comp_name'] = post_comp_name
-
+        self.output_synapse['namespace'] = {}
         # self.output_synapse['namespace'] = namespaces(self.output_synapse).final_namespace
         # self.output_synapse['equation'] = synaptic_equations(self.output_synapse).final_equation
         getattr(customized_synapse, self.output_synapse['type'])(self)
@@ -110,8 +150,8 @@ class customized_synapse(object):
             # Plasticity not implemented. Elsewhere assuming connectivity to compartments a3 and a4 only.
             'stdp01_a3': [0, 0, inf, inf],
             'stdp01_a2': [0, 0, inf, inf],
-            'stdp01_a1': [20, -21.5, 5.4, 124.7],  # BoD
-            'stdp01_a0': [20, -21.5, 5.4, 124.7],  # BoD
+            'stdp01_a1': [20/100., -21.5/100., 5.4*ms, 124.7*ms],  # BoD  WHY /100 , WHY not multiplied directly
+            'stdp01_a0': [20/100., -21.5/100., 5.4*ms, 124.7*ms],  # BoD
             'stdp02a': [-46, -56, 39.9, 39.1],  # NBoD
             'stdp11_a4': [-21, 42, 15, 103.4],  # BoD
             'stdp11_a3': [7.50, 7.00, 15.00, 103.4],  # BoD
@@ -142,10 +182,13 @@ class customized_synapse(object):
             dapre/dt = -apre/taupre : siemens (event-driven)
             dapost/dt = -apost/taupost : siemens (event-driven)
             '''
-        self.output_synapse['A_pre'], self.output_synapse['A_post'], self.output_synapse['tau_pre'], self.output_synapse['tau_post'] = \
+        self.output_synapse['namespace']['Apre'], self.output_synapse['namespace']['Apost'], self.output_synapse['namespace']['taupre'], self.output_synapse['namespace']['taupost'] = \
             self.stdp['stdp%d%d%s' % (self.output_synapse['pre_group_idx'],self.output_synapse['post_group_idx'], self.output_synapse['post_comp_name'])]
-
-        if self.output_synapse['A_pre'] >= 0:
+        self.output_synapse['namespace']['wght_max'] = 0.72 * nS*8.1  *15
+        self.output_synapse['namespace']['wght0'] = 0.72 * nS*8.1
+        self.output_synapse['namespace']['Cp'] = 0.1
+        self.output_synapse['namespace']['Cd'] =0.3
+        if self.output_synapse['namespace']['Apre'] >= 0:
             self.output_synapse['pre_eq'] = '''
                         %s+=wght
                         apre += Apre * wght0 * Cp
@@ -157,7 +200,7 @@ class customized_synapse(object):
                         apre += Apre * wght * Cd
                         wght = clip(wght + apost, 0, wght_max)
                         ''' % (self.output_synapse['receptor']+self.output_synapse['post_comp_name'] + '_post')
-        if self.output_synapse['A_post'] <= 0:
+        if self.output_synapse['namespace']['Apost'] <= 0:
             self.output_synapse['post_eq'] = '''
                         apost += Apost * wght * Cd
                         wght = clip(wght + apre, 0, wght_max)
@@ -184,7 +227,7 @@ class customized_neuron(object):
         is used as the indicator of layer 2/3. Hence, if the last compartment of a neuron is in layer 2/3, use number 2.
         :type layers_idx: numpy array
         '''
-        customized_neuron.instances.append(self) # this is for tracking the instance of the class
+        customized_neuron.instances.append(self) # this is for tracking the instance of the class, may be can be removed and transferred to higher level
         # check cell_type
         customized_neuron._celltypes = array(['PC', 'SS', 'BC', 'MC'])
         assert cell_type in customized_neuron._celltypes, "Error: cell type '%s' is not defined" %cell_type
@@ -208,7 +251,7 @@ class customized_neuron(object):
         # number of compartments if applicable
         self.output_neuron['dend_comp_num'] = len (self.output_neuron['dends_layer']) if self.output_neuron['dends_layer'].all() != 0 else array([0])
         self.output_neuron['total_comp_num'] = self.output_neuron['dend_comp_num'] + 3 if self.output_neuron['type'] == 'PC' or  self.output_neuron['type'] == 'SS' else 1 # plus soma , proximal apical dendrite and basal dendrites which are in the same layer
-        self.output_neuron['namespace'] = namespaces(self.output_neuron).final_namespace
+        self.output_neuron['namespace'] = neuron_namespaces(self.output_neuron).final_namespace
         self.output_neuron['equation'] = neuron_equations(self.output_neuron).final_equation
 
         # self.output_neuron['equation'] = Equations(_eq_template_soma, gL=gL[N_comp], ge='ge_soma', geX='geX_soma',
@@ -224,67 +267,6 @@ class customized_neuron(object):
     def __repr__ (self):
         return 'Customized Neuron Object'
 
-class namespaces (object):
-    'This class embeds all parameter sets associated to all neuron types and will return it as a namespace in form of dictionary'
-    def __init__(self, output_neuron):
-        namespaces.category_ref = array(['multi_comp','soma_only','FS','LTS'])
-        assert output_neuron['category'] in namespaces.category_ref, "Error: cell type '%s' is not defined." % output_neuron['category']
-        self.final_namespace = {}
-        getattr(namespaces, output_neuron['category'])(self,output_neuron)
-    def multi_comp(self,output_neuron):
-        '''
-        :param parameters_type: The type of parameters associated to compartmental neurons. 'Generic' is the common type. Other types could be defined when discovered in literature.
-        :type parameters_type: String
-        :return:
-        :rtype:
-        '''
-        namespace_type_ref = array(['generic'])
-        assert output_neuron['namespace_type'] in namespace_type_ref, "Error: namespace type '%s' is not defined."%output_neuron['namespace_type']
-        if output_neuron['namespace_type'] == namespace_type_ref[0]:
-            # Capacitance, multiplied by the compartmental area to get the final C(compartment)
-            Cm=(1*ufarad*cm**-2)
-            # leak conductance, -''-  Amatrudo et al, 2005 (ja muut) - tuned down to fix R_in
-            gl=(4.2e-5*siemens*cm**-2)
-            Area_tot_pyram = 25000 *.75* um**2
-            # Fractional areas of L1, L2, L3, L4, soma & L5, respectively, adapted from Bernander et al (1994) and Williams & Stuart (2002)
-            fract_areas = {
-                1: array([ 0.2 ,  0.03,  0.15,  0.2 ]),
-                2: array([ 0.2 ,  0.03,  0.15,  0.15,  0.2 ]),
-                3: array([ 0.2 ,  0.03,  0.15,  0.09,  0.15,  0.2 ]),
-                4: array([ 0.2 ,  0.03,  0.15,  0.5 ,  0.09,  0.15,  0.2 ])
-                #           basal  soma   a0     a1      a2      a3    a4
-            }
-
-
-            self.final_namespace = {}
-            # total capacitance in compartmens. The *2 comes from Markram et al Cell 2015: corrects for the deindritic spine area
-            self.final_namespace['C']= fract_areas[output_neuron['dend_comp_num']] * Cm * Area_tot_pyram * 2
-            # total g_leak in compartments
-            self.final_namespace['gL']= fract_areas[output_neuron['dend_comp_num']] * gl * Area_tot_pyram
-
-
-            self.final_namespace['Vr']=-70.11 * mV
-            self.final_namespace['EL'] = 70.11 * mV
-            self.final_namespace['VT']=-41.61 * mV
-            self.final_namespace['V_res']=-70.11 * mV
-            self.final_namespace['DeltaT']=2*mV
-            self.final_namespace['Vcut'] = -25 * mV
-
-
-            # Dendritic parameters, index refers to layer-specific params
-            self.final_namespace['Ee']= 0*mV
-            self.final_namespace['Ei']= -75*mV
-            self.final_namespace['Ed']= 70.11 * mV
-
-
-            # Connection parameters between compartments
-            self.final_namespace['Ra']= [100,80,150,150,200] * Mohm
-            self.final_namespace['tau_e'] = 1.7 * ms
-            self.final_namespace['tau_eX'] = 1.7 * ms
-            self.final_namespace['tau_i'] = 8.3 * ms
-            # return self.final_namespace
-    def soma_only (self,parameters_type):
-        parameter_ref = array(['Generic'])
 
 
 
@@ -416,17 +398,17 @@ class neuron_equations (object):
 #             '''
 
 cortical_module (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt')
+
 # p = customized_neuron ('PC', cell_category= 'multi_comp', namespace_type='generic', eq_category= 'multi_comp',layers_idx=array([4,1])).output_neuron
 # N1 = NeuronGroup(1000, model=p['equation'], threshold='vm>Vcut', reset='vm=V_res', refractory = '2 * ms', namespace = p['namespace'])
 # N2 = NeuronGroup(1000, model=p['equation'], threshold='vm>Vcut', reset='vm=V_res', refractory = '2 * ms', namespace = p['namespace'])
 
 
-
-run(101*ms)
-device.build(directory='shortEX',
-            compile=True,
-             run=True,
-             use_GPU=True)
+# run(101*ms)
+# device.build(directory='shortEX',
+#             compile=True,
+#              run=True,
+#              use_GPU=True)
 # p = customized_equation ('PC' , array([6,4]))
 # print p.output_neuron
 # print help(customized_equation)
