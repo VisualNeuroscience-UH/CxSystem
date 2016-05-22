@@ -91,8 +91,8 @@ syn_names = {'Apost': -0.215,
 
 indices = array([0, 1, 2])
 times = array([1, 2, 3])*ms
-Ge = SpikeGeneratorGroup(3, indices, times)
-forward = Synapses(Ge,G,  connect='i==j')
+# Ge = SpikeGeneratorGroup(3, indices, times)
+# forward = Synapses(Ge,G,  connect='i==j')
 # s_mon1 = SpikeMonitor(Ge)
 # s_mon2 = SpikeMonitor(G)
 s_mon_b = StateMonitor(G,'vm_basal',record = 0)
