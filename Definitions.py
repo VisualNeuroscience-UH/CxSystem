@@ -63,7 +63,7 @@ class customized_neuron(object):
     '''Using this class you will get a dictionary containing all parameters and variables that are needed to \
     create a group of that customized cell. This dictionary will eventually be used to build the cortical module.'''
     # This vairable is to keep track of all customized neurons do be able to draw it
-    def __init__(self, cell_type,cell_category,  layers_idx ):
+    def __init__(self, number_of_neurons,  cell_type,cell_category,  layers_idx ):
         '''
         :param cell_type: type of cell which is either PC, SS, BC, MC, Inh[?].
         :type cell_type: string
@@ -83,6 +83,10 @@ class customized_neuron(object):
             assert cell_type != 'PC' , "Cell type is PC but the start and end of the neuron is not defined in layers_idx"
         # final neuron is the output neuron containing equation, parameters , etc TODO
         self.output_neuron = {}
+        self.output_neuron['number_of_neurons'] = int(number_of_neurons)
+        self.output_neuron['threshold']  = 'vm>Vcut'
+        self.output_neuron['reset'] = 'vm=V_res'
+        self.output_neuron['refractory'] =  '4 * ms'
         self.output_neuron['type'] = cell_type
         self.output_neuron['category'] = cell_category
         # self.output_neuron['namespace_type'] = namespace_type

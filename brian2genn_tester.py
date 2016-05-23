@@ -1,7 +1,7 @@
 from brian2 import *
 import brian2genn
 
-set_device('genn')
+# set_device('genn')
 #set_device('cpp_standalone')
 
 eqs = '''
@@ -48,8 +48,8 @@ Idendr_soma = 12.5*nsiemens*(-vm + vm_a0) + 10.0*nsiemens*(-vm + vm_basal) : amp
 '''
 names = {'C': array([ 75.  ,  11.25,  56.25,  56.25,  75.  ]) * pfarad,
  'DeltaT': 2. * mvolt,
- 'EL': 70.11 * mvolt,
- 'Ed': 70.11 * mvolt,
+ 'EL': -70.11 * mvolt,
+ 'Ed': -70.11 * mvolt,
  'Ee': 0. * volt,
  'Ei': -75. * mvolt,
  'Ra': array([ 100.,   80.,  150.,  150.,  200.]) * Mohm,
@@ -63,8 +63,8 @@ names = {'C': array([ 75.  ,  11.25,  56.25,  56.25,  75.  ]) * pfarad,
  'tau_i': 8.3 * msecond}
 
 
-G = NeuronGroup(10, model = eqs,threshold='vm>Vcut', reset='vm=V_res', refractory = '4 * ms', namespace= names)
-H = NeuronGroup(15, model = eqs,threshold='vm>Vcut', reset='vm=V_res', refractory = '4 * ms', namespace= names)
+G_group = NeuronGroup(10, model = eqs,threshold='vm>Vcut', reset='vm=V_res', refractory = '4 * ms', namespace= names)
+H_group = NeuronGroup(15, model = eqs,threshold='vm>Vcut', reset='vm=V_res', refractory = '4 * ms', namespace= names)
 
 eq = '''wght : siemens
             dapre/dt = -apre/taupre : siemens (event-driven)
@@ -93,33 +93,31 @@ indices = array([0, 1, 2])
 times = array([1, 2, 3])*ms
 # Ge = SpikeGeneratorGroup(3, indices, times)
 # forward = Synapses(Ge,G,  connect='i==j')
-# s_mon1 = SpikeMonitor(Ge)
-# s_mon2 = SpikeMonitor(G)
-s_mon_b = StateMonitor(G,'vm_basal',record = 0)
-s_mon = StateMonitor(G,'vm',record=0)
-s_mon0 = StateMonitor(G,'vm_a0',record=0)
-s_mon1 = StateMonitor(G,'vm_a1',record=0)
-s_mon2 = StateMonitor(G,'vm_a2',record=0)
+# s_mon_b = StateMonitor(G_group,'vm_basal',record = 0)
+# s_mon = StateMonitor(G_group,'vm',record=0)
+# s_mon0 = StateMonitor(G_group,'vm_a0',record=0)
+# s_mon1 = StateMonitor(G_group,'vm_a1',record=0)
+# s_mon2 = StateMonitor(G_group,'vm_a2',record=0)
 
 
-run(101*ms)
-device.build(directory='tester',
-            compile=True,
-             run=True,
-             use_GPU=True)
-
-f, axarr = plt.subplots(5, sharex=True)
-axarr[0].plot(s_mon_b.t / ms, s_mon_b.vm_basal[0])
-axarr[1].plot(s_mon.t / ms, s_mon.vm[0])
-axarr[2].plot(s_mon0.t / ms, s_mon0.vm_a0[0])
-axarr[3].plot(s_mon1.t / ms, s_mon1.vm_a1[0])
-axarr[4].plot(s_mon2.t / ms, s_mon2.vm_a2[0])
-# plot(s_mon2.t / ms, s_mon2.i, '.k')
-# xlabel('Time (ms)')
-# ylabel('Neuron index')
-# figure()
-# plot(s_mon3.t / ms, s_mon3.i, '.k')
-# xlabel('Time (ms)')
-# ylabel('Neuron index')
-
-show()
+# run(101*ms)
+# device.build(directory='tester',
+#             compile=True,
+#              run=True,
+#              use_GPU=True)
+#
+# f, axarr = plt.subplots(5, sharex=True)
+# axarr[0].plot(s_mon_b.t / ms, s_mon_b.vm_basal[0])
+# axarr[1].plot(s_mon.t / ms, s_mon.vm[0])
+# axarr[2].plot(s_mon0.t / ms, s_mon0.vm_a0[0])
+# axarr[3].plot(s_mon1.t / ms, s_mon1.vm_a1[0])
+# axarr[4].plot(s_mon2.t / ms, s_mon2.vm_a2[0])
+# # plot(s_mon2.t / ms, s_mon2.i, '.k')
+# # xlabel('Time (ms)')
+# # ylabel('Neuron index')
+# # figure()
+# # plot(s_mon3.t / ms, s_mon3.i, '.k')
+# # xlabel('Time (ms)')
+# # ylabel('Neuron index')
+#
+# show()
