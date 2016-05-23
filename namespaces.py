@@ -153,7 +153,7 @@ class neuron_namespaces (object):
 
 
         self.output_namespace['Vr']=-70.11 * mV
-        self.output_namespace['EL'] = 70.11 * mV
+        self.output_namespace['EL'] = -70.11 * mV
         self.output_namespace['VT']=-41.61 * mV
         self.output_namespace['V_res']=-70.11 * mV
         self.output_namespace['DeltaT']=2*mV
@@ -163,7 +163,7 @@ class neuron_namespaces (object):
         # Dendritic parameters, index refers to layer-specific params
         self.output_namespace['Ee']= 0*mV
         self.output_namespace['Ei']= -75*mV
-        self.output_namespace['Ed']= 70.11 * mV
+        self.output_namespace['Ed']= -70.11 * mV
 
 
         # Connection parameters between compartments

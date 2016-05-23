@@ -3,18 +3,30 @@ from brian2 import *
 import brian2genn
 import os
 from Definitions import *
+import brian2genn_tester as bt
 set_device('genn')
-
 class cortical_module:
     'A customizable model of cortical module for Brian2Genn'
-    neurongroup_prefix = 'N'
-    synapses_prefix = 'S'
-    def __init__(self,path):
+    _neurongroup_prefix = 'NG'
+    _neuronnumber_prefix = 'NN'
+    _neuronequation_prefix = 'NE'
+    _neuronthreshold_prefix = 'NT'
+    _neuronreset_prefix = 'NRes'
+    _neuronref_prefix = 'NRef'
+    _neuronNS_prefix = 'NNs' # name space prefix
+    _synapses_prefix = 'S'
+    _synapseequation_prefix = 'SE'
+
+    def __init__(self,path,name):
         _options = {
             '[G]': self.neuron_group,
             '[S]' : self.synapse
         }
         is_tag = ['[']
+        self.name = name
+        self.syntax_bank = {}
+        self.syntax_bank['NeuronGroups'] = []
+        self.syntax_bank['Ingredients'] = []
         self.customized_neurons = []
         self.customized_synapses = []
         self.neurongroups_list = []
@@ -62,21 +74,49 @@ class cortical_module:
         # show()
     # def __str__(self):
     #     print "A summary of this cortical module: "
-    def neuron_group (self, *args):
+    def neuron_group (self, *args ):
 
         args = args[0]
-        layer_idx = array([])
         current_idx=  len(self.customized_neurons)
         if args[1] == 'PC' :
             exec 'args[3] = array(' + args[3] + ')'
         else:
             args[3] = int(args[3])
-        group_name = '%s%d_%s'%(self.neurongroup_prefix,current_idx,args[1])
-        self.neurongroups_list.append(group_name)
-        self.customized_neurons.append(customized_neuron (*args[1:]).output_neuron) # layer_idx is created by dynamic compiler
-        tmp_str = "self.%s = NeuronGroup(int(args[0]), model=self.customized_neurons[-1]['equation'], threshold='vm>Vcut', reset='vm=V_res', \
-                    refractory = '4 * ms', namespace =self.customized_neurons[-1]['namespace'])" %group_name
-        exec tmp_str
+        self.customized_neurons.append(customized_neuron (*args[0:4]).output_neuron) # layer_idx is created by dynamic compiler
+        if len(args) > 4: # in case of threshold/reset/refractory overwrite
+            for arg_idx in range (4,len(args)):
+                if 'threshold' in args[arg_idx] :
+                    args[arg_idx] = args[arg_idx][args[arg_idx].index("'")+1:-2]
+                    self.customized_neurons[-1]['threshold'] = args[arg_idx]
+                elif 'reset' in args[arg_idx]:
+                    args[arg_idx] = args[arg_idx][args[arg_idx].index("'")+1:-2]
+                    self.customized_neurons[-1]['reset'] = args[arg_idx]
+                elif 'refractory' in args[arg_idx]:
+                    args[arg_idx] = args[arg_idx][args[arg_idx].index("'")+1:-2]
+                    self.customized_neurons[-1]['refractory'] =  args[arg_idx]
+        NG_name = self._neurongroup_prefix + str(current_idx) + '_'+args[1]
+        self.neurongroups_list.append(NG_name)
+        NN_name = self._neuronnumber_prefix + str(current_idx)
+        NE_name = self._neuronequation_prefix + str(current_idx)
+        NT_name = self._neuronthreshold_prefix + str(current_idx)
+        NRes_name = self._neuronreset_prefix + str(current_idx)
+        NRef_name = self._neuronref_prefix + str(current_idx)
+        NNS_name = self._neuronNS_prefix + str(current_idx )
+
+        NN_str = "%s=%s.customized_neurons[%d]['number_of_neurons']"% (NN_name, self.name ,current_idx)
+        NE_str= "%s=%s.customized_neurons[%d]['equation']"% (NE_name ,self.name , current_idx)
+        NT_str = "%s=%s.customized_neurons[%d]['threshold']"%(NT_name ,self.name ,current_idx)
+        NRes_str = "%s=%s.customized_neurons[%d]['reset']"% (NRes_name,self.name , current_idx)
+        NRef_str = "%s=%s.customized_neurons[%d]['refractory']"% (NRef_name,self.name,current_idx)
+        NNS_str  = "%s=%s.customized_neurons[%d]['namespace']"% (NNS_name,self.name,current_idx)
+        self.syntax_bank['Ingredients'].extend([NN_str,NE_str,NT_str,NRes_str,NRef_str,NNS_str])
+
+        NG_str = "%s= NeuronGroup(%s, model=%s, threshold=%s, reset=%s,refractory = %s, namespace = %s)" \
+                 % (NG_name , NN_name , NE_name,NT_name, NRes_name, NRef_name , NNS_name)
+        self.syntax_bank['NeuronGroups'].append(NG_str)
+
+        # tmp_str = "self.%s = NeuronGroup(self.customized_neurons[-1]['number_of_neurons'], model=self.customized_neurons[-1]['equation'], threshold='vm>Vcut', reset='vm=V_res', \
+        #             refractory = '4 * ms', namespace =self.customized_neurons[-1]['namespace'])" %group_name
 
     # N1 = NeuronGroup(1000, model=p['equation'], threshold='vm>Vcut', reset='vm=V_res', refractory = '2 * ms', namespace = p['namespace'])
 
@@ -95,17 +135,28 @@ class cortical_module:
             if tag == '[C]':
                 _post_group_idx , _post_com_idx = arg.split('[' + 'C' + ']')
                 args[0][2] = _post_group_idx
-                if int(_post_com_idx) == 0 :
-                    triple_args = []
-                    triple_args.append(args[0].append('_basal'))
-                    triple_args.append(args[0].append('_soma'))
-                    triple_args.append(args[0].append('_a0'))
-                    args = triple_args
+                if _post_com_idx[0] == '0':
+                    if len(_post_com_idx) == 1:
+                        triple_args = []
+                        triple_args.append(args[0].append('_basal'))
+                        triple_args.append(args[0].append('_soma'))
+                        triple_args.append(args[0].append('_a0'))
+                        args = triple_args
+                    else :
+                        triple_args = []
+                        for tmp_idx in _post_com_idx[1:]:
+                            if tmp_idx == '0':
+                                triple_args.append(args[0].append('_basal'))
+                            elif tmp_idx == '1':
+                                triple_args.append(args[0].append('_soma'))
+                            elif tmp_idx == '2':
+                                triple_args.append(args[0].append('_a0'))
+                        args = triple_args
                 elif int(_post_com_idx) > 0 :
                     args[0].append('_a'+str(_post_com_idx))
         for syn in args :
             current_idx = len(self.customized_synapses)
-            group_name = '%s%d_%s' % (self.synapses_prefix, current_idx, syn[3])
+            group_name = '%s%d_%s' % (self._synapses_prefix, current_idx, syn[3])
             self.synapses_list.append(group_name)
             self.customized_synapses.append(customized_synapse(*syn))
             tmp_str = "self.%s = Synapses(self.%s,self.%s,model = self.customized_synapses[-1].output_synapse['syn_eq'],\
@@ -125,126 +176,6 @@ class cortical_module:
 
 
 
-
-
-
-
-
-
-
-
-# class neuron_equations (object):
-#     '''
-#     Creates instances of neuron_equations which can be used in any cell. Determination of whether or not the output\
-#     equation matches the nature of neuron, is to the user. Equations other than Fast Spiking, Low Threshold Spiking, \
-#     Multi-Compartmental neurons and soma-only neurons should be defined in this class.
-#     '''
-#     def __init__(self, output_neuron):
-#         '''
-#         :param eq_category: The spiking pattern in the neuron ['multi_comp','soma_only','FS','LTS'].
-#         :type eq_category: String
-#         :param comparts: Number of Compartments in case the requested equation is 'multi_comp'.
-#         :type comparts: int
-#         :return:
-#         :rtype:
-#         '''
-#         neuron_equations.all_eq_types = array(['multi_comp','soma_only','FS','LTS'])
-#         assert output_neuron['eq_category'] in neuron_equations.all_eq_types, "Equation type '%s' is not defined." % output_neuron['eq_category']
-#         self.final_equation = ''
-#         getattr(neuron_equations, output_neuron['eq_category'])(self,output_neuron)
-#
-#
-#     # def __str__(self):
-#     #     'prints a description of the equation'
-#     #     print "Description of Equation"
-#
-#     def multi_comp (self, output_neuron) :
-#         '''
-#         :param namespace_type: defines the category of the equation.
-#         :type namespace_type: str
-#         :param n_comp: number of compartments in the neuron
-#         :type n_comp: int
-#         :param layer_idx: indices of the layers in which neuron resides.
-#         :type layer_idx: array
-#         :param eq_template_soma: Contains template somatic equation used in Brian2.
-#
-#         ::
-#
-#             dgeX/dt = -geX/tau_eX : siemens
-#             dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
-#             dgi/dt = -gi/tau_i : siemens
-#             dgialpha/dt = (gi-gialpha)/tau_i : siemens
-#
-#         :param eq_template_dend: Contains template somatic equation used in Brian2.
-#         :type eq_template_dend: str
-#         :param test_param: something here
-#         :type test_param: some type here
-#         '''
-#
-#         #: The template for the somatic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
-#         eq_template_soma = '''
-#         layers_idx : 1
-#         dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr) / C : volt (unless refractory)
-#         dge/dt = -ge/tau_e : siemens
-#         dgealpha/dt = (ge-gealpha)/tau_e : siemens
-#         dgeX/dt = -geX/tau_eX : siemens
-#         dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
-#         dgi/dt = -gi/tau_i : siemens
-#         dgialpha/dt = (gi-gialpha)/tau_i : siemens
-#         '''
-#         #: The template for the dendritic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
-#         eq_template_dend = '''
-#         dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) +I_dendr) / C : volt
-#         dge/dt = -ge/tau_e : siemens
-#         dgealpha/dt = (ge-gealpha)/tau_e : siemens
-#         dgeX/dt = -geX/tau_eX : siemens
-#         dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
-#         dgi/dt = -gi/tau_i : siemens
-#         dgialpha/dt = (gi-gialpha)/tau_i : siemens
-#         '''
-#
-#         self.final_equation =(Equations(eq_template_dend, vm = "vm_basal", ge="ge_basal", gealpha="gealpha_basal",
-#                 C=output_neuron['namespace']['C'][0], gL=output_neuron['namespace']['gL'][0],
-#                 gi="gi_basal", geX="geX_basal", gialpha="gialpha_basal", gealphaX="gealphaX_basal",I_dendr="Idendr_basal"))
-#         self.final_equation += Equations (eq_template_soma, gL=output_neuron['namespace']['gL'][1],
-#                 ge='ge_soma', geX='geX_soma', gi='gi_soma', gealpha='gealpha_soma', gealphaX='gealphaX_soma',
-#                 gialpha='gialpha_soma', C=output_neuron['namespace']['C'][1], I_dendr='Idendr_soma')
-#         for _ii in range (output_neuron['dend_comp_num']+1): # extra dendritic compartment in the same level of soma
-#             self.final_equation+=Equations(eq_template_dend, vm = "vm_a%d" %_ii, C=output_neuron['namespace']['C'][_ii],
-#             gL=output_neuron['namespace']['gL'][_ii],ge="ge_a%d" %_ii, gi="gi_a%d" %_ii, geX="geX_a%d" %_ii,
-#             gealpha="gealpha_a%d" %_ii, gialpha="gialpha_a%d" %_ii, gealphaX="gealphaX_a%d" %_ii,I_dendr="Idendr_a%d" %_ii)
-#
-#         # basal self connection
-#         self.final_equation += Equations('I_dendr = gapre*(vmpre-vmself)  : amp',
-#                          gapre=1/(output_neuron['namespace']['Ra'][0]),
-#                          I_dendr="Idendr_basal", vmself= "vm_basal", vmpre= "vm")
-#         self.final_equation += Equations('I_dendr = gapre*(vmpre-vmself)  + gapost*(vmpost-vmself) : amp',
-#                          gapre=1/(output_neuron['namespace']['Ra'][1]),
-#                          gapost=1/(output_neuron['namespace']['Ra'][0]),
-#                          I_dendr="Idendr_soma" , vmself= "vm",
-#                          vmpre= "vm_a0", vmpost= "vm_basal")
-#         self.final_equation += Equations('I_dendr = gapre*(vmpre-vmself) + gapost*(vmpost-vmself) : amp',
-#                                  gapre=1/(output_neuron['namespace']['Ra'][2]),
-#                                  gapost=1/(output_neuron['namespace']['Ra'][1]),
-#                                  I_dendr="Idendr_a0" , vmself= "vm_a0" ,vmpre= "vm_a1" , vmpost= "vm")
-#
-#         for _ii in arange(1,output_neuron['dend_comp_num']):
-#             self.final_equation += Equations('I_dendr = gapre*(vmpre-vmself) + gapost*(vmpost-vmself) : amp',
-#                              gapre=1/(output_neuron['namespace']['Ra'][_ii]),
-#                              gapost=1/(output_neuron['namespace']['Ra'][_ii-1]),
-#                              I_dendr="Idendr_a%d" %_ii, vmself= "vm_a%d" %_ii,
-#                              vmpre= "vm_a%d" %(_ii+1), vmpost= "vm_a%d" %(_ii-1))
-#
-#         self.final_equation += Equations('I_dendr = gapost*(vmpost-vmself) : amp',
-#                          I_dendr="Idendr_a%d"%output_neuron['dend_comp_num'] , gapost=1/(output_neuron['namespace']['Ra'][-1]),
-#                          vmself= "vm_a%d"%output_neuron['dend_comp_num'], vmpost= "vm_a%d"%(output_neuron['dend_comp_num']-1))
-
-
-
-
-
-
-
                 # class synaptic_equations (object):
 #     def __init__(self, output_synapse):
 #         synaptic_equations.all_eq_types = array(['STDP'])
@@ -260,7 +191,7 @@ class cortical_module:
 #             dapost/dt = -apost/taupost : siemens (event-driven)
 #             '''
 
-CM = cortical_module (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt')
+CM = cortical_module (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , 'CM')
 
 # for item in CM.neurongroups_list:
 #     tmp_str = item + "= CM." + item
@@ -269,16 +200,67 @@ CM = cortical_module (os.path.dirname(os.path.realpath(__file__)) + '/Connection
 #     tmp_str = item + "= CM." + item
 #     exec tmp_str
 
-N0_PC = CM.N0_PC
+# N0_PC = CM.N0_PC
+#
+# s_mon_b = StateMonitor(N0_PC, 'vm_basal', record=0)
+# s_mon = StateMonitor(N0_PC, 'vm', record=0)
+# s_mon0 = StateMonitor(N0_PC, 'vm_a0', record=0)
+# s_mon1 = StateMonitor(N0_PC, 'vm_a1', record=0)
+# s_mon2 = StateMonitor(N0_PC, 'vm_a2', record=0)
+# run(1000 * ms, report='text')
+# device.build(directory='CXModule',
+#              compile=True,
+#              run=True,
+#              use_GPU=True)
+#
+# f, axarr = plt.subplots(5, sharex=True)
+# axarr[0].plot(s_mon_b.t / ms, s_mon_b.vm_basal[0])
+# axarr[1].plot(s_mon.t / ms, s_mon.vm[0])
+# axarr[2].plot(s_mon0.t / ms, s_mon0.vm_a0[0])
+# axarr[3].plot(s_mon1.t / ms, s_mon1.vm_a1[0])
+# axarr[4].plot(s_mon2.t / ms, s_mon2.vm_a2[0])
+# show()
 
-s_mon_b = StateMonitor(N0_PC, 'vm_basal', record=0)
-s_mon = StateMonitor(N0_PC, 'vm', record=0)
-s_mon0 = StateMonitor(N0_PC, 'vm_a0', record=0)
-s_mon1 = StateMonitor(N0_PC, 'vm_a1', record=0)
-s_mon2 = StateMonitor(N0_PC, 'vm_a2', record=0)
-run(1000 * ms, report='text')
-device.build(directory='CXModule',
-             compile=True,
+for syntax in CM.syntax_bank['Ingredients'] :
+    exec syntax
+for syntax in CM.syntax_bank['NeuronGroups'] :
+    exec syntax
+
+
+
+
+
+
+# eqs = bt.eqs
+# names = bt.names
+# q = 10
+# tmp_str = "G%d = NeuronGroup(q , model = eqs,threshold='vm>Vcut', reset='vm=V_res', refractory = '4 * ms', namespace= names)" %1
+# exec tmp_str
+# H = bt.H_group
+#
+# eq = bt.eq
+# pre = bt.pre
+# post = bt.post
+# syn_names = bt.syn_names
+# S = Synapses(G, H, model= eq,pre = pre, post=post,namespace=syn_names)
+# S.connect(4,5)
+
+indices = array([0, 1, 2])
+times = array([1, 2, 3])*ms
+# Ge = SpikeGeneratorGroup(3, indices, times)
+# forward = Synapses(Ge,G,  connect='i==j')
+# s_mon1 = SpikeMonitor(Ge)
+# s_mon2 = SpikeMonitor(G)
+s_mon_b = StateMonitor(NG0_PC,'vm_basal',record = 0)
+s_mon = StateMonitor(NG0_PC,'vm',record=0)
+s_mon0 = StateMonitor(NG0_PC,'vm_a0',record=0)
+s_mon1 = StateMonitor(NG0_PC,'vm_a1',record=0)
+s_mon2 = StateMonitor(NG0_PC,'vm_a2',record=0)
+
+
+run(101*ms)
+device.build(directory='tester',
+            compile=True,
              run=True,
              use_GPU=True)
 
@@ -288,14 +270,33 @@ axarr[1].plot(s_mon.t / ms, s_mon.vm[0])
 axarr[2].plot(s_mon0.t / ms, s_mon0.vm_a0[0])
 axarr[3].plot(s_mon1.t / ms, s_mon1.vm_a1[0])
 axarr[4].plot(s_mon2.t / ms, s_mon2.vm_a2[0])
+# plot(s_mon2.t / ms, s_mon2.i, '.k')
+# xlabel('Time (ms)')
+# ylabel('Neuron index')
+# figure()
+# plot(s_mon3.t / ms, s_mon3.i, '.k')
+# xlabel('Time (ms)')
+# ylabel('Neuron index')
+
 show()
+
+
+
+
+
+
+
+
+
+
+
 
 
 # p = customized_neuron ('PC', cell_category= 'multi_comp', namespace_type='generic', eq_category= 'multi_comp',layers_idx=array([4,1])).output_neuron
 # N1 = NeuronGroup(1000, model=p['equation'], threshold='vm>Vcut', reset='vm=V_res', refractory = '2 * ms', namespace = p['namespace'])
 # N2 = NeuronGroup(1000, model=p['equation'], threshold='vm>Vcut', reset='vm=V_res', refractory = '2 * ms', namespace = p['namespace'])
-
-
+#
+#
 # run(101*ms)
 # device.build(directory='shortEX',
 #             compile=True,

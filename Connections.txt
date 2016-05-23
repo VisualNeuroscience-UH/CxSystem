@@ -1,6 +1,20 @@
 # this is a test
-
+# [G] is for defining the neuron group:
+# [G]   number_of_neurons    neurons_type   neuron_category   layer_idx
+# some notes:
+# neuron_type can be either PC,SS,etc.
+# neuront_category can be either multicompartmental,soma_only,etc.
+# layer_idx can be either array(compartmental neurons) or int (soma only neurons)
+# you can also overwrite the default threshold, reset, refractory by adding the following at the end:
+# [threshold]='vm>Vcut' and same structure for reset and refractory
+####################
+# [S] is for synaptic object:
+# [S]   receptor_type   reference_group_index     target_group_index    synapse_type(STDP,etc)
+# some description:
+# - reference_group_index and target_group_index based on the index of the group in this configureation file
+# - in case target_group_index is a compartment of the group you can use: target_group_index[C]target_compartment_number
+#        target_compartment_number
 
 [G] 10 PC multicomp [4,1]
-[G] 15 PC multicomp [2,1]
-[S] ge 0 1[C]1 STDP
+#[G] 15 PC multicomp [2,1]
+[S] ge 0 1[C]001 STDP
