@@ -2,62 +2,6 @@ __author__ = 'V_AD'
 from brian2 import *
 from namespaces import *
 
-class customized_synapse(object):
-    def __init__(self, receptor,pre_group_idx ,post_group_idx, syn_type, post_comp_name='_soma'):
-        customized_synapse.syntypes = array(['STDP'])
-        assert syn_type in customized_synapse.syntypes, "Error: cell type '%s' is not defined" % syn_type
-        self.output_synapse = {}
-        self.output_synapse['type'] = syn_type
-        self.output_synapse['receptor'] = receptor
-        # self.output_synapse['namespace_type'] = namespace_type
-        # self.output_synapse['pre_type'] = pre_group_type
-        self.output_synapse['pre_group_idx'] = int(pre_group_idx)
-        # self.output_synapse['post_type'] = post_group_type
-        self.output_synapse['post_group_idx'] = int(post_group_idx)
-        self.output_synapse['post_comp_name'] = post_comp_name
-        self.output_synapse['namespace'] = {}
-        self.output_synapse['namespace'] = synapse_namespaces(self.output_synapse).output_namespace
-
-        getattr(customized_synapse, self.output_synapse['type'])(self)
-
-    def STDP(self):
-
-        self.output_synapse['syn_eq'] = Equations('''
-            wght : siemens
-            dapre/dt = -apre/taupre : siemens (event-driven)
-            dapost/dt = -apost/taupost : siemens (event-driven)
-            ''')
-        # self.output_synapse['namespace']['Apre'], self.output_synapse['namespace']['Apost'], self.output_synapse['namespace']['taupre'], self.output_synapse['namespace']['taupost'] = \
-        #     self.stdp['stdp%d%d%s' % (self.output_synapse['pre_group_idx'],self.output_synapse['post_group_idx'], self.output_synapse['post_comp_name'])]
-        # self.output_synapse['namespace']['wght_max'] = 0.72 * nS*8.1  *15
-        # self.output_synapse['namespace']['wght0'] = 0.72 * nS*8.1
-        # self.output_synapse['namespace']['Cp'] = 0.1
-        # self.output_synapse['namespace']['Cd'] =0.3
-
-
-        if self.output_synapse['namespace']['Apre'] >= 0:
-            self.output_synapse['pre_eq'] = '''
-                        %s+=wght
-                        apre += Apre * wght0 * Cp
-                        wght = clip(wght + apost, 0, wght_max)
-                        ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] +  '_post')
-        else:
-            self.output_synapse['pre_eq'] = '''
-                        %s+=wght
-                        apre += Apre * wght * Cd
-                        wght = clip(wght + apost, 0, wght_max)
-                        ''' % (self.output_synapse['receptor']+self.output_synapse['post_comp_name'] + '_post')
-        if self.output_synapse['namespace']['Apost'] <= 0:
-            self.output_synapse['post_eq'] = '''
-                        apost += Apost * wght * Cd
-                        wght = clip(wght + apre, 0, wght_max)
-                        '''
-        else:
-            self.output_synapse['post_eq'] = '''
-                        apost += Apost * wght0 * Cp
-                        wght = clip(wght + apre, 0, wght_max)
-                        '''
-
 
 class customized_neuron(object):
     '''Using this class you will get a dictionary containing all parameters and variables that are needed to \
@@ -197,4 +141,112 @@ class customized_neuron(object):
                                          gapost=1 / (self.output_neuron['namespace']['Ra'][-1]),
                                          vmself="vm_a%d" % self.output_neuron['dend_comp_num'],
                                          vmpost="vm_a%d" % (self.output_neuron['dend_comp_num'] - 1))
+
+
+    def _BC(self):
+        self.output_neuron['equation'] =   Equations(  '''
+            dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C : volt (unless refractory)
+            dge/dt = -ge/tau_e : siemens  # This goes to synapses object in B2
+            dgi/dt = -gi/tau_i : siemens  # This goes to synapses object in B2
+            ''')
+
+
+    def _L1i(self):
+        self.output_neuron['equation'] =   Equations(  '''
+            dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C : volt (unless refractory)
+            dge/dt = -ge/tau_e : siemens  # This goes to synapses object in B2
+            dgi/dt = -gi/tau_i : siemens  # This goes to synapses object in B2
+            ''')
+
+
+
+    def _MC(self):
+        self.output_neuron['equation'] = Equations(  '''
+            dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C : volt (unless refractory)
+            dge/dt = -ge/tau_e : siemens  # This goes to synapses object in B2
+            dgi/dt = -gi/tau_i : siemens  # This goes to synapses object in B2
+            ''')
+
+    def _SS (self):
+        eq_template_soma = '''
+        layers_idx : 1
+        dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr) / C : volt (unless refractory)
+        dge/dt = -ge/tau_e : siemens
+        dgealpha/dt = (ge-gealpha)/tau_e : siemens
+        dgeX/dt = -geX/tau_eX : siemens
+        dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
+        dgi/dt = -gi/tau_i : siemens
+        dgialpha/dt = (gi-gialpha)/tau_i : siemens
+        '''
+
+        self.output_neuron['equation'] =  Equations(eq_template_soma, gL=self.output_neuron['namespace']['gL'][1],
+                                         ge='ge_soma', geX='geX_soma', gi='gi_soma', gealpha='gealpha_soma',
+                                         gealphaX='gealphaX_soma',
+                                         gialpha='gialpha_soma', C=self.output_neuron['namespace']['C'][1],
+                                         I_dendr='Idendr_soma')
+
+    #################
+#################
+################# Synapses
+#################
+#################
+
+
+
+class customized_synapse(object):
+    def __init__(self, receptor,pre_group_idx ,post_group_idx, syn_type, post_comp_name='_soma'):
+        customized_synapse.syntypes = array(['STDP'])
+        assert syn_type in customized_synapse.syntypes, "Error: cell type '%s' is not defined" % syn_type
+        self.output_synapse = {}
+        self.output_synapse['type'] = syn_type
+        self.output_synapse['receptor'] = receptor
+        # self.output_synapse['namespace_type'] = namespace_type
+        # self.output_synapse['pre_type'] = pre_group_type
+        self.output_synapse['pre_group_idx'] = int(pre_group_idx)
+        # self.output_synapse['post_type'] = post_group_type
+        self.output_synapse['post_group_idx'] = int(post_group_idx)
+        self.output_synapse['post_comp_name'] = post_comp_name
+        self.output_synapse['probability'] =  synapse_namespaces.sp['sp']
+        self.output_synapse['namespace'] = {}
+        self.output_synapse['namespace'] = synapse_namespaces(self.output_synapse).output_namespace
+
+        getattr(customized_synapse, self.output_synapse['type'])(self)
+
+    def STDP(self):
+
+        self.output_synapse['equation'] = Equations('''
+            wght : siemens
+            dapre/dt = -apre/taupre : siemens (event-driven)
+            dapost/dt = -apost/taupost : siemens (event-driven)
+            ''')
+        # self.output_synapse['namespace']['Apre'], self.output_synapse['namespace']['Apost'], self.output_synapse['namespace']['taupre'], self.output_synapse['namespace']['taupost'] = \
+        #     self.stdp['stdp%d%d%s' % (self.output_synapse['pre_group_idx'],self.output_synapse['post_group_idx'], self.output_synapse['post_comp_name'])]
+        # self.output_synapse['namespace']['wght_max'] = 0.72 * nS*8.1  *15
+        # self.output_synapse['namespace']['wght0'] = 0.72 * nS*8.1
+        # self.output_synapse['namespace']['Cp'] = 0.1
+        # self.output_synapse['namespace']['Cd'] =0.3
+
+
+        if self.output_synapse['namespace']['Apre'] >= 0:
+            self.output_synapse['pre_eq'] = '''
+                        %s+=wght
+                        apre += Apre * wght0 * Cp
+                        wght = clip(wght + apost, 0, wght_max)
+                        ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] +  '_post')
+        else:
+            self.output_synapse['pre_eq'] = '''
+                        %s+=wght
+                        apre += Apre * wght * Cd
+                        wght = clip(wght + apost, 0, wght_max)
+                        ''' % (self.output_synapse['receptor']+self.output_synapse['post_comp_name'] + '_post')
+        if self.output_synapse['namespace']['Apost'] <= 0:
+            self.output_synapse['post_eq'] = '''
+                        apost += Apost * wght * Cd
+                        wght = clip(wght + apre, 0, wght_max)
+                        '''
+        else:
+            self.output_synapse['post_eq'] = '''
+                        apost += Apost * wght0 * Cp
+                        wght = clip(wght + apre, 0, wght_max)
+                        '''
 

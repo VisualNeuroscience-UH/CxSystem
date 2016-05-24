@@ -80,6 +80,29 @@ class synapse_namespaces(object):
     stdp_Nsweeps = 60  # 60 in papers one does multiple trials to reach +-50% change in synapse strength. A-coefficien will be divided by this number
     stdp_max_strength_coefficient = 15  # to avoid runaway plasticity
 
+    conn_prob_gain = 10  # This is used for compensation of small number of neurons and thus incoming synapses
+    sp = {'sp01': 0.38 * conn_prob_gain,
+               # 3.2 x release sites, 1.5 x release probability of corticocortical connections. # Was 1 * conn_prob_gain, # the 1 is from hat. thalamocortical probability
+               'sp02a': 0.38 * conn_prob_gain,  # 1 * conn_prob_gain ,
+               'sp11': 0.081 * conn_prob_gain,
+               # Unweighted averages of within layer connections from nmc-portal. Connections with small number of synapses dropped
+               'sp12a': 0.053 * conn_prob_gain,
+               # Average for E-I conn across layers, large and small baskett cells, nmc-portal
+               'sp12b': 0.058 * conn_prob_gain,
+               'sp2a1': 0.071 * conn_prob_gain,  # Average N synapses for I-conn, Markram et al Cell 2015
+               'sp2b1': 0.081 * conn_prob_gain,
+               'sp2a2a': 0.05 * conn_prob_gain,  # Average N synapses for I-conn, NMC portel
+               'sp2b2b': 0.08 * conn_prob_gain,  # NMC portel
+               'sp1Xe': 0.081 * conn_prob_gain,
+               'spXeXi': 0.053 * conn_prob_gain,  # from basket cells only
+               'spXbasalXe': .016,
+               'sp1Xi': 0.053 * conn_prob_gain,  # Check connection: spreads activation like grazy
+               'spXiXe': 0.071 * conn_prob_gain,
+               'spXe1': 0.081 * conn_prob_gain,  # using local here, update when data available
+               'spXe2a': 0.053 * conn_prob_gain,
+               'spXe2b': 0.058 * conn_prob_gain
+               #                   'sp_development' : 2.5  # for plastic synapses
+               }
 
     def __init__(self,output_synapse):
             # synapse_namespaces.type_ref = array (['STDP'])
@@ -94,7 +117,7 @@ class synapse_namespaces(object):
             self.output_namespace['wght0'] = synapse_namespaces.cw['cw%s%s'% (output_synapse['pre_group_idx'],output_synapse['post_group_idx'])]
             self.output_namespace['Cp'] = synapse_namespaces.Cp
             self.output_namespace['Cd'] = synapse_namespaces.Cd
-
+            self.probabiliy = synapse_namespaces.sp['sp%d%d'%()]
 
 
             # output_synapse['namespace']['Apre'], output_synapse['namespace']['Apost'], output_synapse['namespace']['taupre'], \
@@ -107,7 +130,8 @@ class synapse_namespaces(object):
 
 
 
-#############################################
+
+    #############################################
 ##################### Neurons  #############
 ############################################
 
@@ -119,6 +143,9 @@ class neuron_namespaces (object):
         assert output_neuron['type'] in neuron_namespaces.type_ref, "Error: cell type '%s' is not defined." % output_neuron['category']
         self.output_namespace = {}
         getattr(neuron_namespaces, output_neuron['type'])(self,output_neuron)
+
+
+
     def PC(self,output_neuron):
         '''
         :param parameters_type: The type of parameters associated to compartmental neurons. 'Generic' is the common type. Other types could be defined when discovered in literature.
@@ -145,7 +172,6 @@ class neuron_namespaces (object):
         }
 
 
-        self.output_namespace = {}
         # total capacitance in compartmens. The *2 comes from Markram et al Cell 2015: corrects for the deindritic spine area
         self.output_namespace['C']= fract_areas[output_neuron['dend_comp_num']] * Cm * Area_tot_pyram * 2
         # total g_leak in compartments
@@ -172,5 +198,94 @@ class neuron_namespaces (object):
         self.output_namespace['tau_eX'] = 1.7 * ms
         self.output_namespace['tau_i'] = 8.3 * ms
         # return self.final_namespace
-    def soma_only (self,parameters_type):
-        parameter_ref = array(['Generic'])
+
+
+
+    def _BC(self):
+        self.output_namespace['C'] = 100 * pF  # Somatosensory cortex,
+        # Beierlein 2000 - Badel et al., 2008: 90 pF
+
+        self.output_namespace['gL'] = 10 * nS  # Beierlein 2000 -  Badel et al -> 10 nS (calculated from tau_m)
+        self.output_namespace['taum'] = self.output_namespace['C'] / self.output_namespace['gL']  # Badel et al. 2008: 9 ms
+
+        self.output_namespace['EL'] = -67.66 * mV  # mean of neuro-electro portal#-64 * mV # Badel et al. 2008
+        self.output_namespace['VT'] = -38.8 * mV  # mean of neuro-electro portal#self.output_namespace['EL'] + 15  * mV # Badel et al. 2008  #15
+        self.output_namespace['V_res'] = self.output_namespace['VT'] - 4 * mV  # -55 * mV #self.output_namespace['VT']-4*mV
+        self.output_namespace['DeltaT'] = 2 * mV
+        self.output_namespace['Vcut'] = self.output_namespace['VT'] + 5 * self.output_namespace['DeltaT']
+        self.output_namespace['Ee'] = 0 * mV
+        self.output_namespace['Ei'] = -75 * mV
+        self.output_namespace['tau_e'] = 1.7 * ms  # Markram Cell 2015
+        self.output_namespace['tau_i'] = 8.3 * ms  # Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5)
+
+
+
+    def _L1i(self):
+        self.output_namespace['C'] = 100 * pF  # Somatosensory cortex,
+        # Beierlein 2000 - Badel et al., 2008: 90 pF
+
+        self.output_namespace['gL'] = 10 * nS  # Beierlein 2000 -  Badel et al -> 10 nS (calculated from tau_m)
+        self.output_namespace['taum'] = self.output_namespace['C'] / self.output_namespace[
+            'gL']  # Badel et al. 2008: 9 ms
+
+        self.output_namespace['EL'] = -67.66 * mV  # mean of neuro-electro portal#-64 * mV # Badel et al. 2008
+        self.output_namespace[
+            'VT'] = -38.8 * mV  # mean of neuro-electro portal#self.output_namespace['EL'] + 15  * mV # Badel et al. 2008  #15
+        self.output_namespace['V_res'] = self.output_namespace[
+                                             'VT'] - 4 * mV  # -55 * mV #self.output_namespace['VT']-4*mV
+        self.output_namespace['DeltaT'] = 2 * mV
+        self.output_namespace['Vcut'] = self.output_namespace['VT'] + 5 * self.output_namespace['DeltaT']
+        self.output_namespace['Ee'] = 0 * mV
+        self.output_namespace['Ei'] = -75 * mV
+        self.output_namespace['tau_e'] = 1.7 * ms  # Markram Cell 2015
+        self.output_namespace[
+            'tau_i'] = 8.3 * ms  # Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5)
+
+
+
+    def _MC(self):
+        self.output_namespace['C'] = 92.1 * pF  # 92.1 +- 8.4, Paluszkiewicz 2011 J Neurophysiol
+        self.output_namespace['taum'] = 21.22 * ms  # HIGHLY VARYING 21.22 +- 11.2, N=3; Tau_m = 9.7 +- 1.3 Takesian 2012 J Neurophysiol; 17.57 +- 9.24 Wang 2004 J Physiol; 36.4 +- 3.7 Paluszkiewicz 2011 J Neurophysiol
+        self.output_namespace['gL'] = self.output_namespace['C'] / self.output_namespace['taum']
+        #        self.output_namespace['taum'] = self.output_namespace['C'] / self.output_namespace['gL'] from FS neurons
+
+        self.output_namespace['EL'] = -60.38 * mV  # = Vr
+        self.output_namespace['VT'] = -42.29 * mV
+        self.output_namespace['V_res'] = self.output_namespace['VT'] - 4 * mV  # -55 * mV #self.output_namespace['VT']-4*mV # inherited from FS
+        self.output_namespace['DeltaT'] = 2 * mV  # inherited from FS
+        self.output_namespace['Vcut'] = self.output_namespace['VT'] + 5 * self.output_namespace['DeltaT']  # inherited from FS
+        self.output_namespace['Ee'] = 0 * mV  # inherited from FS
+        self.output_namespace['Ei'] = -75 * mV
+        self.output_namespace['tau_e'] = 1.7 * ms  # Markram Cell 2015
+        self.output_namespace['tau_i'] = 8.3 * ms  # Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5)
+
+
+    def _SS(self):
+        # Capacitance, multiplied by the compartmental area to get the final C(compartment)
+        Cm = (1 * ufarad * cm ** -2)
+        # leak conductance, -''-  Amatrudo et al, 2005 (ja muut) - tuned down to fix R_in
+        gl = (4.2e-5 * siemens * cm ** -2)
+        Area_tot_pyram = 25000 * .75 * um ** 2
+        self.output_namespace['C'] =  0.03 * Cm * Area_tot_pyram * 2 # ? is it correct to take the soma part for here
+        # total g_leak in compartments
+        self.output_namespace['gL'] = 0.03 * gl * Area_tot_pyram
+
+        self.output_namespace['Vr'] = -70.11 * mV
+        self.output_namespace['EL'] = -70.11 * mV
+        self.output_namespace['VT'] = -41.61 * mV
+        self.output_namespace['V_res'] = -70.11 * mV
+        self.output_namespace['DeltaT'] = 2 * mV
+        self.output_namespace['Vcut'] = -25 * mV
+
+        # Dendritic parameters, index refers to layer-specific params
+        self.output_namespace['Ee'] = 0 * mV
+        self.output_namespace['Ei'] = -75 * mV
+        self.output_namespace['Ed'] = -70.11 * mV
+
+        # Connection parameters between compartments
+        self.output_namespace['Ra'] = [100, 80, 150, 150, 200] * Mohm
+        self.output_namespace['tau_e'] = 1.7 * ms
+        self.output_namespace['tau_eX'] = 1.7 * ms
+        self.output_namespace['tau_i'] = 8.3 * ms
+        # return self.final_namespace
+
