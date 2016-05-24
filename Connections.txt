@@ -16,5 +16,5 @@
 #        target_compartment_number
 
 [G] 10 PC multicomp [4,1]
-#[G] 15 PC multicomp [2,1]
-[S] ge 0 1[C]001 STDP
+[G] 15 PC multicomp [2,1]
+[S] ge 0 1[C]02 STDP
