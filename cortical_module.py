@@ -4,7 +4,7 @@ import brian2genn
 import os
 from Definitions import *
 import brian2genn_tester as bt
-set_device('genn')
+
 class cortical_module:
     'A customizable model of cortical module for Brian2Genn'
     _NeuronGroup_prefix = 'NG'
@@ -29,17 +29,19 @@ class cortical_module:
         is_tag = ['[']
         self.name = name
         self.syntax_bank = {}
-        self.syntax_bank['NeuronGroups'] = []
         self.syntax_bank['Ingredients'] = []
-        self.syntax_bank['Synapses'] = []
+        self.syntax_bank['NeuronGroups'] = []
+        self.syntax_bank['NeuronGroups_init'] = []
         self.syntax_bank['Synapses_params'] = []
-        self.customized_neurons = []
-        self.customized_synapses = []
+        self.syntax_bank['Synapses'] = []
+        self.customized_neurons_list = []
+        self.customized_synapses_list = []
         self.neurongroups_list = []
         self.synapses_list = []
         with open (path, 'r') as f :
             for line in f:
                 if line[0]  in is_tag :
+                    line = line[line.index(']')+1:]
                     tag = line[line.index('['):line.index(']')+1]
                     assert tag in _options.keys(), 'The tag %s is not defined.'%tag
                 else:
@@ -51,7 +53,7 @@ class cortical_module:
                 _options[tag](args)
 
 
-        print "Cortical Module initialization Done Create an example connection "
+        print "Cortical Module initialization Done."
 
         # indices = array([0, 1, 2])
         # times = array([1, 2, 3])*ms
@@ -83,23 +85,21 @@ class cortical_module:
     def neuron_group (self, *args ):
 
         args = args[0]
-        current_idx=  len(self.customized_neurons)
+        current_idx=  len(self.customized_neurons_list)
         if args[1] == 'PC' :
-            exec 'args[3] = array(' + args[3] + ')'
-        else:
-            args[3] = int(args[3])
-        self.customized_neurons.append(customized_neuron (*args[0:4]).output_neuron) # layer_idx is created by dynamic compiler
-        if len(args) > 4: # in case of threshold/reset/refractory overwrite
-            for arg_idx in range (4,len(args)):
+            exec 'args[2] = array(' + args[2] + ')'
+        self.customized_neurons_list.append(customized_neuron (*args[0:3]).output_neuron) # layer_idx is created by dynamic compiler
+        if len(args) > 3: # in case of threshold/reset/refractory overwrite
+            for arg_idx in range (3,len(args)):
                 if 'threshold' in args[arg_idx] :
                     args[arg_idx] = args[arg_idx][args[arg_idx].index("'")+1:-2]
-                    self.customized_neurons[-1]['threshold'] = args[arg_idx]
+                    self.customized_neurons_list[-1]['threshold'] = args[arg_idx]
                 elif 'reset' in args[arg_idx]:
                     args[arg_idx] = args[arg_idx][args[arg_idx].index("'")+1:-2]
-                    self.customized_neurons[-1]['reset'] = args[arg_idx]
+                    self.customized_neurons_list[-1]['reset'] = args[arg_idx]
                 elif 'refractory' in args[arg_idx]:
                     args[arg_idx] = args[arg_idx][args[arg_idx].index("'")+1:-2]
-                    self.customized_neurons[-1]['refractory'] =  args[arg_idx]
+                    self.customized_neurons_list[-1]['refractory'] =  args[arg_idx]
         NG_name = self._NeuronGroup_prefix + str(current_idx) + '_' + args[1]
         self.neurongroups_list.append(NG_name)
         NN_name = self._NeuronNumber_prefix + str(current_idx)
@@ -109,20 +109,27 @@ class cortical_module:
         NRef_name = self._NeuronRef_prefix + str(current_idx)
         NNS_name = self._NeuronNS_prefix + str(current_idx)
 
-        NN_str = "%s=%s.customized_neurons[%d]['number_of_neurons']"% (NN_name, self.name ,current_idx)
-        NE_str= "%s=%s.customized_neurons[%d]['equation']"% (NE_name ,self.name , current_idx)
-        NT_str = "%s=%s.customized_neurons[%d]['threshold']"%(NT_name ,self.name ,current_idx)
-        NRes_str = "%s=%s.customized_neurons[%d]['reset']"% (NRes_name,self.name , current_idx)
-        NRef_str = "%s=%s.customized_neurons[%d]['refractory']"% (NRef_name,self.name,current_idx)
-        NNS_str  = "%s=%s.customized_neurons[%d]['namespace']"% (NNS_name,self.name,current_idx)
+        NN_str = "%s=%s.customized_neurons_list[%d]['number_of_neurons']"% (NN_name, self.name ,current_idx)
+        NE_str= "%s=%s.customized_neurons_list[%d]['equation']"% (NE_name ,self.name , current_idx)
+        NT_str = "%s=%s.customized_neurons_list[%d]['threshold']"%(NT_name ,self.name ,current_idx)
+        NRes_str = "%s=%s.customized_neurons_list[%d]['reset']"% (NRes_name,self.name , current_idx)
+        NRef_str = "%s=%s.customized_neurons_list[%d]['refractory']"% (NRef_name,self.name,current_idx)
+        NNS_str  = "%s=%s.customized_neurons_list[%d]['namespace']"% (NNS_name,self.name,current_idx)
         self.syntax_bank['Ingredients'].extend([NN_str,NE_str,NT_str,NRes_str,NRef_str,NNS_str])
 
         NG_str = "%s= NeuronGroup(%s, model=%s, threshold=%s, reset=%s,refractory = %s, namespace = %s)" \
                  % (NG_name , NN_name , NE_name,NT_name, NRes_name, NRef_name , NNS_name)
         self.syntax_bank['NeuronGroups'].append(NG_str)
 
-        # tmp_str = "self.%s = NeuronGroup(self.customized_neurons[-1]['number_of_neurons'], model=self.customized_neurons[-1]['equation'], threshold='vm>Vcut', reset='vm=V_res', \
-        #             refractory = '4 * ms', namespace =self.customized_neurons[-1]['namespace'])" %group_name
+        NG_init = 'Vr_offset = rand(len(%s))\n'%NG_name
+        NG_init += "for _key in %s.variables.keys():\n"%NG_name
+        NG_init += "\tif _key.find('vm')>=0:\n"
+        NG_init += "\t\tsetattr(%s,_key,%s['Vr']+Vr_offset * (%s['VT']-%s['Vr']))\n"%(NG_name,NNS_name,NNS_name,NNS_name)
+        NG_init += "\telif ((_key.find('ge')>=0) or (_key.find('gi')>=0)):\n"
+        NG_init += "\t\tsetattr(%s,_key,0)" %NG_name
+        self.syntax_bank['NeuronGroups_init'].append(NG_init)
+        # tmp_str = "self.%s = NeuronGroup(self.customized_neurons_list[-1]['number_of_neurons'], model=self.customized_neurons_list[-1]['equation'], threshold='vm>Vcut', reset='vm=V_res', \
+        #             refractory = '4 * ms', namespace =self.customized_neurons_list[-1]['namespace'])" %group_name
 
     # N1 = NeuronGroup(1000, model=p['equation'], threshold='vm>Vcut', reset='vm=V_res', refractory = '2 * ms', namespace = p['namespace'])
 
@@ -132,15 +139,19 @@ class cortical_module:
         _options = {
             '[C]': self.neuron_group,
         }
-        _is_tag = ['[']
+        # _is_tag = ['[']
         # args = args[0]
-        if len(args[0][2])> 1:
+        if len(args[0][2])> 1 and '[' in args[0][2]:
             arg = args[0][2]
             tag = arg[arg.index('['):arg.index(']') + 1]
             assert tag in _options.keys(), 'The synaptic tag %s is not defined.' % tag
             if tag == '[C]':
                 _post_group_idx , _post_com_idx = arg.split('[' + 'C' + ']')
                 args[0][2] = _post_group_idx
+                assert self.customized_neurons_list[int(args[0][2])]['type'] == 'PC'  , 'A compartment is targetted but the neuron geroup is not PC. Check Synapses in the configuration file.'
+                _pre_type = self.customized_neurons_list[int(args[0][1])]['type']
+                _post_type = self.customized_neurons_list[int(args[0][2])]['type']
+                args[0].extend([_pre_type,_post_type])
                 if _post_com_idx[0] == '0':
                     if len(_post_com_idx) == 1:
                         triple_args = []
@@ -170,30 +181,33 @@ class cortical_module:
                         args = triple_args
                 elif int(_post_com_idx) > 0 :
                     args[0].append('_a'+str(_post_com_idx))
+        else:
+            _pre_type = self.customized_neurons_list[int(args[0][1])]['type']
+            _post_type = self.customized_neurons_list[int(args[0][2])]['type']
+            args[0].extend([_pre_type,_post_type])
         for syn in args :
-            current_idx = len(self.customized_synapses)
-            self.customized_synapses.append(customized_synapse(*syn).output_synapse)
-            group_name = '%s%d_%s' % (self._Synapses_prefix, current_idx, syn[3])
-            S_name = self._Synapses_prefix+str(current_idx) + '_' + syn[-2]
+            current_idx = len(self.customized_synapses_list)
+            self.customized_synapses_list.append(customized_synapse(*syn).output_synapse)
+            S_name = self._Synapses_prefix+str(current_idx) + '_' + syn[3]
             self.synapses_list.append(S_name)
             SE_name= self._SynapsesEquation_prefix + str(current_idx)
             SPre_name=  self._SynapsesPre_prefix + str(current_idx)
             SPost_name = self._SynapsesPost_prefix + str(current_idx)
             SNS_name = self._SynapsesNS_prefix + str(current_idx)
 
-            SE_str= "%s=%s.customized_synapses[%d]['equation']" %(SE_name,self.name,current_idx)
-            SPre_str = "%s=%s.customized_synapses[%d]['pre_eq']" %(SPre_name,self.name,current_idx)
-            SPost_str = "%s=%s.customized_synapses[%d]['post_eq']" % (SPost_name, self.name, current_idx)
-            SNS_str = "%s=%s.customized_synapses[%d]['namespace']" % (SNS_name, self.name, current_idx)
+            SE_str= "%s=%s.customized_synapses_list[%d]['equation']" %(SE_name,self.name,current_idx)
+            SPre_str = "%s=%s.customized_synapses_list[%d]['pre_eq']" %(SPre_name,self.name,current_idx)
+            SPost_str = "%s=%s.customized_synapses_list[%d]['post_eq']" % (SPost_name, self.name, current_idx)
+            SNS_str = "%s=%s.customized_synapses_list[%d]['namespace']" % (SNS_name, self.name, current_idx)
             self.syntax_bank['Ingredients'].extend([SE_str,SPre_str,SPost_str,SNS_str])
 
 
             S_str = "%s = Synapses(%s,%s,model = %s, pre = %s, post = %s, namespace= %s)"\
-                      %(S_name,self.neurongroups_list[self.customized_synapses[-1]['pre_group_idx']], \
-                        self.neurongroups_list[self.customized_synapses[-1]['post_group_idx']],SE_name,SPre_name,SPost_name, SNS_name)
+                      %(S_name,self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
+                        self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']],SE_name,SPre_name,SPost_name, SNS_name)
             self.syntax_bank['Synapses'].append(S_str)
-            SC_str = "%s.connect(p=%f)"%S_name,
-            SW_str = "%s.wght=%s['wght0']" %(group_name,SNS_name)
+            SC_str = "%s.connect('i!=j',p=%f)"%(S_name,self.customized_synapses_list[-1]['probability'])
+            SW_str = "%s.wght=%s['wght0']" %(S_name,SNS_name)
             self.syntax_bank['Synapses_params'].extend([SC_str, SW_str])
 
 # if targ_type == 'PC' and targ_comp_idx == 0:
@@ -246,10 +260,12 @@ CM = cortical_module (os.path.dirname(os.path.realpath(__file__)) + '/Connection
 # axarr[3].plot(s_mon1.t / ms, s_mon1.vm_a1[0])
 # axarr[4].plot(s_mon2.t / ms, s_mon2.vm_a2[0])
 # show()
-
+set_device('genn')
 for syntax in CM.syntax_bank['Ingredients'] :
     exec syntax
 for syntax in CM.syntax_bank['NeuronGroups'] :
+    exec syntax
+for syntax in CM.syntax_bank['NeuronGroups_init']:
     exec syntax
 for syntax in CM.syntax_bank['Synapses']:
     exec syntax
@@ -258,36 +274,17 @@ for syntax in CM.syntax_bank['Synapses_params']:
 
 
 
-
-
-
-
-
-# eqs = bt.eqs
-# names = bt.names
-# q = 10
-# tmp_str = "G%d = NeuronGroup(q , model = eqs,threshold='vm>Vcut', reset='vm=V_res', refractory = '4 * ms', namespace= names)" %1
-# exec tmp_str
-# H = bt.H_group
-#
-# eq = bt.eq
-# pre = bt.pre
-# post = bt.post
-# syn_names = bt.syn_names
-# S = Synapses(G, H, model= eq,pre = pre, post=post,namespace=syn_names)
-# S.connect(4,5)
-
-indices = array([0, 1, 2])
-times = array([1, 2, 3])*ms
+# indices = array([0, 1, 2])
+# times = array([1, 2, 3])*ms
 # Ge = SpikeGeneratorGroup(3, indices, times)
 # forward = Synapses(Ge,G,  connect='i==j')
 # s_mon1 = SpikeMonitor(Ge)
 # s_mon2 = SpikeMonitor(G)
-s_mon_b = StateMonitor(NG0_PC,'vm_basal',record = 0)
-s_mon = StateMonitor(NG0_PC,'vm',record=0)
-s_mon0 = StateMonitor(NG0_PC,'vm_a0',record=0)
-s_mon1 = StateMonitor(NG0_PC,'vm_a1',record=0)
-s_mon2 = StateMonitor(NG0_PC,'vm_a2',record=0)
+s_mon_b = StateMonitor(NG15_L1i,'vm',record = 0)
+s_mon = StateMonitor(NG1_PC,'vm',record=0)
+# s_mon0 = StateMonitor(NG2_L1i,'vm',record=0)
+# s_mon1 = StateMonitor(NG0_SS,'vm_a1',record=0)
+# s_mon2 = StateMonitor(NG0_SS,'vm_a2',record=0)
 
 
 run(101*ms)
@@ -296,12 +293,12 @@ device.build(directory='tester',
              run=True,
              use_GPU=True)
 
-f, axarr = plt.subplots(5, sharex=True)
-axarr[0].plot(s_mon_b.t / ms, s_mon_b.vm_basal[0])
+f, axarr = plt.subplots(2, sharex=True)
+axarr[0].plot(s_mon_b.t / ms, s_mon_b.vm[0])
 axarr[1].plot(s_mon.t / ms, s_mon.vm[0])
-axarr[2].plot(s_mon0.t / ms, s_mon0.vm_a0[0])
-axarr[3].plot(s_mon1.t / ms, s_mon1.vm_a1[0])
-axarr[4].plot(s_mon2.t / ms, s_mon2.vm_a2[0])
+# axarr[2].plot(s_mon0.t / ms, s_mon0.vm[0])
+# axarr[3].plot(s_mon1.t / ms, s_mon1.vm_a1[0])
+# axarr[4].plot(s_mon2.t / ms, s_mon2.vm_a2[0])
 # plot(s_mon2.t / ms, s_mon2.i, '.k')
 # xlabel('Time (ms)')
 # ylabel('Neuron index')

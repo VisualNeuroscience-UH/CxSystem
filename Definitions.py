@@ -7,7 +7,7 @@ class customized_neuron(object):
     '''Using this class you will get a dictionary containing all parameters and variables that are needed to \
     create a group of that customized cell. This dictionary will eventually be used to build the cortical module.'''
     # This vairable is to keep track of all customized neurons do be able to draw it
-    def __init__(self, number_of_neurons,  cell_type,cell_category,  layers_idx ):
+    def __init__(self, number_of_neurons,  cell_type,  layers_idx ):
         '''
         :param cell_type: type of cell which is either PC, SS, BC, MC, Inh[?].
         :type cell_type: string
@@ -17,7 +17,7 @@ class customized_neuron(object):
         :type layers_idx: numpy array
         '''
         # check cell_type
-        customized_neuron._celltypes = array(['PC', 'SS', 'BC', 'MC'])
+        customized_neuron._celltypes = array(['PC', 'SS', 'BC', 'MC','L1i'])
         assert cell_type in customized_neuron._celltypes, "Error: cell type '%s' is not defined" %cell_type
         # check layers_idx
         assert len(layers_idx) < 3 , "Error: length of layers_idx array is larger than 2"
@@ -32,28 +32,26 @@ class customized_neuron(object):
         self.output_neuron['reset'] = 'vm=V_res'
         self.output_neuron['refractory'] =  '4 * ms'
         self.output_neuron['type'] = cell_type
-        self.output_neuron['category'] = cell_category
-        # self.output_neuron['namespace_type'] = namespace_type
-        # self.output_neuron['eq_category'] = eq_category
-        self.output_neuron['soma_layer'] = layers_idx[0]
+        self.output_neuron['soma_layer'] = int(layers_idx[0])
         # _comparts_tmp1 & 2 are for extracting the layer of the compartments if applicable
-        self._comparts_tmp1 = array(range (layers_idx[0]-1,layers_idx[1]-1,-1))
-        self._comparts_tmp2 = delete(self._comparts_tmp1,where(self._comparts_tmp1==3)) if 3 in self._comparts_tmp1 else self._comparts_tmp1
-        self.output_neuron['dends_layer'] = array([0]) if self.output_neuron['type'] != 'PC'  else self._comparts_tmp2
-        # number of compartments if applicable
-        self.output_neuron['dend_comp_num'] = len (self.output_neuron['dends_layer']) if self.output_neuron['dends_layer'].all() != 0 else array([0])
-        self.output_neuron['total_comp_num'] = self.output_neuron['dend_comp_num'] + 3 if self.output_neuron['type'] == 'PC' or  self.output_neuron['type'] == 'SS' else 1 # plus soma , proximal apical dendrite and basal dendrites which are in the same layer
+        if self.output_neuron['type'] == 'PC':
+            self._comparts_tmp1 = array(range (layers_idx[0]-1,layers_idx[1]-1,-1))
+            self._comparts_tmp2 = delete(self._comparts_tmp1,where(self._comparts_tmp1==3)) if 3 in self._comparts_tmp1 else self._comparts_tmp1
+            self.output_neuron['dends_layer'] = self._comparts_tmp2
+            self.output_neuron['dend_comp_num'] = len (self.output_neuron['dends_layer'])
+            self.output_neuron['total_comp_num'] = self.output_neuron['dend_comp_num'] + 3
+        else:
+            self.output_neuron['dends_layer'] = self.output_neuron['soma_layer']
+            self.output_neuron['dend_comp_num'] = array([0])
+            self.output_neuron['total_comp_num'] = array([1])
+            # number of compartments if applicable
+
         self.output_neuron['namespace'] = neuron_namespaces(self.output_neuron).output_namespace
         self.output_neuron['equation'] = ''
-        getattr(customized_neuron, self.output_neuron['type'])(self)
-        # self.output_neuron['equation'] = Equations(_eq_template_soma, gL=gL[N_comp], ge='ge_soma', geX='geX_soma',
-        # gi='gi_soma', gealpha='gealpha_soma', gealphaX='gealphaX_soma', gialpha='gialpha_soma',
-        # C=C[N_comp], I_dendr='Idendr_soma')
+        getattr(self, '_' + self.output_neuron['type'])()
+        print "Customized " + str(cell_type) + " neuron in layer "+ str(layers_idx) + " initialized"
 
-        #sorting the final dict to be neat
-        print "Customized cell initialized"
-
-    def PC(self):
+    def _PC(self):
         '''
         :param namespace_type: defines the category of the equation.
         :type namespace_type: str
@@ -78,7 +76,6 @@ class customized_neuron(object):
 
         #: The template for the somatic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
         eq_template_soma = '''
-        layers_idx : 1
         dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr) / C : volt (unless refractory)
         dge/dt = -ge/tau_e : siemens
         dgealpha/dt = (ge-gealpha)/tau_e : siemens
@@ -148,7 +145,7 @@ class customized_neuron(object):
             dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C : volt (unless refractory)
             dge/dt = -ge/tau_e : siemens  # This goes to synapses object in B2
             dgi/dt = -gi/tau_i : siemens  # This goes to synapses object in B2
-            ''')
+            ''', ge = 'ge_soma',gi='gi_soma')
 
 
     def _L1i(self):
@@ -156,7 +153,7 @@ class customized_neuron(object):
             dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C : volt (unless refractory)
             dge/dt = -ge/tau_e : siemens  # This goes to synapses object in B2
             dgi/dt = -gi/tau_i : siemens  # This goes to synapses object in B2
-            ''')
+            ''', ge = 'ge_soma',gi='gi_soma')
 
 
 
@@ -165,27 +162,17 @@ class customized_neuron(object):
             dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C : volt (unless refractory)
             dge/dt = -ge/tau_e : siemens  # This goes to synapses object in B2
             dgi/dt = -gi/tau_i : siemens  # This goes to synapses object in B2
-            ''')
+            ''', ge = 'ge_soma',gi='gi_soma')
 
     def _SS (self):
-        eq_template_soma = '''
-        layers_idx : 1
-        dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr) / C : volt (unless refractory)
-        dge/dt = -ge/tau_e : siemens
-        dgealpha/dt = (ge-gealpha)/tau_e : siemens
-        dgeX/dt = -geX/tau_eX : siemens
-        dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
-        dgi/dt = -gi/tau_i : siemens
-        dgialpha/dt = (gi-gialpha)/tau_i : siemens
-        '''
+        self.output_neuron['equation'] = Equations(  '''
+            dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C : volt (unless refractory)
+            dge/dt = -ge/tau_e : siemens  # This goes to synapses object in B2
+            dgi/dt = -gi/tau_i : siemens  # This goes to synapses object in B2
+            ''', ge = 'ge_soma',gi='gi_soma')
 
-        self.output_neuron['equation'] =  Equations(eq_template_soma, gL=self.output_neuron['namespace']['gL'][1],
-                                         ge='ge_soma', geX='geX_soma', gi='gi_soma', gealpha='gealpha_soma',
-                                         gealphaX='gealphaX_soma',
-                                         gialpha='gialpha_soma', C=self.output_neuron['namespace']['C'][1],
-                                         I_dendr='Idendr_soma')
 
-    #################
+#################
 #################
 ################# Synapses
 #################
@@ -194,7 +181,7 @@ class customized_neuron(object):
 
 
 class customized_synapse(object):
-    def __init__(self, receptor,pre_group_idx ,post_group_idx, syn_type, post_comp_name='_soma'):
+    def __init__(self, receptor,pre_group_idx ,post_group_idx, syn_type,pre_type,post_type, post_comp_name='_soma'):
         customized_synapse.syntypes = array(['STDP'])
         assert syn_type in customized_synapse.syntypes, "Error: cell type '%s' is not defined" % syn_type
         self.output_synapse = {}
@@ -203,14 +190,17 @@ class customized_synapse(object):
         # self.output_synapse['namespace_type'] = namespace_type
         # self.output_synapse['pre_type'] = pre_group_type
         self.output_synapse['pre_group_idx'] = int(pre_group_idx)
+        self.output_synapse['pre_group_type'] = pre_type
         # self.output_synapse['post_type'] = post_group_type
         self.output_synapse['post_group_idx'] = int(post_group_idx)
+        self.output_synapse['post_group_type'] = post_type
         self.output_synapse['post_comp_name'] = post_comp_name
-        self.output_synapse['probability'] =  synapse_namespaces.sp['sp']
+        _name_space = synapse_namespaces(self.output_synapse)
         self.output_synapse['namespace'] = {}
-        self.output_synapse['namespace'] = synapse_namespaces(self.output_synapse).output_namespace
+        self.output_synapse['namespace'] = _name_space.output_namespace
+        self.output_synapse['probability'] = _name_space.probabiliy
 
-        getattr(customized_synapse, self.output_synapse['type'])(self)
+        getattr(self, self.output_synapse['type'])()
 
     def STDP(self):
 
@@ -219,13 +209,6 @@ class customized_synapse(object):
             dapre/dt = -apre/taupre : siemens (event-driven)
             dapost/dt = -apost/taupost : siemens (event-driven)
             ''')
-        # self.output_synapse['namespace']['Apre'], self.output_synapse['namespace']['Apost'], self.output_synapse['namespace']['taupre'], self.output_synapse['namespace']['taupost'] = \
-        #     self.stdp['stdp%d%d%s' % (self.output_synapse['pre_group_idx'],self.output_synapse['post_group_idx'], self.output_synapse['post_comp_name'])]
-        # self.output_synapse['namespace']['wght_max'] = 0.72 * nS*8.1  *15
-        # self.output_synapse['namespace']['wght0'] = 0.72 * nS*8.1
-        # self.output_synapse['namespace']['Cp'] = 0.1
-        # self.output_synapse['namespace']['Cd'] =0.3
-
 
         if self.output_synapse['namespace']['Apre'] >= 0:
             self.output_synapse['pre_eq'] = '''
