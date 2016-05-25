@@ -1,8 +1,8 @@
 __author__ = 'V_AD'
 from brian2 import *
-
+import sys
 class synapse_namespaces(object):
-    weights = {
+    _weights = {
         'we_e': 0.72 * nS,
         'we_e2': 0.4 * nS,
         'we_e_FS': 0.72 * nS,  # Markram et al Cell 2015
@@ -21,88 +21,141 @@ class synapse_namespaces(object):
     gain_parameter_E = 3.6  # 0.17*3.6 # The 0.5 is for release probability/synapse
     gain_parameter_I = 13.9  # 0.6*13.9
     gain_parameter_TC = 8.1  # 0.17*8.1
-    cw = {'cw01': weights['we_e'] * gain_parameter_TC,
-                             # Putting this to dev gives only local sparse activation
-                             'cw02a': weights['we_e_FS'] * gain_parameter_TC,
-                             'cw12a': weights['we_e_FS'] * gain_parameter_E,
-                             'cw12b': weights['we_e_LTS'] * gain_parameter_E,
-                             'cw11': weights['we_e'] * gain_parameter_E,
-                             'cw11local': weights['we_elocal'] * gain_parameter_E,
-                             'cw2a1': weights['we_i'] * gain_parameter_I,  # *12,
-                             'cw2b1': weights['we_i'] * gain_parameter_I,
-                             'cw2a2a': weights['we_i'] * gain_parameter_I,
-                             'cw2b2b': weights['we_i'] * gain_parameter_I,
-                             'cwXbasalXe': weights['we_eX'] * gain_parameter_E,
-                             'cw1Xe': weights['we_e'] * gain_parameter_E,
-                             'cw1Xi': weights['we_eX'] * gain_parameter_E,
-                             'cwXeXi': weights['we_e2'] * gain_parameter_E,
-                             'cwXiXe': weights['we_i'] * gain_parameter_I,
-                             'cwXe1': weights['we_NMDA'] * gain_parameter_E,
-                             'cwXe2a': weights['we_eX'] * gain_parameter_E,
-                             'cwXe2b': weights['we_eX'] * gain_parameter_E
-                             }
-
-    stdp_Nsweeps = 60  # 60 in papers one does multiple trials to reach +-50% change in synapse strength. A-coefficien will be divided by this number
-    stdp_max_strength_coefficient = 15  # to avoid runaway plasticity
-    stdp = {
-        'stdp01_a4': [0, 0, inf, inf],
-        # Plasticity not implemented. Elsewhere assuming connectivity to compartments a3 and a4 only.
-        'stdp01_a3': [0, 0, inf, inf],
-        'stdp01_a2': [0, 0, inf, inf],
-        'stdp01_a1': [20 / 100., -21.5 / 100., 5.4 * ms, 124.7 * ms],  # BoD  WHY /100 , WHY not multiplied directly
-        'stdp01_a0': [20 / 100., -21.5 / 100., 5.4 * ms, 124.7 * ms],  # BoD
-        'stdp02a': [-46, -56, 39.9, 39.1],  # NBoD
-        'stdp11_a4': [-21, 42, 15, 103.4],  # BoD
-        'stdp11_a3': [7.50, 7.00, 15.00, 103.4],  # BoD
-        'stdp11_a2': [36, -28, 12.5, 103.4],  # BoD
-        'stdp11_a1': [76, -48, 15.9, 19.3],  # BoD
-        'stdp11_a0': [76, -48, 15.9, 19.3],  # BoD
-        'stdp12a': [-46, -56, 39.9, 39.1],  # BoD
-        'stdp12b': [240, -50, 7.1, 39.1],  # BoD
-        'stdp2a1': [0, 0, inf, inf],
-        'stdp2b1': [0, 0, inf, inf],
-        'stdp2a2a': [0, 0, inf, inf],
-        'stdp2b2b': [0, 0, inf, inf],
-        'stdp1Xe': [20, -21.5, 5.4, 124.7],  # NBoD
-        'stdpXeXi': [-46, -56, 39.9, 39.1],  # NBoD
-        'stdpXbasalXe': [0, 0, inf, inf],
-        'stdp1Xi': [-46, -56, 39.9, 39.1],  # NBoD
-        'stdpXiXe': [0, 0, inf, inf],
-        'stdpXe1_a4': [-21, 42, 15, 103.4],  # BoD
-        'stdpXe1_a3': [7.50, 7.00, 15.00, 103.4],  # BoD
-        'stdpXe1_a2': [36, -28, 12.5, 103.4],  # BoD
-        'stdpXe1_a1': [76, -48, 15.9, 19.3],  # BoD
-        'stdpXe1_a0': [76, -48, 15.9, 19.3],  # BoD
-        'stdpXe2a': [-46, -56, 39.9, 39.1],  # NBoD
-        'stdpXe2b': [240, -50, 7.1, 39.1],  # NBoD
-    }
+    cw = {
+        'cw_in_SS' : _weights['we_e']*gain_parameter_TC,
+        'cw_in_PC': _weights['we_e'] * gain_parameter_TC,
+        'cw_in_BC': _weights['we_e_FS']*gain_parameter_TC,
+        'cw_in_L1i': _weights['we_e_FS']*gain_parameter_TC,
+        'cw_SS_SS': _weights['we_e']*gain_parameter_E,
+        'cw_SS_PC': _weights['we_e']*gain_parameter_E,
+        'cw_SS_BC':_weights['we_eX']*gain_parameter_E,
+        'cw_SS_MC': _weights['we_eX']*gain_parameter_E,
+        'cw_SS_L1i': _weights['we_eX']*gain_parameter_E,
+        'cw_PC_SS': _weights['we_e']*gain_parameter_E,
+        'cw_PC_PC':_weights['we_e']*gain_parameter_E,
+        'cw_PC_BC':_weights['we_e_FS']*gain_parameter_E,
+        'cw_PC_MC':_weights['we_e_LTS']*gain_parameter_E,
+        'cw_PC_L2i':_weights['we_e_FS']*gain_parameter_E,
+        'cw_BC_SS':_weights['we_i']*gain_parameter_I,
+        'cw_BC_PC':_weights['we_i']*gain_parameter_I,
+        'cw_BC_BC':_weights['we_i']*gain_parameter_I,
+        'cw_BC_MC':_weights['we_i']*gain_parameter_I,
+        'cw_MC_SS':_weights['we_i']*gain_parameter_I,
+        'cw_MC_PC':_weights['we_i']*gain_parameter_I,
+        'cw_MC_BC':_weights['we_i']*gain_parameter_I,
+        'cw_MC_MC':_weights['we_i']*gain_parameter_I,
+        'cw_MC_L1i':_weights['we_i']*gain_parameter_I,
+        'cw_L1i_SS':_weights['we_i']*gain_parameter_I,
+        'cw_L1i_PC':_weights['we_i']*gain_parameter_I,
+        'cw_L1i_L1i':_weights['we_i']*gain_parameter_I
+        }
 
     stdp_Nsweeps = 60  # 60 in papers one does multiple trials to reach +-50% change in synapse strength. A-coefficien will be divided by this number
     stdp_max_strength_coefficient = 15  # to avoid runaway plasticity
 
     conn_prob_gain = 10  # This is used for compensation of small number of neurons and thus incoming synapses
-    sp = {'sp01': 0.38 * conn_prob_gain,
-               # 3.2 x release sites, 1.5 x release probability of corticocortical connections. # Was 1 * conn_prob_gain, # the 1 is from hat. thalamocortical probability
-               'sp02a': 0.38 * conn_prob_gain,  # 1 * conn_prob_gain ,
-               'sp11': 0.081 * conn_prob_gain,
-               # Unweighted averages of within layer connections from nmc-portal. Connections with small number of synapses dropped
-               'sp12a': 0.053 * conn_prob_gain,
-               # Average for E-I conn across layers, large and small baskett cells, nmc-portal
-               'sp12b': 0.058 * conn_prob_gain,
-               'sp2a1': 0.071 * conn_prob_gain,  # Average N synapses for I-conn, Markram et al Cell 2015
-               'sp2b1': 0.081 * conn_prob_gain,
-               'sp2a2a': 0.05 * conn_prob_gain,  # Average N synapses for I-conn, NMC portel
-               'sp2b2b': 0.08 * conn_prob_gain,  # NMC portel
-               'sp1Xe': 0.081 * conn_prob_gain,
-               'spXeXi': 0.053 * conn_prob_gain,  # from basket cells only
-               'spXbasalXe': .016,
-               'sp1Xi': 0.053 * conn_prob_gain,  # Check connection: spreads activation like grazy
-               'spXiXe': 0.071 * conn_prob_gain,
-               'spXe1': 0.081 * conn_prob_gain,  # using local here, update when data available
-               'spXe2a': 0.053 * conn_prob_gain,
-               'spXe2b': 0.058 * conn_prob_gain
-               #                   'sp_development' : 2.5  # for plastic synapses
-               }
+    sp = {
+        'sp_in_SS' : 0.38 * conn_prob_gain,
+        'sp_in_PC': 0.38 * conn_prob_gain,
+        'sp_in_BC': 0.38 * conn_prob_gain,
+        'sp_in_L1i':  0.38 * conn_prob_gain,
+        'sp_SS_SS': 0.081 * conn_prob_gain,
+        'sp_SS_PC':  0.081 * conn_prob_gain,
+        'sp_SS_BC': 0.053 * conn_prob_gain,
+        'sp_SS_MC': 0.058 * conn_prob_gain,
+        'sp_SS_L1i': 0.053 * conn_prob_gain,
+        'sp_PC_SS':0.081 * conn_prob_gain,
+        'sp_PC_PC':0.081 * conn_prob_gain,
+        'sp_PC_BC':0.053 * conn_prob_gain,
+        'sp_PC_MC':0.058 * conn_prob_gain,
+        'sp_PC_L2i':0.053 * conn_prob_gain,
+        'sp_BC_SS':0.071 * conn_prob_gain,
+        'sp_BC_PC': 0.05 * conn_prob_gain,
+        'sp_BC_BC':0.071 * conn_prob_gain,
+        'sp_BC_MC':0.071 * conn_prob_gain,
+        'sp_MC_SS':0.081 * conn_prob_gain,
+        'sp_MC_PC':0.081 * conn_prob_gain,
+        'sp_MC_BC':0.081 * conn_prob_gain,
+        'sp_MC_MC': 0.08 * conn_prob_gain,
+        'sp_MC_L1i':0.081 * conn_prob_gain,
+        'sp_L1i_SS': 0.071 * conn_prob_gain,
+        'sp_L1i_PC': 0.071 * conn_prob_gain,
+        'sp_L1i_L1i':0.05 * conn_prob_gain,
+          }
+    stdp_Nsweeps = 60  # 60 in papers one does multiple trials to reach +-50% change in synapse strength. A-coefficien will be divided by this number
+    stdp_max_strength_coefficient = 15  # to avoid runaway plasticity
+    stdp = {# instead of inf 2^32 -1 will be used
+        'stdp_in_SS_soma': [20, -21.5, 5.4 * ms, 124.7 * ms],
+        'stdp_in_PC_a4':[0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_in_PC_a3':[0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_in_PC_a2':[0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_in_PC_a1':[20, -21.5, 5.4 * ms, 124.7 * ms],
+        'stdp_in_PC_a0': [20, -21.5, 5.4 * ms, 124.7 * ms],
+        'stdp_in_PC_soma': [20, -21.5, 5.4 * ms, 124.7 * ms],
+        'stdp_in_PC_basal': [20, -21.5, 5.4 * ms, 124.7 * ms],
+        'stdp_in_BC_soma': [-46, -56, 39.9 * ms, 39.1 * ms],
+        'stdp_in_L1i_soma': [-46, -56, 39.9 * ms, 39.1 * ms],
+
+        'stdp_SS_SS_soma':  [76, -48, 15.9 * ms, 19.3 * ms],
+        'stdp_SS_PC_a4':  [-21, 42, 15 * ms, 103.4 * ms],
+        'stdp_SS_PC_a3':[7.50, 7.00, 15.00 * ms, 103.4 * ms],
+        'stdp_SS_PC_a2': [36, -28, 12.5 * ms, 103.4 * ms],
+        'stdp_SS_PC_a1': [76, -48, 15.9 * ms, 19.3 * ms],
+        'stdp_SS_PC_a0': [76, -48, 15.9 * ms, 19.3 * ms],
+        'stdp_SS_PC_soma': [76, -48, 15.9 * ms, 19.3 * ms],
+        'stdp_SS_PC_basal': [76, -48, 15.9 * ms, 19.3 * ms],
+        'stdp_SS_BC_soma': [-46,-56,39.9 * ms,39.1 * ms],
+        'stdp_SS_MC_soma': [240,-50, 7.1 * ms,39.1 * ms],
+        'stdp_SS_L1i_soma': [-46,-56,39.9 * ms,39.1 * ms],
+
+        'stdp_PC_SS_soma': [76, -48, 15.9 * ms, 19.3 * ms],
+        'stdp_PC_PC_a4': [-21, 42, 15 * ms, 103.4 * ms],
+        'stdp_PC_PC_a3': [7.50, 7.00, 15.00 * ms, 103.4 * ms],
+        'stdp_PC_PC_a2': [36, -28, 12.5 * ms, 103.4 * ms],
+        'stdp_PC_PC_a1': [76, -48, 15.9 * ms, 19.3 * ms],
+        'stdp_PC_PC_a0': [76, -48, 15.9 * ms, 19.3 * ms],
+        'stdp_PC_PC_soma': [76, -48, 15.9 * ms, 19.3 * ms],
+        'stdp_PC_PC_basal': [76, -48, 15.9 * ms, 19.3 * ms],
+        'stdp_PC_BC_soma':[-46,-56,39.9 * ms,39.1 * ms],
+        'stdp_PC_MC_soma': [240,-50, 7.1 * ms,39.1 * ms],
+        'stdp_PC_L1i_soma': [-46, -56, 39.9 * ms, 39.1 * ms],
+
+        'stdp_BC_SS_soma':  [0,0,2147483647 * ms,2147483647 * ms], # instead of inf 2^32 -1 will be used
+        'stdp_BC_PC_a4': [0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_BC_PC_a3':[0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_BC_PC_a2':[0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_BC_PC_a1': [0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_BC_PC_a0': [0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_BC_PC_soma':[0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_BC_PC_basal':[0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_BC_BC_soma': [0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_BC_MC_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
+
+        'stdp_MC_SS_soma':  [0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_MC_PC_a4': [0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_MC_PC_a3':[0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_MC_PC_a2':[0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_MC_PC_a1': [0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_MC_PC_a0': [0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_MC_PC_soma':[0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_MC_PC_basal':[0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_MC_BC_soma': [0,0,2147483647 * ms,2147483647 * ms],
+        'stdp_MC_MC_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
+        'stdp_MC_L1i_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
+
+        'stdp_L1i_SS_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
+        'stdp_L1i_PC_a4': [0, 0, 2147483647 * ms, 2147483647 * ms],
+        'stdp_L1i_PC_a3': [0, 0, 2147483647 * ms, 2147483647 * ms],
+        'stdp_L1i_PC_a2': [0, 0, 2147483647 * ms, 2147483647 * ms],
+        'stdp_L1i_PC_a1': [0, 0, 2147483647 * ms, 2147483647 * ms],
+        'stdp_L1i_PC_a0': [0, 0, 2147483647 * ms, 2147483647 * ms],
+        'stdp_L1i_PC_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
+        'stdp_L1i_PC_basal': [0, 0, 2147483647 * ms, 2147483647 * ms],
+        'stdp_L1i_L1i_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
+
+    }
+
+
 
     def __init__(self,output_synapse):
             # synapse_namespaces.type_ref = array (['STDP'])
@@ -111,13 +164,13 @@ class synapse_namespaces(object):
             # getattr(synapse_namespaces,output_synapse['type'])(self)
             self.output_namespace = {}
             self.output_namespace['Apre'], self.output_namespace['Apost'], self.output_namespace['taupre'], \
-            self.output_namespace['taupost'] = synapse_namespaces.stdp['stdp%d%d%s' % (output_synapse['pre_group_idx'], \
-                output_synapse['post_group_idx'], output_synapse['post_comp_name'])]
-            self.output_namespace['wght_max'] = synapse_namespaces.cw['cw%s%s'% (output_synapse['pre_group_idx'],output_synapse['post_group_idx'])] * synapse_namespaces.stdp_max_strength_coefficient
-            self.output_namespace['wght0'] = synapse_namespaces.cw['cw%s%s'% (output_synapse['pre_group_idx'],output_synapse['post_group_idx'])]
+            self.output_namespace['taupost'] = synapse_namespaces.stdp['stdp_%s_%s' % (output_synapse['pre_group_type'], \
+                output_synapse['post_group_type'] + output_synapse['post_comp_name'])]
+            self.output_namespace['wght_max'] = synapse_namespaces.cw['cw_%s_%s'% (output_synapse['pre_group_type'],output_synapse['post_group_type'])] * synapse_namespaces.stdp_max_strength_coefficient
+            self.output_namespace['wght0'] = synapse_namespaces.cw['cw_%s_%s'% (output_synapse['pre_group_type'],output_synapse['post_group_type'])]
             self.output_namespace['Cp'] = synapse_namespaces.Cp
             self.output_namespace['Cd'] = synapse_namespaces.Cd
-            self.probabiliy = synapse_namespaces.sp['sp%d%d'%()]
+            self.probabiliy = synapse_namespaces.sp['sp_%s_%s'%(output_synapse['pre_group_type'],output_synapse['post_group_type'])]
 
 
             # output_synapse['namespace']['Apre'], output_synapse['namespace']['Apost'], output_synapse['namespace']['taupre'], \
@@ -139,14 +192,14 @@ class synapse_namespaces(object):
 class neuron_namespaces (object):
     'This class embeds all parameter sets associated to all neuron types and will return it as a namespace in form of dictionary'
     def __init__(self, output_neuron):
-        neuron_namespaces.type_ref = array(['PC', 'SS', 'BC', 'MC'])
+        neuron_namespaces.type_ref = array(['PC', 'SS', 'BC', 'MC','L1i'])
         assert output_neuron['type'] in neuron_namespaces.type_ref, "Error: cell type '%s' is not defined." % output_neuron['category']
         self.output_namespace = {}
-        getattr(neuron_namespaces, output_neuron['type'])(self,output_neuron)
+        getattr(self, '_'+ output_neuron['type'])(output_neuron)
 
 
 
-    def PC(self,output_neuron):
+    def _PC(self,output_neuron):
         '''
         :param parameters_type: The type of parameters associated to compartmental neurons. 'Generic' is the common type. Other types could be defined when discovered in literature.
         :type parameters_type: String
@@ -201,13 +254,13 @@ class neuron_namespaces (object):
 
 
 
-    def _BC(self):
+    def _BC(self,output_neuron):
         self.output_namespace['C'] = 100 * pF  # Somatosensory cortex,
         # Beierlein 2000 - Badel et al., 2008: 90 pF
 
         self.output_namespace['gL'] = 10 * nS  # Beierlein 2000 -  Badel et al -> 10 nS (calculated from tau_m)
         self.output_namespace['taum'] = self.output_namespace['C'] / self.output_namespace['gL']  # Badel et al. 2008: 9 ms
-
+        self.output_namespace['Vr'] = -67.66 * mV
         self.output_namespace['EL'] = -67.66 * mV  # mean of neuro-electro portal#-64 * mV # Badel et al. 2008
         self.output_namespace['VT'] = -38.8 * mV  # mean of neuro-electro portal#self.output_namespace['EL'] + 15  * mV # Badel et al. 2008  #15
         self.output_namespace['V_res'] = self.output_namespace['VT'] - 4 * mV  # -55 * mV #self.output_namespace['VT']-4*mV
@@ -220,30 +273,26 @@ class neuron_namespaces (object):
 
 
 
-    def _L1i(self):
+    def _L1i(self,output_neuron):
         self.output_namespace['C'] = 100 * pF  # Somatosensory cortex,
         # Beierlein 2000 - Badel et al., 2008: 90 pF
 
         self.output_namespace['gL'] = 10 * nS  # Beierlein 2000 -  Badel et al -> 10 nS (calculated from tau_m)
-        self.output_namespace['taum'] = self.output_namespace['C'] / self.output_namespace[
-            'gL']  # Badel et al. 2008: 9 ms
-
+        self.output_namespace['taum'] = self.output_namespace['C'] / self.output_namespace['gL']  # Badel et al. 2008: 9 ms
+        self.output_namespace['Vr'] =-67.66 * mV
         self.output_namespace['EL'] = -67.66 * mV  # mean of neuro-electro portal#-64 * mV # Badel et al. 2008
-        self.output_namespace[
-            'VT'] = -38.8 * mV  # mean of neuro-electro portal#self.output_namespace['EL'] + 15  * mV # Badel et al. 2008  #15
-        self.output_namespace['V_res'] = self.output_namespace[
-                                             'VT'] - 4 * mV  # -55 * mV #self.output_namespace['VT']-4*mV
+        self.output_namespace['VT'] = -38.8 * mV  # mean of neuro-electro portal#self.output_namespace['EL'] + 15  * mV # Badel et al. 2008  #15
+        self.output_namespace['V_res'] = self.output_namespace['VT'] - 4 * mV  # -55 * mV #self.output_namespace['VT']-4*mV
         self.output_namespace['DeltaT'] = 2 * mV
         self.output_namespace['Vcut'] = self.output_namespace['VT'] + 5 * self.output_namespace['DeltaT']
         self.output_namespace['Ee'] = 0 * mV
         self.output_namespace['Ei'] = -75 * mV
         self.output_namespace['tau_e'] = 1.7 * ms  # Markram Cell 2015
-        self.output_namespace[
-            'tau_i'] = 8.3 * ms  # Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5)
+        self.output_namespace['tau_i'] = 8.3 * ms  # Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5)
 
 
 
-    def _MC(self):
+    def _MC(self,output_neuron):
         self.output_namespace['C'] = 92.1 * pF  # 92.1 +- 8.4, Paluszkiewicz 2011 J Neurophysiol
         self.output_namespace['taum'] = 21.22 * ms  # HIGHLY VARYING 21.22 +- 11.2, N=3; Tau_m = 9.7 +- 1.3 Takesian 2012 J Neurophysiol; 17.57 +- 9.24 Wang 2004 J Physiol; 36.4 +- 3.7 Paluszkiewicz 2011 J Neurophysiol
         self.output_namespace['gL'] = self.output_namespace['C'] / self.output_namespace['taum']
@@ -251,6 +300,7 @@ class neuron_namespaces (object):
 
         self.output_namespace['EL'] = -60.38 * mV  # = Vr
         self.output_namespace['VT'] = -42.29 * mV
+        self.output_namespace['Vr'] = -60.38 * mV
         self.output_namespace['V_res'] = self.output_namespace['VT'] - 4 * mV  # -55 * mV #self.output_namespace['VT']-4*mV # inherited from FS
         self.output_namespace['DeltaT'] = 2 * mV  # inherited from FS
         self.output_namespace['Vcut'] = self.output_namespace['VT'] + 5 * self.output_namespace['DeltaT']  # inherited from FS
@@ -260,7 +310,7 @@ class neuron_namespaces (object):
         self.output_namespace['tau_i'] = 8.3 * ms  # Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5)
 
 
-    def _SS(self):
+    def _SS(self,output_neuron):
         # Capacitance, multiplied by the compartmental area to get the final C(compartment)
         Cm = (1 * ufarad * cm ** -2)
         # leak conductance, -''-  Amatrudo et al, 2005 (ja muut) - tuned down to fix R_in
@@ -283,7 +333,7 @@ class neuron_namespaces (object):
         self.output_namespace['Ed'] = -70.11 * mV
 
         # Connection parameters between compartments
-        self.output_namespace['Ra'] = [100, 80, 150, 150, 200] * Mohm
+        self.output_namespace['Ra'] = 80 * Mohm
         self.output_namespace['tau_e'] = 1.7 * ms
         self.output_namespace['tau_eX'] = 1.7 * ms
         self.output_namespace['tau_i'] = 8.3 * ms
