@@ -24,7 +24,8 @@ class cortical_module:
     def __init__(self,path,name):
         _options = {
             '[G]': self.neuron_group,
-            '[S]' : self.synapse
+            '[S]': self.synapse,
+            '[IN]': self.relay
         }
         is_tag = ['[']
         self.name = name
@@ -52,36 +53,8 @@ class cortical_module:
                 args = line.split(' ')
                 _options[tag](args)
 
-
         print "Cortical Module initialization Done."
 
-        # indices = array([0, 1, 2])
-        # times = array([1, 2, 3])*ms
-        # G = SpikeGeneratorGroup(3, indices, times)
-        # forward = Synapses(G,self.N0,  connect='i==j')
-        # s_mon1 = SpikeMonitor(G)
-        # s_mon2 = SpikeMonitor(self.N0)
-        # s_mon3 = SpikeMonitor(self.N1)
-
-        # network_obj = Network(collect())
-        # for item in self.neurongroups_list +self.synapses_list:
-        #     network_obj.add(item)
-
-
-        # network_obj.run (1*second)
-
-
-        # figure()
-        # plot(s_mon1.t / ms, s_mon1.i, '.k')
-        # figure()
-        # plot(s_mon2.t / ms, s_mon2.i, '.k')
-        # figure()
-        # plot(s_mon3.t / ms, s_mon3.i, '.k')
-        # xlabel('Time (ms)')
-        # ylabel('Neuron index')
-        # show()
-    # def __str__(self):
-    #     print "A summary of this cortical module: "
     def neuron_group (self, *args ):
 
         args = args[0]
@@ -210,6 +183,32 @@ class cortical_module:
             SW_str = "%s.wght=%s['wght0']" %(S_name,SNS_name)
             self.syntax_bank['Synapses_params'].extend([SC_str, SW_str])
 
+    def relay(self,*args):
+        args = args[0]
+        current_idx=  len(self.customized_neurons_list)
+        relay_group = {}
+        relay_group['type'] = 'in'
+        self.customized_neurons_list.append(relay_group)
+        NG_name = self._NeuronGroup_prefix +str(current_idx) +'_' + 'relay'
+        self.neurongroups_list.append(NG_name)
+        NN_name = self._NeuronNumber_prefix + str(current_idx)
+        NE_name = self._NeuronEquation_prefix + str(current_idx)
+        NT_name = self._NeuronThreshold_prefix + str(current_idx)
+        NRes_name = self._NeuronReset_prefix + str(current_idx)
+        Eq= """'''emit_spike : 1
+            x : meter
+            y : meter'''"""
+        NN_str = "%s=%s" % (NN_name, args[0])
+        NE_str = "%s=%s" % (NE_name, Eq)
+        NT_str = "%s=%s" % (NT_name, "'emit_spike==1'")
+        NRes_str = "%s=%s" % (NRes_name, "'emit_spike=0'")
+        self.syntax_bank['Ingredients'].extend([NN_str, NE_str, NT_str, NRes_str])
+
+        NG_str = "%s= NeuronGroup(%s, model=%s, threshold=%s, reset=%s)" \
+                 % (NG_name, NN_name, NE_name, NT_name, NRes_name)
+        self.syntax_bank['NeuronGroups'].append(NG_str)
+
+
 # if targ_type == 'PC' and targ_comp_idx == 0:
 #     self.output_synapse['targ_comp_name'] = ['_basal', '_soma', '_a0']
 
@@ -274,29 +273,39 @@ for syntax in CM.syntax_bank['Synapses_params']:
 
 
 
-# indices = array([0, 1, 2])
-# times = array([1, 2, 3])*ms
-# Ge = SpikeGeneratorGroup(3, indices, times)
-# forward = Synapses(Ge,G,  connect='i==j')
-# s_mon1 = SpikeMonitor(Ge)
-# s_mon2 = SpikeMonitor(G)
-s_mon_b = StateMonitor(NG15_L1i,'vm',record = 0)
-s_mon = StateMonitor(NG1_PC,'vm',record=0)
+# indices = arange(NN0)
+# all_idx = append(indices,indices)
+# all_idx = append(all_idx, indices)
+# times = repeat (array([10, 15, 25])*ms, NN0)
+Ge = SpikeGeneratorGroup(10, array([0,1,2,3,4]), array([20,100,120,50,280])*ms)
+forward = Synapses(Ge,NG16_relay, pre = 'emit_spike+=1',  connect='i==j')
+s_mon1 = SpikeMonitor(Ge)
+s_mon2 = SpikeMonitor(NG16_relay)
+s_mon3 = StateMonitor(NG15_L1i,'vm',record = True)
+# s_mon2 = StateMonitor(NG16_relay,'vm',record = True)
+# s_mon3 = StateMonitor(NG1_PC,'vm',record=[0,5,10])
 # s_mon0 = StateMonitor(NG2_L1i,'vm',record=0)
 # s_mon1 = StateMonitor(NG0_SS,'vm_a1',record=0)
 # s_mon2 = StateMonitor(NG0_SS,'vm_a2',record=0)
 
 
-run(101*ms)
+run(501*ms)
 device.build(directory='tester',
             compile=True,
              run=True,
              use_GPU=True)
 
-f, axarr = plt.subplots(2, sharex=True)
-axarr[0].plot(s_mon_b.t / ms, s_mon_b.vm[0])
-axarr[1].plot(s_mon.t / ms, s_mon.vm[0])
-# axarr[2].plot(s_mon0.t / ms, s_mon0.vm[0])
+f, axarr = plt.subplots(3, sharex=True)
+axarr[0].plot(s_mon1.t / ms, s_mon1.i,'.k')
+axarr[1].plot(s_mon2.t / ms, s_mon2.i,'.k')
+# axarr[2].plot(s_mon3.t / ms, s_mon3.i,'.k')
+axarr[2].plot(s_mon3.t / ms, s_mon3.vm[1])
+axarr[2].plot(s_mon3.t / ms, s_mon3.vm[2])
+axarr[2].plot(s_mon3.t / ms, s_mon3.vm[3])
+axarr[2].plot(s_mon3.t / ms, s_mon3.vm[4])
+#
+# axarr[2].plot(s_mon3.t / ms, s_mon3.vm[0])
+
 # axarr[3].plot(s_mon1.t / ms, s_mon1.vm_a1[0])
 # axarr[4].plot(s_mon2.t / ms, s_mon2.vm_a2[0])
 # plot(s_mon2.t / ms, s_mon2.i, '.k')
