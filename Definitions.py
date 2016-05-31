@@ -245,7 +245,7 @@ class customized_synapse(object):
     def STDP(self):
 
         self.output_synapse['equation'] = Equations('''
-            wght : siemens
+            wght:siemens
             dapre/dt = -apre/taupre : siemens (event-driven)
             dapost/dt = -apost/taupost : siemens (event-driven)
             ''')
