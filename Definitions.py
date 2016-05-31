@@ -7,7 +7,7 @@ class customized_neuron(object):
     '''Using this class you will get a dictionary containing all parameters and variables that are needed to \
     create a group of that customized cell. This dictionary will eventually be used to build the cortical module.'''
     # This vairable is to keep track of all customized neurons do be able to draw it
-    def __init__(self, number_of_neurons,  cell_type,  layers_idx ):
+    def __init__(self, number_of_neurons,  cell_type,  layers_idx , resolution = 0.1, network_center = 0 + 0j):
         '''
         :param cell_type: type of cell which is either PC, SS, BC, MC, Inh[?].
         :type cell_type: string
@@ -49,7 +49,34 @@ class customized_neuron(object):
         self.output_neuron['namespace'] = neuron_namespaces(self.output_neuron).output_namespace
         self.output_neuron['equation'] = ''
         getattr(self, '_' + self.output_neuron['type'])()
+        _M_V1 = 2.3
+        _dx = _M_V1* resolution
+        _grid_size = sqrt(self.output_neuron['number_of_neurons'])*_dx
+        self.output_neuron['positions'] = self._get_positions(self.output_neuron['number_of_neurons'],_grid_size,1,'array', network_center)
         print "Customized " + str(cell_type) + " neuron in layer "+ str(layers_idx) + " initialized"
+
+
+    def _get_positions(self, N, grid_size, scale, layout, networkcenter):
+
+        _pos_ndx=array(range(N))
+
+        # print N, grid_size, scale, layout
+
+    #        _positions = empty((N, 2))
+
+        _side = int(sqrt(N))
+        if layout == 'array':
+            _positions = (_pos_ndx/_side) + 1j * ( _pos_ndx%_side)
+            _positions = _positions/float(_side)*grid_size + networkcenter #SV change 030915
+            print "grid_size: " + str(grid_size)
+
+        else:
+            if layout == 'random':
+                _positions=grid_size*numpy.random.rand(N, 2)
+
+        return (_positions-0.5*grid_size*(1+1j))
+
+
 
     def _PC(self):
         '''
@@ -139,6 +166,9 @@ class customized_neuron(object):
                                          vmself="vm_a%d" % self.output_neuron['dend_comp_num'],
                                          vmpost="vm_a%d" % (self.output_neuron['dend_comp_num'] - 1))
 
+        self.output_neuron['equation'] +=  Equations('''x : meter
+                            y : meter''')
+
 
     def _BC(self):
         self.output_neuron['equation'] =   Equations(  '''
@@ -147,6 +177,9 @@ class customized_neuron(object):
             dgi/dt = -gi/tau_i : siemens  # This goes to synapses object in B2
             ''', ge = 'ge_soma',gi='gi_soma')
 
+        self.output_neuron['equation'] += Equations('''x : meter
+            y : meter''')
+
 
     def _L1i(self):
         self.output_neuron['equation'] =   Equations(  '''
@@ -154,6 +187,9 @@ class customized_neuron(object):
             dge/dt = -ge/tau_e : siemens  # This goes to synapses object in B2
             dgi/dt = -gi/tau_i : siemens  # This goes to synapses object in B2
             ''', ge = 'ge_soma',gi='gi_soma')
+
+        self.output_neuron['equation'] += Equations('''x : meter
+            y : meter''')
 
 
 
@@ -164,6 +200,8 @@ class customized_neuron(object):
             dgi/dt = -gi/tau_i : siemens  # This goes to synapses object in B2
             ''', ge = 'ge_soma',gi='gi_soma')
 
+        self.output_neuron['equation'] += Equations('''x : meter
+            y : meter''')
     def _SS (self):
         self.output_neuron['equation'] = Equations(  '''
             dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C : volt (unless refractory)
@@ -171,6 +209,8 @@ class customized_neuron(object):
             dgi/dt = -gi/tau_i : siemens  # This goes to synapses object in B2
             ''', ge = 'ge_soma',gi='gi_soma')
 
+        self.output_neuron['equation'] += Equations('''x : meter
+            y : meter''')
 
 #################
 #################
@@ -198,8 +238,8 @@ class customized_synapse(object):
         _name_space = synapse_namespaces(self.output_synapse)
         self.output_synapse['namespace'] = {}
         self.output_synapse['namespace'] = _name_space.output_namespace
-        self.output_synapse['probability'] = _name_space.probabiliy
-
+        self.output_synapse['sparseness'] = _name_space.sparseness
+        self.output_synapse['ilam'] = _name_space.ilam
         getattr(self, self.output_synapse['type'])()
 
     def STDP(self):
