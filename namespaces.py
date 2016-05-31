@@ -155,6 +155,38 @@ class synapse_namespaces(object):
 
     }
 
+    _M_V1 = 2.3
+
+    dist = {
+        'ilam_in_SS': 0.01/mm,
+        'ilam_in_PC': 0.01/mm,
+        'ilam_in_BC': 0.01/mm,
+        'ilam_in_L1i':0.01/mm,
+        'ilam_SS_SS':2.3 / _M_V1 / mm,
+        'ilam_SS_PC': 2.3 / _M_V1 / mm,
+        'ilam_SS_BC': 0.7 / _M_V1 / mm,
+        'ilam_SS_MC': 0.7 / _M_V1 / mm,
+        'ilam_SS_L1i': 0.7 / _M_V1 / mm,
+        'ilam_PC_SS': 2.3 / _M_V1 / mm,
+        'ilam_PC_PC': 2.3 / _M_V1 / mm,
+        'ilam_PC_BC':  2.3 / _M_V1 / mm,
+        'ilam_PC_MC': 2.3 / _M_V1 / mm,
+        'ilam_PC_L1i':  2.3 / _M_V1 / mm,
+        'ilam_BC_SS':2.3 / _M_V1 / mm,
+        'ilam_BC_PC':2.3 / _M_V1 / mm,
+        'ilam_BC_BC': 2.3 / _M_V1 / mm,
+        'ilam_BC_MC': 2.3 / _M_V1 / mm,
+        'ilam_MC_SS': 0.01/mm,
+        'ilam_MC_PC': 0.01/mm,
+        'ilam_MC_BC': 0.01/mm,
+        'ilam_MC_MC': 0.01/mm,
+        'ilam_MC_L1i': 0.01/mm,
+        'ilam_L1i_SS':2.3 / _M_V1 / mm,
+        'ilam_L1i_PC': 2.3 / _M_V1 / mm,
+        'ilam_L1i_L1i': 2.3 / _M_V1 / mm,
+
+    }
+
 
 
     def __init__(self,output_synapse):
@@ -170,8 +202,8 @@ class synapse_namespaces(object):
             self.output_namespace['wght0'] = synapse_namespaces.cw['cw_%s_%s'% (output_synapse['pre_group_type'],output_synapse['post_group_type'])]
             self.output_namespace['Cp'] = synapse_namespaces.Cp
             self.output_namespace['Cd'] = synapse_namespaces.Cd
-            self.probabiliy = synapse_namespaces.sp['sp_%s_%s'%(output_synapse['pre_group_type'],output_synapse['post_group_type'])]
-
+            self.sparseness = synapse_namespaces.sp['sp_%s_%s'%(output_synapse['pre_group_type'],output_synapse['post_group_type'])]
+            self.ilam = synapse_namespaces.dist['ilam_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])]
 
             # output_synapse['namespace']['Apre'], output_synapse['namespace']['Apost'], output_synapse['namespace']['taupre'], \
             #     output_synapse['namespace']['taupost'] = synapse_namespaces.stdp['stdp%d%d%s' % (output_synapse['pre_group_idx'], \
@@ -220,7 +252,7 @@ class neuron_namespaces (object):
             1: array([ 0.2 ,  0.03,  0.15,  0.2 ]),
             2: array([ 0.2 ,  0.03,  0.15,  0.15,  0.2 ]),
             3: array([ 0.2 ,  0.03,  0.15,  0.09,  0.15,  0.2 ]),
-            4: array([ 0.2 ,  0.03,  0.15,  0.5 ,  0.09,  0.15,  0.2 ])
+            4: array([ 0.2 ,  0.03,  0.15,  0.15 ,  0.09,  0.15,  0.2 ])
             #           basal  soma   a0     a1      a2      a3    a4
         }
 
@@ -236,7 +268,7 @@ class neuron_namespaces (object):
         self.output_namespace['VT']=-41.61 * mV
         self.output_namespace['V_res']=-70.11 * mV
         self.output_namespace['DeltaT']=2*mV
-        self.output_namespace['Vcut'] = -25 * mV
+        self.output_namespace['Vcut'] =-25 * mV
 
 
         # Dendritic parameters, index refers to layer-specific params
