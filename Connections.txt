@@ -17,7 +17,7 @@
 
 
 ### Neuron Groups
-[0][G] 46 SS 4 [M] [Sp] [St]ge_soma[dt]100,gi_soma[dt]120
+[0][G] 46 SS 4 [M] [Sp] [St]ge_soma+gi_soma
 [1][G] 75 PC [2,1]
 [2][G] 46 PC [4,2]
 [3][G] 46 PC [4,1]
@@ -34,8 +34,8 @@
 [14][G] 12 MC 6
 [15][G] 33 L1i 1
 [16][IN] 25
-[2][S] ge 0 2[C]002 STDP [M] [St]apre,wght[dt]100
-[2][S] ge 16 0 STDP [M] [St]apre,wght[dt]100
+#[2][S] ge 0 2[C]002 STDP [M] [St]apre,wght[dt]100
+#[2][S] ge 16 0 STDP [M] [St]apre,wght[dt]100
 [2][S] ge 0 8 STDP
 
 #[3][S] ge 6 6[C]002 STDP
