@@ -4,6 +4,7 @@ import brian2genn
 import os
 from Definitions import *
 import brian2genn_tester as bt
+from Plotter import *
 
 class cortical_module:
     'A customizable model of cortical module for Brian2Genn'
@@ -142,47 +143,54 @@ class cortical_module:
 
         monitor_options = {
             '[Sp]': ['SpMon', 'SpikeMonitor'],
-            '[St]': ['StMon', 'StateMonitor']
+            '[St]': ['StMon', 'StateMonitor'],
+            '[dt]' : [',dt='],
+            '[rec]': [',record=']
         }
         for mon_arg in mon_args:
             mon_tag = mon_arg[mon_arg.index('['):mon_arg.index(']') + 1]
             mon_arg = mon_arg.replace(mon_tag, '')
             if mon_tag == '[Sp]':
-                Mon_name = monitor_options['[Sp]'][0] + str(self.monitor_idx) + '_' + cell_type
+                Mon_name = monitor_options['[Sp]'][0] + str(self.monitor_idx) + '_' + object_name
                 Mon_str = "%s=%s(%s)" % (Mon_name, monitor_options['[Sp]'][1], object_name)
                 self.syntax_bank[6].append(Mon_str)
                 self.monitor_idx +=1
             else:
-                mon_arg = mon_arg.split(',')
+                mon_arg = mon_arg.split('+')
                 for sub_mon_arg in mon_arg:
-                    sub_mon_tag = ''
-                    if '[' in sub_mon_arg :
-                        sub_mon_tag = sub_mon_arg[sub_mon_arg.index('['):sub_mon_arg.index(']') + 1]
-                    if sub_mon_tag == '[dt]':
-                        mon_clock = sub_mon_arg[sub_mon_arg.index(']') + 1:]
-                        sub_mon_arg = sub_mon_arg[0:sub_mon_arg.index('[')]
-                        if ('d' + sub_mon_arg ) in str(equation):
-                            assert (sub_mon_arg + '/') in str(equation), 'The monitor varibale %s is not defined in the equation.' %sub_mon_arg
-                        else:
-                            assert (sub_mon_arg) in str(equation), 'The monitor varibale %s is not defined in the equation.' % sub_mon_arg
-                        Mon_name = monitor_options[mon_tag][0] + str(self.monitor_idx) + '_' + cell_type + '_' + sub_mon_arg
-                        Mon_str = "%s=%s(%s,'%s',dt=%s*ms)" % (Mon_name, str(monitor_options[mon_tag][1]), object_name,sub_mon_arg,mon_clock )
-                        self.syntax_bank[6].append(Mon_str)
-                        self.monitor_idx+=1
+                    # Mon_name = monitor_options['[St]'][0] + str(self.monitor_idx) + '_' + object_name + '_' +
+                    Mon_str = "=%s(%s,"% ( str(monitor_options[mon_tag][1]),object_name)
+                    if not ('[' in sub_mon_arg):
+                        Mon_str += "'" + sub_mon_arg + "'"
                     else:
-                        if ('d' + sub_mon_arg) in str(equation):
-                            assert (sub_mon_arg + '/') in str(equation), 'The monitor varibale %s is not defined in the equation.' % sub_mon_arg
+                        sub_mon_tags = []
+                        tag_open_indices = [idx for idx, ltr in enumerate(sub_mon_arg) if ltr == '[']
+                        tag_close_indices = [idx for idx, ltr in enumerate(sub_mon_arg) if ltr == ']']
+                        assert len(tag_open_indices)==len(tag_close_indices), 'Error: wrong sets of tagging paranteses in monitor definitoins. '
+                        for tag_idx in range(len(tag_open_indices)) :
+                            sub_mon_tags.append(sub_mon_arg[sub_mon_arg.index('['):sub_mon_arg.index(']') + 1])
+                            sub_mon_arg = sub_mon_arg.replace(sub_mon_tags[tag_idx],' ') # replace the tags with space
+                        sub_mon_arg = sub_mon_arg.split(' ')
+                        if not '[rec]' in sub_mon_tags:
+                            sub_mon_tags.append('[rec]')
+                            sub_mon_arg.append('True')
+                        assert len(sub_mon_arg) == len(sub_mon_tags) + 1 , 'Error in monitor tag definition.'
+                        Mon_name = monitor_options['[St]'][0] + str(self.monitor_idx) + '_' + object_name + '_' + sub_mon_arg[0]
+                        Mon_str = Mon_name + Mon_str + "'" +  sub_mon_arg[0]+ "'"
+                        # check if the variable exist in the equation
+                        if ('d' + sub_mon_arg[0]) in str(equation):
+                            assert (sub_mon_arg[0] + '/') in str(equation), \
+                                'The monitor varibale %s is not defined in the equation.' % sub_mon_arg[0]
                         else:
-                            assert (sub_mon_arg) in str(equation), 'The monitor varibale %s is not defined in the equation.' % sub_mon_arg
-                        Mon_name = monitor_options[mon_tag][0] + str(self.monitor_idx) + '_' + cell_type + '_' + sub_mon_arg
-                        Mon_str = "%s=%s(%s,'%s')" % (Mon_name, monitor_options[mon_tag][1], sub_mon_arg ,object_name)
+                            assert (sub_mon_arg[0]) in str(equation), \
+                                'The monitor varibale %s is not defined in the equation.' % sub_mon_arg[0]
+                        del(sub_mon_arg[0])
+                        for idx,tag in enumerate(sub_mon_tags):
+                            Mon_str += monitor_options[tag][0] + sub_mon_arg[idx]
+                        Mon_str +=')'
                         self.syntax_bank[6].append(Mon_str)
-                        self.monitor_idx+=1
+                        self.monitor_idx += 1
 
-            # tmp_str = "self.%s = NeuronGroup(self.customized_neurons_list[-1]['number_of_neurons'], model=self.customized_neurons_list[-1]['equation'], threshold='vm>Vcut', reset='vm=V_res', \
-        #             refractory = '4 * ms', namespace =self.customized_neurons_list[-1]['namespace'])" %group_name
-
-    # N1 = NeuronGroup(1000, model=p['equation'], threshold='vm>Vcut', reset='vm=V_res', refractory = '2 * ms', namespace = p['namespace'])
 
 
     def synapse(self, *args):
@@ -315,19 +323,11 @@ for hierarchy in CM.syntax_bank :
 # times = repeat (array([10, 15, 25])*ms, NN0)
 Ge = SpikeGeneratorGroup(10, array([0,0,1,2,3,4]), array([20,25,100,120,50,280])*ms)
 forward = Synapses(Ge,NG16_relay, pre = 'emit_spike+=1',  connect='i==j')
-s_mon1 = SpikeMonitor(Ge)
-s_mon2 = SpikeMonitor(NG16_relay)
-s_mon3 = StateMonitor(NG0_SS,'vm',record = True)
-s_mon4 = StateMonitor(NG8_BC,'vm',record = True)
-s_mon5 = SpikeMonitor(NG0_SS)
-s_mon6 = SpikeMonitor(NG8_BC)
 
-# s_mon2 = StateMonitor(NG16_relay,'vm',record = True)
-# s_mon3 = StateMonitor(NG1_PC,'vm',record=[0,5,10])
-# s_mon0 = StateMonitor(NG2_L1i,'vm',record=0)
-# s_mon1 = StateMonitor(NG0_SS,'vm_a1',record=0)
-# s_mon2 = StateMonitor(NG0_SS,'vm_a2',record=0)
-
+# s_mon1 = SpikeMonitor(NG0_SS)
+# s_mon2 = StateMonitor(NG0_SS,'vm',record = True)
+# s_mon3 = SpikeMonitor(NG8_BC)
+# s_mon4 = StateMonitor(NG8_BC,'vm',record = True)
 
 run(501*ms)
 device.build(directory='tester',
@@ -336,18 +336,18 @@ device.build(directory='tester',
              use_GPU=True)
 
 
-f, axarr = plt.subplots(5, sharex=True)
+f, axarr = plt.subplots(4, sharex=True)
 axarr[0].plot(s_mon1.t / ms, s_mon1.i,'.k')
-# axarr[1].plot(s_mon2.t / ms, s_mon2.i,'.k')
-# axarr[2].plot(s_mon3.t / ms, s_mon3.i,'.k')
-axarr[1].plot(s_mon6.t / ms, s_mon6.i,'.k')
-for i in range(len(s_mon3.vm)):
-    axarr[2].plot(s_mon3.t / ms, s_mon3.vm[i])
+multi_y_plotter ('axarr[1]',len(s_mon2.vm), 's_mon2.t / ms', 's_mon2.vm' )
+axarr[2].plot(s_mon3.t / ms, s_mon3.i,'.k')
+multi_y_plotter ('axarr[3]',len(s_mon4.vm), 's_mon4.t / ms', 's_mon4.vm' )
+# for i in range(len(s_mon3.vm)):
+#     axarr[2].plot(s_mon3.t / ms, s_mon3.vm[i])
 
-
-for i in range(len(s_mon4.vm)):
-    axarr[3].plot(s_mon4.t / ms, s_mon4.vm[i])
-axarr[4].plot(s_mon5.t / ms, s_mon5.i,'.k')
+#
+# for i in range(len(s_mon4.vm)):
+#     axarr[3].plot(s_mon4.t / ms, s_mon4.vm[i])
+# axarr[4].plot(s_mon5.t / ms, s_mon5.i,'.k')
 
 #
 # axarr[2].plot(s_mon3.t / ms, s_mon3.vm[0])
@@ -369,23 +369,3 @@ show()
 
 
 
-
-
-
-
-
-
-
-# p = customized_neuron ('PC', cell_category= 'multi_comp', namespace_type='generic', eq_category= 'multi_comp',layers_idx=array([4,1])).output_neuron
-# N1 = NeuronGroup(1000, model=p['equation'], threshold='vm>Vcut', reset='vm=V_res', refractory = '2 * ms', namespace = p['namespace'])
-# N2 = NeuronGroup(1000, model=p['equation'], threshold='vm>Vcut', reset='vm=V_res', refractory = '2 * ms', namespace = p['namespace'])
-#
-#
-# run(101*ms)
-# device.build(directory='shortEX',
-#             compile=True,
-#              run=True,
-#              use_GPU=True)
-# p = customized_equation ('PC' , array([6,4]))
-# print p.output_neuron
-# print help(customized_equation)
