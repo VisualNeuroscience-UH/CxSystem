@@ -5,6 +5,7 @@ import os
 from Definitions import *
 import brian2genn_tester as bt
 from Plotter import *
+from save_data import *
 
 class cortical_module:
     'A customizable model of cortical module for Brian2Genn'
@@ -23,11 +24,10 @@ class cortical_module:
     _SynapsesNS_prefix = 'SNS'
     _SynapticConnection_prefix = 'SC'
     _SynapticWeight_prefix = 'SW'
-
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self,path,name):
+    def __init__(self,config_path,name,save_path):
         _options = {
             '[G]': self.neuron_group,
             '[S]': self.synapse,
@@ -46,13 +46,12 @@ class cortical_module:
         self.customized_synapses_list = []
         self.neurongroups_list = []
         self.synapses_list = []
-        # self.monitor_name_bank = {}
-        # self.monitor_name_bank['NeuroGroups']=[]
-        # self.monitor_name_bank['Synapses'] = []
-        # self.monitor_name_bank['Synapses_definitions'] = []
+        self.monitor_name_bank = {}
         self.default_monitors = []
         self.monitor_idx = 0
-        with open (path, 'r') as f :
+        self.save_data = save_data(save_path)
+        self.save_data.creat_key('positions_all')
+        with open (config_path, 'r') as f :
             for line in f:
                 if line[0]  in is_tag :
                     line = line[line.index(']')+1:]
@@ -116,6 +115,7 @@ class cortical_module:
         self.syntax_bank[2].append(NG_str)
 
         NPos_str = "%s.x=real(%s.customized_neurons_list[%d]['positions'])*mm\n%s.y=imag(%s.customized_neurons_list[%d]['positions'])*mm" % (NG_name, self.name, current_idx,NG_name, self.name, current_idx)
+        self.save_data.syntax_bank.append("%s.save_data.data['positions_all']['%s'] = %s.customized_neurons_list[%d]['positions']" % (self.name, NG_name,self.name, current_idx ))
 
         NG_init = 'Vr_offset = rand(len(%s))\n'%NG_name
         NG_init += "for _key in %s.variables.keys():\n"%NG_name
@@ -147,11 +147,15 @@ class cortical_module:
             '[dt]' : [',dt='],
             '[rec]': [',record=']
         }
+        self.monitor_name_bank[object_name] = []
         for mon_arg in mon_args:
             mon_tag = mon_arg[mon_arg.index('['):mon_arg.index(']') + 1]
             mon_arg = mon_arg.replace(mon_tag, '')
             if mon_tag == '[Sp]':
+                self.save_data.creat_key('spikes_all')
                 Mon_name = monitor_options['[Sp]'][0] + str(self.monitor_idx) + '_' + object_name
+                self.save_data.syntax_bank.append("%s.save_data.data['spikes_all']['%s'] = %s.it"%(self.name,object_name,Mon_name))
+                self.monitor_name_bank[object_name].append(Mon_name)
                 Mon_str = "%s=%s(%s)" % (Mon_name, monitor_options['[Sp]'][1], object_name)
                 self.syntax_bank[6].append(Mon_str)
                 self.monitor_idx +=1
@@ -160,10 +164,14 @@ class cortical_module:
                 for sub_mon_arg in mon_arg:
                     # Mon_name = monitor_options['[St]'][0] + str(self.monitor_idx) + '_' + object_name + '_' +
                     Mon_str = "=%s(%s,"% ( str(monitor_options[mon_tag][1]),object_name)
+                    sub_mon_tags = []
                     if not ('[' in sub_mon_arg):
-                        Mon_str += "'" + sub_mon_arg + "'"
+                        sub_mon_arg = sub_mon_arg.split()
+                        sub_mon_arg.append('True')
+                        sub_mon_tags.append('[rec]')
+                        # Mon_name = monitor_options['[St]'][0] + str(self.monitor_idx) + '_' + object_name + '_' + \
+                        #        sub_mon_arg
                     else:
-                        sub_mon_tags = []
                         tag_open_indices = [idx for idx, ltr in enumerate(sub_mon_arg) if ltr == '[']
                         tag_close_indices = [idx for idx, ltr in enumerate(sub_mon_arg) if ltr == ']']
                         assert len(tag_open_indices)==len(tag_close_indices), 'Error: wrong sets of tagging paranteses in monitor definitoins. '
@@ -171,25 +179,29 @@ class cortical_module:
                             sub_mon_tags.append(sub_mon_arg[sub_mon_arg.index('['):sub_mon_arg.index(']') + 1])
                             sub_mon_arg = sub_mon_arg.replace(sub_mon_tags[tag_idx],' ') # replace the tags with space
                         sub_mon_arg = sub_mon_arg.split(' ')
-                        if not '[rec]' in sub_mon_tags:
+                        if not '[rec]' in sub_mon_tags  :
                             sub_mon_tags.append('[rec]')
                             sub_mon_arg.append('True')
                         assert len(sub_mon_arg) == len(sub_mon_tags) + 1 , 'Error in monitor tag definition.'
-                        Mon_name = monitor_options['[St]'][0] + str(self.monitor_idx) + '_' + object_name + '_' + sub_mon_arg[0]
-                        Mon_str = Mon_name + Mon_str + "'" +  sub_mon_arg[0]+ "'"
+                    self.save_data.creat_key('%s_all'%sub_mon_arg[0])
+                    Mon_name = monitor_options['[St]'][0] + str(self.monitor_idx) + '_' + object_name + '__' + sub_mon_arg[0]
+                    self.save_data.syntax_bank.append("%s.save_data.data['%s_all']['%s'] = asarray(%s.%s)" % (self.name,sub_mon_arg[0], object_name, Mon_name,sub_mon_arg[0]))
+
+                    self.monitor_name_bank[object_name].append(Mon_name)
+                    Mon_str = Mon_name + Mon_str + "'" + sub_mon_arg[0] + "'"
                         # check if the variable exist in the equation
-                        if ('d' + sub_mon_arg[0]) in str(equation):
-                            assert (sub_mon_arg[0] + '/') in str(equation), \
-                                'The monitor varibale %s is not defined in the equation.' % sub_mon_arg[0]
-                        else:
-                            assert (sub_mon_arg[0]) in str(equation), \
-                                'The monitor varibale %s is not defined in the equation.' % sub_mon_arg[0]
-                        del(sub_mon_arg[0])
-                        for idx,tag in enumerate(sub_mon_tags):
-                            Mon_str += monitor_options[tag][0] + sub_mon_arg[idx]
-                        Mon_str +=')'
-                        self.syntax_bank[6].append(Mon_str)
-                        self.monitor_idx += 1
+                    if ('d' + sub_mon_arg[0]) in str(equation):
+                        assert (sub_mon_arg[0] + '/') in str(equation), \
+                            'The monitor varibale %s is not defined in the equation.' % sub_mon_arg[0]
+                    else:
+                        assert (sub_mon_arg[0]) in str(equation), \
+                            'The monitor varibale %s is not defined in the equation.' % sub_mon_arg[0]
+                    del(sub_mon_arg[0])
+                    for idx,tag in enumerate(sub_mon_tags):
+                        Mon_str += monitor_options[tag][0] + sub_mon_arg[idx]
+                    Mon_str +=')'
+                    self.syntax_bank[6].append(Mon_str)
+                    self.monitor_idx += 1
 
 
 
@@ -219,6 +231,7 @@ class cortical_module:
                 if _post_com_idx[0] == '0':
                     if len(_post_com_idx) == 1:
                         triple_args = []
+
                         tmp_args = list(args[0])
                         tmp_args.append('_basal')
                         triple_args.append(tmp_args)
@@ -248,7 +261,9 @@ class cortical_module:
         else:
             if '[M]' in args[0]:
                 mon_args = args[0][args[0].index('[M]') + 1:]
+                args = list(args)
                 args[0] = args[0][0:args[0].index('[M]')]
+                args = tuple(args)
             _pre_type = self.customized_neurons_list[int(args[0][1])]['type']
             _post_type = self.customized_neurons_list[int(args[0][2])]['type']
             args[0].extend([_pre_type,_post_type])
@@ -309,7 +324,9 @@ class cortical_module:
         self.syntax_bank[2].append(NG_str)
 
 
-CM = cortical_module (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , 'CM')
+a = datetime.datetime.now()
+
+CM = cortical_module (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , 'CM', os.getcwd())
 
 
 set_device('genn')
@@ -317,30 +334,47 @@ for hierarchy in CM.syntax_bank :
     for syntax in CM.syntax_bank[hierarchy]:
         exec syntax
 
-# indices = arange(NN0)
-# all_idx = append(indices,indices)
-# all_idx = append(all_idx, indices)
-# times = repeat (array([10, 15, 25])*ms, NN0)
+
 Ge = SpikeGeneratorGroup(10, array([0,0,1,2,3,4]), array([20,25,100,120,50,280])*ms)
 forward = Synapses(Ge,NG16_relay, pre = 'emit_spike+=1',  connect='i==j')
 
-# s_mon1 = SpikeMonitor(NG0_SS)
-# s_mon2 = StateMonitor(NG0_SS,'vm',record = True)
-# s_mon3 = SpikeMonitor(NG8_BC)
-# s_mon4 = StateMonitor(NG8_BC,'vm',record = True)
 
-run(501*ms)
+run(500*ms)
 device.build(directory='tester',
             compile=True,
              run=True,
              use_GPU=True)
 
 
-f, axarr = plt.subplots(4, sharex=True)
-axarr[0].plot(s_mon1.t / ms, s_mon1.i,'.k')
-multi_y_plotter ('axarr[1]',len(s_mon2.vm), 's_mon2.t / ms', 's_mon2.vm' )
-axarr[2].plot(s_mon3.t / ms, s_mon3.i,'.k')
-multi_y_plotter ('axarr[3]',len(s_mon4.vm), 's_mon4.t / ms', 's_mon4.vm' )
+for group in CM.monitor_name_bank:
+    mon_num = len(CM.monitor_name_bank[group])
+    tmp_str = "f, axarr = plt.subplots(%d, sharex=True)"%mon_num ; exec tmp_str
+    for item_idx,item in enumerate(CM.monitor_name_bank[group]):
+        if 'SpMon' in item :
+            tmp_str = "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item);exec tmp_str
+            tmp_str= "axarr[%d].set_title('%s')"% (item_idx, item);exec tmp_str
+        elif 'StMon' in item:
+            underscore= item.index('__')
+            variable = item[underscore+2:]
+            tmp_str = 'y_num=len(%s.%s)'%(item,variable);exec tmp_str
+            tmp_str = "multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item);exec tmp_str
+
+
+
+for syntax in CM.save_data.syntax_bank :
+    exec syntax
+CM.save_data.save_to_file()
+
+b = datetime.datetime.now()
+c = b - a
+print c
+divmod(c.days * 86400 + c.seconds, 60)
+print divmod(c.days * 86400 + c.seconds, 60)
+# f, axarr = plt.subplots(4, sharex=True)
+# axarr[0].plot(s_mon1.t / ms, s_mon1.i,'.k')
+# multi_y_plotter ('axarr[1]',len(s_mon2.vm), 's_mon2.t / ms', 's_mon2.vm' )
+# axarr[2].plot(s_mon3.t / ms, s_mon3.i,'.k')
+# multi_y_plotter ('axarr[3]',len(s_mon4.vm), 's_mon4.t / ms', 's_mon4.vm' )
 # for i in range(len(s_mon3.vm)):
 #     axarr[2].plot(s_mon3.t / ms, s_mon3.vm[i])
 

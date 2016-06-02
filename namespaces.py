@@ -15,8 +15,8 @@ class synapse_namespaces(object):
         'we_i': 0.83 * nS
         #                        'we_development' : 0.01 * nS,
     }
-    Cp = 0.1  # 1 #0.001 # Synaptic potentiation coefficient according to van Rossum J Neurosci 2000, here relative to initial value
-    Cd = 0.3  # 1 #0.003 # Synaptic depression coefficient according to van Rossum J Neurosci 2000
+    Cp = 0.001  # 1 #0.001 # Synaptic potentiation coefficient according to van Rossum J Neurosci 2000, here relative to initial value
+    Cd = 0.003  # 1 #0.003 # Synaptic depression coefficient according to van Rossum J Neurosci 2000
     # The term (3.6 etc) is the mean number of synapses/connection, from Markram Cell 2015
     gain_parameter_E = 3.6  # 0.17*3.6 # The 0.5 is for release probability/synapse
     gain_parameter_I = 13.9  # 0.6*13.9
@@ -351,7 +351,7 @@ class neuron_namespaces (object):
         self.output_namespace['C'] =  0.03 * Cm * Area_tot_pyram * 2 # ? is it correct to take the soma part for here
         # total g_leak in compartments
         self.output_namespace['gL'] = 0.03 * gl * Area_tot_pyram
-
+        # print self.output_namespace['C'] / self.output_namespace['gL']
         self.output_namespace['Vr'] = -70.11 * mV
         self.output_namespace['EL'] = -70.11 * mV
         self.output_namespace['VT'] = -41.61 * mV
