@@ -7,7 +7,7 @@ import brian2genn_tester as bt
 from Plotter import *
 from save_data import *
 
-class cortical_module:
+class cortical_module(object):
     'A customizable model of cortical module for Brian2Genn'
     _NeuronGroup_prefix = 'NG'
     _NeuronNumber_prefix = 'NN'
@@ -28,6 +28,13 @@ class cortical_module:
     _StateMonitor_prefix = 'StMon'
 
     def __init__(self,config_path,name,save_path):
+        '''
+
+
+        :param config_path: The path to the configuration file. The description of the configuration file can be found in ().
+        :param name: Name of the
+        :param save_path:
+        '''
         _options = {
             '[G]': self.neuron_group,
             '[S]': self.synapse,
@@ -69,7 +76,12 @@ class cortical_module:
 
 
     def neuron_group (self, *args ):
+        '''
+        The method that creates the NeuronGroups() based on the parameters that are extracted from the configuraiton file in the __init__ method of the class.
 
+        :param args:
+        :return:
+        '''
         args = args[0]
         mon_args=[]
         #check monitors in line:
@@ -128,6 +140,15 @@ class cortical_module:
 
 
     def monitors(self,mon_args,cell_type, object_name , equation):
+        '''
+        The method that creates the monitors() based on the parameters that are extracted from the configuraiton file in the __init__ method of the class.
+
+        :param mon_args:
+        :param cell_type:
+        :param object_name:
+        :param equation:
+        :return:
+        '''
         if not mon_args and not self.default_monitors:
             return
         if not mon_args:
@@ -206,6 +227,12 @@ class cortical_module:
 
 
     def synapse(self, *args):
+        '''
+        The method that creates the Synapses() in brian2, based on the parameters that are extracted from the configuraiton file in the __init__ method of the class.
+
+        :param args:
+        :return:
+        '''
         _options = {
             '[C]': self.neuron_group,
         }
@@ -299,6 +326,12 @@ class cortical_module:
             self.monitors(mon_args, syn[3], S_name, self.customized_synapses_list[-1]['equation'])
 
     def relay(self,*args):
+        '''
+        The method that creates the relay NeuronGroups based on the parameters that are extracted from the configuraiton file in the __init__ method of the class.
+
+        :param args:
+        :return:
+        '''
         args = args[0]
         current_idx=  len(self.customized_neurons_list)
         relay_group = {}
@@ -324,81 +357,52 @@ class cortical_module:
         self.syntax_bank[2].append(NG_str)
 
 
-a = datetime.datetime.now()
-
-CM = cortical_module (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , 'CM', os.getcwd())
-
-
-set_device('genn')
-for hierarchy in CM.syntax_bank :
-    for syntax in CM.syntax_bank[hierarchy]:
-        exec syntax
-
-
-Ge = SpikeGeneratorGroup(10, array([0,0,1,2,3,4]), array([20,25,100,120,50,280])*ms)
-forward = Synapses(Ge,NG16_relay, pre = 'emit_spike+=1',  connect='i==j')
-
-
-run(500*ms)
-device.build(directory='tester',
-            compile=True,
-             run=True,
-             use_GPU=True)
-
-
-for group in CM.monitor_name_bank:
-    mon_num = len(CM.monitor_name_bank[group])
-    tmp_str = "f, axarr = plt.subplots(%d, sharex=True)"%mon_num ; exec tmp_str
-    for item_idx,item in enumerate(CM.monitor_name_bank[group]):
-        if 'SpMon' in item :
-            tmp_str = "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item);exec tmp_str
-            tmp_str= "axarr[%d].set_title('%s')"% (item_idx, item);exec tmp_str
-        elif 'StMon' in item:
-            underscore= item.index('__')
-            variable = item[underscore+2:]
-            tmp_str = 'y_num=len(%s.%s)'%(item,variable);exec tmp_str
-            tmp_str = "multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item);exec tmp_str
-
-
-
-for syntax in CM.save_data.syntax_bank :
-    exec syntax
-CM.save_data.save_to_file()
-
-b = datetime.datetime.now()
-c = b - a
-print c
-divmod(c.days * 86400 + c.seconds, 60)
-print divmod(c.days * 86400 + c.seconds, 60)
-# f, axarr = plt.subplots(4, sharex=True)
-# axarr[0].plot(s_mon1.t / ms, s_mon1.i,'.k')
-# multi_y_plotter ('axarr[1]',len(s_mon2.vm), 's_mon2.t / ms', 's_mon2.vm' )
-# axarr[2].plot(s_mon3.t / ms, s_mon3.i,'.k')
-# multi_y_plotter ('axarr[3]',len(s_mon4.vm), 's_mon4.t / ms', 's_mon4.vm' )
-# for i in range(len(s_mon3.vm)):
-#     axarr[2].plot(s_mon3.t / ms, s_mon3.vm[i])
-
+# a = datetime.datetime.now()
 #
-# for i in range(len(s_mon4.vm)):
-#     axarr[3].plot(s_mon4.t / ms, s_mon4.vm[i])
-# axarr[4].plot(s_mon5.t / ms, s_mon5.i,'.k')
-
+# CM = cortical_module (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , 'CM', os.getcwd())
 #
-# axarr[2].plot(s_mon3.t / ms, s_mon3.vm[0])
-
-# axarr[3].plot(s_mon1.t / ms, s_mon1.vm_a1[0])
-# axarr[4].plot(s_mon2.t / ms, s_mon2.vm_a2[0])
-# plot(s_mon2.t / ms, s_mon2.i, '.k')
-# xlabel('Time (ms)')
-# ylabel('Neuron index')
-# figure()
-# plot(s_mon3.t / ms, s_mon3.i, '.k')
-# xlabel('Time (ms)')
-# ylabel('Neuron index')
-
-show()
-
-
+#
+# set_device('genn')
+# for hierarchy in CM.syntax_bank :
+#     for syntax in CM.syntax_bank[hierarchy]:
+#         exec syntax
+#
+#
+# Ge = SpikeGeneratorGroup(10, array([0,0,1,2,3,4]), array([20,25,100,120,50,280])*ms)
+# forward = Synapses(Ge,NG16_relay, pre = 'emit_spike+=1',  connect='i==j')
+#
+#
+# run(500*ms)
+# device.build(directory='tester',
+#             compile=True,
+#              run=True,
+#              use_GPU=True)
+#
+#
+# for group in CM.monitor_name_bank:
+#     mon_num = len(CM.monitor_name_bank[group])
+#     tmp_str = "f, axarr = plt.subplots(%d, sharex=True)"%mon_num ; exec tmp_str
+#     for item_idx,item in enumerate(CM.monitor_name_bank[group]):
+#         if 'SpMon' in item :
+#             tmp_str = "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item);exec tmp_str
+#             tmp_str= "axarr[%d].set_title('%s')"% (item_idx, item);exec tmp_str
+#         elif 'StMon' in item:
+#             underscore= item.index('__')
+#             variable = item[underscore+2:]
+#             tmp_str = 'y_num=len(%s.%s)'%(item,variable);exec tmp_str
+#             tmp_str = "multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item);exec tmp_str
+#
+#
+#
+# for syntax in CM.save_data.syntax_bank :
+#     exec syntax
+# CM.save_data.save_to_file()
+#
+# b = datetime.datetime.now()
+# c = b - a
+# print c
+# divmod(c.days * 86400 + c.seconds, 60)
+# print divmod(c.days * 86400 + c.seconds, 60)
 
 
 
