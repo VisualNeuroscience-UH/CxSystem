@@ -6,6 +6,7 @@ from Definitions import *
 import brian2genn_tester as bt
 from Plotter import *
 from save_data import *
+from stimuli import *
 
 class cortical_module(object):
     'A customizable model of cortical module for Brian2Genn'
@@ -313,7 +314,6 @@ class cortical_module(object):
             SNS_str = "%s=%s.customized_synapses_list[%d]['namespace']" % (SNS_name, self.name, current_idx)
             self.syntax_bank[1].extend([SE_str,SPre_str,SPost_str,SNS_str])
 
-
             S_str = "%s = Synapses(%s,%s,model = %s, pre = %s, post = %s, namespace= %s)"\
                       %(S_name,self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
                         self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']],SE_name,SPre_name,SPost_name, SNS_name)
@@ -332,7 +332,14 @@ class cortical_module(object):
         :param args:
         :return:
         '''
+
         args = args[0]
+        inp = stimuli()
+        inp.generate_inputs(args[0],args[1])
+        spikes_str, times_str, SG_str , number_of_neurons = inp.load_input_seq(args[0])
+        self.syntax_bank[1].extend([spikes_str, times_str])
+        self.syntax_bank[2].append(SG_str)
+
         current_idx=  len(self.customized_neurons_list)
         relay_group = {}
         relay_group['type'] = 'in'
@@ -346,7 +353,7 @@ class cortical_module(object):
         Eq= """'''emit_spike : 1
             x : meter
             y : meter'''"""
-        NN_str = "%s=%s" % (NN_name, args[0])
+        NN_str = "%s=%s" % (NN_name, number_of_neurons)
         NE_str = "%s=%s" % (NE_name, Eq)
         NT_str = "%s=%s" % (NT_name, "'emit_spike==1'")
         NRes_str = "%s=%s" % (NRes_name, "'emit_spike=0'")
@@ -355,28 +362,29 @@ class cortical_module(object):
         NG_str = "%s= NeuronGroup(%s, model=%s, threshold=%s, reset=%s)" \
                  % (NG_name, NN_name, NE_name, NT_name, NRes_name)
         self.syntax_bank[2].append(NG_str)
-
+        GEN_Syn = "GEN_Syn = Synapses(GEN, %s, pre='emit_spike+=1', connect='i==j')" % NG_name
+        self.syntax_bank[5].append(GEN_Syn)
 
 # a = datetime.datetime.now()
 #
-# CM = cortical_module (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , 'CM', os.getcwd())
+CM = cortical_module (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , 'CM', os.getcwd())
 #
 #
-# set_device('genn')
-# for hierarchy in CM.syntax_bank :
-#     for syntax in CM.syntax_bank[hierarchy]:
-#         exec syntax
+set_device('genn')
+for hierarchy in CM.syntax_bank :
+    for syntax in CM.syntax_bank[hierarchy]:
+        exec syntax
 #
 #
 # Ge = SpikeGeneratorGroup(10, array([0,0,1,2,3,4]), array([20,25,100,120,50,280])*ms)
 # forward = Synapses(Ge,NG16_relay, pre = 'emit_spike+=1',  connect='i==j')
 #
 #
-# run(500*ms)
-# device.build(directory='tester',
-#             compile=True,
-#              run=True,
-#              use_GPU=True)
+run(500*ms)
+device.build(directory='tester',
+            compile=True,
+             run=True,
+             use_GPU=True)
 #
 #
 # for group in CM.monitor_name_bank:
