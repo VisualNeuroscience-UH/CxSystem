@@ -33,7 +33,7 @@
 [13][G] 61 MC 5
 [14][G] 12 MC 6
 [15][G] 33 L1i 1
-[16][IN] 25
+[16][IN] /home/corriel/Documents/Git_repos/CXModule_Git/V1_input_layer_2015_10_30_11_7_31.mat 200*Hz
 [34][S] ge 0 8 STDP
 [40][S] ge 0 2[C]0 STDP
 [41][S] ge 0 3[C]0 STDP
