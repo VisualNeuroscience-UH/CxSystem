@@ -28,6 +28,14 @@ class stimuli(object):
         SG_str = 'GEN = SpikeGeneratorGroup(%d, GEN_SP, GEN_TI)'%int(max(new_spikes[0])+1)
         return spikes_str, times_str,  SG_str , int(max(new_spikes[0])+1)
 
+    def get_input_positions(self, path):
+
+        _V1_mats = {}
+        sio.loadmat(path, _V1_mats)
+        return _V1_mats['z_coord']
+
+
+
     def _initialize_inputs(self,  path, freq):
 
         print "Initializing stimuli..."
