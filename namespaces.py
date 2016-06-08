@@ -190,28 +190,28 @@ class synapse_namespaces(object):
 
 
     def __init__(self,output_synapse):
-            # synapse_namespaces.type_ref = array (['STDP'])
-            # assert output_synapse['type'] in synapse_namespaces.type_ref, "Error: cell type '%s' is not defined." % output_synapse['type']
-            # self.output_namespace = {}
-            # getattr(synapse_namespaces,output_synapse['type'])(self)
-            self.output_namespace = {}
-            self.output_namespace['Apre'], self.output_namespace['Apost'], self.output_namespace['taupre'], \
-            self.output_namespace['taupost'] = synapse_namespaces.stdp['stdp_%s_%s' % (output_synapse['pre_group_type'], \
-                output_synapse['post_group_type'] + output_synapse['post_comp_name'])]
-            self.output_namespace['wght_max'] = synapse_namespaces.cw['cw_%s_%s'% (output_synapse['pre_group_type'],output_synapse['post_group_type'])] * synapse_namespaces.stdp_max_strength_coefficient
-            self.output_namespace['wght0'] = synapse_namespaces.cw['cw_%s_%s'% (output_synapse['pre_group_type'],output_synapse['post_group_type'])]
-            self.output_namespace['Cp'] = synapse_namespaces.Cp
-            self.output_namespace['Cd'] = synapse_namespaces.Cd
-            self.sparseness = synapse_namespaces.sp['sp_%s_%s'%(output_synapse['pre_group_type'],output_synapse['post_group_type'])]
-            self.ilam = synapse_namespaces.dist['ilam_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])]
+        synapse_namespaces.type_ref = array (['STDP','Fixed'])
+        assert output_synapse['type'] in synapse_namespaces.type_ref, "Error: cell type '%s' is not defined." % output_synapse['type']
+        self.output_namespace = {}
+        self.output_namespace['Cp'] = synapse_namespaces.Cp
+        self.output_namespace['Cd'] = synapse_namespaces.Cd
+        self.sparseness = synapse_namespaces.sp[
+            'sp_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])]
+        self.ilam = synapse_namespaces.dist[
+            'ilam_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])]
+        getattr(synapse_namespaces,output_synapse['type'])(self,output_synapse)
 
-            # output_synapse['namespace']['Apre'], output_synapse['namespace']['Apost'], output_synapse['namespace']['taupre'], \
-            #     output_synapse['namespace']['taupost'] = synapse_namespaces.stdp['stdp%d%d%s' % (output_synapse['pre_group_idx'], \
-            #     output_synapse['post_group_idx'], output_synapse['post_comp_name'])]
-            # output_synapse['namespace']['wght_max'] = synapse_namespaces.cw['cw%s%s'% (output_synapse['pre_group_idx'],output_synapse['post_group_idx'])] * synapse_namespaces.stdp_max_strength_coefficient
-            # output_synapse['namespace']['wght0'] = synapse_namespaces.cw['cw%s%s'% (output_synapse['pre_group_idx'],output_synapse['post_group_idx'])]
-            # output_synapse['namespace']['Cp'] = synapse_namespaces.Cp
-            # output_synapse['namespace']['Cd'] = synapse_namespaces.Cd
+
+    def STDP(self,output_synapse):
+        self.output_namespace['Apre'], self.output_namespace['Apost'], self.output_namespace['taupre'], \
+        self.output_namespace['taupost'] = synapse_namespaces.stdp['stdp_%s_%s' % (output_synapse['pre_group_type'], \
+            output_synapse['post_group_type'] + output_synapse['post_comp_name'])]
+        self.output_namespace['wght_max'] = synapse_namespaces.cw['cw_%s_%s'% (output_synapse['pre_group_type'],output_synapse['post_group_type'])] * synapse_namespaces.stdp_max_strength_coefficient
+        self.output_namespace['wght0'] = synapse_namespaces.cw['cw_%s_%s'% (output_synapse['pre_group_type'],output_synapse['post_group_type'])]
+
+
+    def Fixed(self,output_synapse):
+        return
 
 
 
