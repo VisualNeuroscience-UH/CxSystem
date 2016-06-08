@@ -343,6 +343,7 @@ class cortical_module(object):
         current_idx=  len(self.customized_neurons_list)
         relay_group = {}
         relay_group['type'] = 'in'
+        relay_group['positions'] = inp.get_input_positions(args[0])
         self.customized_neurons_list.append(relay_group)
         NG_name = self._NeuronGroup_prefix +str(current_idx) +'_' + 'relay'
         self.neurongroups_list.append(NG_name)
@@ -358,10 +359,17 @@ class cortical_module(object):
         NT_str = "%s=%s" % (NT_name, "'emit_spike==1'")
         NRes_str = "%s=%s" % (NRes_name, "'emit_spike=0'")
         self.syntax_bank[1].extend([NN_str, NE_str, NT_str, NRes_str])
-
         NG_str = "%s= NeuronGroup(%s, model=%s, threshold=%s, reset=%s)" \
                  % (NG_name, NN_name, NE_name, NT_name, NRes_name)
         self.syntax_bank[2].append(NG_str)
+
+
+        NPos_str = "%s.x=real(%s.customized_neurons_list[%d]['positions'])*mm\n%s.y=imag(%s.customized_neurons_list[%d]['positions'])*mm" % (
+            NG_name, self.name, current_idx, NG_name, self.name, current_idx)
+        self.save_data.syntax_bank.append(
+            "%s.save_data.data['positions_all']['%s'] = %s.customized_neurons_list[%d]['positions']" % (
+                self.name, NG_name, self.name, current_idx))
+        self.syntax_bank[3].append(NPos_str)
         GEN_Syn = "GEN_Syn = Synapses(GEN, %s, pre='emit_spike+=1', connect='i==j')" % NG_name
         self.syntax_bank[5].append(GEN_Syn)
 
