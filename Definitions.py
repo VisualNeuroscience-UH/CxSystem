@@ -222,7 +222,7 @@ class customized_neuron(object):
 
 class customized_synapse(object):
     def __init__(self, receptor,pre_group_idx ,post_group_idx, syn_type,pre_type,post_type, post_comp_name='_soma'):
-        customized_synapse.syntypes = array(['STDP'])
+        customized_synapse.syntypes = array(['STDP','Fixed'])
         assert syn_type in customized_synapse.syntypes, "Error: cell type '%s' is not defined" % syn_type
         self.output_synapse = {}
         self.output_synapse['type'] = syn_type
@@ -272,4 +272,10 @@ class customized_synapse(object):
                         apost += Apost * wght0 * Cp
                         wght = clip(wght + apre, 0, wght_max)
                         '''
-
+    def Fixed(self):
+        self.output_synapse['equation'] = Equations('''
+            wght:siemens
+            ''')
+        self.output_synapse['pre_eq'] = '''
+        %s+=wght
+        '''%self.output_synapse['post_comp_name'] +  '_post'
