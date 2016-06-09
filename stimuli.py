@@ -75,7 +75,7 @@ class stimuli(object):
         tmp_network.add(tmp_mon)
         spikemons.append(tmp_mon)
         if self.BaseLine == 0 * second:
-            tmp_network.run(self.SimulationDuration)
+            tmp_network.run(self.SimulationDuration, report='text')
         else:
             tmp_network.run(self.BaseLine)
             tmp_network.run(self.SimulationDuration - self.BaseLine)

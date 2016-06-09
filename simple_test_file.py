@@ -49,8 +49,9 @@ class creator():
         Ce.connect('i<3200', p=0.02)
         Ci.connect('i>=3200', p=0.02)
         P.v = Vr + rand(len(P)) * (Vt - Vr)
-        globals().update({'P':P})
+        globals().update({'P':P,'El':El})
 q = creator()
+pq= 123
 q.create()
 s_mon = SpikeMonitor(P)
 run(1 * second)

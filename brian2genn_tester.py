@@ -1,7 +1,7 @@
 from brian2 import *
 import brian2genn
 
-# set_device('genn')
+set_device('genn')
 #set_device('cpp_standalone')
 
 eqs = '''
@@ -100,12 +100,12 @@ times = array([1, 2, 3])*ms
 # s_mon2 = StateMonitor(G_group,'vm_a2',record=0)
 
 
-# run(101*ms)
-# device.build(directory='tester',
-#             compile=True,
-#              run=True,
-#              use_GPU=True)
-#
+run(101*ms)
+device.build(directory='tester',
+            compile=True,
+             run=True,
+             use_GPU=True)
+
 # f, axarr = plt.subplots(5, sharex=True)
 # axarr[0].plot(s_mon_b.t / ms, s_mon_b.vm_basal[0])
 # axarr[1].plot(s_mon.t / ms, s_mon.vm[0])

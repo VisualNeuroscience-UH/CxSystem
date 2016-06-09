@@ -7,7 +7,7 @@ class customized_neuron(object):
     '''Using this class you will get a dictionary containing all parameters and variables that are needed to \
     create a group of that customized cell. This dictionary will eventually be used to build the cortical module.'''
     # This vairable is to keep track of all customized neurons do be able to draw it
-    def __init__(self, number_of_neurons,  cell_type,  layers_idx , resolution = 0.1, network_center = 0 + 0j):
+    def __init__(self, number_of_neurons,  cell_type,  layers_idx , network_center = 0 + 0j, resolution = 0.1):
         '''
         :param cell_type: type of cell which is either PC, SS, BC, MC, Inh[?].
         :type cell_type: string
@@ -278,4 +278,4 @@ class customized_synapse(object):
             ''')
         self.output_synapse['pre_eq'] = '''
         %s+=wght
-        '''%self.output_synapse['post_comp_name'] +  '_post'
+        '''% (self.output_synapse['receptor']+self.output_synapse['post_comp_name'] +  '_post')
