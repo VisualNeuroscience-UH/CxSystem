@@ -211,7 +211,11 @@ class synapse_namespaces(object):
 
 
     def Fixed(self,output_synapse):
-        return
+        self.output_namespace['wght_max'] = synapse_namespaces.cw['cw_%s_%s' % (output_synapse['pre_group_type'],
+                                                                                output_synapse[
+                                                                                    'post_group_type'])] * synapse_namespaces.stdp_max_strength_coefficient
+        self.output_namespace['wght0'] = synapse_namespaces.cw[
+            'cw_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])]
 
 
 

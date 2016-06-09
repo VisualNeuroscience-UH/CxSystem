@@ -5,16 +5,19 @@ from numpy import *
 import os
 
 class save_data(object):
-    def __init__(self,save_path):
+    def __init__(self,save_path,system_name):
         self.save_path = save_path
+        self.system_name = system_name
         self.data = {}
-
         self.syntax_bank = []
+
     def creat_key(self,key):
         if not key in self.data:
             self.data[key] = {}
 
-    def gather_data(self):
+    def gather_result(self,CX_system):
+        for syntax in self.syntax_bank:
+            exec syntax
         self.save_to_file()
 
     def save_to_file(self):
