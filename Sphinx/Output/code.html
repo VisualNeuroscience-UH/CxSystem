@@ -50,6 +50,21 @@
             
   <div class="section" id="cortical-system-package">
 <h1>Cortical System Package<a class="headerlink" href="#cortical-system-package" title="Permalink to this headline">¶</a></h1>
+<p>The cortical system package consists of five major modules. cortical_module as the main module, creates the target cortical model based on a configuration file (Connections.txt). This configuration line is parsed in cortical module and the neurons/synapses formation of the module is created in brian2 accordingly.</p>
+<div class="section" id="configuration-file">
+<h2>Configuration file<a class="headerlink" href="#configuration-file" title="Permalink to this headline">¶</a></h2>
+<p>Each line of the configuration file that has to be interpretted, aka target line, defines either a Neuron_Group() or Synapses() in brian2. A line is considered as target line if it contains a target tag. Currently there are three target tags in the system: [IN], [G], [S] and a numbering tag, e.g. [0]. Each of these tags are thoroughly discussed later in this document. Each line that starts with the character <em>[</em> will be considered as a potential target line. Hence any other line that starts with other characters is equal to a comment line. Though you can use <em>#</em> in the beginning of the line to be tidy.</p>
+<p>Numbering tag: Each line should start with a numbering tag. This numbering tag is only used to make following the line numbers easier for the user. Although this numbering tag is required to be in each and every line, it doesn&#8217;t have any effect on the line interpretation result.</p>
+<p>[IN]: Defines the [IN]put of the system (video only). The format of the input line is as follows:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span>[Number][IN] &lt;.mat file location&gt; &lt;frequency&gt; [monitors]
+</pre></div>
+</div>
+<p>[G]: Defines the brian2 Neuron_Group(). The format of the input line is as follows:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span>[Number][G] &lt;number of neurons&gt; &lt;cell type&gt; &lt;cell layer&gt; &lt;cell group center&gt; [monitors]
+</pre></div>
+</div>
+<p>[S]: Defines the brian2 Synapses().</p>
+</div>
 <div class="section" id="module-cortical_module">
 <span id="cortical-system-module"></span><h2>Cortical System module<a class="headerlink" href="#module-cortical_module" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
@@ -159,6 +174,7 @@
   <h3><a href="Documentation.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Cortical System Package</a><ul>
+<li><a class="reference internal" href="#configuration-file">Configuration file</a></li>
 <li><a class="reference internal" href="#module-cortical_module">Cortical System module</a></li>
 </ul>
 </li>
