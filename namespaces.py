@@ -55,10 +55,10 @@ class synapse_namespaces(object):
 
     conn_prob_gain = 10  # This is used for compensation of small number of neurons and thus incoming synapses
     sp = {
-        'sp_in_SS' : 0.38 * conn_prob_gain,
+        'sp_in_SS': 0.0038 * conn_prob_gain, #TODO : 0.38 sparsness in input layer cause high probabilities with ilam of 0.1. Find a good combination of ilam and sp for input layer.
         'sp_in_PC': 0.38 * conn_prob_gain,
         'sp_in_BC': 0.38 * conn_prob_gain,
-        'sp_in_L1i':  0.38 * conn_prob_gain,
+        'sp_in_L1i': 0.38 * conn_prob_gain,
         'sp_SS_SS': 0.081 * conn_prob_gain,
         'sp_SS_PC':  0.081 * conn_prob_gain,
         'sp_SS_BC': 0.053 * conn_prob_gain,
@@ -158,8 +158,8 @@ class synapse_namespaces(object):
     _M_V1 = 2.3
 
     dist = {
-        'ilam_in_SS': 0.01/mm,
-        'ilam_in_PC': 0.01/mm,
+        'ilam_in_SS': 0.1/mm,
+        'ilam_in_PC': 0.01/mm, #TODO : These parameters are still to be checked, 0.01 cause high probability eventhough the shape is similar to gaussian. It would be better if we change them to some value near 1.
         'ilam_in_BC': 0.01/mm,
         'ilam_in_L1i':0.01/mm,
         'ilam_SS_SS':2.3 / _M_V1 / mm,

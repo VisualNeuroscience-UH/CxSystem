@@ -8,7 +8,10 @@ from save_data import *
 from stimuli import *
 
 class cortical_module(object):
-    'A customizable model of cortical module for Brian2Genn'
+    '''
+    A customizable model of cortical module for Brian2Genn
+    '''
+
     _NeuronGroup_prefix = 'NG'
     _NeuronNumber_prefix = 'NN'
     _NeuronEquation_prefix = 'NE'
@@ -58,6 +61,8 @@ class cortical_module(object):
         self.monitor_idx = 0
         self.save_data = save_data(save_path,self.name)
         self.save_data.creat_key('positions_all')
+        self.save_data.data['positions_all']['w_coord']= {}
+        self.save_data.data['positions_all']['z_coord'] = {}
         with open (config_path, 'r') as f :
             for line in f:
                 if line[0]  in is_tag :
@@ -126,11 +131,12 @@ class cortical_module(object):
         exec "%s=self.customized_neurons_list[%d]['namespace']"% (NNS_name,current_idx)
         exec "%s= NeuronGroup(%s, model=%s, threshold=%s, reset=%s,refractory = %s, namespace = %s)" \
                  % (NG_name , NN_name , NE_name,NT_name, NRes_name, NRef_name , NNS_name)
-        exec "%s.x=real(self.customized_neurons_list[%d]['positions'])*mm\n%s.y=imag(self.customized_neurons_list[%d]['positions'])*mm" % (
+        exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % (
         NG_name, current_idx, NG_name, current_idx)
 
         # self.save_data.syntax_bank.append("%s.save_data.data['positions_all']['%s'] = %s.customized_neurons_list[%d]['positions']" % (self.name, NG_name,self.name, current_idx ))
-        self.save_data.data['positions_all'][NG_name] = self.customized_neurons_list[current_idx]['positions']
+        self.save_data.data['positions_all']['z_coord'][NG_name] = self.customized_neurons_list[current_idx]['z_positions']
+        self.save_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx]['w_positions']
 
         NG_init = 'Vr_offset = rand(len(%s))\n'%NG_name
         NG_init += "for _key in %s.variables.keys():\n"%NG_name
@@ -331,7 +337,7 @@ class cortical_module(object):
                         self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SE_name, SPre_name, SNS_name)
 
             # self.monitor_name_bank['Synapses_definitions'].append(S_str)
-            exec "%s.connect('i!=j', p='%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)')"\
+            exec "%s.connect('i!=j', p='%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)   ')"\
                      %(S_name,self.customized_synapses_list[-1]['sparseness'],self.customized_synapses_list[-1]['ilam'])
             exec "%s.wght=%s['wght0']" %(S_name,SNS_name)
             try :
@@ -370,7 +376,8 @@ class cortical_module(object):
         current_idx=  len(self.customized_neurons_list)
         relay_group = {}
         relay_group['type'] = 'in'
-        relay_group['positions'] = squeeze(inp.get_input_positions(args[0]))
+        relay_group['z_positions'] = squeeze(inp.get_input_positions(args[0]))
+        relay_group['w_positions'] = 17*log(relay_group['z_positions']+1)
         relay_group['equation'] = ''
         self.customized_neurons_list.append(relay_group)
         NG_name = self._NeuronGroup_prefix +str(current_idx) +'_' + 'relay'
@@ -384,16 +391,17 @@ class cortical_module(object):
             y : meter'''"""
         exec "%s=%s" % (NN_name, number_of_neurons)
         exec "%s=%s" % (NE_name, Eq)
-        exec "%s=%s" % (NT_name, "'emit_spike==1'")
+        exec "%s=%s" % (NT_name, "'emit_spike>=1'")
         exec "%s=%s" % (NRes_name, "'emit_spike=0'")
         exec "%s= NeuronGroup(%s, model=%s, threshold=%s, reset=%s)" \
                  % (NG_name, NN_name, NE_name, NT_name, NRes_name)
-        exec "%s.x=real(self.customized_neurons_list[%d]['positions'])*mm\n%s.y=imag(self.customized_neurons_list[%d]['positions'])*mm" % (
+        exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % (
             NG_name,  current_idx, NG_name,  current_idx)
         # self.save_data.syntax_bank.append(
         #     "%s.save_data.data['positions_all']['%s'] = %s.customized_neurons_list[%d]['positions']" % (
         #         self.name, NG_name, self.name, current_idx))
-        self.save_data.data['positions_all'][NG_name] = self.customized_neurons_list[current_idx]['positions']
+        self.save_data.data['positions_all']['z_coord'][NG_name] = self.customized_neurons_list[current_idx]['z_positions']
+        self.save_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx]['w_positions']
         SGsyn_name = 'SGEN_Syn'
         exec "%s = Synapses(GEN, %s, pre='emit_spike+=1', connect='i==j')" %(SGsyn_name,NG_name)
 
@@ -419,9 +427,9 @@ class cortical_module(object):
     #         plot([0, 1], [i, j], '-k')
     #     xticks([0, 1], ['Source', 'Target'])
     #     ylabel('Neuron index')
-CM = cortical_module (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , 'CM', os.getcwd())
-#
-#
+
+# CM = cortical_module (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , 'CM', os.getcwd())
+
 
 # for hierarchy in CM.syntax_bank :
 #     for syntax in CM.syntax_bank[hierarchy]:
@@ -433,32 +441,32 @@ CM = cortical_module (os.path.dirname(os.path.realpath(__file__)) + '/Connection
 
 
 
-run(500*ms,report = 'text')
+# run(500*ms,report = 'text')
 # device.build(directory='tester',
 #             compile=True,
 #              run=True,
 #              use_GPU=True)
 
 
-CM.gather_result()
-# CM.visualise_connectivity(S0_Fixed)
-for group in CM.monitor_name_bank:
-    mon_num = len(CM.monitor_name_bank[group])
-    tmp_str = "f, axarr = plt.subplots(%d, sharex=True)"%mon_num ; exec tmp_str
-    for item_idx,item in enumerate(CM.monitor_name_bank[group]):
-        if 'SpMon' in item :
-            if len (CM.monitor_name_bank[group]) ==1  :
-                exec "axarr.plot(%s.t/ms,%s.i,'.k')" % ( item, item);
-                exec "axarr.set_title('%s')" % ( item);
-            else:
-                tmp_str = "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item);exec tmp_str
-                tmp_str= "axarr[%d].set_title('%s')"% (item_idx, item);exec tmp_str
-        elif 'StMon' in item:
-            underscore= item.index('__')
-            variable = item[underscore+2:]
-            tmp_str = 'y_num=len(%s.%s)'%(item,variable);exec tmp_str
-            tmp_str = "multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item);exec tmp_str
-show()
+# CM.gather_result()
+# # CM.visualise_connectivity(S0_Fixed)
+# for group in CM.monitor_name_bank:
+#     mon_num = len(CM.monitor_name_bank[group])
+#     tmp_str = "f, axarr = plt.subplots(%d, sharex=True)"%mon_num ; exec tmp_str
+#     for item_idx,item in enumerate(CM.monitor_name_bank[group]):
+#         if 'SpMon' in item :
+#             if len (CM.monitor_name_bank[group]) ==1  :
+#                 exec "axarr.plot(%s.t/ms,%s.i,'.k')" % ( item, item);
+#                 exec "axarr.set_title('%s')" % ( item);
+#             else:
+#                 tmp_str = "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item);exec tmp_str
+#                 tmp_str= "axarr[%d].set_title('%s')"% (item_idx, item);exec tmp_str
+#         elif 'StMon' in item:
+#             underscore= item.index('__')
+#             variable = item[underscore+2:]
+#             tmp_str = 'y_num=len(%s.%s)'%(item,variable);exec tmp_str
+#             tmp_str = "multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item);exec tmp_str
+# show()
 #
 #
 # for syntax in CM.save_data.syntax_bank :

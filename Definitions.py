@@ -52,7 +52,8 @@ class customized_neuron(object):
         _M_V1 = 2.3
         _dx = _M_V1* resolution
         _grid_size = sqrt(self.output_neuron['number_of_neurons'])*_dx
-        self.output_neuron['positions'] = self._get_positions(self.output_neuron['number_of_neurons'],_grid_size,1,'array', network_center)
+        self.output_neuron['z_positions'] = self._get_positions(self.output_neuron['number_of_neurons'],_grid_size,1,'array', network_center)
+        self.output_neuron['w_positions'] = 17*log(self.output_neuron['z_positions']+1)
         print "Customized " + str(cell_type) + " neuron in layer "+ str(layers_idx) + " initialized"
 
 
