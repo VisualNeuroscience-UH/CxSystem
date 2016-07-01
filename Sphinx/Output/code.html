@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Cortical System Package &mdash; CX_System 1 documentation</title>
+    <title>Cortical System Package &mdash; CX_System 1.0 documentation</title>
     
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '1',
+        VERSION:     '1.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -23,8 +23,8 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="CX_System 1 documentation" href="Documentation.html" />
-    <link rel="prev" title="A intorduction to Cortical System" href="project.html" /> 
+    <link rel="top" title="CX_System 1.0 documentation" href="Documentation.html" />
+    <link rel="prev" title="Configuration File Tutorial" href="configuration.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -37,9 +37,9 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="project.html" title="A intorduction to Cortical System"
+          <a href="configuration.html" title="Configuration File Tutorial"
              accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="Documentation.html">CX_System 1 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="Documentation.html">CX_System 1.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -50,30 +50,16 @@
             
   <div class="section" id="cortical-system-package">
 <h1>Cortical System Package<a class="headerlink" href="#cortical-system-package" title="Permalink to this headline">¶</a></h1>
-<p>The cortical system package consists of five major modules. cortical_module as the main module, creates the target cortical model based on a configuration file (Connections.txt). This configuration line is parsed in cortical module and the neurons/synapses formation of the module is created in brian2 accordingly.</p>
-<div class="section" id="configuration-file">
-<h2>Configuration file<a class="headerlink" href="#configuration-file" title="Permalink to this headline">¶</a></h2>
-<p>Each line of the configuration file that has to be interpretted, aka target line, defines either a Neuron_Group() or Synapses() in brian2. A line is considered as target line if it contains a target tag. Currently there are three target tags in the system: [IN], [G], [S] and a numbering tag, e.g. [0]. Each of these tags are thoroughly discussed later in this document. Each line that starts with the character <em>[</em> will be considered as a potential target line. Hence any other line that starts with other characters is equal to a comment line. Though you can use <em>#</em> in the beginning of the line to be tidy.</p>
-<p>Numbering tag: Each line should start with a numbering tag. This numbering tag is only used to make following the line numbers easier for the user. Although this numbering tag is required to be in each and every line, it doesn&#8217;t have any effect on the line interpretation result.</p>
-<p>[IN]: Defines the [IN]put of the system (video only). The format of the input line is as follows:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>[Number][IN] &lt;.mat file location&gt; &lt;frequency&gt; [monitors]
-</pre></div>
-</div>
-<p>[G]: Defines the brian2 Neuron_Group(). The format of the input line is as follows:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>[Number][G] &lt;number of neurons&gt; &lt;cell type&gt; &lt;cell layer&gt; &lt;cell group center&gt; [monitors]
-</pre></div>
-</div>
-<p>[S]: Defines the brian2 Synapses().</p>
-</div>
-<div class="section" id="module-cortical_module">
-<span id="cortical-system-module"></span><h2>Cortical System module<a class="headerlink" href="#module-cortical_module" title="Permalink to this headline">¶</a></h2>
+<p>The cortical system package consists of five major modules. cortical_system as the main module, creates the target cortical model based on a configuration file (Connections.txt). This configuration line is parsed in cortical module and the neurons/synapses formation of the module is created in brian2 accordingly. The thorugh description of the configuration file can be found in <a class="reference internal" href="configuration.html#config-file"><span>Configuration File Tutorial</span></a>.</p>
+<div class="section" id="module-cortical_system">
+<span id="cortical-system-module"></span><h2>Cortical System module<a class="headerlink" href="#module-cortical_system" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
-<dt id="cortical_module.cortical_module">
-<em class="property">class </em><code class="descclassname">cortical_module.</code><code class="descname">cortical_module</code><span class="sig-paren">(</span><em>config_path</em>, <em>name</em>, <em>save_path</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_module.cortical_module" title="Permalink to this definition">¶</a></dt>
-<dd><p>A customizable model of cortical module for Brian2Genn</p>
+<dt id="cortical_system.cortical_system">
+<em class="property">class </em><code class="descclassname">cortical_system.</code><code class="descname">cortical_system</code><span class="sig-paren">(</span><em>config_path</em>, <em>name</em>, <em>save_path</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system" title="Permalink to this definition">¶</a></dt>
+<dd><p>A customizable model of cortical module for Brian2Genn.</p>
 <dl class="method">
-<dt id="cortical_module.cortical_module.__init__">
-<code class="descname">__init__</code><span class="sig-paren">(</span><em>config_path</em>, <em>name</em>, <em>save_path</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_module.cortical_module.__init__" title="Permalink to this definition">¶</a></dt>
+<dt id="cortical_system.cortical_system.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>config_path</em>, <em>name</em>, <em>save_path</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system.__init__" title="Permalink to this definition">¶</a></dt>
 <dd><table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -90,8 +76,8 @@
 </dd></dl>
 
 <dl class="method">
-<dt id="cortical_module.cortical_module.monitors">
-<code class="descname">monitors</code><span class="sig-paren">(</span><em>mon_args</em>, <em>cell_type</em>, <em>object_name</em>, <em>equation</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_module.cortical_module.monitors" title="Permalink to this definition">¶</a></dt>
+<dt id="cortical_system.cortical_system.monitors">
+<code class="descname">monitors</code><span class="sig-paren">(</span><em>mon_args</em>, <em>cell_type</em>, <em>object_name</em>, <em>equation</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system.monitors" title="Permalink to this definition">¶</a></dt>
 <dd><p>The method that creates the monitors() based on the parameters that are extracted from the configuraiton file in the __init__ method of the class.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -113,8 +99,8 @@
 </dd></dl>
 
 <dl class="method">
-<dt id="cortical_module.cortical_module.neuron_group">
-<code class="descname">neuron_group</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_module.cortical_module.neuron_group" title="Permalink to this definition">¶</a></dt>
+<dt id="cortical_system.cortical_system.neuron_group">
+<code class="descname">neuron_group</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system.neuron_group" title="Permalink to this definition">¶</a></dt>
 <dd><p>The method that creates the NeuronGroups() based on the parameters that are extracted from the configuraiton file in the __init__ method of the class.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -129,8 +115,8 @@
 </dd></dl>
 
 <dl class="method">
-<dt id="cortical_module.cortical_module.relay">
-<code class="descname">relay</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_module.cortical_module.relay" title="Permalink to this definition">¶</a></dt>
+<dt id="cortical_system.cortical_system.relay">
+<code class="descname">relay</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system.relay" title="Permalink to this definition">¶</a></dt>
 <dd><p>The method that creates the relay NeuronGroups based on the parameters that are extracted from the configuraiton file in the __init__ method of the class.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -145,8 +131,8 @@
 </dd></dl>
 
 <dl class="method">
-<dt id="cortical_module.cortical_module.synapse">
-<code class="descname">synapse</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_module.cortical_module.synapse" title="Permalink to this definition">¶</a></dt>
+<dt id="cortical_system.cortical_system.synapse">
+<code class="descname">synapse</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system.synapse" title="Permalink to this definition">¶</a></dt>
 <dd><p>The method that creates the Synapses() in brian2, based on the parameters that are extracted from the configuraiton file in the __init__ method of the class.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -174,15 +160,14 @@
   <h3><a href="Documentation.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Cortical System Package</a><ul>
-<li><a class="reference internal" href="#configuration-file">Configuration file</a></li>
-<li><a class="reference internal" href="#module-cortical_module">Cortical System module</a></li>
+<li><a class="reference internal" href="#module-cortical_system">Cortical System module</a></li>
 </ul>
 </li>
 </ul>
 
   <h4>Previous topic</h4>
-  <p class="topless"><a href="project.html"
-                        title="previous chapter">A intorduction to Cortical System</a></p>
+  <p class="topless"><a href="configuration.html"
+                        title="previous chapter">Configuration File Tutorial</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -217,9 +202,9 @@
           <a href="py-modindex.html" title="Python Module Index"
              >modules</a> |</li>
         <li class="right" >
-          <a href="project.html" title="A intorduction to Cortical System"
+          <a href="configuration.html" title="Configuration File Tutorial"
              >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="Documentation.html">CX_System 1 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="Documentation.html">CX_System 1.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">

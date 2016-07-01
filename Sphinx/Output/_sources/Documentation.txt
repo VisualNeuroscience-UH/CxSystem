@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 GPU-Accelerated Cortical System Framework Documentation 
-=====================================
+========================================================
 
 This is the documentation for GPU-accelerated cortical system framework implemented using Brian2, Brian2GeNN and GeNN libraries. 
 
@@ -14,6 +14,8 @@ Contents:
    :maxdepth: 2
 
    project
+   system
+   configuration
    code
 
 

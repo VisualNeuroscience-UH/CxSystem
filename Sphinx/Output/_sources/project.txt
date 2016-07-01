@@ -1,4 +1,4 @@
-A intorduction to Cortical System
-====================================
+Brief intorduction to Cortical System
+=====================================
 
 Here's the intro...

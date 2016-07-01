@@ -7,9 +7,9 @@ from Plotter import *
 from save_data import *
 from stimuli import *
 
-class cortical_module(object):
+class cortical_system(object):
     '''
-    A customizable model of cortical module for Brian2Genn
+    A customizable model of cortical module for Brian2Genn.
     '''
 
     _NeuronGroup_prefix = 'NG'
@@ -428,7 +428,7 @@ class cortical_module(object):
     #     xticks([0, 1], ['Source', 'Target'])
     #     ylabel('Neuron index')
 
-# CM = cortical_module (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , 'CM', os.getcwd())
+# CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , 'CM', os.getcwd())
 
 
 # for hierarchy in CM.syntax_bank :
