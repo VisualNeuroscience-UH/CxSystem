@@ -55,24 +55,33 @@
 <span id="cortical-system-module"></span><h2>Cortical System module<a class="headerlink" href="#module-cortical_system" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="cortical_system.cortical_system">
-<em class="property">class </em><code class="descclassname">cortical_system.</code><code class="descname">cortical_system</code><span class="sig-paren">(</span><em>config_path</em>, <em>name</em>, <em>save_path</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system" title="Permalink to this definition">¶</a></dt>
-<dd><p>A customizable model of cortical module for Brian2Genn.</p>
+<em class="property">class </em><code class="descclassname">cortical_system.</code><code class="descname">cortical_system</code><span class="sig-paren">(</span><em>config_path</em>, <em>save_path</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system" title="Permalink to this definition">¶</a></dt>
+<dd><p>The main object of cortical system module for building and running a customized model of cortical module in Brian2Genn.</p>
 <dl class="method">
 <dt id="cortical_system.cortical_system.__init__">
-<code class="descname">__init__</code><span class="sig-paren">(</span><em>config_path</em>, <em>name</em>, <em>save_path</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system.__init__" title="Permalink to this definition">¶</a></dt>
-<dd><table class="docutils field-list" frame="void" rules="none">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>config_path</em>, <em>save_path</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize the cortical system by parsing the configuration file.</p>
+<table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>config_path</strong> &#8211; The path to the configuration file. The description of the configuration file can be found in ().</li>
-<li><strong>name</strong> &#8211; Name of the</li>
-<li><strong>save_path</strong> &#8211; </li>
+<li><strong>config_path</strong> &#8211; The path to the configuration file.</li>
+<li><strong>save_path</strong> &#8211; The path to save the final data.</li>
 </ul>
 </td>
 </tr>
 </tbody>
 </table>
+<p>Main internal variables:</p>
+<ul class="simple">
+<li>customized_neurons_list: This list contains the customized_neuron instances. So for each neuron group target line, there would be an element in this list which contains all the information for that particular neuron group.</li>
+<li>customized_synapses_list: This list contains the customized_synapse instances. Hence, for each synapse custom line, there would be an element in this list, containing all the necessary information.</li>
+<li>neurongroups_list: This list contains name of the NeuronGroup() instances that are placed in the Globals().</li>
+<li>synapses_list: This list contains name of the Synapses() instances that are placed in the Globals().</li>
+<li>monitor_name_bank: The dictionary containing the name of the monitors that are defined for any NeuronGroup() or Synapses().</li>
+<li>default_monitors:</li>
+</ul>
 </dd></dl>
 
 <dl class="method">

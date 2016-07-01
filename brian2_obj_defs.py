@@ -1,6 +1,6 @@
 __author__ = 'V_AD'
 from brian2 import *
-from namespaces import *
+from brian2_obj_namespaces import *
 
 
 class customized_neuron(object):
