@@ -1,0 +1,348 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Configuration File Tutorial &mdash; CX_System 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="CX_System 1.0 documentation" href="Documentation.html" />
+    <link rel="next" title="Cortical System Package" href="code.html" />
+    <link rel="prev" title="How The System works" href="system.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="code.html" title="Cortical System Package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="system.html" title="How The System works"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="Documentation.html">CX_System 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="configuration-file-tutorial">
+<span id="config-file"></span><h1>Configuration File Tutorial<a class="headerlink" href="#configuration-file-tutorial" title="Permalink to this headline">¶</a></h1>
+<p>Each line of the configuration file that has to be interpretted, aka target line, defines either a Neuron_Group() or Synapses() in brian2. A line is considered as target line if it contains a target tag. Currently there are three target tags in the system: [IN], [G], [S] and a indexing tag, e.g. [0]. Each of these tags are thoroughly discussed later in this document. Each line that starts with the character <em>[</em> will be considered as a potential target line. Hence any other line that starts with other characters is equal to a comment line. Though you can use <em>#</em> in the beginning of the line to be tidy.</p>
+<hr class="docutils" />
+<p><strong>indexing tag</strong>:</p>
+<p>Each line should start with a indexing tag. This indexing tag is only used to make following the line numbers easier for the user. Although this indexing tag is required to be in each and every line, it doesn&#8217;t have any effect on the line interpretation result. Example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span>[0][G] ...
+[1][G] ...
+</pre></div>
+</div>
+<hr class="docutils" />
+<p><strong>Monitors</strong>:</p>
+<p>In Brian2 monitors can be assigned to a neuron group or synapses. When using the configuration file, you are able to set monitors for any target line, i.e. neuron groups or synapses. The monitors are defined in the following way:</p>
+<dl class="docutils">
+<dt>[M]:</dt>
+<dd><p class="first">If the [M]onitor tag is present in a target line, a monitor object will be created for the neuron group or synapse of that target line. Note that it is not possible to have different clocks for monitors in brian2GeNN. Hence, try to use the monitors wisely to prevent generating bulk data. Following tags can be used for configuring a specific monitor:</p>
+<dl class="last docutils">
+<dt>[Sp]:</dt>
+<dd>This tag defines the [Sp]ikeMonitor() in brian2. Example:</dd>
+</dl>
+</dd>
+</dl>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">...</span> <span class="p">[</span><span class="n">M</span><span class="p">]</span> <span class="p">[</span><span class="n">Sp</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The ellipsis represents the predecessor tags in the target line.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>[St]:</dt>
+<dd>This tag defines the [St]ateMonitor() in brian2. In this case, one should define the target variable in the following way:</dd>
+</dl>
+</div></blockquote>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">...</span> <span class="p">[</span><span class="n">M</span><span class="p">]</span> <span class="p">[</span><span class="n">St</span><span class="p">]</span><span class="o">&lt;</span><span class="n">state</span> <span class="n">variable1</span><span class="o">&gt;+&lt;</span><span class="n">statevariable2</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>Similar to [Sp], the ellipsis represents the predecessor tags in the target line. State variables are separated with <em>+</em>. An example of using [Sp] alongside with a [St] with three state variables of <em>ge_soma</em>,*gi_soma*, and <em>vm</em>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">...</span> <span class="p">[</span><span class="n">M</span><span class="p">]</span> <span class="p">[</span><span class="n">Sp</span><span class="p">]</span> <span class="p">[</span><span class="n">St</span><span class="p">]</span><span class="n">ge_soma</span><span class="o">+</span><span class="n">gi_soma</span><span class="o">+</span><span class="n">vm</span>
+</pre></div>
+</div>
+<p>One might intend to monitor specific indices of neuron_group/synapses. This can be achieved by using the [rec] tag followed by the indices of interest. In the following example two state monitors are defined for <em>apre</em> and <em>wght</em> of the Synapses() object. In the former statemonitor the first 20 indices are being recorded whilst in the latter (<em>wght</em>), even indices between 0 and 20 are being recorded:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">...</span> <span class="p">[</span><span class="n">M</span><span class="p">]</span> <span class="p">[</span><span class="n">St</span><span class="p">]</span><span class="n">apre</span><span class="p">[</span><span class="n">rec</span><span class="p">]</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">20</span><span class="p">)</span><span class="o">+</span><span class="n">wght</span><span class="p">[</span><span class="n">rec</span><span class="p">]</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">20</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<hr class="docutils" />
+<p><strong>Input</strong>:</p>
+<p>Currently the video input in implemented in the cortical system. The stimuli is created using a <em>.mat</em> file. This stimuli is in form of spike and is fed to a SpikeGeneratorGroup() . This group is then connected to a relay neuron group with synapses(). The main purpose of the relay neurons is to have positions for input neurons (SpikeGeneratorGroup does not support positions). The input can be defined using the following tag:</p>
+<dl class="docutils">
+<dt>[IN]:</dt>
+<dd>Defines the [IN]put of the system (video only). The format of the input line is as follows:</dd>
+</dl>
+<div class="highlight-python"><div class="highlight"><pre><span></span>[index][IN] &lt;.mat file location&gt; &lt;frequency&gt; [monitors]
+</pre></div>
+</div>
+<p>This is an example of defining an input for the system:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span>[0][IN] /home/$USER/V1_input.mat 190*Hz [M] [Sp]
+</pre></div>
+</div>
+<p>In this example an input is created based on the <em>V1_inpu.mat</em> file with a frequency of 190*Hz and a SpikeMonitor is set on it.</p>
+<hr class="docutils" />
+<p><strong>Neuron Group</strong></p>
+<dl class="docutils">
+<dt>[G]:</dt>
+<dd>Defines the brian2 Neuron_Group(). The format of the neurongroup target line is as follows:</dd>
+</dl>
+<div class="highlight-python"><div class="highlight"><pre><span></span>[index][G] &lt;number of neurons&gt; &lt;cell type&gt; &lt;layer index&gt; &lt;cell group center&gt; [monitors]
+</pre></div>
+</div>
+<p>where the <em>[index]</em> is the line number, <em>&lt;number of neurons&gt;</em> is the number of neurons in that particular neuron group. The <em>&lt;cell type&gt;</em> is the category of the cells of the group, which is one of the following groups:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="24%" />
+<col width="76%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">type</th>
+<th class="head">Cell  Category</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>SS</td>
+<td>Stellate cell</td>
+</tr>
+<tr class="row-odd"><td>PC</td>
+<td>Pyramidal cell</td>
+</tr>
+<tr class="row-even"><td>BC</td>
+<td>Pyramidal cell</td>
+</tr>
+<tr class="row-odd"><td>MC</td>
+<td>Martinotti cell</td>
+</tr>
+<tr class="row-even"><td>L1i</td>
+<td>Layer 1 inhibitory</td>
+</tr>
+</tbody>
+</table>
+<p>The <em>&lt;layer index&gt;</em> argument defines the layer in which the neuron group is located. Except for PC cells, all types of neurons are defined as a soma-only neuron, hence their layer is an integer. In case of layer 2/3 using 2 is sufficient. For instance the following example defines a group of 46 SS neurons in layer 2/3:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span>[0][G] 46 SS 2
+</pre></div>
+</div>
+<p>Currently PC cells are the only multi compartmental neurons that could possibly cover more than one layer. In this case, the layer index should be defined as a list where the first element defines the soma location and the second element defines the farthest apical dendrite compartment. In the following example, a PC group of 55 neurons is defined in which the basal dendrites, soma and proximal apical dendrite is located in layer 6 and the apical dendrites covers layer layer 5 to 2:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span>[1][G] 55 PC [6,2]
+</pre></div>
+</div>
+<p>The compartment formation is then as follows:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="24%" />
+<col width="76%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Layer</th>
+<th class="head">Compartment</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>3/2</td>
+<td>Apical dendrite[3]</td>
+</tr>
+<tr class="row-odd"><td>4</td>
+<td>Apical dendrite[2]</td>
+</tr>
+<tr class="row-even"><td>5</td>
+<td>Apical dendrite[1]</td>
+</tr>
+<tr class="row-odd"><td>6</td>
+<td>Apical dendrite[0]</td>
+</tr>
+<tr class="row-even"><td>6</td>
+<td>Soma</td>
+</tr>
+<tr class="row-odd"><td>6</td>
+<td>Basal dendrite</td>
+</tr>
+</tbody>
+</table>
+<p>As the name implies, the <em>&lt;cell group center&gt;</em> defines the center of the neuron group. The center can be defined with the [CN] tag followed by the center position.  If not defined, the center will be the default value of 0+0j. The following example creates a neuron group consist of 75 BC neurons located in 5+0j, with a spike monitors assigned to it:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span>[2][G] 75 BC 2 [CN] 5+0j [M] [Sp]
+</pre></div>
+</div>
+<hr class="docutils" />
+<p><strong>Synapses</strong></p>
+<dl class="docutils">
+<dt>[S]:</dt>
+<dd>Defines the brian2 Synapses(). The format of the Synapses() target line is as follows:</dd>
+</dl>
+<div class="highlight-python"><div class="highlight"><pre><span></span>[index][S] &lt;receptor&gt; &lt;presynaptic group index&gt; &lt;postsynaptic group index&gt; &lt;synapse type&gt;
+</pre></div>
+</div>
+<p>where the <em>[index]</em> is the line number, <em>&lt;receptor&gt;</em> defines the receptor type, e.g. ge and gi, <em>&lt;presynaptic group index&gt;</em> and <em>&lt;postsynaptic group index&gt;</em> defines the index of the presynaptic and postsynaptic group respectively. These indices could be determined using the <em>indexing tag</em> in the neuron groups target lines. The next field defines the type of the synapse. Currently there are two types of synapses implemented: Fixed and STDP. The following example defines a excitatory STDP synapstic connection between neuron groups with indices of 2 and 4, in which the <em>ge</em> is the receptor:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span>[0][S] ge 2 4 STDP
+</pre></div>
+</div>
+<p>In case the postsynaptic group is multicompartmental, the target compartment should be defined using the [C] tag. Let us review this concept with an example:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span>[0][G] 46 SS 4
+[1][G] 50 PC [4,1]
+[2][S] ge 0 1[C]1 STDP
+</pre></div>
+</div>
+<p>Clearly Neurongroup 0 is group of 46 SS cells and Neurongroup 1 is a group of 50 PC cells. The latter is multicompartmental with a layer index of [4,1]. Hence the compartments formation are as follows:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="19%" />
+<col width="61%" />
+<col width="19%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Comp.
+Index</th>
+<th class="head">Compartment  type</th>
+<th class="head">Layer</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>2</td>
+<td>Apical dendrite[2]</td>
+<td>1</td>
+</tr>
+<tr class="row-odd"><td>1</td>
+<td>Apical dendrite[1]</td>
+<td>3/2</td>
+</tr>
+<tr class="row-even"><td>0</td>
+<td>Apical dendrite[0]</td>
+<td>4</td>
+</tr>
+<tr class="row-odd"><td>0</td>
+<td>Soma</td>
+<td>4</td>
+</tr>
+<tr class="row-even"><td>0</td>
+<td>Basal dendrite</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<p>The synapses() object is targetting the 1st compartment of the PC cells, i.e.  Apical dendrite[1]. Consider the following example in which the target is the compartment number 0 in the target neuron group:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span>[2][S] ge 0 1[C]0012 STDP
+</pre></div>
+</div>
+<p>As you can see, the compartment <em>[C]0</em> is followed by three numbers <em>012</em>. This indicates that the among the three sub-compartments inside the compartment number 0, i.e. Basal dendrite, Soma and Apical dendrite[0], indices of 0,1 and 2 are beging targetted. Regardless of the layer, the indices of these three compartments are always as:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="24%" />
+<col width="76%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Comp.
+Index</th>
+<th class="head">Compartment  type</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>2</td>
+<td>Apical dendrite[0]</td>
+</tr>
+<tr class="row-odd"><td>1</td>
+<td>Soma</td>
+</tr>
+<tr class="row-even"><td>0</td>
+<td>Basal dendrite</td>
+</tr>
+</tbody>
+</table>
+<p>So for instance, in case an inhibitory connection tends to target the soma only, the synaptic definition should be changed to:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span>[2][S] ge 0 1[C]01 STDP
+</pre></div>
+</div>
+<p>If both basal dendrite and apical dendrite[0] was being targetted, the syntax should change to:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span>[2][S] ge 0 1[C]002 STDP
+</pre></div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="system.html"
+                        title="previous chapter">How The System works</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="code.html"
+                        title="next chapter">Cortical System Package</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/configuration.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="code.html" title="Cortical System Package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="system.html" title="How The System works"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="Documentation.html">CX_System 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, Vafa Andalibi.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.5.
+    </div>
+  </body>
+</html>
