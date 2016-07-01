@@ -2,14 +2,14 @@ __author__ = 'V_AD'
 from brian2 import *
 import brian2genn
 import os
-from Definitions import *
+from brian2_obj_defs import *
 from Plotter import *
 from save_data import *
 from stimuli import *
 
 class cortical_system(object):
     '''
-    A customizable model of cortical module for Brian2Genn.
+    The main object of cortical system module for building and running a customized model of cortical module in Brian2Genn.
     '''
 
     _NeuronGroup_prefix = 'NG'
@@ -30,36 +30,37 @@ class cortical_system(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self,config_path,name,save_path):
+    def __init__(self,config_path,save_path):
+        '''
+        Initialize the cortical system by parsing the configuration file.
+
+        :param config_path: The path to the configuration file.
+        :param save_path: The path to save the final data.
+
+        Main internal variables:
+
+        * customized_neurons_list: This list contains the customized_neuron instances. So for each neuron group target line, there would be an element in this list which contains all the information for that particular neuron group.
+        * customized_synapses_list: This list contains the customized_synapse instances. Hence, for each synapse custom line, there would be an element in this list, containing all the necessary information.
+        * neurongroups_list: This list contains name of the NeuronGroup() instances that are placed in the Globals().
+        * synapses_list: This list contains name of the Synapses() instances that are placed in the Globals().
+        * monitor_name_bank: The dictionary containing the name of the monitors that are defined for any NeuronGroup() or Synapses().
+        * default_monitors:
         '''
 
-
-        :param config_path: The path to the configuration file. The description of the configuration file can be found in ().
-        :param name: Name of the
-        :param save_path:
-        '''
         _options = {
             '[G]': self.neuron_group,
             '[S]': self.synapse,
             '[IN]': self.relay
         }
         is_tag = ['[']
-        self.name = name
-        self.syntax_bank = {}
-        self.syntax_bank[1] = []  # components of both neuron groups and synapses
-        self.syntax_bank[2] = [] # definitions of the neuron groups
-        self.syntax_bank[3] = [] # neuron groups initialization
-        self.syntax_bank[4] = []
-        self.syntax_bank[5] = []
-        self.syntax_bank[6] = [] # monitors
-        self.customized_neurons_list = []
-        self.customized_synapses_list = []
-        self.neurongroups_list = []
-        self.synapses_list = []
-        self.monitor_name_bank = {}
+        self.customized_neurons_list = [] # This list contains the customized_neuron instances. So for each neuron group target line, there would be an element in this list which contains all the information for that particular neuron group.
+        self.customized_synapses_list = [] # This list contains the customized_synapse instances. Hence, for each synapse custom line, there would be an element in this list, containing all the necessary information.
+        self.neurongroups_list = [] # This list contains name of the NeuronGroup() instances that are placed in the Globals().
+        self.synapses_list = [] # This list contains name of the Synapses() instances that are placed in the Globals().
+        self.monitor_name_bank = {} # The dictionary containing the name of the monitors that are defined for any NeuronGroup() or Synapses().
         self.default_monitors = []
         self.monitor_idx = 0
-        self.save_data = save_data(save_path,self.name)
+        self.save_data = save_data(save_path)
         self.save_data.creat_key('positions_all')
         self.save_data.data['positions_all']['w_coord']= {}
         self.save_data.data['positions_all']['z_coord'] = {}
@@ -134,7 +135,6 @@ class cortical_system(object):
         exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % (
         NG_name, current_idx, NG_name, current_idx)
 
-        # self.save_data.syntax_bank.append("%s.save_data.data['positions_all']['%s'] = %s.customized_neurons_list[%d]['positions']" % (self.name, NG_name,self.name, current_idx ))
         self.save_data.data['positions_all']['z_coord'][NG_name] = self.customized_neurons_list[current_idx]['z_positions']
         self.save_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx]['w_positions']
 
@@ -428,7 +428,7 @@ class cortical_system(object):
     #     xticks([0, 1], ['Source', 'Target'])
     #     ylabel('Neuron index')
 
-# CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , 'CM', os.getcwd())
+# CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , os.getcwd())
 
 
 # for hierarchy in CM.syntax_bank :

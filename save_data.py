@@ -5,9 +5,8 @@ from numpy import *
 import os
 
 class save_data(object):
-    def __init__(self,save_path,system_name):
+    def __init__(self,save_path):
         self.save_path = save_path
-        self.system_name = system_name
         self.data = {}
         self.syntax_bank = []
 
