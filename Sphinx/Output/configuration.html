@@ -124,7 +124,7 @@
 <dt>[G]:</dt>
 <dd>Defines the brian2 Neuron_Group(). The format of the NeuronGroup target line is as follows:</dd>
 </dl>
-<div class="highlight-python"><div class="highlight"><pre><span></span>[index][G] &lt;number of neurons&gt; &lt;cell type&gt; &lt;layer index&gt; &lt;cell group center&gt; [monitors]
+<div class="highlight-python"><div class="highlight"><pre><span></span>[index][G] &lt;number of neurons&gt; &lt;cell type&gt; &lt;layer index&gt; [threshold] [reset] [refractory] [cell group center] [monitors]
 </pre></div>
 </div>
 <p>where the <em>[index]</em> is the line number, <em>&lt;number of neurons&gt;</em> is the number of neurons in that particular neuron group. The <em>&lt;cell type&gt;</em> is the category of the cells of the group, which is one of the following groups:</p>
@@ -196,7 +196,13 @@
 </tr>
 </tbody>
 </table>
-<p>As the name implies, the <em>&lt;cell group center&gt;</em> defines the center of the neuron group. The center can be defined with the [CN] tag followed by the center position.  If not defined, the center will be the default value of 0+0j. The following example creates a neuron group consist of 75 BC neurons located in 5+0j, with a spike monitors assigned to it:</p>
+<p>By default following values are assigned to threshold, reset and refractory of any neurongroup:</p>
+<ul class="simple">
+<li><em>threshold</em>: <em>vm&gt;Vcut</em></li>
+<li><em>reset</em>: <em>vm=V_res</em></li>
+<li><em>refractory</em>: <em>4</em> * <em>ms</em></li>
+</ul>
+<p>Any of this variables can be overwritten by using the keyword arguments [threshold], [reset] and [refractory]. As the name implies, the optional argument <em>[cell group center]</em> defines the center of the neuron group. The center can be defined with the [CN] tag followed by the center position.  If not defined, the center will be the default value of 0+0j. The following example creates a neuron group consist of 75 BC neurons located in 5+0j, with a spike monitors assigned to it:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span>[2][G] 75 BC 2 [CN] 5+0j [M] [Sp]
 </pre></div>
 </div>
