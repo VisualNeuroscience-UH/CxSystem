@@ -96,7 +96,7 @@ In this example an input is created based on the *V1_inpu.mat* file with a frequ
 
 ::
 
-	 [index][G] <number of neurons> <cell type> <layer index> <cell group center> [monitors]
+	 [index][G] <number of neurons> <cell type> <layer index> [threshold] [reset] [refractory] [cell group center] [monitors]
 
 where the *[index]* is the line number, *<number of neurons>* is the number of neurons in that particular neuron group. The *<cell type>* is the category of the cells of the group, which is one of the following groups: 
 
@@ -145,7 +145,13 @@ The compartment formation is then as follows:
 | 6    | Basal dendrite    |
 +------+-------------------+
 
-As the name implies, the *<cell group center>* defines the center of the neuron group. The center can be defined with the [CN] tag followed by the center position.  If not defined, the center will be the default value of 0+0j. The following example creates a neuron group consist of 75 BC neurons located in 5+0j, with a spike monitors assigned to it: 
+By default following values are assigned to threshold, reset and refractory of any neurongroup: 
+
+- *threshold*: *vm>Vcut*
+- *reset*: *vm=V_res*
+- *refractory*: *4* * *ms*
+
+Any of this variables can be overwritten by using the keyword arguments [threshold], [reset] and [refractory]. As the name implies, the optional argument *[cell group center]* defines the center of the neuron group. The center can be defined with the [CN] tag followed by the center position.  If not defined, the center will be the default value of 0+0j. The following example creates a neuron group consist of 75 BC neurons located in 5+0j, with a spike monitors assigned to it: 
 
 ::
 
