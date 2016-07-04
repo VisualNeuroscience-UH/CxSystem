@@ -86,6 +86,12 @@
 </dd></dl>
 
 <dl class="method">
+<dt id="cortical_system.cortical_system.gather_result">
+<code class="descname">gather_result</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system.gather_result" title="Permalink to this definition">¶</a></dt>
+<dd><p>After the simulation and using the syntaxes that are previously prepared in the synatx_bank of save_data() object, this method saves the collected data to a file.</p>
+</dd></dl>
+
+<dl class="method">
 <dt id="cortical_system.cortical_system.monitors">
 <code class="descname">monitors</code><span class="sig-paren">(</span><em>mon_args</em>, <em>object_name</em>, <em>equation</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system.monitors" title="Permalink to this definition">¶</a></dt>
 <dd><p>This method creates the Monitors() in brian2 based on the parameters that are extracted from a target line in configuraiton file.</p>
@@ -120,7 +126,7 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>args</strong> &#8211; This method will have at least 3 main positional argumenst: Number of Neurons in the group, Type of neuron in the group and layer index (description of the layer index can be found in the configuration file.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>args</strong> &#8211; This method have at least 3 main positional argumenst directly passed from the __init__ method: Number of Neurons in the group, Type of neuron in the group and layer index. Description of the layer index as well as other possible arguments can be found in the configuration file tutorial.</td>
 </tr>
 </tbody>
 </table>
@@ -128,7 +134,7 @@
 <ul class="simple">
 <li>mon_args: contains the monitor arguments extracted from the target line.</li>
 <li>net_center: center position of the neuron group in visual field coordinates, description can be found in configuration file tutorial.</li>
-<li>NG_name: Generated vriable name for the NeuonGroup().</li>
+<li>NG_name: Generated vriable name for the NeuonGroup() object in brian2.</li>
 <li>NN_name: Generated vriable name for corresponding Neuron Number.</li>
 <li>NE_name: Generated vriable name for the NeuonGroup() equation.</li>
 <li>NT_name: Generated vriable name for the NeuonGroup() threshold.</li>
@@ -142,17 +148,33 @@
 <dl class="method">
 <dt id="cortical_system.cortical_system.relay">
 <code class="descname">relay</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system.relay" title="Permalink to this definition">¶</a></dt>
-<dd><p>The method that creates the relay NeuronGroups based on the parameters that are extracted from the configuraiton file in the __init__ method of the class.</p>
+<dd><p>The method that creates the relay NeuronGroups based on the parameters that are extracted from the configuraiton         file in the __init__ method of the class. Note that the SpikeGeneratorGroup() does not support the locations and         synaptic connection based on the distance between the input, and the target neuron group. For this reason, a &#8220;realy&#8221;         neuron group is created which is directly connected to the SpikeGeneratorGroup(). Unlike SpikeGeneratorGroup() this         relay group supports the locations. With this workaround, the synaptic connection between the input and the Neuron group can be implemented         based on the distance of the neurons then.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>args</strong> &#8211; </td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>args</strong> &#8211; This method will have at least 4 main positional argumenst directly passed from __init__ method: path to the input .mat file, and the frequency. Description of other possible arguments can be found in Configuration file tutorial.</td>
 </tr>
 </tbody>
 </table>
+<p>Main internal variables:</p>
+<ul class="simple">
+<li>inp: an instance of stimuli() object from stimuli module.</li>
+<li>relay_group: the dictionary containing the data for relay NeuonGroup()</li>
+<li>NG_name: Generated vriable name for the NeuonGroup() object in brian2.</li>
+<li>NN_name: Generated vriable name for corresponding Neuron Number.</li>
+<li>NE_name: Generated vriable name for the NeuonGroup() equation.</li>
+<li>NT_name: Generated vriable name for the NeuonGroup() threshold.</li>
+<li>NRes_name: Generated vriable name for the NeuonGroup() reset value.</li>
+<li>SGsyn_name: variable name for the Synapses() objecct that connects SpikeGeneratorGroup() and relay neurons.</li>
+</ul>
+<p>following four variables are build using the load_input_seq() method in simuli object:</p>
+<ul class="simple">
+<li>spikes_str: The string containing the syntax for Spike indices in the input neuron group.</li>
+<li>times_str: The string containing the syntax for time indices in the input neuron group.</li>
+<li>SG_str: The string containing the syntax for creating the SpikeGeneratorGroup() based on the input .mat file.</li>
+<li>number_of_neurons: The number of neurons that exist in the input .mat file.</li>
+</ul>
 </dd></dl>
 
 <dl class="method">
@@ -163,13 +185,19 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>args</strong> &#8211; This method will have at least 4 main positional argumenst: The transmitter, e.g. ge or gi, presynaptic neurong group index, post synaptic group index, and type of Synaptic connection , i.e. STDP or Fixed.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>args</strong> &#8211; This method will have at least 4 main positional argumenst directly passed from __init__ method: The transmitter, e.g. ge or gi, presynaptic neurong group index, post synaptic group index, and type of Synaptic connection , i.e. STDP or Fixed. Description of other possible arguments can be found in Configuration file tutorial.</td>
 </tr>
 </tbody>
 </table>
 <p>Main internal variables:</p>
 <ul class="simple">
 <li>mon_args: contains the monitor arguments extracted from the target line.</li>
+<li>args: normally args contains a set of arguments for a single Synapses() object. However, this changes when the post-synaptic neuron is the first (with index of 0) compartment of a multi-compartmental neuron. In this case, one might intend to target all three subcompartments, i.e. Basal dendrites, Soma and proximal apical dendrites. So the single set of arguments will be changed to 3 sets of arguments and a for loop will take care of every one of them.</li>
+<li>S_name: Generated vriable name for the Synapses() object in brian2.</li>
+<li>SE_name: Generated vriable name for the Synapses() equation.</li>
+<li>SPre_name: Generated variable name for pre_synaptic equations, i.e. &#8220;pre=...&#8221;</li>
+<li>SPost_name: Generated variable name for post_synaptic equations, i.e. &#8220;post= ...&#8221;</li>
+<li>SNS_name: Generated vriable name for the Synapses() namespace.</li>
 </ul>
 </dd></dl>
 
