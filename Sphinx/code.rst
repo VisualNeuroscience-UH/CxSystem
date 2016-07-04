@@ -11,3 +11,33 @@ Cortical System module
    :members:
    
    .. automethod:: cortical_system.cortical_system.__init__
+
+Brian2 Objects definitions module
+------------------------------------
+.. module:: brian2_obj_defs
+.. autoclass:: customized_neuron
+   :members:
+
+   .. automethod:: brian2_obj_defs.customized_neuron.__init__ 
+
+.. autoclass:: customized_synapse
+   :members:
+
+   .. automethod:: brian2_obj_defs.customized_synapse.__init__ 
+
+
+Brian2 objects namespaces module
+------------------------------------
+.. module:: brian2_obj_namespaces
+.. autoclass:: synapse_namespaces
+   :members:
+
+   .. automethod:: brian2_obj_namespaces.synapse_namespaces.__init__ 
+
+Stimuli module
+----------------
+.. module:: stimuli
+.. autoclass:: stimuli
+   :members:
+
+   .. automethod:: stimuli.stimuli.__init__

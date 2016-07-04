@@ -6,7 +6,13 @@ import os
 
 
 class stimuli(object):
+    '''
+    Stimulation object for applying the input to a particular NeuronGroup(). Currently only video input is supported.
+    '''
     def __init__(self):
+        '''
+        Stimuli initialization method.
+        '''
         self.indices = array([])
         self.times = array([])
         self.i_patterns = {}

@@ -204,6 +204,279 @@
 </dd></dl>
 
 </div>
+<div class="section" id="module-brian2_obj_defs">
+<span id="brian2-objects-definitions-module"></span><h2>Brian2 Objects definitions module<a class="headerlink" href="#module-brian2_obj_defs" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="brian2_obj_defs.customized_neuron">
+<em class="property">class </em><code class="descclassname">brian2_obj_defs.</code><code class="descname">customized_neuron</code><span class="sig-paren">(</span><em>number_of_neurons</em>, <em>cell_type</em>, <em>layers_idx</em>, <em>network_center=0j</em>, <em>resolution=0.1</em><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_defs.customized_neuron" title="Permalink to this definition">¶</a></dt>
+<dd><p>Using this class, a dictionary object is created which contains all parameters and variables that are needed to     create a group of that customized cell. This dictionary will eventually be used in process of building the cortical module.    New types of neurons should be implemented in this class.</p>
+<dl class="method">
+<dt id="brian2_obj_defs.customized_neuron.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>number_of_neurons</em>, <em>cell_type</em>, <em>layers_idx</em>, <em>network_center=0j</em>, <em>resolution=0.1</em><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_defs.customized_neuron.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>initialize the customized_neuron based on the arguments.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>number_of_neurons</strong> &#8211; number of neurons in the NeuronGroup() object.</li>
+<li><strong>cell_type</strong> &#8211; type of cell in the NeuronGroup: currently PC, SS, BC, MC and L1i.</li>
+<li><strong>layers_idx</strong> &#8211; indicating the layer in which the cell group is located. In case of SS, BC, MC and L1i it is an integer          but for PC which is a multicompartmental neuron, it is a tuple array. This tuple numpy array defines the first          and last layers in which the neuron resides. So array([4,1]) means that the soma resides in layer 4 and the apical          dendrites which are (2 compartments) extend to layer 2/3 and 1. To avoid confusion, layer 2 is used as the indicator          of layer 2/3. Hence, if the last compartment of a neuron is in layer 2/3, use number 2.</li>
+<li><strong>network_center</strong> &#8211; as the name implies, this argument defines the center of teh NeuronGroup() in visual field coordinates. The default value is 0+0j.</li>
+<li><strong>resolution</strong> &#8211; resolution for formation of neurons in the grid. Default value is 0.1</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Main internal variables:</p>
+<ul class="simple">
+<li>output_neuron: the main dictionary containing all the data about current Customized_neuron_group including: number of neurons, threshold, reset, refractory, neuron type, soma position(layer), dendrites layer, total number of compartments, namespace, equation, positions (both in cortical and visual coordinates).</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="brian2_obj_defs.customized_neuron.BC">
+<code class="descname">BC</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_defs.customized_neuron.BC" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method build up the equation for BC neurons. The final equation is then saved in output_neuron[&#8216;equation&#8217;].</p>
+<ul>
+<li><p class="first">The equation of the neuron is as follows:</p>
+<blockquote>
+<div><div class="highlight-python"><div class="highlight"><pre><span></span>dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge_soma * (Ee-vm) + gi_soma * (Ei-vm)) / C : volt (unless refractory)
+dge_soma/dt = -ge_soma/tau_e : siemens
+dgi_soma/dt = -gi_soma/tau_i : siemens
+x : meter
+y : meter
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="brian2_obj_defs.customized_neuron.L1i">
+<code class="descname">L1i</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_defs.customized_neuron.L1i" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method build up the equation for Layer 1 inhibitory (L1i) neurons. The final equation is then saved in output_neuron[&#8216;equation&#8217;].</p>
+<ul>
+<li><p class="first">The equation of the neuron is as follows:</p>
+<blockquote>
+<div><div class="highlight-python"><div class="highlight"><pre><span></span>dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge_soma * (Ee-vm) + gi_soma * (Ei-vm)) / C : volt (unless refractory)
+dge_soma/dt = -ge_soma/tau_e : siemens
+dgi_soma/dt = -gi_soma/tau_i : siemens
+x : meter
+y : meter
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="brian2_obj_defs.customized_neuron.MC">
+<code class="descname">MC</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_defs.customized_neuron.MC" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method build up the equation for MC neurons. The final equation is then saved in output_neuron[&#8216;equation&#8217;].</p>
+<ul>
+<li><p class="first">The equation of the neuron is as follows:</p>
+<blockquote>
+<div><div class="highlight-python"><div class="highlight"><pre><span></span>dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge_soma * (Ee-vm) + gi_soma * (Ei-vm)) / C : volt (unless refractory)
+dge_soma/dt = -ge_soma/tau_e : siemens
+dgi_soma/dt = -gi_soma/tau_i : siemens
+x : meter
+y : meter
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="brian2_obj_defs.customized_neuron.PC">
+<code class="descname">PC</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_defs.customized_neuron.PC" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method build up the equation for PC neurons based on the number of compartments. The final equation is then saved in output_neuron[&#8216;equation&#8217;].</p>
+<p>Main internal variables:</p>
+<ul>
+<li><p class="first">eq_template_soma: Contains template somatic equation, the variables in side the equation could be replaced later using &#8220;Equation&#8221; function in brian2. :</p>
+<blockquote>
+<div><div class="highlight-python"><div class="highlight"><pre><span></span>dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr) / C : volt (unless refractory)
+dge/dt = -ge/tau_e : siemens
+dgealpha/dt = (ge-gealpha)/tau_e : siemens
+dgeX/dt = -geX/tau_eX : siemens
+dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
+dgi/dt = -gi/tau_i : siemens
+dgialpha/dt = (gi-gialpha)/tau_i : siemens
+x : meter
+y : meter
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p class="first">eq_template_dend: Contains template dendritic equation:</p>
+<blockquote>
+<div><div class="highlight-python"><div class="highlight"><pre><span></span>dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr) / C : volt (unless refractory)
+dge/dt = -ge/tau_e : siemens
+dgealpha/dt = (ge-gealpha)/tau_e : siemens
+dgeX/dt = -geX/tau_eX : siemens
+dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
+dgi/dt = -gi/tau_i : siemens
+dgialpha/dt = (gi-gialpha)/tau_i : siemens
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="brian2_obj_defs.customized_neuron.SS">
+<code class="descname">SS</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_defs.customized_neuron.SS" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method build up the equation for SS neurons. The final equation is then saved in output_neuron[&#8216;equation&#8217;].</p>
+<ul>
+<li><p class="first">The equation of the neuron is as follows:</p>
+<blockquote>
+<div><div class="highlight-python"><div class="highlight"><pre><span></span>dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge_soma * (Ee-vm) + gi_soma * (Ei-vm)) / C : volt (unless refractory)
+dge_soma/dt = -ge_soma/tau_e : siemens
+dgi_soma/dt = -gi_soma/tau_i : siemens
+x : meter
+y : meter
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="brian2_obj_defs.customized_synapse">
+<em class="property">class </em><code class="descclassname">brian2_obj_defs.</code><code class="descname">customized_synapse</code><span class="sig-paren">(</span><em>receptor</em>, <em>pre_group_idx</em>, <em>post_group_idx</em>, <em>syn_type</em>, <em>pre_type</em>, <em>post_type</em>, <em>post_comp_name='_soma'</em><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_defs.customized_synapse" title="Permalink to this definition">¶</a></dt>
+<dd><p>In this class, a dictionary object is created which contains all parameters and variables that are needed to         create a Synapses() object between two neuron group. This dictionary will eventually be used in process of         building the cortical module. New types of synapses should be implemented in this class.</p>
+<dl class="method">
+<dt id="brian2_obj_defs.customized_synapse.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>receptor</em>, <em>pre_group_idx</em>, <em>post_group_idx</em>, <em>syn_type</em>, <em>pre_type</em>, <em>post_type</em>, <em>post_comp_name='_soma'</em><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_defs.customized_synapse.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>initializes the customized_synapse based on its arguments.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>receptor</strong> &#8211; defines the type of the receptor in the synaptic connection. Currently ge and gi are implemented.</li>
+<li><strong>pre_group_idx</strong> &#8211; The index of the pre-synaptic group.</li>
+<li><strong>post_group_idx</strong> &#8211; The index of the post-synaptic group.</li>
+<li><strong>syn_type</strong> &#8211; Type of the synaptic connection, currently STDP and Fixed are implemented.</li>
+<li><strong>pre_type</strong> &#8211; Type of the pre-synaptic NeuronGroup.</li>
+<li><strong>post_type</strong> &#8211; Type of the post-synaptic NeuronGroup.</li>
+<li><strong>post_comp_name</strong> &#8211; Name of the target compartment in the cells of the post-synaptic NeuronGroup. The deufaul value is &#8220;_soma&#8221; as usually soma is being targeted. In case other compartments are targeted in a PC cell, e.g. basal or apical dendrites, _basal or _apical will be used.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Main internal variables:</p>
+<ul class="simple">
+<li>output_synapse: the main dictionary containing all the data about current customized_synapse_group including: synaptic equations (model, pre, post), type of synapse, type of receptor, index and type of pre- and post-synaptic group, namespace for the Synapses() object, sparseness, ilam (?).</li>
+<li>_name_space: An instance of brian2_obj_namespaces() object which contains all the constant parameters for this synaptic equation.</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="brian2_obj_defs.customized_synapse.Fixed">
+<code class="descname">Fixed</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_defs.customized_synapse.Fixed" title="Permalink to this definition">¶</a></dt>
+<dd><p>The method for implementing the Fixed synaptic connection.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="brian2_obj_defs.customized_synapse.STDP">
+<code class="descname">STDP</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_defs.customized_synapse.STDP" title="Permalink to this definition">¶</a></dt>
+<dd><p>The method for implementing the STDP synaptic connection.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-brian2_obj_namespaces">
+<span id="brian2-objects-namespaces-module"></span><h2>Brian2 objects namespaces module<a class="headerlink" href="#module-brian2_obj_namespaces" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="brian2_obj_namespaces.synapse_namespaces">
+<em class="property">class </em><code class="descclassname">brian2_obj_namespaces.</code><code class="descname">synapse_namespaces</code><span class="sig-paren">(</span><em>output_synapse</em><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_namespaces.synapse_namespaces" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class contains all the variables that are required for the Synapses() object namespaces. There are several reference dictionaries in this class for:</p>
+<ul class="simple">
+<li>cw: connection weights for any connection between NeuronGroup()s.</li>
+<li>sp: Sparsness values for any connection between NeuronGroup()s.</li>
+<li>STDP: values for A_pre, A_post, Tau_pre and Tau_post for any connection between NeuronGroup()s.</li>
+<li>dist: distribution of the neurons for connection between NeuronGroup()s.</li>
+</ul>
+<p>There are also some important internal variables:</p>
+<ul class="simple">
+<li>Cp: Synaptic potentiation coefficient according to van Rossum J Neurosci 2000</li>
+<li>Cd: Synaptic depression coefficient according to van Rossum J Neurosci 2000</li>
+<li>stdp_Nsweeps: 60 in papers one does multiple trials to reach +-50% change in synapse strength. A-coefficien will be divided by this number</li>
+<li>stdp_max_strength_coefficient: This value is to avoid runaway plasticity.</li>
+<li>conn_prob_gain: This is used for compensation of small number of neurons and thus incoming synapses</li>
+</ul>
+<dl class="method">
+<dt id="brian2_obj_namespaces.synapse_namespaces.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>output_synapse</em><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_namespaces.synapse_namespaces.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>The initialization method for namespaces() object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>output_synapse</strong> &#8211; This is the dictioanry created in customized_neuron() in brian2_obj_namespaces module. This contains all the informatino about the synaptic connection. In this class, Synaptic namespace parameters are directly added to it. Following valus are set after initialization: Cp, Cd, sparseness, ilan. Other variables are then set based on the type of the synaptic connection (STDP,Fixed).</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="brian2_obj_namespaces.synapse_namespaces.Fixed">
+<code class="descname">Fixed</code><span class="sig-paren">(</span><em>output_synapse</em><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_namespaces.synapse_namespaces.Fixed" title="Permalink to this definition">¶</a></dt>
+<dd><p>The Fixed method for assigning the parameters for Fixed synaptic connection to the customized_synapses() object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>output_synapse</strong> &#8211; This is the dictioanry created in customized_neuron() in brian2_obj_namespaces module. This contains all the informatino about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP valus are set in this method: wght_max, wght0.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="brian2_obj_namespaces.synapse_namespaces.STDP">
+<code class="descname">STDP</code><span class="sig-paren">(</span><em>output_synapse</em><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_namespaces.synapse_namespaces.STDP" title="Permalink to this definition">¶</a></dt>
+<dd><p>The STDP method for assigning the STDP parameters to the customized_synapses() object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>output_synapse</strong> &#8211; This is the dictioanry created in customized_neuron() in brian2_obj_namespaces module. This contains all the informatino about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP valus are set in this method: Apre, Apost, Tau_pre, Tau_post, wght_max, wght0.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-stimuli">
+<span id="stimuli-module"></span><h2>Stimuli module<a class="headerlink" href="#module-stimuli" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="stimuli.stimuli">
+<em class="property">class </em><code class="descclassname">stimuli.</code><code class="descname">stimuli</code><a class="headerlink" href="#stimuli.stimuli" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stimulation object for applying the input to a particular NeuronGroup(). Currently only video input is supported.</p>
+<dl class="method">
+<dt id="stimuli.stimuli.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#stimuli.stimuli.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stimuli initialization method.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
 </div>
 
 
@@ -216,6 +489,9 @@
   <ul>
 <li><a class="reference internal" href="#">Cortical System Package</a><ul>
 <li><a class="reference internal" href="#module-cortical_system">Cortical System module</a></li>
+<li><a class="reference internal" href="#module-brian2_obj_defs">Brian2 Objects definitions module</a></li>
+<li><a class="reference internal" href="#module-brian2_obj_namespaces">Brian2 objects namespaces module</a></li>
+<li><a class="reference internal" href="#module-stimuli">Stimuli module</a></li>
 </ul>
 </li>
 </ul>
