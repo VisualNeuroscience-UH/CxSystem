@@ -7,12 +7,9 @@ import os
 
 class stimuli(object):
     '''
-    Stimulation object for applying the input to a particular NeuronGroup(). Currently only video input is supported.
+    [Extracted from VCX_model] This is the stimulation object for applying the input to a particular NeuronGroup(). Currently only video input is supported.
     '''
     def __init__(self):
-        '''
-        Stimuli initialization method.
-        '''
         self.indices = array([])
         self.times = array([])
         self.i_patterns = {}
@@ -21,7 +18,13 @@ class stimuli(object):
         self.SimulationDuration = 0.4 * second
 
     def generate_inputs(self, path, freq):
-        # if _sim_round == 0:
+        '''
+        The method for generating input based on the .mat file, using the internal _initialize_inputs() and _calculate_input_seqs() methods.
+
+        :param path: path to the input .mat file.
+        :param freq: frequency.
+        :return:
+        '''
         self._initialize_inputs(path, freq)
         self._calculate_input_seqs(path)
 
@@ -35,7 +38,11 @@ class stimuli(object):
         return spikes_str, times_str,  SG_str , int(max(new_spikes[0])+1)
 
     def get_input_positions(self, path):
+        '''
+        Extract the positions from the .mat file.
 
+        :param path: Path to the .mat file.
+        '''
         _V1_mats = {}
         sio.loadmat(path, _V1_mats)
         return _V1_mats['z_coord']
