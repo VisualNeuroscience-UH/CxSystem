@@ -1,5 +1,5 @@
 # __author__ = 'V_AD'
-# from brian2 import *
+# from brian_genn_version  import *
 # from numpy import *
 #
 #
@@ -15,7 +15,7 @@
 # plot(tmp_mon.t,tmp_mon.i,'b.');show()
 
 
-from brian2 import *
+from brian_genn_version  import *
 import time
 
 # BrianLogger.log_level_debug()
