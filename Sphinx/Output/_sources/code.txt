@@ -40,4 +40,10 @@ Stimuli module
 .. autoclass:: stimuli
    :members:
 
-   .. automethod:: stimuli.stimuli.__init__
+Save data module 
+------------------
+.. module:: save_data
+.. autoclass:: save_data
+   :members:
+
+   .. automethod:: save_data.save_data.__init__
