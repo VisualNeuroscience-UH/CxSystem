@@ -1,4 +1,4 @@
-from brian2 import *
+from brian_genn_version  import *
 import brian2genn
 
 set_device('genn')
