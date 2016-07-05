@@ -3,7 +3,7 @@
 Configuration File Tutorial
 ===========================
 
-Each line of the configuration file that has to be interpreted, aka target line, defines either a Neuron_Group() or Synapses() in brian2. A line is considered as target line if it contains a target tag. Currently there are three target tags in the system: [IN], [G], [S] and a indexing tag, e.g. [0]. Each of these tags are thoroughly discussed later in this document. Each line that starts with the character *[* will be considered as a potential target line. Hence any other line that starts with other characters is equal to a comment line. Though you can use *#* in the beginning of the line to be tidy. 
+Each line of the configuration file that has to be interpreted, aka target line, defines either a Neuron_Group() or Synapses() in brian2. A line is considered as target line if it contains a target tag. Currently there are three target tags in the system: [IN], [G], [S] and a indexing tag, e.g. [0]. Each of these tags are thoroughly discussed later in this document. Each line that starts with the character *[* will be considered as a potential target line. Hence any other line that starts with other characters is equal to a comment line. Though you can use *#* in the beginning of the line to be tidy. Note that in this tutorial, mandatory arguments are shown inside <> while optional arguments are presented in {}. 
 
 -----------------
 
@@ -77,7 +77,7 @@ Currently the video input in implemented in the cortical system. The stimuli is 
 
 ::
 
-	[index][IN] <.mat file location> <frequency> [monitors]
+	<index><[IN]> <.mat file location> <frequency> {monitors}
 
 This is an example of defining an input for the system: 
 
@@ -96,7 +96,7 @@ In this example an input is created based on the *V1_inpu.mat* file with a frequ
 
 ::
 
-	 [index][G] <number of neurons> <cell type> <layer index> [threshold] [reset] [refractory] [cell group center] [monitors]
+	 <index><[G]> <number of neurons> <cell type> <layer index> {threshold} {reset} {refractory} {cell group center} {monitors}
 
 where the *[index]* is the line number, *<number of neurons>* is the number of neurons in that particular neuron group. The *<cell type>* is the category of the cells of the group, which is one of the following groups: 
 
@@ -166,13 +166,13 @@ Any of this variables can be overwritten by using the keyword arguments [thresho
 
 ::
 
-	[index][S] <receptor> <presynaptic group index> <postsynaptic group index> <synapse type>
+	<index><[S]> <receptor> <presynaptic group index> <postsynaptic group index> <synapse type> {probability} {number of connections} {monitors}
 
 where the *[index]* is the line number, *<receptor>* defines the receptor type, e.g. ge and gi, *<presynaptic group index>* and *<postsynaptic group index>* defines the index of the presynaptic and postsynaptic group respectively. These indices could be determined using the *indexing tag* in the neuron groups target lines. The next field defines the type of the synapse. Currently there are two types of synapses implemented: Fixed and STDP. The following example defines a excitatory STDP synaptic connection between neuron groups with indices of 2 and 4, in which the *ge* is the receptor: 
 
 ::
 
-	[0][S] ge 2 4 STDP
+	[0][S] ge 2 4 STDP 
 
 In case the postsynaptic group is multi-compartmental, the target compartment should be defined using the [C] tag. Let us review this concept with an example: 
 
@@ -235,5 +235,20 @@ If both basal dendrite and apical dendrite[0] was being targeted, the syntax sho
 ::
 
 	[2][S] ge 0 1[C]002 STDP
+
+By default the probability of the synaptic connections are determined based on the distance between the neurons, which depends on sparseness and ilam variables in the brian2_obj_namespaces module. In case the maximum probability of the connection should be overwritten, [p] tag can be used. In the following example the maximum probability of the connection is overwriten as 0.06 (6%): 
+
+::
+
+	[2][S] ge 0 1[C]002 STDP [p] 0.06
+
+By default the number of connections that happens between a pair of neurons is also equal to 1. This can also be overwritten to another integer value by using the [n] tag. So, for having a probability of 6% over 3 connection per pair of neuron: 
+
+::
+
+	[2][S] ge 0 1[C]002 STDP [p] 0.06 [n] 3 
+
+
+
 
 
