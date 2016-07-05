@@ -1,5 +1,5 @@
 __author__ = 'V_AD'
-from brian2 import *
+from brian_genn_version  import *
 import brian2genn
 import os
 from brian2_obj_defs import *
@@ -495,7 +495,9 @@ class cortical_system(object):
         Spikes_Name = spikes_str.split('=')[0].rstrip()
         Time_Name = times_str.split('=')[0].rstrip()
         SG_Name = SG_str.split('=')[0].rstrip()
-        # set_device('genn')
+
+        set_device('genn')
+
         exec spikes_str # runnig the string containing the syntax for Spike indices in the input neuron group.
         exec times_str # running the string containing the syntax for time indices in the input neuron group.
         exec SG_str # running the string containing the syntax for creating the SpikeGeneratorGroup() based on the input .mat file.
@@ -566,7 +568,7 @@ class cortical_system(object):
     #     xticks([0, 1], ['Source', 'Target'])
     #     ylabel('Neuron index')
 
-# CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , os.getcwd())
+CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , os.getcwd())
 
 
 # for hierarchy in CM.syntax_bank :
@@ -579,32 +581,32 @@ class cortical_system(object):
 
 
 
-# run(500*ms,report = 'text')
-# device.build(directory='tester',
-#             compile=True,
-#              run=True,
-#              use_GPU=True)
+run(500*ms,report = 'text')
+device.build(directory='tester',
+            compile=True,
+             run=True,
+             use_GPU=True)
 
 
-# CM.gather_result()
-# # CM.visualise_connectivity(S0_Fixed)
-# for group in CM.monitor_name_bank:
-#     mon_num = len(CM.monitor_name_bank[group])
-#     tmp_str = "f, axarr = plt.subplots(%d, sharex=True)"%mon_num ; exec tmp_str
-#     for item_idx,item in enumerate(CM.monitor_name_bank[group]):
-#         if 'SpMon' in item :
-#             if len (CM.monitor_name_bank[group]) ==1  :
-#                 exec "axarr.plot(%s.t/ms,%s.i,'.k')" % ( item, item);
-#                 exec "axarr.set_title('%s')" % ( item);
-#             else:
-#                 tmp_str = "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item);exec tmp_str
-#                 tmp_str= "axarr[%d].set_title('%s')"% (item_idx, item);exec tmp_str
-#         elif 'StMon' in item:
-#             underscore= item.index('__')
-#             variable = item[underscore+2:]
-#             tmp_str = 'y_num=len(%s.%s)'%(item,variable);exec tmp_str
-#             tmp_str = "multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item);exec tmp_str
-# show()
+CM.gather_result()
+# CM.visualise_connectivity(S0_Fixed)
+for group in CM.monitor_name_bank:
+    mon_num = len(CM.monitor_name_bank[group])
+    tmp_str = "f, axarr = plt.subplots(%d, sharex=True)"%mon_num ; exec tmp_str
+    for item_idx,item in enumerate(CM.monitor_name_bank[group]):
+        if 'SpMon' in item :
+            if len (CM.monitor_name_bank[group]) ==1  :
+                exec "axarr.plot(%s.t/ms,%s.i,'.k')" % ( item, item);
+                exec "axarr.set_title('%s')" % ( item);
+            else:
+                tmp_str = "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item);exec tmp_str
+                tmp_str= "axarr[%d].set_title('%s')"% (item_idx, item);exec tmp_str
+        elif 'StMon' in item:
+            underscore= item.index('__')
+            variable = item[underscore+2:]
+            tmp_str = 'y_num=len(%s.%s)'%(item,variable);exec tmp_str
+            tmp_str = "multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item);exec tmp_str
+show()
 #
 #
 # for syntax in CM.save_data.syntax_bank :

@@ -1,5 +1,5 @@
 from matplotlib.pyplot import  *
-from brian2 import *
+from brian_genn_version  import *
 
 def multi_y_plotter(ax, len, variable,item,title):
 
