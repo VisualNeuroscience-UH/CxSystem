@@ -309,15 +309,36 @@ class cortical_system(object):
         * SPre_name: Generated variable name for pre_synaptic equations, i.e. "pre=..."
         * SPost_name: Generated variable name for post_synaptic equations, i.e. "post= ..."
         * SNS_name: Generated vriable name for the Synapses() namespace.
+        * syn_con_str: The string containing the sytanct for connect() method of a current Synapses() object. This string changes depending on using the [p] and [n] tags in the configuration file.
         '''
         _options = {
             '[C]': self.neuron_group,
         }
-        # _is_tag = ['[']
-        # args = args[0]
         mon_args = []  # contains the monitor arguments extracted from the target line.
-        if len(args[0][2]) > 1 and '[' in args[0][
-            2]:  # This if is for when the post-synaptic neuron is a multicompartmental PC neuon, the rules are described in the configuration file description.
+        try: # extracting the monitors
+            mon_args = args[0][args[0].index('[M]') + 1:]
+            args = list(args)
+            args[0] = args[0][0:args[0].index('[M]')]
+            args = tuple(args)
+        except:
+            pass
+        try:  # extracting the number of connection in a synapse (n)
+            n_arg = args[0][args[0].index('[n]') + 1:args[0].index('[n]') + 2][0]
+            args = list(args)
+            args[0] = args[0][0:args[0].index('[n]')]
+            args = tuple(args)
+        except:
+            pass
+        try:  # extracting the probability (p)
+            p_arg = args[0][args[0].index('[p]') + 1:args[0].index('[p]') + 2][0]
+            args = list(args)
+            args[0] = args[0][0:args[0].index('[p]')]
+            args = tuple(args)
+        except:
+            pass
+
+        if len(args[0][2]) > 1 and '[' in args[0][2]:  # This if is for when the post-synaptic neuron is a \
+            # multicompartmental PC neuon, the rules are described in the configuration file description.
             arg = args[0][2]  # post-synaptic target layer index
             tag = arg[arg.index('['):arg.index(']') + 1]  # extracting the tag
             assert tag in _options.keys(), 'The synaptic tag %s is not defined.' % tag
@@ -326,11 +347,11 @@ class cortical_system(object):
                 args[0][2] = _post_group_idx
                 assert self.customized_neurons_list[int(args[0][2])][
                            'type'] == 'PC', 'A compartment is targetted but the neuron geroup is not PC. Check Synapses in the configuration file.'
-                if '[M]' in args[0]:  # extracting the monitors
-                    mon_args = args[0][args[0].index('[M]') + 1:]
-                    args = list(args)
-                    args[0] = args[0][0:args[0].index('[M]')]
-                    args = tuple(args)
+                # if '[M]' in args[0]:
+                #     mon_args = args[0][args[0].index('[M]') + 1:]
+                #     args = list(args)
+                #     args[0] = args[0][0:args[0].index('[M]')]
+                #     args = tuple(args)
                 _pre_type = self.customized_neurons_list[int(args[0][1])]['type']  # Pre-synaptic neuron type
                 _post_type = self.customized_neurons_list[int(args[0][2])]['type']  # Post-synaptic neuron type
                 args[0].extend([_pre_type, _post_type])
@@ -366,11 +387,11 @@ class cortical_system(object):
                 elif int(_post_com_idx) > 0:
                     args[0].append('_a' + str(_post_com_idx))
         else:
-            if '[M]' in args[0]:  # extracting the monitors
-                mon_args = args[0][args[0].index('[M]') + 1:]
-                args = list(args)
-                args[0] = args[0][0:args[0].index('[M]')]
-                args = tuple(args)
+            # if '[M]' in args[0]:  # extracting the monitors
+            #     mon_args = args[0][args[0].index('[M]') + 1:]
+            #     args = list(args)
+            #     args[0] = args[0][0:args[0].index('[M]')]
+            #     args = tuple(args)
             _pre_type = self.customized_neurons_list[int(args[0][1])]['type']  # Pre-synaptic neuron type
             _post_type = self.customized_neurons_list[int(args[0][2])]['type']  # Post-synaptic neuron type
             args[0].extend([_pre_type, _post_type])
@@ -409,9 +430,20 @@ class cortical_system(object):
                      % (S_name, self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
                         self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SE_name, SPre_name,
                         SNS_name)
-            # Connecting the synapses based on the neurons location (distance)
-            exec "%s.connect('i!=j', p='%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)   ')" \
-                 % (S_name, self.customized_synapses_list[-1]['sparseness'], self.customized_synapses_list[-1]['ilam'])
+            syn_con_str = "%s.connect('i!=j', p= " %S_name
+            # Connecting the synapses based on either [the defined probability and the distance] or [only the distance] plus considering the number of connections
+            try:
+                # syn_con_str+= p_arg
+                syn_con_str += "'%s*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
+                           % (p_arg, self.customized_synapses_list[-1]['ilam'])
+            except:
+                syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
+                 % ( self.customized_synapses_list[-1]['sparseness'], self.customized_synapses_list[-1]['ilam'])
+            try:
+                syn_con_str += ',n=%s)' %n_arg
+            except :
+                syn_con_str += ')'
+            exec syn_con_str
             exec "%s.wght=%s['wght0']" % (S_name, SNS_name)  # set the weights
             try:  # update the Globals()
                 exec "globals().update({'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s})" % \
@@ -509,7 +541,7 @@ class cortical_system(object):
              (NN_name, NN_name, NE_name, NE_name, NT_name, NT_name, NRes_name, NRes_name, NG_name, NG_name, SGsyn_name,
               SGsyn_name) # updating the Globals()
 
-        self.monitors(mon_args, args[1], NG_name, self.customized_neurons_list[-1]['equation']) # taking care of the monitors
+        self.monitors(mon_args, NG_name, self.customized_neurons_list[-1]['equation']) # taking care of the monitors
 
     def gather_result(self):
         '''

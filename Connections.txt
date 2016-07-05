@@ -17,12 +17,12 @@
 
 
 ### Neuron Groups
-[0][IN] /home/corriel/Documents/Git_repos/CXModule_Git/V1_input_layer_2015_10_30_11_7_31.mat 190*Hz [M] [Sp]
+[0][IN] /home/corriel/Documents/Git_repos/CXSystem_Git/V1_input_layer_2015_10_30_11_7_31.mat 190*Hz [M] [Sp]
 [1][G] 46 SS 4 [CN] 5+0j [M] [Sp] [St]ge_soma+gi_soma+vm
 [2][G] 46 PC [4,2] [CN] 5+0j [M] [Sp] [St]ge_soma+gi_soma+vm_basal+vm+vm_a1
 #[3][G] 75 BC 2 [CN] 5+0j [M] [Sp] [St]ge_soma+gi_soma+vm
 
-[2][S] ge 0 1 Fixed
+[2][S] ge 0 1 Fixed [p] 0.06 [n] 3 [M] [St]apre[rec]arange(0,21)+wght[rec]arange(0,21)
 [2][S] ge 1 2 Fixed
 
 #[0][S] ge 1 2[C]002 STDP [M] [St]apre[rec]arange(0,21)+wght[rec]arange(0,20)
