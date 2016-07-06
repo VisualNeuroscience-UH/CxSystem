@@ -6,7 +6,7 @@ from brian2_obj_defs import *
 from Plotter import *
 from save_data import *
 from stimuli import *
-
+import copy # for copying Equation object
 
 class cortical_system(object):
     '''
@@ -45,7 +45,7 @@ class cortical_system(object):
         * customized_neurons_list: This list contains the customized_neuron instances. So for each neuron group target line, there would be an element in this list which contains all the information for that particular neuron group.
         * customized_synapses_list: This list contains the customized_synapse instances. Hence, for each synapse custom line, there would be an element in this list, containing all the necessary information.
         * neurongroups_list: This list contains name of the NeuronGroup() instances that are placed in the Globals().
-        * synapses_list: This list contains name of the Synapses() instances that are placed in the Globals().
+        * synapses_name_list: This list contains name of the Synapses() instances that are placed in the Globals().
         * monitor_name_bank: The dictionary containing the name of the monitors that are defined for any NeuronGroup() or Synapses().
         * default_monitors: In case --> and <-- symbols are used in the configuration file, this default monitor will be applied on all the target lines in between those marks.
         * save_data: The save_data() object for saving the final data.
@@ -55,13 +55,15 @@ class cortical_system(object):
         _options = {
             '[G]': self.neuron_group,
             '[S]': self.synapse,
-            '[IN]': self.relay
+            '[IN]': self.relay,
+            '[total_synapses]': self.total_synapses
         }
         is_tag = ['[']
         self.customized_neurons_list = []  # This list contains the customized_neuron instances. So for each neuron group target line, there would be an element in this list which contains all the information for that particular neuron group.
         self.customized_synapses_list = []  # This list contains the customized_synapse instances. Hence, for each synapse custom line, there would be an element in this list, containing all the necessary information.
         self.neurongroups_list = []  # This list contains name of the NeuronGroup() instances that are placed in the Globals().
-        self.synapses_list = []  # This list contains name of the Synapses() instances that are placed in the Globals().
+        self.synapses_name_list = []  # This list contains name of the Synapses() instances that are placed in the Globals().
+        self.synapses_perc_list = [] # This list contains percentages of the Synapses() instances that are placed in the Globals().
         self.monitor_name_bank = {}  # The dictionary containing the name of the monitors that are defined for any NeuronGroup() or Synapses().
         self.default_monitors = []  # In case --> and <-- symbols are used in the configuration file, this default monitor will be applied on all the target lines in between those marks.
         self.monitor_idx = 0
@@ -69,10 +71,11 @@ class cortical_system(object):
         self.save_data.creat_key('positions_all')
         self.save_data.data['positions_all']['w_coord'] = {}
         self.save_data.data['positions_all']['z_coord'] = {}
+
         with open(config_path, 'r') as f:  # Here is the configuration file parser.
             for line in f:
                 if line[0] in is_tag:
-                    line = line[line.index(']') + 1:]  # Trip the index number
+                    line = line[line.index(']') + 1:]  # Trim the index number
                     tag = line[line.index('['):line.index(']') + 1]  # extract the main tag
                     assert tag in _options.keys(), 'The tag %s is not defined.' % tag
                 else:
@@ -83,7 +86,12 @@ class cortical_system(object):
                 args = line.split(' ')
                 _options[tag](args)
 
+        assert len(self.synapses_name_list) == len(self.synapses_perc_list), "When the percentage for a synapse is defined, it should be defined for all others as well. Error: One or more synaptses percentages are missing"
+        assert sum(map(float,self.synapses_perc_list)) == 1 , "Error: the percentage of the synapses does not sum up to 1"
         print "Cortical Module initialization Done."
+
+    def total_synapses(self,*args):
+        self.total_synapses = int(args[0][0])
 
     def neuron_group(self, *args):
         '''
@@ -317,6 +325,13 @@ class cortical_system(object):
             '[C]': self.neuron_group,
         }
         mon_args = []  # contains the monitor arguments extracted from the target line.
+        try:
+            perc_arg = args[0][args[0].index('[%]') + 1:]
+            args = list(args)
+            args[0] = args[0][0:args[0].index('[%]')]
+            args = tuple(args)
+        except:
+            pass
         try: # extracting the monitors
             mon_args = args[0][args[0].index('[M]') + 1:]
             args = list(args)
@@ -341,6 +356,10 @@ class cortical_system(object):
 
         if len(args[0][2]) > 1 and '[' in args[0][2]:  # This if is for when the post-synaptic neuron is a \
             # multicompartmental PC neuon, the rules are described in the configuration file description.
+            try :
+                self.synapses_perc_list.extend(map(float,perc_arg.split('+')))
+            except:
+                self.synapses_perc_list.append(float(perc_arg[0]))
             arg = args[0][2]  # post-synaptic target layer index
             tag = arg[arg.index('['):arg.index(']') + 1]  # extracting the tag
             assert tag in _options.keys(), 'The synaptic tag %s is not defined.' % tag
@@ -349,11 +368,6 @@ class cortical_system(object):
                 args[0][2] = _post_group_idx
                 assert self.customized_neurons_list[int(args[0][2])][
                            'type'] == 'PC', 'A compartment is targetted but the neuron geroup is not PC. Check Synapses in the configuration file.'
-                # if '[M]' in args[0]:
-                #     mon_args = args[0][args[0].index('[M]') + 1:]
-                #     args = list(args)
-                #     args[0] = args[0][0:args[0].index('[M]')]
-                #     args = tuple(args)
                 _pre_type = self.customized_neurons_list[int(args[0][1])]['type']  # Pre-synaptic neuron type
                 _post_type = self.customized_neurons_list[int(args[0][2])]['type']  # Post-synaptic neuron type
                 args[0].extend([_pre_type, _post_type])
@@ -388,24 +402,25 @@ class cortical_system(object):
                         args = triple_args
                 elif int(_post_com_idx) > 0:
                     args[0].append('_a' + str(_post_com_idx))
+            assert len(args) == len(perc_arg), "Not enough percentage values are defined for a PC neuron. In a \
+            multi-compartmental PC neuron, when multiple compartments in soma are being targeted, the percentage of each of\
+             those connection should be declared separately. Check configuration file tutorial."
         else:
-            # if '[M]' in args[0]:  # extracting the monitors
-            #     mon_args = args[0][args[0].index('[M]') + 1:]
-            #     args = list(args)
-            #     args[0] = args[0][0:args[0].index('[M]')]
-            #     args = tuple(args)
+            self.synapses_perc_list.append(float( perc_arg[0]))
             _pre_type = self.customized_neurons_list[int(args[0][1])]['type']  # Pre-synaptic neuron type
             _post_type = self.customized_neurons_list[int(args[0][2])]['type']  # Post-synaptic neuron type
+            assert _post_type!= 'PC', 'Error: The post_synaptc group is a multicompartmental PC but the target compartment is not selected. Use [C] tag. '
             args[0].extend([_pre_type, _post_type])
         for syn in args:
 
             # check monitors in line:
+            _number_of_synapse = 0 #_number_of_synapse number of synaptic connections in the Synapses() object
             current_idx = len(self.customized_synapses_list)
             self.customized_synapses_list.append(customized_synapse(
                 *syn).output_synapse)  # creating a customized_synapse object and passing the positional arguments to it. The main member of the class called output_synapse is then appended to customized_synapses_list.
             S_name = self._Synapses_prefix + str(current_idx) + '_' + syn[
                 3]  # Generated vriable name for the Synapses() object in brian2.
-            self.synapses_list.append(S_name)
+            self.synapses_name_list.append(S_name)
             SE_name = self._SynapsesEquation_prefix + str(
                 current_idx)  # Generated vriable name for the Synapses() equation.
             SPre_name = self._SynapsesPre_prefix + str(
@@ -422,31 +437,82 @@ class cortical_system(object):
             except:
                 pass
             exec "%s=self.customized_synapses_list[%d]['namespace']" % (SNS_name, current_idx)
+
+            ### creating the initial synaptic connection :
+            exec "eq_tmp = copy.deepcopy(%s)" % SE_name  # after passing a model equation to a Syanpses(), a new line will automatically be added to equation, e.i. lastupdate: seconds. This is to remove that specific line
             try:
-                exec "%s = Synapses(%s,%s,model = %s, pre = %s, post = %s, namespace= %s)" \
+                exec "%s = Synapses(%s,%s,model = eq_tmp, pre = %s, post = %s, namespace= %s)" \
                      % (S_name, self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
-                        self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SE_name, SPre_name,
+                        self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SPre_name,
                         SPost_name, SNS_name)
             except:  # for when there is no "post =...", i.e. fixed connection
-                exec "%s = Synapses(%s,%s,model = %s, pre = %s, namespace= %s)" \
+                exec "%s = Synapses(%s,%s,model = eq_tmp, pre = %s, namespace= %s)" \
                      % (S_name, self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
-                        self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SE_name, SPre_name,
+                        self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SPre_name,
                         SNS_name)
-            syn_con_str = "%s.connect('i!=j', p= " %S_name
+            syn_con_str = "%s.connect('i!=j', p= " % S_name
             # Connecting the synapses based on either [the defined probability and the distance] or [only the distance] plus considering the number of connections
             try:
-                # syn_con_str+= p_arg
                 syn_con_str += "'%s*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
-                           % (p_arg, self.customized_synapses_list[-1]['ilam'])
+                               % (p_arg, self.customized_synapses_list[-1]['ilam'])
             except:
                 syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
-                 % ( self.customized_synapses_list[-1]['sparseness'], self.customized_synapses_list[-1]['ilam'])
+                               % (self.customized_synapses_list[-1]['sparseness'],
+                                  self.customized_synapses_list[-1]['ilam'])
+                p_arg = self.customized_synapses_list[-1]['sparseness']
             try:
-                syn_con_str += ',n=%s)' %n_arg
-            except :
+                syn_con_str += ',n=%s)' % n_arg
+            except:
                 syn_con_str += ')'
             exec syn_con_str
+            exec "_number_of_synapse = len(%s.i)" % S_name #at this stage, _number_of_synapse contains the inital number of synapses.
+
+            _optimization_direction = 'decrease' if _number_of_synapse > self.synapses_perc_list[current_idx]*self.total_synapses else 'increase'
+            # _do_optimize_flag = 1 # this is for forcing the code to go through the while loop
+
+            while True :
+                if _optimization_direction == 'decrease':
+                    if _number_of_synapse < self.synapses_perc_list[current_idx]*self.total_synapses:
+                        break
+                    p_arg = str(float(p_arg) - 0.01)
+                elif _optimization_direction == 'increase':
+                    if _number_of_synapse > self.synapses_perc_list[current_idx] * self.total_synapses:
+                        break
+                    p_arg = str(float(p_arg) + 0.01)
+                try:
+                    exec "del %s"%S_name
+                except:
+                    pass
+                exec "eq_tmp = copy.deepcopy(%s)"%SE_name # after passing a model equation to a Syanpses(), a new line will automatically be added to equation, e.i. lastupdate: seconds. This is to remove that specific line
+                try:
+                    exec "%s = Synapses(%s,%s,model = eq_tmp, pre = %s, post = %s, namespace= %s)" \
+                         % (S_name, self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
+                            self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']],  SPre_name,
+                            SPost_name, SNS_name)
+                except:  # for when there is no "post =...", i.e. fixed connection
+                    exec "%s = Synapses(%s,%s,model = eq_tmp, pre = %s, namespace= %s)" \
+                         % (S_name, self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
+                            self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']],  SPre_name,
+                            SNS_name)
+                syn_con_str = "%s.connect('i!=j', p= " %S_name
+                # Connecting the synapses based on either [the defined probability and the distance] or [only the distance] plus considering the number of connections
+                try:
+                    syn_con_str += "'%s*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
+                               % (p_arg, self.customized_synapses_list[-1]['ilam'])
+                except:
+                    syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
+                     % ( self.customized_synapses_list[-1]['sparseness'], self.customized_synapses_list[-1]['ilam'])
+                try:
+                    syn_con_str += ',n=%s)' %n_arg
+                except :
+                    syn_con_str += ')'
+                exec syn_con_str
+                exec "_number_of_synapse = len(%s.i)" % S_name
+
+
+
             exec "%s.wght=%s['wght0']" % (S_name, SNS_name)  # set the weights
+
             try:  # update the Globals()
                 exec "globals().update({'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s})" % \
                      (
@@ -565,49 +631,49 @@ class cortical_system(object):
 
     # a = datetime.datetime.now()
     #
-    # def visualise_connectivity(self,S):
-    #     Ns = len(S.source)
-    #     Nt = len(S.target)
-    #     figure(figsize=(10, 4))
-    #     subplot(121)
-    #     plot(zeros(Ns), arange(Ns), 'ok', ms=10)
-    #     plot(ones(Nt), arange(Nt), 'ok', ms=10)
-    #     for i, j in zip(S.i, S.j):
-    #         plot([0, 1], [i, j], '-k')
-    #     xticks([0, 1], ['Source', 'Target'])
-    #     ylabel('Neuron index')
+    def visualise_connectivity(self,S):
+        Ns = len(S.source)
+        Nt = len(S.target)
+        figure(figsize=(10, 4))
+        subplot(121)
+        plot(zeros(Ns), arange(Ns), 'ok', ms=10)
+        plot(ones(Nt), arange(Nt), 'ok', ms=10)
+        for i, j in zip(S.i, S.j):
+            plot([0, 1], [i, j], '-k')
+        xticks([0, 1], ['Source', 'Target'])
+        ylabel('Neuron index')
 
-# CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , os.getcwd())
-#
-#
-# run(500*ms,report = 'text')
-# if CM.use_genn == 1 :
-#     device.build(directory='tester',
-#                 compile=True,
-#                  run=True,
-#                  use_GPU=True)
-#
-#
-# CM.gather_result()
-# # CM.visualise_connectivity(S0_Fixed)
-# for group in CM.monitor_name_bank:
-#     mon_num = len(CM.monitor_name_bank[group])
-#     exec "f, axarr = plt.subplots(%d, sharex=True)"%mon_num
-#     for item_idx,item in enumerate(CM.monitor_name_bank[group]):
-#         if 'SpMon' in item :
-#             if len (CM.monitor_name_bank[group]) ==1  :
-#                 exec "axarr.plot(%s.t/ms,%s.i,'.k')" % ( item, item);
-#                 exec "axarr.set_title('%s')" % ( item);
-#             else:
-#                 exec "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item)
-#                 exec "axarr[%d].set_title('%s')"% (item_idx, item)
-#         elif 'StMon' in item:
-#             underscore= item.index('__')
-#             variable = item[underscore+2:]
-#             exec 'y_num=len(%s.%s)'%(item,variable)
-#             try :
-#                 exec "multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item)
-#             except:
-#                 exec "multi_y_plotter(axarr , y_num , '%s',%s , '%s')" % ( variable, item, item)
-# show()
+CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , os.getcwd())
+
+
+run(500*ms,report = 'text')
+if CM.use_genn == 1 :
+    device.build(directory='tester',
+                compile=True,
+                 run=True,
+                 use_GPU=True)
+
+
+CM.gather_result()
+# CM.visualise_connectivity(S0_Fixed)
+for group in CM.monitor_name_bank:
+    mon_num = len(CM.monitor_name_bank[group])
+    exec "f, axarr = plt.subplots(%d, sharex=True)"%mon_num
+    for item_idx,item in enumerate(CM.monitor_name_bank[group]):
+        if 'SpMon' in item :
+            if len (CM.monitor_name_bank[group]) ==1  :
+                exec "axarr.plot(%s.t/ms,%s.i,'.k')" % ( item, item);
+                exec "axarr.set_title('%s')" % ( item);
+            else:
+                exec "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item)
+                exec "axarr[%d].set_title('%s')"% (item_idx, item)
+        elif 'StMon' in item:
+            underscore= item.index('__')
+            variable = item[underscore+2:]
+            exec 'y_num=len(%s.%s)'%(item,variable)
+            try :
+                exec "multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item)
+            except:
+                exec "multi_y_plotter(axarr , y_num , '%s',%s , '%s')" % ( variable, item, item)
+show()
 
