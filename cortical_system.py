@@ -31,14 +31,16 @@ class cortical_system(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self, config_path, save_path):
+    def __init__(self, config_path, save_path, use_genn=0):
         '''
         Initialize the cortical system by parsing the configuration file.
 
         :param config_path: The path to the configuration file.
         :param save_path: The path to save the final data.
+        :param use_genn: switch the GeNN mode on/off (1/0), by default genn is off
 
         Main internal variables:
+
 
         * customized_neurons_list: This list contains the customized_neuron instances. So for each neuron group target line, there would be an element in this list which contains all the information for that particular neuron group.
         * customized_synapses_list: This list contains the customized_synapse instances. Hence, for each synapse custom line, there would be an element in this list, containing all the necessary information.
@@ -49,7 +51,7 @@ class cortical_system(object):
         * save_data: The save_data() object for saving the final data.
 
         '''
-
+        self.use_genn = use_genn
         _options = {
             '[G]': self.neuron_group,
             '[S]': self.synapse,
@@ -464,6 +466,11 @@ class cortical_system(object):
         relay group supports the locations. With this workaround, the synaptic connection between the input and the Neuron group can be implemented \
         based on the distance of the neurons then.
 
+        Note: extracting the input spikes and time sequences for using in a SpikeGeneratorGroup() is done in this method. \
+        This procedure needs using a "run()" method in brian2. However, one of the limitations of the Brian2Genn is that \
+        the user cannot use multiple "run()" methods in the whole scirpt. To address this issue, the genn device should be \
+        set after using the first run(), hence the unusual placement of "set_device('genn')" command in current method.
+
         :param args: This method will have at least 4 main positional argumenst directly passed from __init__ method: path to the input .mat file, and the frequency. Description of other possible arguments can be found in Configuration file tutorial.
 
         Main internal variables:
@@ -496,7 +503,9 @@ class cortical_system(object):
         Time_Name = times_str.split('=')[0].rstrip()
         SG_Name = SG_str.split('=')[0].rstrip()
 
-        set_device('genn')
+        # Internal switch for brian2GeNN:
+        if self.use_genn == 1:
+            set_device('genn')
 
         exec spikes_str # runnig the string containing the syntax for Spike indices in the input neuron group.
         exec times_str # running the string containing the syntax for time indices in the input neuron group.
@@ -568,53 +577,37 @@ class cortical_system(object):
     #     xticks([0, 1], ['Source', 'Target'])
     #     ylabel('Neuron index')
 
-CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , os.getcwd())
-
-
-# for hierarchy in CM.syntax_bank :
-#     for syntax in CM.syntax_bank[hierarchy]:
-#         exec syntax
-
-
-# Ge = SpikeGeneratorGroup(10, array([0,0,1,2,3,4]), array([20,25,100,120,50,280])*ms)
-# forward = Synapses(Ge,NG16_relay, pre = 'emit_spike+=1',  connect='i==j')
-
-
-
-run(500*ms,report = 'text')
-device.build(directory='tester',
-            compile=True,
-             run=True,
-             use_GPU=True)
-
-
-CM.gather_result()
-# CM.visualise_connectivity(S0_Fixed)
-for group in CM.monitor_name_bank:
-    mon_num = len(CM.monitor_name_bank[group])
-    tmp_str = "f, axarr = plt.subplots(%d, sharex=True)"%mon_num ; exec tmp_str
-    for item_idx,item in enumerate(CM.monitor_name_bank[group]):
-        if 'SpMon' in item :
-            if len (CM.monitor_name_bank[group]) ==1  :
-                exec "axarr.plot(%s.t/ms,%s.i,'.k')" % ( item, item);
-                exec "axarr.set_title('%s')" % ( item);
-            else:
-                tmp_str = "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item);exec tmp_str
-                tmp_str= "axarr[%d].set_title('%s')"% (item_idx, item);exec tmp_str
-        elif 'StMon' in item:
-            underscore= item.index('__')
-            variable = item[underscore+2:]
-            tmp_str = 'y_num=len(%s.%s)'%(item,variable);exec tmp_str
-            tmp_str = "multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item);exec tmp_str
-show()
+# CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , os.getcwd())
 #
 #
-# for syntax in CM.save_data.syntax_bank :
-#     exec syntax
-# CM.save_data.save_to_file()
+# run(500*ms,report = 'text')
+# if CM.use_genn == 1 :
+#     device.build(directory='tester',
+#                 compile=True,
+#                  run=True,
+#                  use_GPU=True)
 #
-# b = datetime.datetime.now()
-# c = b - a
-# print c
-# divmod(c.days * 86400 + c.seconds, 60)
-# print divmod(c.days * 86400 + c.seconds, 60)
+#
+# CM.gather_result()
+# # CM.visualise_connectivity(S0_Fixed)
+# for group in CM.monitor_name_bank:
+#     mon_num = len(CM.monitor_name_bank[group])
+#     exec "f, axarr = plt.subplots(%d, sharex=True)"%mon_num
+#     for item_idx,item in enumerate(CM.monitor_name_bank[group]):
+#         if 'SpMon' in item :
+#             if len (CM.monitor_name_bank[group]) ==1  :
+#                 exec "axarr.plot(%s.t/ms,%s.i,'.k')" % ( item, item);
+#                 exec "axarr.set_title('%s')" % ( item);
+#             else:
+#                 exec "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item)
+#                 exec "axarr[%d].set_title('%s')"% (item_idx, item)
+#         elif 'StMon' in item:
+#             underscore= item.index('__')
+#             variable = item[underscore+2:]
+#             exec 'y_num=len(%s.%s)'%(item,variable)
+#             try :
+#                 exec "multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item)
+#             except:
+#                 exec "multi_y_plotter(axarr , y_num , '%s',%s , '%s')" % ( variable, item, item)
+# show()
+

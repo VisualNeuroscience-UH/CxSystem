@@ -56,7 +56,8 @@ class stimuli(object):
         _new_input_defs = []
         #type : video
         _V1_mats = {}
-        sio.loadmat(path, _V1_mats)
+
+        sio.loadmat(os.path.abspath(path), _V1_mats)
         try:
             frameduration = double(_V1_mats['frameduration'])  # _V1_mats['frameduration'] is numpy nd array
         except:
