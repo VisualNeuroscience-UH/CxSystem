@@ -55,11 +55,11 @@
 <span id="cortical-system-module"></span><h2>Cortical System module<a class="headerlink" href="#module-cortical_system" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="cortical_system.cortical_system">
-<em class="property">class </em><code class="descclassname">cortical_system.</code><code class="descname">cortical_system</code><span class="sig-paren">(</span><em>config_path</em>, <em>save_path</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">cortical_system.</code><code class="descname">cortical_system</code><span class="sig-paren">(</span><em>config_path</em>, <em>save_path</em>, <em>use_genn=0</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system" title="Permalink to this definition">¶</a></dt>
 <dd><p>The main object of cortical system module for building and running a customized model of cortical module in Brian2Genn.</p>
 <dl class="method">
 <dt id="cortical_system.cortical_system.__init__">
-<code class="descname">__init__</code><span class="sig-paren">(</span><em>config_path</em>, <em>save_path</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system.__init__" title="Permalink to this definition">¶</a></dt>
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>config_path</em>, <em>save_path</em>, <em>use_genn=0</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system.__init__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Initialize the cortical system by parsing the configuration file.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -68,6 +68,7 @@
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>config_path</strong> &#8211; The path to the configuration file.</li>
 <li><strong>save_path</strong> &#8211; The path to save the final data.</li>
+<li><strong>use_genn</strong> &#8211; switch the GeNN mode on/off (1/0), by default genn is off</li>
 </ul>
 </td>
 </tr>
@@ -149,6 +150,7 @@
 <dt id="cortical_system.cortical_system.relay">
 <code class="descname">relay</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#cortical_system.cortical_system.relay" title="Permalink to this definition">¶</a></dt>
 <dd><p>The method that creates the relay NeuronGroups based on the parameters that are extracted from the configuraiton         file in the __init__ method of the class. Note that the SpikeGeneratorGroup() does not support the locations and         synaptic connection based on the distance between the input, and the target neuron group. For this reason, a &#8220;realy&#8221;         neuron group is created which is directly connected to the SpikeGeneratorGroup(). Unlike SpikeGeneratorGroup() this         relay group supports the locations. With this workaround, the synaptic connection between the input and the Neuron group can be implemented         based on the distance of the neurons then.</p>
+<p>Note: extracting the input spikes and time sequences for using in a SpikeGeneratorGroup() is done in this method.         This procedure needs using a &#8220;run()&#8221; method in brian2. However, one of the limitations of the Brian2Genn is that         the user cannot use multiple &#8220;run()&#8221; methods in the whole scirpt. To address this issue, the genn device should be         set after using the first run(), hence the unusual placement of &#8220;set_device(&#8216;genn&#8217;)&#8221; command in current method.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
