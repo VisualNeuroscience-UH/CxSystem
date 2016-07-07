@@ -1,3 +1,4 @@
+[-][sys_mode] local
 [-][total_synapses] 3300
 
 ### Neuron Groups
