@@ -92,13 +92,16 @@ class cortical_system(object):
 
         assert len(self.synapses_name_list) == len(self.synapses_perc_list), "When the percentage for a synapse is defined, it should be defined for all others as well. Error: One or more synaptses percentages are missing"
         assert sum(map(float,self.synapses_perc_list)) == 1 , "Error: the percentage of the synapses does not sum up to 1"
+        with open(self.config_path, "a") as f:
+            f.write("optimized_probabilities: %s") %(' '.join(str(x) for x in self.optimized_probabilities))
+        print "optimized percentages saved in the configuration file, you can now use them and change the mode to expanded"
         print "Cortical Module initialization Done."
 
     def set_total_synapses(self,*args):
         self.total_synapses = int(args[0][0])
 
     def set_sys_mode(self,*args):
-        self.sys_mode = int(args[0][0])
+        self.sys_mode = args[0][0]
 
     def neuron_group(self, *args):
         '''
@@ -484,17 +487,26 @@ class cortical_system(object):
 
             exec "%s.wght=%s['wght0']" % (S_name, SNS_name)  # set the weights
 
+            # try:  # update the Globals()
+            #     exec "globals().update({'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s})" % \
+            #          (
+            #          SE_name, SE_name, SPre_name, SPre_name, SPost_name, SPost_name, SNS_name, SNS_name, S_name, S_name)
+            # except:  # in case of fixed connection
+            #     exec "globals().update({'%s':%s,'%s':%s,'%s':%s,'%s':%s})" % \
+            #          (SE_name, SE_name, SPre_name, SPre_name, SNS_name, SNS_name, S_name, S_name)
+
             try:  # update the Globals()
-                exec "globals().update({'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s})" % \
-                     (
-                     SE_name, SE_name, SPre_name, SPre_name, SPost_name, SPost_name, SNS_name, SNS_name, S_name, S_name)
-            except:  # in case of fixed connection
                 exec "globals().update({'%s':%s,'%s':%s,'%s':%s,'%s':%s})" % \
-                     (SE_name, SE_name, SPre_name, SPre_name, SNS_name, SNS_name, S_name, S_name)
+                     (
+                         SE_name, SE_name, SPre_name, SPre_name, SPost_name, SPost_name, SNS_name, SNS_name)
+            except:  # in case of fixed connection
+                exec "globals().update({'%s':%s,'%s':%s,'%s':%s})" % \
+                     (SE_name, SE_name, SPre_name, SPre_name, SNS_name, SNS_name )
+            exec "del %s"%S_name
             try :
-                self._Synapses_Optimizer(_number_of_synapse,current_idx,S_name,SE_name,SPre_name,SPost_name,p_arg,n_arg)
-            except:
-                self._Synapses_Optimizer(_number_of_synapse, current_idx, S_name, SE_name, SPre_name, SPost_name, p_arg)
+                self._Synapses_Optimizer(_number_of_synapse,current_idx,S_name,SE_name,SPre_name,SPost_name,SNS_name,p_arg,n_arg)
+            except NameError:
+                self._Synapses_Optimizer(_number_of_synapse, current_idx, S_name, SE_name, SPre_name, SPost_name,SNS_name, p_arg)
 
             self.monitors(mon_args, S_name,
                           self.customized_synapses_list[-1]['equation'])  # taking care of the monitors
@@ -502,11 +514,11 @@ class cortical_system(object):
 
 
     def _Synapses_Optimizer(self,_number_of_synapse,current_idx,S_name,SE_name,SPre_name,SPost_name,SNS_name,p_arg,n_arg='no_n_arg' ):
-
+        # exec "del globals()['%s']"%S_name
         assert self.total_synapses != 0 , "System is in [local] mode and the synapses are to be optimized, but the total number of synapses are not defined."
         if n_arg == 'no_n_arg':
             del n_arg
-        optimization_found = 1
+        optimization_notfound = 1
         # check if the optimized probabtilities are already written to the file:
         with open(self.config_path, "rb") as f:
             f.seek(-2, 2)  # Jump to the second last byte.
@@ -519,18 +531,40 @@ class cortical_system(object):
             optimization_notfound = 0
 
         if self.sys_mode == 'local' and optimization_notfound:
-            _optimization_direction = 'decrease' if _number_of_synapse > self.synapses_perc_list[
-                                                                             current_idx] * self.total_synapses else 'increase'
-
+            _optimization_direction = 'decrease' if _number_of_synapse > self.synapses_perc_list[current_idx] * \
+                                                                         self.total_synapses else 'increase'
+            constant = 0.01
+            target_number = self.synapses_perc_list[current_idx] * self.total_synapses
+            number_of_returns = 1
+            number_of_iter = 1
             while True:
+                if abs((target_number - _number_of_synapse) / target_number) < 0.05:
+                    exec "globals().update({'%s':%s})" % (S_name, S_name)
+                    break
                 if _optimization_direction == 'decrease':
-                    if _number_of_synapse < self.synapses_perc_list[current_idx] * self.total_synapses:
-                        break
-                    p_arg = str(float(p_arg) - 0.01)
+                    if _number_of_synapse < target_number:
+                        print "changed optimization direction %d times" %(number_of_returns)
+                        _optimization_direction = 'increase'
+                        number_of_returns +=1
+                        number_of_iter = 1
+                        constant = constant* (float(number_of_iter)/number_of_returns)
+
+                        continue
+                    constant += constant *  (float(number_of_iter)/number_of_returns)
+                    p_arg = str(float(p_arg) - constant) if (float(p_arg)-constant)>0 else str(float(p_arg)/2)
                 elif _optimization_direction == 'increase':
-                    if _number_of_synapse > self.synapses_perc_list[current_idx] * self.total_synapses:
-                        break
-                    p_arg = str(float(p_arg) + 0.01)
+                    if _number_of_synapse > target_number :
+                        print "changed optimization direction %d times" % (number_of_returns )
+                        _optimization_direction = 'decrease'
+                        number_of_returns += 1
+                        number_of_iter = 1
+                        constant = constant* (float(number_of_iter)/number_of_returns)
+                        # if abs((target_number - _number_of_synapse) / target_number) < 0.05:
+                        #     exec "globals().update({'%s':%s})" % (S_name, S_name)
+                        #     break
+                        continue
+                    constant +=  constant* (float(number_of_iter)/number_of_returns)
+                    p_arg = str(float(p_arg) + constant)
                 try:
                     exec "del %s" % S_name
                 except:
@@ -561,6 +595,12 @@ class cortical_system(object):
                     syn_con_str += ')'
                 exec syn_con_str
                 exec "_number_of_synapse = len(%s.i)" % S_name
+                number_of_iter += 1
+            self.optimized_probabilities.append(p_arg)
+            print "optimization for %s finished"%S_name
+
+
+
 
 
     def relay(self, *args):
