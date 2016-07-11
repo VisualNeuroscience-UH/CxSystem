@@ -76,6 +76,18 @@ class cortical_system(object):
         self.sys_mode = ''
         self.config_path = config_path
         self.optimized_probabilities = []
+
+        self.optimization_notfound = 1
+        with open(self.config_path, "rb") as f:
+            f.seek(-2, 2)  # Jump to the second last byte.
+            while f.read(1) != b"\n":  # Until EOL is found...
+                f.seek(-2, 1)  # ...jump back the read byte plus one more.
+            last_line = f.readline()
+        if "optimized_probabilities:" in last_line:
+            last_line = last_line.replace("optimized_probabilities:", "")
+            self.optimized_probabilities = last_line.split(',')
+            self.optimization_notfound = 0
+
         with open(self.config_path, 'r') as f:  # Here is the configuration file parser.
             for line in f:
                 if line[0] in is_tag:
@@ -89,12 +101,13 @@ class cortical_system(object):
                 line = line.lstrip()
                 args = line.split(' ')
                 _options[tag](args)
-
-        assert len(self.synapses_name_list) == len(self.synapses_perc_list), "When the percentage for a synapse is defined, it should be defined for all others as well. Error: One or more synaptses percentages are missing"
-        assert sum(map(float,self.synapses_perc_list)) == 1 , "Error: the percentage of the synapses does not sum up to 1"
-        with open(self.config_path, "a") as f:
-            f.write("optimized_probabilities: %s") %(' '.join(str(x) for x in self.optimized_probabilities))
-        print "optimized percentages saved in the configuration file, you can now use them and change the mode to expanded"
+        if self.sys_mode != '':
+            assert len(self.synapses_name_list) == len(self.synapses_perc_list), "When the percentage for a synapse is defined, it should be defined for all others as well. Error: One or more synaptses percentages are missing"
+            assert sum(map(float,self.synapses_perc_list)) == 1 , "Error: the percentage of the synapses does not sum up to 1"
+            if self.optimization_notfound ==1 :
+                with open(self.config_path, "a") as f:
+                    f.write("\noptimized_probabilities: %s"%(','.join(str(x) for x in self.optimized_probabilities)))
+                print "optimized percentages saved in the configuration file, you can now use them and change the mode to expanded"
         print "Cortical Module initialization Done."
 
     def set_total_synapses(self,*args):
@@ -331,7 +344,6 @@ class cortical_system(object):
         * SNS_name: Generated vriable name for the Synapses() namespace.
         * syn_con_str: The string containing the sytanct for connect() method of a current Synapses() object. This string changes depending on using the [p] and [n] tags in the configuration file.
         '''
-        assert self.sys_mode, "Error: system mode is not defined in the configuration file. Use the [-][sys-mode] tag."
 
         _options = {
             '[C]': self.neuron_group,
@@ -343,6 +355,7 @@ class cortical_system(object):
             args[0] = args[0][0:args[0].index('[%]')]
             args = tuple(args)
         except:
+            assert self.sys_mode == '', "Error: You have defined the system mode, however the percentages of the synapses are not defined in the synaptic definitions."
             pass
         try: # extracting the monitors
             mon_args = args[0][args[0].index('[M]') + 1:]
@@ -364,14 +377,20 @@ class cortical_system(object):
             args[0] = args[0][0:args[0].index('[p]')]
             args = tuple(args)
         except:
-            pass
+            try:
+                p_arg = self.optimized_probabilities[len(self.customized_synapses_list)]
+            except:
+                pass
 
         if len(args[0][2]) > 1 and '[' in args[0][2]:  # This if is for when the post-synaptic neuron is a \
             # multicompartmental PC neuon, the rules are described in the configuration file description.
             try :
                 self.synapses_perc_list.extend(map(float,perc_arg.split('+')))
             except:
-                self.synapses_perc_list.append(float(perc_arg[0]))
+                try:
+                    self.synapses_perc_list.append(float(perc_arg[0]))
+                except:
+                    pass
             arg = args[0][2]  # post-synaptic target layer index
             tag = arg[arg.index('['):arg.index(']') + 1]  # extracting the tag
             assert tag in _options.keys(), 'The synaptic tag %s is not defined.' % tag
@@ -414,11 +433,13 @@ class cortical_system(object):
                         args = triple_args
                 elif int(_post_com_idx) > 0:
                     args[0].append('_a' + str(_post_com_idx))
-            assert len(args) == len(perc_arg), "Not enough percentage values are defined for a PC neuron. In a \
-            multi-compartmental PC neuron, when multiple compartments in soma are being targeted, the percentage of each of\
-             those connection should be declared separately. Check configuration file tutorial."
+            if 'perc_arg' in locals():
+                assert len(args) == len(perc_arg), "Not enough percentage values are defined for a PC neuron. In a multi-compartmental PC neuron, when multiple compartments in soma are being targeted, the percentage of each of those connection should be declared separately. Check configuration file tutorial."
         else:
-            self.synapses_perc_list.append(float( perc_arg[0]))
+            try:
+                self.synapses_perc_list.append(float( perc_arg[0]))
+            except:
+                pass
             _pre_type = self.customized_neurons_list[int(args[0][1])]['type']  # Pre-synaptic neuron type
             _post_type = self.customized_neurons_list[int(args[0][2])]['type']  # Post-synaptic neuron type
             assert _post_type!= 'PC', 'Error: The post_synaptc group is a multicompartmental PC but the target compartment is not selected. Use [C] tag. '
@@ -466,15 +487,21 @@ class cortical_system(object):
             # Connecting the synapses based on either [the defined probability and the distance] or [only the distance] plus considering the number of connections
             try:
                 if self.sys_mode== 'local':
-                    syn_con_str += "%s" %(p_arg)
+                    syn_con_str += "'%s'" %(p_arg)
                 elif self.sys_mode == 'expanded':
+                    syn_con_str += "'%s*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
+                                   % (p_arg, self.customized_synapses_list[-1]['ilam'])
+                else:
                     syn_con_str += "'%s*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
                                    % (p_arg, self.customized_synapses_list[-1]['ilam'])
             except:
                 p_arg = self.customized_synapses_list[-1]['sparseness']
                 if self.sys_mode== 'local':
-                    syn_con_str += "%f" %(p_arg)
+                    syn_con_str += "'%f'" %(p_arg)
                 elif self.sys_mode == 'expanded' :
+                    syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
+                                   % (p_arg, self.customized_synapses_list[-1]['ilam'])
+                else:
                     syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
                                    % (p_arg, self.customized_synapses_list[-1]['ilam'])
             try:
@@ -484,121 +511,144 @@ class cortical_system(object):
             exec syn_con_str
             exec "_number_of_synapse = len(%s.i)" % S_name #at this stage, _number_of_synapse contains the inital number of synapses.
 
-
             exec "%s.wght=%s['wght0']" % (S_name, SNS_name)  # set the weights
-
-            # try:  # update the Globals()
-            #     exec "globals().update({'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s})" % \
-            #          (
-            #          SE_name, SE_name, SPre_name, SPre_name, SPost_name, SPost_name, SNS_name, SNS_name, S_name, S_name)
-            # except:  # in case of fixed connection
-            #     exec "globals().update({'%s':%s,'%s':%s,'%s':%s,'%s':%s})" % \
-            #          (SE_name, SE_name, SPre_name, SPre_name, SNS_name, SNS_name, S_name, S_name)
 
             try:  # update the Globals()
                 exec "globals().update({'%s':%s,'%s':%s,'%s':%s,'%s':%s})" % \
-                     (
-                         SE_name, SE_name, SPre_name, SPre_name, SPost_name, SPost_name, SNS_name, SNS_name)
+                     (SE_name, SE_name, SPre_name, SPre_name, SPost_name, SPost_name, SNS_name, SNS_name)
             except:  # in case of fixed connection
                 exec "globals().update({'%s':%s,'%s':%s,'%s':%s})" % \
                      (SE_name, SE_name, SPre_name, SPre_name, SNS_name, SNS_name )
-            exec "del %s"%S_name
-            try :
-                self._Synapses_Optimizer(_number_of_synapse,current_idx,S_name,SE_name,SPre_name,SPost_name,SNS_name,p_arg,n_arg)
-            except NameError:
-                self._Synapses_Optimizer(_number_of_synapse, current_idx, S_name, SE_name, SPre_name, SPost_name,SNS_name, p_arg)
-
+            if self.sys_mode == 'local' and self.optimization_notfound:
+                exec "del %s" % S_name
+                try :
+                    self._Synapses_Optimizer(_number_of_synapse,current_idx,S_name,SE_name,SPre_name,SPost_name,SNS_name,p_arg,n_arg)
+                except NameError:
+                    self._Synapses_Optimizer(_number_of_synapse, current_idx, S_name, SE_name, SPre_name, SPost_name,SNS_name, p_arg)
+            else:
+                exec "globals().update({'%s':%s})" % (S_name, S_name)
             self.monitors(mon_args, S_name,
                           self.customized_synapses_list[-1]['equation'])  # taking care of the monitors
-
+            exec "num_tmp = len(%s.i)"%S_name
+            print "number of synapses: %d" %num_tmp
 
 
     def _Synapses_Optimizer(self,_number_of_synapse,current_idx,S_name,SE_name,SPre_name,SPost_name,SNS_name,p_arg,n_arg='no_n_arg' ):
-        # exec "del globals()['%s']"%S_name
         assert self.total_synapses != 0 , "System is in [local] mode and the synapses are to be optimized, but the total number of synapses are not defined."
         if n_arg == 'no_n_arg':
             del n_arg
-        optimization_notfound = 1
-        # check if the optimized probabtilities are already written to the file:
-        with open(self.config_path, "rb") as f:
-            f.seek(-2, 2)  # Jump to the second last byte.
-            while f.read(1) != b"\n":  # Until EOL is found...
-                f.seek(-2, 1)  # ...jump back the read byte plus one more.
-            last_line = f.readline()
-        if "optimized_probabilities:" in last_line:
-            last_line = last_line.replace("optimized_probabilities:", "")
-            self.optimized_probabilities = last_line.split(',')
-            optimization_notfound = 0
+        # self.optimization_notfound = 1
+        # # check if the optimized probabtilities are already written to the file:
+        # with open(self.config_path, "rb") as f:
+        #     f.seek(-2, 2)  # Jump to the second last byte.
+        #     while f.read(1) != b"\n":  # Until EOL is found...
+        #         f.seek(-2, 1)  # ...jump back the read byte plus one more.
+        #     last_line = f.readline()
+        # if "optimized_probabilities:" in last_line:
+        #     last_line = last_line.replace("optimized_probabilities:", "")
+        #     self.optimized_probabilities = last_line.split(',')
+        #     self.optimization_notfound = 0
 
-        if self.sys_mode == 'local' and optimization_notfound:
-            _optimization_direction = 'decrease' if _number_of_synapse > self.synapses_perc_list[current_idx] * \
-                                                                         self.total_synapses else 'increase'
-            constant = 0.01
-            target_number = self.synapses_perc_list[current_idx] * self.total_synapses
-            number_of_returns = 1
-            number_of_iter = 1
-            while True:
-                if abs((target_number - _number_of_synapse) / target_number) < 0.05:
-                    exec "globals().update({'%s':%s})" % (S_name, S_name)
-                    break
-                if _optimization_direction == 'decrease':
-                    if _number_of_synapse < target_number:
-                        print "changed optimization direction %d times" %(number_of_returns)
-                        _optimization_direction = 'increase'
-                        number_of_returns +=1
-                        number_of_iter = 1
-                        constant = constant* (float(number_of_iter)/number_of_returns)
+        # if self.optimization_notfound:
+        _optimization_direction = 'decrease' if _number_of_synapse > self.synapses_perc_list[current_idx] * \
+                                                                     self.total_synapses else 'increase'
+        constant = 0.01
+        p_arg_list = []
 
-                        continue
-                    constant += constant *  (float(number_of_iter)/number_of_returns)
-                    p_arg = str(float(p_arg) - constant) if (float(p_arg)-constant)>0 else str(float(p_arg)/2)
-                elif _optimization_direction == 'increase':
-                    if _number_of_synapse > target_number :
-                        print "changed optimization direction %d times" % (number_of_returns )
-                        _optimization_direction = 'decrease'
-                        number_of_returns += 1
-                        number_of_iter = 1
-                        constant = constant* (float(number_of_iter)/number_of_returns)
-                        # if abs((target_number - _number_of_synapse) / target_number) < 0.05:
-                        #     exec "globals().update({'%s':%s})" % (S_name, S_name)
-                        #     break
-                        continue
-                    constant +=  constant* (float(number_of_iter)/number_of_returns)
-                    p_arg = str(float(p_arg) + constant)
-                try:
-                    exec "del %s" % S_name
-                except:
-                    pass
-                exec "eq_tmp = copy.deepcopy(%s)" % SE_name  # after passing a model equation to a Syanpses(), a new line will automatically be added to equation, e.i. lastupdate: seconds. This is to remove that specific line
-                try:
-                    exec "%s = Synapses(%s,%s,model = eq_tmp, pre = %s, post = %s, namespace= %s)" \
-                         % (S_name, self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
-                            self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SPre_name,
-                            SPost_name, SNS_name)
-                except:  # for when there is no "post =...", i.e. fixed connection
-                    exec "%s = Synapses(%s,%s,model = eq_tmp, pre = %s, namespace= %s)" \
-                         % (S_name, self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
-                            self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SPre_name,
-                            SNS_name)
-                syn_con_str = "%s.connect('i!=j', p= " % S_name
-                # Connecting the synapses based on either [the defined probability and the distance] or [only the distance] plus considering the number of connections
-                try:
-                    syn_con_str += "'%s*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
-                                   % (p_arg, self.customized_synapses_list[-1]['ilam'])
-                except:
-                    syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
-                                   % (self.customized_synapses_list[-1]['sparseness'],
-                                      self.customized_synapses_list[-1]['ilam'])
-                try:
-                    syn_con_str += ',n=%s)' % n_arg
-                except:
-                    syn_con_str += ')'
-                exec syn_con_str
-                exec "_number_of_synapse = len(%s.i)" % S_name
-                number_of_iter += 1
-            self.optimized_probabilities.append(p_arg)
-            print "optimization for %s finished"%S_name
+        target_number = self.synapses_perc_list[current_idx] * self.total_synapses
+        while True:
+            if abs((target_number - _number_of_synapse) / target_number) < 0.05:
+                exec "globals().update({'%s':%s})" % (S_name, S_name)
+                break
+            if _optimization_direction == 'decrease':
+                if _number_of_synapse < target_number:
+                    print "go to fixating mode"
+                    del p_arg_list[-1]
+                    p_arg = p_arg_list[-1]
+                    constant = constant/2
+                else:
+                    constant = constant *  2
+                p_arg = str(float(p_arg) - constant) if (float(p_arg)-constant)>0 else str(float(p_arg)/2)
+                p_arg_list.append(p_arg)
 
+            elif _optimization_direction == 'increase':
+                if _number_of_synapse > target_number :
+                    print "go to fixating mode"
+                    del p_arg_list[-1]
+                    p_arg = p_arg_list[-1]
+                    constant = constant/2
+                else:
+                    constant =  constant* 2
+                p_arg = str(float(p_arg) + constant)
+                p_arg_list.append(p_arg)
+
+            try:
+                exec "del %s" % S_name
+            except:
+                pass
+            exec "eq_tmp = copy.deepcopy(%s)" % SE_name  # after passing a model equation to a Syanpses(), a new line will automatically be added to equation, e.i. lastupdate: seconds. This is to remove that specific line
+            try:
+                exec "%s = Synapses(%s,%s,model = eq_tmp, pre = %s, post = %s, namespace= %s)" \
+                     % (S_name, self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
+                        self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SPre_name,
+                        SPost_name, SNS_name)
+            except:  # for when there is no "post =...", i.e. fixed connection
+                exec "%s = Synapses(%s,%s,model = eq_tmp, pre = %s, namespace= %s)" \
+                     % (S_name, self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
+                        self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SPre_name,
+                        SNS_name)
+            syn_con_str = "%s.connect('i!=j', p=' " % S_name
+            # Connecting the synapses based on either [the defined probability and the distance] or [only the distance] plus considering the number of connections
+            try:
+                # if self.sys_mode == 'local':
+                syn_con_str += "%s" % (p_arg)
+                # elif self.sys_mode == 'expanded':
+                #     syn_con_str += "'%s*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
+                #                    % (p_arg, self.customized_synapses_list[-1]['ilam'])
+            except:
+                p_arg = self.customized_synapses_list[-1]['sparseness']
+                # if self.sys_mode == 'local':
+                syn_con_str += "%f" % (p_arg)
+                # elif self.sys_mode == 'expanded':
+                #     syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
+                #                    % (self.customized_synapses_list[-1]['sparseness'],
+                #                       self.customized_synapses_list[-1]['ilam'])
+            try:
+                syn_con_str += "',n=%s)" % n_arg
+            except:
+                syn_con_str += "')"
+            exec syn_con_str
+            exec "_number_of_synapse = len(%s.i)" % S_name
+            print "probability: %s" %p_arg
+
+        self.optimized_probabilities.append(p_arg)
+        print "optimization for %s finished"%S_name
+        # else:
+        #     print "Warning: the CX_system is running in local mode but the percentages are already determined and saved in the configuration file . If this is not intentional, either remove the last line of configuration file to re-optimize the percentages, or change the mode to 'expanded' mode."
+        #     try:
+        #         exec "del %s" % S_name
+        #     except:
+        #         pass
+        #     exec "eq_tmp = copy.deepcopy(%s)" % SE_name  # after passing a model equation to a Syanpses(), a new line will automatically be added to equation, e.i. lastupdate: seconds. This is to remove that specific line
+        #     try:
+        #         exec "%s = Synapses(%s,%s,model = eq_tmp, pre = %s, post = %s, namespace= %s)" \
+        #              % (S_name, self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
+        #                 self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SPre_name,
+        #                 SPost_name, SNS_name)
+        #     except:  # for when there is no "post =...", i.e. fixed connection
+        #         exec "%s = Synapses(%s,%s,model = eq_tmp, pre = %s, namespace= %s)" \
+        #              % (S_name, self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
+        #                 self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SPre_name,
+        #                 SNS_name)
+        #     syn_con_str = "%s.connect('i!=j', p=' " % S_name
+        #     # Connecting the synapses based on either [the defined probability and the distance] or [only the distance] plus considering the number of connections
+        #     syn_con_str += "%s" % (self.optimized_probabilities[current_idx])
+        #     try:
+        #         syn_con_str += "',n=%s)" % n_arg
+        #     except:
+        #         syn_con_str += "')"
+        #     exec syn_con_str
+        #     exec "globals().update({'%s':%s})" % (S_name, S_name)
 
 
 
