@@ -1,5 +1,5 @@
 [-][sys_mode] local
-[-][total_synapses] 3300
+[-][total_synapses] 764
 
 ### Neuron Groups
 [0][IN] ./V1_input_layer_2015_10_30_11_7_31.mat 190*Hz [M] [Sp]
@@ -7,9 +7,11 @@
 [2][G] 46 PC [4,2] [CN] 5+0j [M] [Sp] [St]ge_soma+gi_soma+vm_basal+vm+vm_a0+vm_a1
 #[3][G] 75 BC 2 [CN] 5+0j [M] [Sp] [St]ge_soma+gi_soma+vm
 
-[2][S] ge 0 1 Fixed [p] 0.06 [n] 3 [%] 0.93
-[2][S] ge 1 2[C]1 Fixed [M] [St]wght [%] 0.07
+[2][S] ge 0 1 Fixed [M] [St]wght[rec]arange(0,20) [%] 0.76
+[2][S] ge 1 2[C]1 Fixed [M] [St]wght[rec]arange(0,20) [%] 0.24
 
 #[0][S] ge 1 2[C]002 STDP [M] [St]apre[rec]arange(0,21)+wght[rec]arange(0,20)
 #[2][S] ge 0 1 STDP [M] [St]apre[rec]arange(0,21)+wght[rec]arange(0,21)
-#[35][S] ge 1 3 STDP
+#[35][S] ge 1 3 STD
+
+optimized_probabilities: 0.0065,0.09
