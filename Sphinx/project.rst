@@ -1,4 +1,4 @@
-Brief intorduction to Cortical System
+Brief introduction to Cortical System
 =====================================
 
 Here's the intro...

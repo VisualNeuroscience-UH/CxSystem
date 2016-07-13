@@ -58,7 +58,7 @@
 <hr class="docutils" />
 <p><strong>indexing tag</strong>:</p>
 <p>Each line should start with a indexing tag. This indexing tag is only used to make following the line numbers easier for the user. Although this indexing tag is required to be in each and every line, it does not have any effect on the line interpretation result. Example:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>[0][G] ...
+<div class="highlight-python"><div class="highlight"><pre>[0][G] ...
 [1][G] ...
 </pre></div>
 </div>
@@ -74,7 +74,7 @@
 </dl>
 </dd>
 </dl>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">...</span> <span class="p">[</span><span class="n">M</span><span class="p">]</span> <span class="p">[</span><span class="n">Sp</span><span class="p">]</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="o">...</span> <span class="p">[</span><span class="n">M</span><span class="p">]</span> <span class="p">[</span><span class="n">Sp</span><span class="p">]</span>
 </pre></div>
 </div>
 <p>The ellipsis represents the predecessor tags in the target line.</p>
@@ -84,19 +84,19 @@
 <dd>This tag defines the [St]ateMonitor() in brian2. In this case, one should define the target variable in the following way:</dd>
 </dl>
 </div></blockquote>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">...</span> <span class="p">[</span><span class="n">M</span><span class="p">]</span> <span class="p">[</span><span class="n">St</span><span class="p">]</span><span class="o">&lt;</span><span class="n">state</span> <span class="n">variable1</span><span class="o">&gt;+&lt;</span><span class="n">state</span> <span class="n">variable2</span><span class="o">&gt;</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="o">...</span> <span class="p">[</span><span class="n">M</span><span class="p">]</span> <span class="p">[</span><span class="n">St</span><span class="p">]</span><span class="o">&lt;</span><span class="n">state</span> <span class="n">variable1</span><span class="o">&gt;+&lt;</span><span class="n">state</span> <span class="n">variable2</span><span class="o">&gt;</span>
 </pre></div>
 </div>
 <p>Similar to [Sp], the ellipsis represents the predecessor tags in the target line. State variables are separated with <em>+</em>. An example of using [Sp] alongside with a [St] with three state variables of <em>ge_soma</em>,*gi_soma*, and <em>vm</em>:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">...</span> <span class="p">[</span><span class="n">M</span><span class="p">]</span> <span class="p">[</span><span class="n">Sp</span><span class="p">]</span> <span class="p">[</span><span class="n">St</span><span class="p">]</span><span class="n">ge_soma</span><span class="o">+</span><span class="n">gi_soma</span><span class="o">+</span><span class="n">vm</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="o">...</span> <span class="p">[</span><span class="n">M</span><span class="p">]</span> <span class="p">[</span><span class="n">Sp</span><span class="p">]</span> <span class="p">[</span><span class="n">St</span><span class="p">]</span><span class="n">ge_soma</span><span class="o">+</span><span class="n">gi_soma</span><span class="o">+</span><span class="n">vm</span>
 </pre></div>
 </div>
 <p>By default all of the possible indices are being monitored (record = True). However, one might intend to monitor specific indices of neuron_group/synapses. This can be achieved by using the [rec] tag followed by the indices of interest. In the following example two state monitors are defined for <em>apre</em> and <em>wght</em> of the Synapses() object. In the former state monitor the first 20 indices are being recorded whilst in the latter (<em>wght</em>), even indices between 0 and 20 are being recorded:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">...</span> <span class="p">[</span><span class="n">M</span><span class="p">]</span> <span class="p">[</span><span class="n">St</span><span class="p">]</span><span class="n">apre</span><span class="p">[</span><span class="n">rec</span><span class="p">]</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">20</span><span class="p">)</span><span class="o">+</span><span class="n">wght</span><span class="p">[</span><span class="n">rec</span><span class="p">]</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">20</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="o">...</span> <span class="p">[</span><span class="n">M</span><span class="p">]</span> <span class="p">[</span><span class="n">St</span><span class="p">]</span><span class="n">apre</span><span class="p">[</span><span class="n">rec</span><span class="p">]</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">20</span><span class="p">)</span><span class="o">+</span><span class="n">wght</span><span class="p">[</span><span class="n">rec</span><span class="p">]</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">20</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Occasionally, one might want to assign a specific type of monitor to several consecutive target lines. In this case, the generic monitor(s) can be defined in the first target line and a <strong>&#8211;&gt;</strong> symbol should be written at the end of the line. <strong>&#8211;&gt;</strong> indicates that all the next lines should be assigned with the same monitor. For finishing this assignment, a <strong>&lt;&#8211;</strong> symbol should be put at the last target line of interest. Note that it is possible to overwrite the defined monitors of some lines between the <strong>&#8211;&gt;</strong> and <strong>&lt;&#8211;</strong> symbols simply by adding the monitor of the interest.</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">...</span> <span class="p">[</span><span class="n">M</span><span class="p">]</span> <span class="p">[</span><span class="n">St</span><span class="p">]</span><span class="n">ge_soma</span> <span class="o">--&gt;</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="o">...</span> <span class="p">[</span><span class="n">M</span><span class="p">]</span> <span class="p">[</span><span class="n">St</span><span class="p">]</span><span class="n">ge_soma</span> <span class="o">--&gt;</span>
 <span class="o">...</span>
 <span class="o">...</span> <span class="p">[</span><span class="n">M</span><span class="p">]</span> <span class="p">[</span><span class="n">Sp</span><span class="p">]</span>
 <span class="o">...</span> <span class="o">&lt;--</span>
@@ -110,11 +110,11 @@
 <dt>[IN]:</dt>
 <dd>Defines the [IN]put of the system (video only). The format of the input line is as follows:</dd>
 </dl>
-<div class="highlight-python"><div class="highlight"><pre><span></span>&lt;index&gt;&lt;[IN]&gt; &lt;.mat file location&gt; &lt;frequency&gt; {monitors}
+<div class="highlight-python"><div class="highlight"><pre>&lt;index&gt;&lt;[IN]&gt; &lt;.mat file location&gt; &lt;frequency&gt; {monitors}
 </pre></div>
 </div>
 <p>This is an example of defining an input for the system:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>[0][IN] /home/$USER/V1_input.mat 190*Hz [M] [Sp]
+<div class="highlight-python"><div class="highlight"><pre>[0][IN] /home/$USER/V1_input.mat 190*Hz [M] [Sp]
 </pre></div>
 </div>
 <p>In this example an input is created based on the <em>V1_inpu.mat</em> file with a frequency of 190*Hz and a SpikeMonitor is set on it.</p>
@@ -124,7 +124,7 @@
 <dt>[G]:</dt>
 <dd>Defines the brian2 Neuron_Group(). The format of the NeuronGroup target line is as follows:</dd>
 </dl>
-<div class="highlight-python"><div class="highlight"><pre><span></span>&lt;index&gt;&lt;[G]&gt; &lt;number of neurons&gt; &lt;cell type&gt; &lt;layer index&gt; {threshold} {reset} {refractory} {cell group center} {monitors}
+<div class="highlight-python"><div class="highlight"><pre>&lt;index&gt;&lt;[G]&gt; &lt;number of neurons&gt; &lt;cell type&gt; &lt;layer index&gt; {threshold} {reset} {refractory} {cell group center} {monitors}
 </pre></div>
 </div>
 <p>where the <em>[index]</em> is the line number, <em>&lt;number of neurons&gt;</em> is the number of neurons in that particular neuron group. The <em>&lt;cell type&gt;</em> is the category of the cells of the group, which is one of the following groups:</p>
@@ -157,11 +157,11 @@
 </tbody>
 </table>
 <p>The <em>&lt;layer index&gt;</em> argument defines the layer in which the neuron group is located. Except for PC cells, all types of neurons are defined as a soma-only neuron, hence their layer is an integer. In case of layer 2/3 using 2 is sufficient. For instance the following example defines a group of 46 SS neurons in layer 2/3:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>[0][G] 46 SS 2
+<div class="highlight-python"><div class="highlight"><pre>[0][G] 46 SS 2
 </pre></div>
 </div>
 <p>Currently PC cells are the only multi compartmental neurons that could possibly cover more than one layer. In this case, the layer index should be defined as a list where the first element defines the soma location and the second element defines the farthest apical dendrite compartment. In the following example, a PC group of 55 neurons is defined in which the basal dendrites, soma and proximal apical dendrite is located in layer 6 and the apical dendrites covers layer layer 5 to 2:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>[1][G] 55 PC [6,2]
+<div class="highlight-python"><div class="highlight"><pre>[1][G] 55 PC [6,2]
 </pre></div>
 </div>
 <p>The compartment formation is then as follows:</p>
@@ -203,7 +203,7 @@
 <li><em>refractory</em>: <em>4</em> * <em>ms</em></li>
 </ul>
 <p>Any of this variables can be overwritten by using the keyword arguments [threshold], [reset] and [refractory]. As the name implies, the optional argument <em>[cell group center]</em> defines the center of the neuron group. The center can be defined with the [CN] tag followed by the center position.  If not defined, the center will be the default value of 0+0j. The following example creates a neuron group consist of 75 BC neurons located in 5+0j, with a spike monitors assigned to it:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>[2][G] 75 BC 2 [CN] 5+0j [M] [Sp]
+<div class="highlight-python"><div class="highlight"><pre>[2][G] 75 BC 2 [CN] 5+0j [M] [Sp]
 </pre></div>
 </div>
 <hr class="docutils" />
@@ -212,15 +212,15 @@
 <dt>[S]:</dt>
 <dd>Defines the brian2 Synapses(). The format of the Synapses() target line is as follows:</dd>
 </dl>
-<div class="highlight-python"><div class="highlight"><pre><span></span>&lt;index&gt;&lt;[S]&gt; &lt;receptor&gt; &lt;presynaptic group index&gt; &lt;postsynaptic group index&gt; &lt;synapse type&gt; {probability} {number of connections} {monitors}
+<div class="highlight-python"><div class="highlight"><pre>&lt;index&gt;&lt;[S]&gt; &lt;receptor&gt; &lt;presynaptic group index&gt; &lt;postsynaptic group index&gt; &lt;synapse type&gt; {probability} {number of connections} {monitors}
 </pre></div>
 </div>
 <p>where the <em>[index]</em> is the line number, <em>&lt;receptor&gt;</em> defines the receptor type, e.g. ge and gi, <em>&lt;presynaptic group index&gt;</em> and <em>&lt;postsynaptic group index&gt;</em> defines the index of the presynaptic and postsynaptic group respectively. These indices could be determined using the <em>indexing tag</em> in the neuron groups target lines. The next field defines the type of the synapse. Currently there are two types of synapses implemented: Fixed and STDP. The following example defines a excitatory STDP synaptic connection between neuron groups with indices of 2 and 4, in which the <em>ge</em> is the receptor:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>[0][S] ge 2 4 STDP
+<div class="highlight-python"><div class="highlight"><pre>[0][S] ge 2 4 STDP
 </pre></div>
 </div>
 <p>In case the postsynaptic group is multi-compartmental, the target compartment should be defined using the [C] tag. Let us review this concept with an example:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>[0][G] 46 SS 4
+<div class="highlight-python"><div class="highlight"><pre>[0][G] 46 SS 4
 [1][G] 50 PC [4,1]
 [2][S] ge 0 1[C]1 STDP
 </pre></div>
@@ -263,7 +263,7 @@ Index</th>
 </tbody>
 </table>
 <p>The synapses() object is targeting the 1st compartment of the PC cells, i.e.  Apical dendrite[1]. Consider the following example in which the target is the compartment number 0 in the target neuron group:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>[2][S] ge 0 1[C]0012 STDP
+<div class="highlight-python"><div class="highlight"><pre>[2][S] ge 0 1[C]0012 STDP
 </pre></div>
 </div>
 <p>As you can see, the compartment <em>[C]0</em> is followed by three numbers <em>012</em>. This indicates that the among the three sub-compartments inside the compartment number 0, i.e. Basal dendrite, Soma and Apical dendrite[0], indices of 0,1 and 2 are being targeted. Regardless of the layer, the indices of these three compartments are always as:</p>
@@ -291,19 +291,19 @@ Index</th>
 </tbody>
 </table>
 <p>So for instance, in case an inhibitory connection tends to target the soma only, the synaptic definition should be changed to:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>[2][S] ge 0 1[C]01 STDP
+<div class="highlight-python"><div class="highlight"><pre>[2][S] ge 0 1[C]01 STDP
 </pre></div>
 </div>
 <p>If both basal dendrite and apical dendrite[0] was being targeted, the syntax should change to:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>[2][S] ge 0 1[C]002 STDP
+<div class="highlight-python"><div class="highlight"><pre>[2][S] ge 0 1[C]002 STDP
 </pre></div>
 </div>
 <p>By default the probability of the synaptic connections are determined based on the distance between the neurons, which depends on sparseness and ilam variables in the brian2_obj_namespaces module. In case the maximum probability of the connection should be overwritten, [p] tag can be used. In the following example the maximum probability of the connection is overwriten as 0.06 (6%):</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>[2][S] ge 0 1[C]002 STDP [p] 0.06
+<div class="highlight-python"><div class="highlight"><pre>[2][S] ge 0 1[C]002 STDP [p] 0.06
 </pre></div>
 </div>
 <p>By default the number of connections that happens between a pair of neurons is also equal to 1. This can also be overwritten to another integer value by using the [n] tag. So, for having a probability of 6% over 3 connection per pair of neuron:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span>[2][S] ge 0 1[C]002 STDP [p] 0.06 [n] 3
+<div class="highlight-python"><div class="highlight"><pre>[2][S] ge 0 1[C]002 STDP [p] 0.06 [n] 3
 </pre></div>
 </div>
 </div>
@@ -364,7 +364,7 @@ Index</th>
     </div>
     <div class="footer" role="contentinfo">
         &copy; Copyright 2016, Vafa Andalibi.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.5.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
     </div>
   </body>
 </html>
