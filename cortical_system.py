@@ -532,7 +532,6 @@ class cortical_system(object):
             exec "num_tmp = len(%s.i)"%S_name
             print "number of synapses: %d" %num_tmp
 
-
     def _Synapses_Optimizer(self,_number_of_synapse,current_idx,S_name,SE_name,SPre_name,SPost_name,SNS_name,p_arg,n_arg='no_n_arg' ):
         assert self.total_synapses != 0 , "System is in [local] mode and the synapses are to be optimized, but the total number of synapses are not defined."
         if n_arg == 'no_n_arg':
@@ -649,9 +648,6 @@ class cortical_system(object):
         #         syn_con_str += "')"
         #     exec syn_con_str
         #     exec "globals().update({'%s':%s})" % (S_name, S_name)
-
-
-
 
     def relay(self, *args):
         '''
@@ -771,37 +767,37 @@ class cortical_system(object):
         xticks([0, 1], ['Source', 'Target'])
         ylabel('Neuron index')
 
-CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , os.getcwd())
-
-
-run(500*ms,report = 'text')
-if CM.use_genn == 1 :
-    device.build(directory='tester',
-                compile=True,
-                 run=True,
-                 use_GPU=True)
-
-
-CM.gather_result()
-# CM.visualise_connectivity(S0_Fixed)
-for group in CM.monitor_name_bank:
-    mon_num = len(CM.monitor_name_bank[group])
-    exec "f, axarr = plt.subplots(%d, sharex=True)"%mon_num
-    for item_idx,item in enumerate(CM.monitor_name_bank[group]):
-        if 'SpMon' in item :
-            if len (CM.monitor_name_bank[group]) ==1  :
-                exec "axarr.plot(%s.t/ms,%s.i,'.k')" % ( item, item);
-                exec "axarr.set_title('%s')" % ( item);
-            else:
-                exec "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item)
-                exec "axarr[%d].set_title('%s')"% (item_idx, item)
-        elif 'StMon' in item:
-            underscore= item.index('__')
-            variable = item[underscore+2:]
-            exec 'y_num=len(%s.%s)'%(item,variable)
-            try :
-                exec "multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item)
-            except:
-                exec "multi_y_plotter(axarr , y_num , '%s',%s , '%s')" % ( variable, item, item)
-show()
+# CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , os.getcwd())
+#
+#
+# run(500*ms,report = 'text')
+# if CM.use_genn == 1 :
+#     device.build(directory='tester',
+#                 compile=True,
+#                  run=True,
+#                  use_GPU=True)
+#
+#
+# CM.gather_result()
+# # CM.visualise_connectivity(S0_Fixed)
+# for group in CM.monitor_name_bank:
+#     mon_num = len(CM.monitor_name_bank[group])
+#     exec "f, axarr = plt.subplots(%d, sharex=True)"%mon_num
+#     for item_idx,item in enumerate(CM.monitor_name_bank[group]):
+#         if 'SpMon' in item :
+#             if len (CM.monitor_name_bank[group]) ==1  :
+#                 exec "axarr.plot(%s.t/ms,%s.i,'.k')" % ( item, item);
+#                 exec "axarr.set_title('%s')" % ( item);
+#             else:
+#                 exec "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item)
+#                 exec "axarr[%d].set_title('%s')"% (item_idx, item)
+#         elif 'StMon' in item:
+#             underscore= item.index('__')
+#             variable = item[underscore+2:]
+#             exec 'y_num=len(%s.%s)'%(item,variable)
+#             try :
+#                 exec "multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item)
+#             except:
+#                 exec "multi_y_plotter(axarr , y_num , '%s',%s , '%s')" % ( variable, item, item)
+# show()
 

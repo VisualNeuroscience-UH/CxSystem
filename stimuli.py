@@ -47,8 +47,6 @@ class stimuli(object):
         sio.loadmat(path, _V1_mats)
         return _V1_mats['z_coord']
 
-
-
     def _initialize_inputs(self,  path, freq):
 
         print "Initializing stimuli..."
