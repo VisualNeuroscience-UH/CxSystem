@@ -2,6 +2,7 @@ from __future__ import division
 import json
 import os.path
 import re
+import numpy as np
 
 basepath = 'C:\Users\Simo\Laskenta\Models\Markram' # Path to json data. Change this according to your settings
 
@@ -40,9 +41,9 @@ class CellGroupData:
             'L6_SBC': 67, 'L6_NGC': 17, 'L6_LBC': 463, 'L6_BTC': 54, 'L6_NBC': 198, 'L6_BPC': 3174, 'L6_IPC': 3476,
             'L6_TPC_L1': 1637, 'L6_DBC': 31, 'L6_TPC_L4': 1440, 'L6_UTPC': 1735, 'L6_BP': 7}
 
-        self.own_Ncell_dict, self.ordered_own_Ncell_list = self._cx_ncells(_cell_group_dict,_cell_N_dict)
-        self.own_group2markram_connections_map = self._cx_nsynapses(_cell_group_dict)
-
+        self.own_Ncell_dict, self.ordered_own_Ncell_list, self.proportion_MC, self.proportion_BC = \
+            self._cx_ncells(_cell_group_dict,_cell_N_dict)
+        self.own_group2markram_connections_map = self._cx_nsynapses(_cell_group_dict,_cell_N_dict)
 
     def _cx_ncells(self,_cell_group_dict,_cell_N_dict):
         own_cell_groups=set(_cell_group_dict.values())
@@ -79,7 +80,7 @@ class CellGroupData:
 
         ordered_own_Ncell_list=sorted(own_Ncell_dict.items())
 
-        return own_Ncell_dict, ordered_own_Ncell_list
+        return own_Ncell_dict, ordered_own_Ncell_list, proportion_MC, proportion_BC
         #check the sum
         # for layer in layers:
         #     print layer
@@ -92,7 +93,7 @@ class CellGroupData:
         # print ordered_own_Ncell_list
         # print cellsum
 
-    def _cx_nsynapses(self,_cell_group_dict):
+    def _cx_nsynapses(self,_cell_group_dict,_cell_N_dict):
         own_cell_groups=set(_cell_group_dict.values())
 
         # Map own cell groups to Markram cell groups
@@ -111,18 +112,19 @@ class CellGroupData:
             data = json.load(data_file)
 
         # Names second level
-        flags_second_level = {'common_neighbor_bias': 0, 'connection_probability': 0,
-                              'mean_number_of_synapse_per_connection': 0, 'number_of_convergent_neuron_mean': 0,
-                              'number_of_convergent_neuron_std': 0, 'number_of_divergent_neuron_mean': 0,
-                              'number_of_divergent_neuron_std': 0, 'number_of_synapse_per_connection_std': 0,
-                              'total_synapse_count': 0}
+        connection_parameters = ['common_neighbor_bias', 'connection_probability',
+                              'mean_number_of_synapse_per_connection', 'number_of_convergent_neuron_mean',
+                              'number_of_convergent_neuron_std', 'number_of_divergent_neuron_mean',
+                              'number_of_divergent_neuron_std', 'number_of_synapse_per_connection_std',
+                              'total_synapse_count']
 
         # search_pre_layer = '^L23'
         # search_post_layer = ':L23'
         # search_pre_group = '_NBC:'
         # search_post_group = '_NBC$'
-        # search_any_pre_group = '^.*:'
+        search_any_pre_group = '^.*:'
 
+        # Map own connections to Markram connections
         markram_connections_tmp=[]
         own_group2markram_connections_map={}
         for own_cell_group in own_cell_groups:
@@ -133,8 +135,30 @@ class CellGroupData:
             own_group2markram_connections_map[own_cell_group]=markram_connections_tmp
             markram_connections_tmp=[]
 
+        # Map own connection parameters to Markram connection parameters; note, weighted average except for synapse count
+        #TODO: Now maps own cell groups to markram connection params. Should be own connections to markram connection params
+        own_data={}
+        tmp_param_list = []
+        tmp_N_cell_list = []
+        for own_cell_group in own_cell_groups:
+            markram_groups_tmp=own2markram_group_dict[own_cell_group]
+            for connection_parameter in connection_parameters:
+                list_of_connections=own_group2markram_connections_map[own_cell_group]
+                for connection in list_of_connections:
+                    tmp_param_list.append(data[connection][connection_parameter])
+                    match=re.search(search_any_pre_group, connection)
+                    markram_group = str(match.group())
+                    tmp_N_cell_list.append(_cell_N_dict[markram_group[:-1]])
+                tmp_param_array = np.asarray(tmp_param_list)
+                tmp_N_cell_array = np.asarray(tmp_N_cell_list)
+                tmp_weighted_param_array = np.multiply(tmp_param_array,tmp_N_cell_array)
+                # own_data[]
 
-        # count = 0
+                tmp_param_list = []
+                tmp_N_cell_list = []
+
+
+                # count = 0
         # all_matches=[]
         #
         #
