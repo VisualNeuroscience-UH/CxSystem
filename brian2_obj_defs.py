@@ -10,7 +10,7 @@ class customized_neuron(object):
     New types of neurons should be implemented in this class.
     '''
 
-    def __init__(self, number_of_neurons, cell_type, layers_idx, network_center=0 + 0j, resolution=0.1):
+    def __init__(self,idx, number_of_neurons, cell_type, layers_idx, network_center=0 + 0j, resolution=0.1):
         '''
         initialize the customized_neuron based on the arguments.
 
@@ -37,6 +37,7 @@ class customized_neuron(object):
             assert cell_type != 'PC', "Cell type is PC but the start and end of the neuron is not defined in layers_idx"
         # final neuron is the output neuron containing equation, parameters
         self.output_neuron = {}
+        self.output_neuron['idx'] = idx
         self.output_neuron['number_of_neurons'] = int(number_of_neurons)
         self.output_neuron['threshold'] = 'vm>Vcut'
         self.output_neuron['reset'] = 'vm=V_res'
