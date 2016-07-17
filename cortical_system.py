@@ -52,14 +52,18 @@ class cortical_system(object):
 
         '''
         self.use_genn = use_genn
-        _options = {
-            '[G]': self.neuron_group,
-            '[S]': self.synapse,
-            '[IN]': self.relay,
-            '[total_synapses]': self.set_total_synapses,
-            '[sys_mode]': self.set_sys_mode, # either "local" or "expanded"
+        self._options = {
+            'G': self.neuron_group,
+            'S': self.synapse,
+            'IN': self.relay,
+            'total_synapses': self._set_total_synapses,
+            'sys_mode': self._set_sys_mode, # either "local" or "expanded"
+            'params': self.set_runtime_parameters,
+
         }
-        is_tag = ['[']
+        self.current_parameters_list = []
+        self.current_values_list = []
+        self.NG_indices = []
         self.customized_neurons_list = []  # This list contains the customized_neuron instances. So for each neuron group target line, there would be an element in this list which contains all the information for that particular neuron group.
         self.customized_synapses_list = []  # This list contains the customized_synapse instances. Hence, for each synapse custom line, there would be an element in this list, containing all the necessary information.
         self.neurongroups_list = []  # This list contains name of the NeuronGroup() instances that are placed in the Globals().
@@ -90,17 +94,20 @@ class cortical_system(object):
 
         with open(self.config_path, 'r') as f:  # Here is the configuration file parser.
             for line in f:
-                if line[0] in is_tag:
-                    line = line[line.index(']') + 1:]  # Trim the index number
-                    tag = line[line.index('['):line.index(']') + 1]  # extract the main tag
-                    assert tag in _options.keys(), 'The tag %s is not defined.' % tag
-                else:
-                    continue
-                line = line.replace(tag, '')
                 line = line.replace('\n', '')
                 line = line.lstrip()
-                args = line.split(' ')
-                _options[tag](args)
+                try:
+                    if line[0] == '#' or not line.split(','): # comments
+                        continue
+                except:
+                    continue
+                _splitted_line = [non_empty for non_empty in line.split(',') if non_empty != '']
+                if 'row_type' in line:
+                    self.current_parameters_list = _splitted_line[1:]
+                elif _splitted_line[0] in self._options:
+                    self.current_values_list = _splitted_line[1:]
+                    self._options[_splitted_line[0]]()
+
         if self.sys_mode != '':
             assert len(self.synapses_name_list) == len(self.synapses_perc_list), "When the percentage for a synapse is defined, it should be defined for all others as well. Error: One or more synaptses percentages are missing"
             assert sum(map(float,self.synapses_perc_list)) == 1 , "Error: the percentage of the synapses does not sum up to 1"
@@ -110,11 +117,18 @@ class cortical_system(object):
                 print "optimized percentages saved in the configuration file, you can now use them and change the mode to expanded"
         print "Cortical Module initialization Done."
 
-    def set_total_synapses(self,*args):
-        self.total_synapses = int(args[0][0])
+    def set_runtime_parameters(self):
+        for idx,parameter in enumerate(self.current_parameters_list):
+            assert parameter in self._options.keys(), 'The tag %s is not defined.' % parameter
+            self._options[parameter](self.current_values_list[idx])
+        if self.sys_mode == '':
+            print "Warning: system mode is not defined. "
 
-    def set_sys_mode(self,*args):
-        self.sys_mode = args[0][0]
+    def _set_total_synapses(self,*args):
+        self.total_synapses = int(args[0])
+
+    def _set_sys_mode(self,*args):
+        self.sys_mode = args[0]
 
     def neuron_group(self, *args):
         '''
@@ -135,45 +149,57 @@ class cortical_system(object):
         * NNS_name: Generated vriable name for the NeuonGroup() namespace.
         * NG_init: NeuronGroups() should be initialized with a random vm, ge and gi values. To address this, a 6-line code is generated and put in this variable, the running of which will lead to initialization of current NeuronGroup().
         '''
-        args = args[0]
-        mon_args = []  # contains the monitor arguments extracted from the target line.
-        net_center = 0 + 0j  # center position of the neuron group in visual field coordinates, description can be found in configuration file tutorial.
-        if '[M]' in args:  # check if target line contains monitors
-            mon_args = args[args.index('[M]') + 1:]
-            args = args[0:args.index('[M]')]
-        if '[CN]' in args:  # check if target line contains center position.
-            net_center = complex(args[args.index('[CN]') + 1])
-            args = args[0:args.index('[CN]')]
+        _all_columns = ['idx','number_of_neurons','neuron_type','layer_idx','threshold','reset','refractory','net_center','monitors']
+        _obligatory_params = [0,1,2,3]
+        assert len(self.current_values_list) <= len(_all_columns), 'One or more of of the columns for input definition \
+        is missing. Following obligatory columns should be defined:\n%s\n ' \
+                                                                   % str([_all_columns[ii] for ii in _obligatory_params])
+        assert 'N/A' not in [self.current_values_list[ii] for ii in
+                             _obligatory_params], 'Following obligatory values cannot be "N/A":\n%s'% str([_all_columns[ii] for ii in _obligatory_params])
+        # args = args[0]
+        # mon_args = []  # contains the monitor arguments extracted from the target line.
+        idx = -1
+        net_center = 0 + 0j
+        number_of_neurons = 0
+        neuron_type = ''
+        layer_idx = 0
+        threshold = ''
+        reset =''
+        refractory = ''
+        monitors = ''
+        for column in _all_columns:
+            try:
+                exec "%s=self.current_values_list[self.current_parameters_list.index('%s')]"%(column,column)
+            except:
+                exec "%s='N/A'" %column
+        if net_center == 'N/A':
+            net_center = 0 + 0j  # center position of the neuron group in visual field coordinates, description can be found in configuration file tutorial.
+        net_center = complex(net_center)
+        # if '[M]' in args:  # check if target line contains monitors
+        #     mon_args = args[args.index('[M]') + 1:]
+        #     args = args[0:args.index('[M]')]
+        # if '[CN]' in args:  # check if target line contains center position.
+        #     net_center = complex(args[args.index('[CN]') + 1])
+        #     args = args[0:args.index('[CN]')]
         current_idx = len(self.customized_neurons_list)
-        if args[
-            1] == 'PC':  # extract the layer index of PC neurons separately (since it is in form of a list like [4,1]
-            exec 'args[2] = array(' + args[2] + ')'
-        self.customized_neurons_list.append(customized_neuron(*args[0:3],
+        if neuron_type == 'PC':  # extract the layer index of PC neurons separately (since it is in form of a list like [4,1]
+            exec 'layer_idx = array(' + layer_idx.replace('->',',') + ')'
+        self.customized_neurons_list.append(customized_neuron(idx,number_of_neurons,neuron_type, layer_idx,
                                                               network_center=net_center).output_neuron)  # creating a customized_neuron() object and passing the positional arguments to it. The main member of the class called output_neuron is then appended to customized_neurons_list.
-        if len(args) > 3:  # in case of threshold/reset/refractory overwrite
-            for arg_idx in range(3, len(args)):
-                if 'threshold' in args[arg_idx]:
-                    args[arg_idx] = args[arg_idx][args[arg_idx].index("'") + 1:-2]
-                    self.customized_neurons_list[-1]['threshold'] = args[arg_idx]
-                elif 'reset' in args[arg_idx]:
-                    args[arg_idx] = args[arg_idx][args[arg_idx].index("'") + 1:-2]
-                    self.customized_neurons_list[-1]['reset'] = args[arg_idx]
-                elif 'refractory' in args[arg_idx]:
-                    args[arg_idx] = args[arg_idx][args[arg_idx].index("'") + 1:-2]
-                    self.customized_neurons_list[-1]['refractory'] = args[arg_idx]
-        NG_name = self._NeuronGroup_prefix + str(current_idx) + '_' + args[
-            1]  # Generated vriable name for the NeuonGroup().
+      # in case of threshold/reset/refractory overwrite
+        if threshold != 'N/A':
+            self.customized_neurons_list[-1]['threshold'] = threshold
+        if reset != 'N/A' :
+            self.customized_neurons_list[-1]['reset'] = reset
+        if refractory != 'N/A':
+            self.customized_neurons_list[-1]['refractory'] =refractory
+        NG_name = self._NeuronGroup_prefix + str(current_idx) + '_' + neuron_type  # Generated vriable name for the NeuonGroup().
         self.neurongroups_list.append(NG_name)
-        NN_name = self._NeuronNumber_prefix + str(
-            current_idx)  # Generated vriable name for corresponding Neuron Number.
-        NE_name = self._NeuronEquation_prefix + str(
-            current_idx)  # Generated vriable name for the NeuonGroup() equation.
-        NT_name = self._NeuronThreshold_prefix + str(
-            current_idx)  # Generated vriable name for the NeuonGroup() threshold.
-        NRes_name = self._NeuronReset_prefix + str(
-            current_idx)  # Generated vriable name for the NeuonGroup() reset value.
-        NRef_name = self._NeuronRef_prefix + str(
-            current_idx)  # Generated vriable name for the NeuonGroup() refractory value.
+        NN_name = self._NeuronNumber_prefix + str(current_idx)  # Generated vriable name for corresponding Neuron Number.
+        NE_name = self._NeuronEquation_prefix + str(current_idx)  # Generated vriable name for the NeuonGroup() equation.
+        NT_name = self._NeuronThreshold_prefix + str(current_idx)  # Generated vriable name for the NeuonGroup() threshold.
+        NRes_name = self._NeuronReset_prefix + str(current_idx)  # Generated vriable name for the NeuonGroup() reset value.
+        NRef_name = self._NeuronRef_prefix + str(current_idx)  # Generated vriable name for the NeuonGroup() refractory value.
         NNS_name = self._NeuronNS_prefix + str(current_idx)  # Generated vriable name for the NeuonGroup() namespace.
         # NPos_name = self._NeuronPos_prefix + str(current_idx)
         # self.monitor_name_bank['NeuroGroups'].append(NG_name)
@@ -193,27 +219,23 @@ class cortical_system(object):
             NG_name, current_idx, NG_name, current_idx)
 
         # Saving the neurons' positions both in visual field and cortical coordinates in save_data() object.
-        self.save_data.data['positions_all']['z_coord'][NG_name] = self.customized_neurons_list[current_idx][
-            'z_positions']
-        self.save_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx][
-            'w_positions']
+        self.save_data.data['positions_all']['z_coord'][NG_name] = self.customized_neurons_list[current_idx]['z_positions']
+        self.save_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx]['w_positions']
 
         # NeuronGroups() should be initialized with a random vm, ge and gi values. To address this, a 6-line code is generated and put in NG_init variable, the running of which will lead to initialization of current NeuronGroup().
         NG_init = 'Vr_offset = rand(len(%s))\n' % NG_name
         NG_init += "for _key in %s.variables.keys():\n" % NG_name
         NG_init += "\tif _key.find('vm')>=0:\n"
-        NG_init += "\t\tsetattr(%s,_key,%s['Vr']+Vr_offset * (%s['VT']-%s['Vr']))\n" % (
-        NG_name, NNS_name, NNS_name, NNS_name)
+        NG_init += "\t\tsetattr(%s,_key,%s['Vr']+Vr_offset * (%s['VT']-%s['Vr']))\n" % (NG_name, NNS_name, NNS_name, NNS_name)
         NG_init += "\telif ((_key.find('ge')>=0) or (_key.find('gi')>=0)):\n"
         NG_init += "\t\tsetattr(%s,_key,0)" % NG_name
         exec NG_init
         # updating the Globals()
         exec "globals().update({'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s})" % \
-             (
-             NN_name, NN_name, NE_name, NE_name, NT_name, NT_name, NRes_name, NRes_name, NRef_name, NRef_name, NNS_name,
+            (NN_name, NN_name, NE_name, NE_name, NT_name, NT_name, NRes_name, NRes_name, NRef_name, NRef_name, NNS_name,
              NNS_name, NG_name, NG_name)
         # passing remainder of the arguments to monitors() method to take care of the arguments.
-        self.monitors(mon_args, NG_name, self.customized_neurons_list[-1]['equation'])
+        self.monitors(monitors.split(' '), NG_name, self.customized_neurons_list[-1]['equation'])
 
     def monitors(self, mon_args, object_name, equation):
         '''
@@ -231,6 +253,8 @@ class cortical_system(object):
         * sub_mon_tags: The tags in configuration file that are specified for a StateMonitor(), e.g. in record=True which is specified by [rec]True in configuration file, [rec] is saved in sub_mon_tags
         * sub_mon_args: The corresponding arguments of sub_mon_tags for a StateMonitor(), e.g. in record=True which is specified by [rec]True in configuration file, True is saved in sub_mon_args.
         '''
+        if 'N/A' in mon_args:
+            return
         if not mon_args and not self.default_monitors:
             return
         if not mon_args:
@@ -255,6 +279,7 @@ class cortical_system(object):
         for mon_arg in mon_args:
             # Extracting the monitor tag
             mon_tag = mon_arg[mon_arg.index('['):mon_arg.index(']') + 1]
+            assert mon_tag in monitor_options.keys(),'Error: %s is not recognized as a type of monitor ' %mon_tag
             mon_arg = mon_arg.replace(mon_tag, '')
             if mon_tag == '[Sp]':  # This is for SpikeMonitor()s
                 # If there is a spike monitor, a spikes_all field is added to the save_data() object.
@@ -683,14 +708,27 @@ class cortical_system(object):
         * SG_str: The string containing the syntax for creating the SpikeGeneratorGroup() based on the input .mat file.
         * number_of_neurons: The number of neurons that exist in the input .mat file.
         '''
-
-        args = args[0]
-        if '[M]' in args: # extracting the monitor tags
-            mon_args = args[args.index('[M]') + 1:]
-            args = args[0:args.index('[M]')]
+        _all_columns = ['idx','path','freq','monitors']
+        _obligatory_params = [0,1,2]
+        assert len (self.current_values_list) >= len (_obligatory_params ), 'One or more of of the columns for\
+         input definition is missing. Following obligatory columns should be defined:\n%s\n' %str([_all_columns[ii] for ii in _obligatory_params])
+        assert 'N/A' not in [self.current_values_list[ii] for ii in _obligatory_params], 'Following obligatory values cannot be "N/A":\n%s'% str([_all_columns[ii] for ii in _obligatory_params])
+        # args = args[0]
+        # if '[M]' in args: # extracting the monitor tags
+        #     mon_args = args[args.index('[M]') + 1:]
+        #     args = args[0:args.index('[M]')]
+        path = self.current_values_list[_all_columns.index('path')].strip()
+        freq = self.current_values_list[_all_columns.index('freq')]
+        idx = self.current_values_list[_all_columns.index('idx')]
+        try :
+            mons = self.current_values_list[_all_columns.index('monitors')]
+        except:
+            mons = 'N/A'
+        assert idx not in self.NG_indices, "Error: multiple indices with same values exist in the configuration file."
+        self.NG_indices.append(idx)
         inp = stimuli()
-        inp.generate_inputs(args[0], args[1])
-        spikes_str, times_str, SG_str, number_of_neurons = inp.load_input_seq(args[0])
+        inp.generate_inputs(path,freq )
+        spikes_str, times_str, SG_str, number_of_neurons = inp.load_input_seq(path)
         Spikes_Name = spikes_str.split('=')[0].rstrip()
         Time_Name = times_str.split('=')[0].rstrip()
         SG_Name = SG_str.split('=')[0].rstrip()
@@ -707,8 +745,9 @@ class cortical_system(object):
 
         current_idx = len(self.customized_neurons_list)
         relay_group = {}
+        relay_group['idx'] = idx
         relay_group['type'] = 'in'
-        relay_group['z_positions'] = squeeze(inp.get_input_positions(args[0]))
+        relay_group['z_positions'] = squeeze(inp.get_input_positions(path))
         relay_group['w_positions'] = 17 * log(relay_group['z_positions'] + 1)
         relay_group['equation'] = ''
         self.customized_neurons_list.append(relay_group)
@@ -744,7 +783,7 @@ class cortical_system(object):
              (NN_name, NN_name, NE_name, NE_name, NT_name, NT_name, NRes_name, NRes_name, NG_name, NG_name, SGsyn_name,
               SGsyn_name) # updating the Globals()
 
-        self.monitors(mon_args, NG_name, self.customized_neurons_list[-1]['equation']) # taking care of the monitors
+        self.monitors(mons.split(' '), NG_name, self.customized_neurons_list[-1]['equation']) # taking care of the monitors
 
     def gather_result(self):
         '''
@@ -767,10 +806,10 @@ class cortical_system(object):
         xticks([0, 1], ['Source', 'Target'])
         ylabel('Neuron index')
 
-# CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Connections.txt' , os.getcwd())
+CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Connections.csv' , os.getcwd())
 #
 #
-# run(500*ms,report = 'text')
+run(500*ms,report = 'text')
 # if CM.use_genn == 1 :
 #     device.build(directory='tester',
 #                 compile=True,
