@@ -37,7 +37,7 @@ class customized_neuron(object):
             assert cell_type != 'PC', "Cell type is PC but the start and end of the neuron is not defined in layers_idx"
         # final neuron is the output neuron containing equation, parameters
         self.output_neuron = {}
-        self.output_neuron['idx'] = idx
+        self.output_neuron['idx'] = int(idx)
         self.output_neuron['number_of_neurons'] = int(number_of_neurons)
         self.output_neuron['threshold'] = 'vm>Vcut'
         self.output_neuron['reset'] = 'vm=V_res'
