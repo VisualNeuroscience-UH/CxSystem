@@ -43,7 +43,7 @@ class CellGroupData:
 
         self.own_Ncell_dict, self.ordered_own_Ncell_list, self.proportion_MC, self.proportion_BC = \
             self._cx_ncells(_cell_group_dict,_cell_N_dict)
-        self.own_connections2markram_connections_map = self._cx_nsynapses(_cell_group_dict,_cell_N_dict)
+        self.own_connections2markram_connections_map, self.own_data_vector = self._cx_nsynapses(_cell_group_dict,_cell_N_dict)
 
     def _cx_ncells(self,_cell_group_dict,_cell_N_dict):
         own_cell_groups=set(_cell_group_dict.values())
@@ -154,32 +154,38 @@ class CellGroupData:
                 own_connections2markram_connections_map[connection_key] = connection_value
 
 
-
+        # Now collect all param values from data
+        own_data_vector={} # this has the whole data as a vector of markram connection values
+        for own_connection, markram_connections in own_connections2markram_connections_map.items():
+            own_data_vector[own_connection]={}
+            for param in connection_parameters:
+                param_values=[]
+                for markram_connection in markram_connections:
+                    param_values.append(data[markram_connection][param])
+                own_data_vector[own_connection][param]=param_values
 
 
 
         # Map own connection parameters to Markram connection parameters; note, weighted average except for synapse count
-        #TODO: Now maps own cell groups to markram connection params. Should be own connections to markram connection params
-        own_data={}
-        tmp_param_list = []
-        tmp_N_cell_list = []
-        for own_cell_group in own_cell_groups:
-            markram_groups_tmp=own2markram_group_dict[own_cell_group]
-            for connection_parameter in connection_parameters:
-                list_of_connections=own_group2markram_connections_map[own_cell_group]
-                for connection in list_of_connections:
-                    tmp_param_list.append(data[connection][connection_parameter])
-                    match=re.search(search_any_pre_group, connection)
-                    markram_group = str(match.group())
-                    tmp_N_cell_list.append(_cell_N_dict[markram_group[:-1]])
-                tmp_param_array = np.asarray(tmp_param_list)
-                tmp_N_cell_array = np.asarray(tmp_N_cell_list)
-                tmp_weighted_param_array = np.multiply(tmp_param_array,tmp_N_cell_array)
-                # own_data[]
-
-                tmp_param_list = []
-                tmp_N_cell_list = []
-
+        # tmp_param_list = []
+        # tmp_N_cell_list = []
+        # for own_cell_group in own_cell_groups:
+        #     markram_groups_tmp=own2markram_group_dict[own_cell_group]
+        #     for connection_parameter in connection_parameters:
+        #         list_of_connections=own_group2markram_connections_map[own_cell_group]
+        #         for connection in list_of_connections:
+        #             tmp_param_list.append(data[connection][connection_parameter])
+        #             match=re.search(search_any_pre_group, connection)
+        #             markram_group = str(match.group())
+        #             tmp_N_cell_list.append(_cell_N_dict[markram_group[:-1]])
+        #         tmp_param_array = np.asarray(tmp_param_list)
+        #         tmp_N_cell_array = np.asarray(tmp_N_cell_list)
+        #         tmp_weighted_param_array = np.multiply(tmp_param_array,tmp_N_cell_array)
+        #         # own_data[]
+        #
+        #         tmp_param_list = []
+        #         tmp_N_cell_list = []
+        #
 
                 # count = 0
         # all_matches=[]
@@ -212,7 +218,7 @@ class CellGroupData:
         # for gn in sorted_group_names:
         #     print gn + ', '
 
-        return own_connections2markram_connections_map
+        return own_connections2markram_connections_map, own_data_vector
 
 if __name__ == '__main__':
     tmpvar=CellGroupData()
