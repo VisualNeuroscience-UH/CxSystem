@@ -43,7 +43,7 @@ class CellGroupData:
 
         self.own_Ncell_dict, self.ordered_own_Ncell_list, self.proportion_MC, self.proportion_BC = \
             self._cx_ncells(_cell_group_dict,_cell_N_dict)
-        self.own_group2markram_connections_map = self._cx_nsynapses(_cell_group_dict,_cell_N_dict)
+        self.own_connections2markram_connections_map = self._cx_nsynapses(_cell_group_dict,_cell_N_dict)
 
     def _cx_ncells(self,_cell_group_dict,_cell_N_dict):
         own_cell_groups=set(_cell_group_dict.values())
@@ -123,8 +123,11 @@ class CellGroupData:
         # search_pre_group = '_NBC:'
         # search_post_group = '_NBC$'
         search_any_pre_group = '^.*:'
+        search_any_post_group =':.*$'
 
         # Map own connections to Markram connections
+
+        # First map own presynaptic groups to markram connections
         markram_connections_tmp=[]
         own_group2markram_connections_map={}
         for own_cell_group in own_cell_groups:
@@ -134,6 +137,26 @@ class CellGroupData:
                 [markram_connections_tmp.append(key) for key, value in data.items() if '{}:'.format(markram_group) in key]
             own_group2markram_connections_map[own_cell_group]=markram_connections_tmp
             markram_connections_tmp=[]
+
+
+        # Now map own connections to markram connections
+        own_connections2markram_connections_map = {} # all connections
+        for presynG,markram_connections in own_group2markram_connections_map.items(): # go through own presynaptic group to markram connections map
+            for postsynG in own_cell_groups: # take first possible postsynaptic group from set of own groups
+                connection_key = '{0}:{1}'.format(presynG,postsynG) # own connection key
+                connection_value=[] # init markram connection list for this own connection key
+                for markram_connection in markram_connections:
+                    match = re.search(search_any_post_group, markram_connection) # search postsynaptic group name from markram connection
+                    markram_group = str(match.group())[1:]
+                    if markram_group in own2markram_group_dict[postsynG]:
+                        connection_value.append(markram_connection) # add markram connection to won connection key
+
+                own_connections2markram_connections_map[connection_key] = connection_value
+
+
+
+
+
 
         # Map own connection parameters to Markram connection parameters; note, weighted average except for synapse count
         #TODO: Now maps own cell groups to markram connection params. Should be own connections to markram connection params
@@ -189,7 +212,7 @@ class CellGroupData:
         # for gn in sorted_group_names:
         #     print gn + ', '
 
-        return own_group2markram_connections_map
+        return own_connections2markram_connections_map
 
 if __name__ == '__main__':
     tmpvar=CellGroupData()
