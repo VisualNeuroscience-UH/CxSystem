@@ -1,4 +1,12 @@
+# Sketchy code for adding parameters to Markram's set of connections according to Vanni simplification
+# Creates a json file similar to the original pathways_anatomy_factsheets_simplified.json
+# Henri Hokkanen 21 July 2016
+
 import pandas as pd
+
+file_pathways_anatomy_markram = 'pathways_anatomy_factsheets_simplified.json' # INPUT FILE, from https://bbp.epfl.ch/nmc-portal/downloads
+file_pathways_anatomy_vannilized = 'pathways_anatomy_vannilized.json' # OUTPUT FILE
+
 
 # Mapping from Markram et al cell groups to own cell groups
 cell_group_dict = {
@@ -28,16 +36,17 @@ cell_N_dict = {
     }
 
 
-data = pd.read_json('pathways_anatomy_factsheets_simplified.json', orient='index') # From https://bbp.epfl.ch/nmc-portal/downloads
+data = pd.read_json(file_pathways_anatomy_markram, orient='index') 
 
 # Split connection names (eg. L6_UTPC:L6_IPC) into two columns -> markram_pre, markram_post
 markram_to_vanni = data.index.str.extract('(.*):(.*)', expand=True)
 markram_to_vanni.index = data.index
 markram_to_vanni.columns = ['markram_pre', 'markram_post']
 
-# Get corresponding Vanni neuron groups
+# Get corresponding Vanni neuron groups & create "Vanni index, eg. L6_PC1:L6_PC1"
 markram_to_vanni['vanni_pre'] = markram_to_vanni['markram_pre'].map(cell_group_dict)
 markram_to_vanni['vanni_post'] = markram_to_vanni['markram_post'].map(cell_group_dict)
+markram_to_vanni['vanni_index'] = markram_to_vanni['vanni_pre'] + ':' + markram_to_vanni['vanni_post']
 
 # Get number of neurons pre and post Markram neuron groups
 markram_to_vanni['neuron_number_pre'] = markram_to_vanni['markram_pre'].map(cell_N_dict)
@@ -58,17 +67,13 @@ celltypes_post = markram_to_vanni['vanni_pre'].str.extract('^(\w{2,3})_(.*)$', e
 
 celltypes_pre =  markram_to_vanni['vanni_post'].str.extract('^\w{2,3}_(.*)$', expand=False) 
 
-#celltypes.columns = ['vanni_pre_celltype', 'vanni_post_celltype']
 
-# Create mean of synapses per vanni-connection
-#markram_mean_synapses = data.pivot_table('mean_number_of_synapse_per_connection', index='markram_pre', columns='markram_post', aggfunc = sum)
 
 
 # Join em all!
 data = data.join(markram_to_vanni)
 data = data.join(pre_layers)
 data = data.join(post_layers)
-#data = data.join(celltypes_pre)
-#data = data.join(celltypes_post)
 
-data.astype(str).to_json('pathways_anatomy_vanni.json', orient='index')
+
+data.astype(str).to_json(file_pathways_anatomy_vannilized, orient='index')
