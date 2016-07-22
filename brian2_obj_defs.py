@@ -237,6 +237,30 @@ class customized_neuron(object):
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
 
+
+    def UMi(self):
+        '''
+        This method build up the equation for Unassigned Markram inhibitory (UMi) neurons. The final equation is then saved in output_neuron['equation'].
+
+        * The equation of the neuron is as follows:
+
+            ::
+
+                dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge_soma * (Ee-vm) + gi_soma * (Ei-vm)) / C : volt (unless refractory)
+                dge_soma/dt = -ge_soma/tau_e : siemens
+                dgi_soma/dt = -gi_soma/tau_i : siemens
+                x : meter
+                y : meter
+        '''
+        self.output_neuron['equation'] = Equations('''
+            dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C : volt (unless refractory)
+            dge/dt = -ge/tau_e : siemens
+            dgi/dt = -gi/tau_i : siemens
+            ''', ge='ge_soma', gi='gi_soma')
+
+        self.output_neuron['equation'] += Equations('''x : meter
+            y : meter''')
+
     def MC(self):
         '''
             This method build up the equation for MC neurons. The final equation is then saved in output_neuron['equation'].
