@@ -2,6 +2,7 @@ __author__ = 'V_AD'
 from brian_genn_version  import *
 import brian2genn
 import os
+import sys
 from brian2_obj_defs import *
 from Plotter import *
 from save_data import *
@@ -83,14 +84,56 @@ class cortical_system(object):
         self.optimized_probabilities = []
 
 
+        with open(self.config_path, 'r') as f:
+            for self.line in f:
+                self.line = self.line.replace('\n', '')
+                self.line = self.line.lstrip()
+                if 'do_optimize' in self.line or self.line[0:6] == 'params':
+                    _splitted_line = [non_empty for non_empty in self.line.split(',') if non_empty != '']
+                    if 'row_type' in self.line:
+                        self.current_parameters_list = _splitted_line[1:]
+                    elif _splitted_line[0] in self._options:
+                        self.current_values_list = _splitted_line[1:]
+                        self._options[_splitted_line[0]]()
+
+        if os.path.isfile(os.path.abspath('./generated_connections.csv')) and self.do_optimize == 1:
+            var = ''
+            while var != 'Y' and var != 'N':
+                var = raw_input("Optimized file already exist, Overwrite?(Y/N) ")
+            if var == 'Y':
+                generated_file_name = './generated_connections.csv'
+            elif var == 'N':
+                sure = ''
+                while sure != 'Y':
+                    generated_file_name = raw_input("Enter the file name: ")
+                    generated_file_name = generated_file_name .replace('.csv','') if '.csv' in generated_file_name else generated_file_name
+                    while sure != 'Y' and sure != 'N':
+                        sure = raw_input("Are you sure?(Y/N) ")
 
         with open(self.config_path, 'r') as f:  # Here is the configuration file parser.
-            with open(os.path.abspath('./generated_connections.csv'), 'w') as new_file:
+            if self.do_optimize:
+                with open(os.path.abspath("./generated_connections.csv"), 'w') as new_file:
+                    for self.line in f:
+                        self.line = self.line.replace('\n', '')
+                        self.line = self.line.lstrip()
+                        try:
+                            if self.line[0] == '#' or not self.line.split(','): # comments
+                                continue
+                        except:
+                            continue
+                        _splitted_line = [non_empty for non_empty in self.line.split(',') if non_empty != '']
+                        if 'row_type' in self.line:
+                            self.current_parameters_list = _splitted_line[1:]
+                        elif _splitted_line[0] in self._options:
+                            self.current_values_list = _splitted_line[1:]
+                            self._options[_splitted_line[0]]()
+                        new_file.write(self.line + "\n")
+            else:
                 for self.line in f:
                     self.line = self.line.replace('\n', '')
                     self.line = self.line.lstrip()
                     try:
-                        if self.line[0] == '#' or not self.line.split(','): # comments
+                        if self.line[0] == '#' or not self.line.split(','):  # comments
                             continue
                     except:
                         continue
@@ -100,15 +143,17 @@ class cortical_system(object):
                     elif _splitted_line[0] in self._options:
                         self.current_values_list = _splitted_line[1:]
                         self._options[_splitted_line[0]]()
-                    new_file.write(self.line)
 
-        if self.sys_mode != '':
+
+        if self.sys_mode != '' and self.do_optimize:
             assert len(self.synapses_name_list) == len(self.synapses_perc_list), "When the percentage for a synapse is defined, it should be defined for all others as well. Error: One or more synaptses percentages are missing"
             assert sum(map(float,self.synapses_perc_list)) == 1 , "Error: the percentage of the synapses does not sum up to 1"
             # if self.optimization_notfound ==1 :
             #     with open(self.config_path, "a") as f:
             #         f.write("\noptimized_probabilities: %s"%(','.join(str(x) for x in self.optimized_probabilities)))
             #     print "optimized percentages saved in the configuration file, you can now use them and change the mode to expanded"
+        if self.do_optimize == 1:
+            sys.exit("Execution Compeleted. the synapses are optimized based on their percentages and the new connection file is generated. Use the name of the new configuration file to re-run the program.")
         print "Cortical Module initialization Done."
 
     def set_runtime_parameters(self):
@@ -133,7 +178,8 @@ class cortical_system(object):
             '1', str(0)) + self.line[indices[tmp_idx + 1]:]
         except:
             self.line = self.line[:indices[tmp_idx] + 1] + self.line[indices[tmp_idx] + 1:].replace('1', str(0))
-        print "Info: Probabilities are going to be optimized based on their percentages and the result is save in a new file. do_optimize flag set to zero."
+        if self.do_optimize :
+            print "Info: Probabilities are going to be optimized based on their percentages and the result is save in a new file. do_optimize flag set to zero."
         # if self.do_optimize == 1:
         #     self.optimization_notfound = 1
         #     with open(self.config_path, "rb") as f:
@@ -438,11 +484,36 @@ class cortical_system(object):
             # multicompartmental PC neuon, the rules are described in the configuration file description.
             try :
                 self.synapses_perc_list.extend(map(float,self.current_values_list[self.current_parameters_list.index('percentage')].split('+')))
+                _current_percs = map(float,self.current_values_list[self.current_parameters_list.index('percentage')].split('+'))
             except:
                 try:
+                    _current_percs = float(self.current_values_list[self.current_parameters_list.index('percentage')])
                     self.synapses_perc_list.append(float(self.current_values_list[self.current_parameters_list.index('percentage')]))
                 except:
-                    pass
+                    _current_percs = []
+                    try:
+                        assert (self.current_values_list[self.current_parameters_list.index('percentage')] == 'N/A'), "when targetting multiple comparments near some, their percentage should be defined separately and especifically. Unless it's marked as 'N/A'"
+                        _current_percs = 'N/A'
+                    except:
+                        assert self.do_optimize == 0, "Error: if ther percentages in the synapses are not defined, the do_optimize should be set to 0. "
+            # if len(_current_percs) > 1 :
+            try:
+                _current_probs = map(float,self.current_values_list[self.current_parameters_list.index('p')].split('+'))
+
+            except:
+                try:
+                    assert self.current_values_list[self.current_parameters_list.index('p')] == 'N/A', "when targetting multiple comparments near some, their probabilitiy should be defined separately and especifically. Unless it's marked as 'N/A'"
+                    _current_probs = 'N/A'
+                except:
+                    assert 'p' not in self.current_parameters_list
+            try:
+                _current_ns = map(float,self.current_values_list[self.current_parameters_list.index('n')].split('+'))
+            except:
+                try:
+                    assert self.current_values_list[self.current_parameters_list.index('n')] == 'N/A', "when targetting multiple comparments near some, their number of connections 'n' should be defined separately and especifically. Unless it's marked as 'N/A'"
+                    _current_ns = 'N/A'
+                except:
+                    assert 'n' not in self.current_parameters_list
             arg = self.current_values_list[self.current_parameters_list.index('post_syn_idx')]  # post-synaptic target layer index
             tag = arg[arg.index('['):arg.index(']') + 1]  # extracting the tag
             assert tag in _options.keys(), 'The synaptic tag %s is not defined.' % tag
@@ -459,7 +530,7 @@ class cortical_system(object):
                 _post_type = self.customized_neurons_list[post_group_ref_idx]['type']  # Post-synaptic neuron type
                 self.current_parameters_list.extend(['pre_type', 'post_type','post_comp_name'])
                 self.current_values_list.extend([_pre_type, _post_type])
-                if str(int(_post_com_idx))[0] == '0':  # this is in case the target is from compartment 0 which has 3 compartments itself (Description in configuration file tutorial).
+                if str(_post_com_idx)[0] == '0':  # this is in case the target is from compartment 0 which has 3 compartments itself (Description in configuration file tutorial).
                     assert len(_post_com_idx) > 1, 'Error: a soma of a compartmental neuron is being targeted but the exact compartment in the soma is not defined. After 0, use "b" for basal dendrites, "s" for soma and "a" for apical dendrites.'
 
                     # if len(_post_com_idx) == 1:
@@ -476,11 +547,17 @@ class cortical_system(object):
                     #     args = triple_args
                     # else:
                     triple_args = []
-                    if self.current_values_list[self.current_parameters_list.index('percentage')] != 'N/A':
-                        comp_percs = self.current_values_list[self.current_parameters_list.index('percentage')].split('+')
+                    # if self.current_values_list[self.current_parameters_list.index('percentage')] != 'N/A':
+                    #     comp_percs = self.current_values_list[self.current_parameters_list.index('percentage')].split('+')
 
-                    for tmp_idx in _post_com_idx[1:]:
+                    for idx, tmp_idx in enumerate(_post_com_idx[1:]):
                         tmp_args = list(self.current_values_list)
+                        if 'p' in self.current_parameters_list:
+                            tmp_args[self.current_parameters_list.index('p')] = _current_probs[idx] if tmp_args[self.current_parameters_list.index('p')]!= 'N/A' else 'N/A'
+                        if 'n' in self.current_parameters_list:
+                            tmp_args[self.current_parameters_list.index('n')] = _current_ns[idx] if tmp_args[self.current_parameters_list.index('n')]!= 'N/A' else 'N/A'
+                        if 'percentage' in self.current_parameters_list:
+                            tmp_args[self.current_parameters_list.index('percentage')] = _current_percs[idx] if tmp_args[self.current_parameters_list.index('percentage')] != 'N/A' else 'N/A'
                         if tmp_idx == 'b':
                             tmp_args.append('_basal')
                             triple_args.append(tmp_args)
@@ -495,6 +572,8 @@ class cortical_system(object):
                     self.current_values_list.append('_a' + str(_post_com_idx))
             if type(self.current_values_list[0]) != list :
                 self.current_values_list = [self.current_values_list]
+            if 'percentage' in self.current_parameters_list:
+                assert len(self.current_values_list) == len(_current_percs),"Not enough percentage values are defined for a PC neuron. In a multi-compartmental PC neuron, when multiple compartments in soma are being targeted, the percentage of each of those connection should be declared separately. Check configuration file tutorial."
             # for value_set in self.current_values_list :
             #     if value_set[self.current_parameters_list.index('percentage')] != 'N/A':
             #         assert len(self.current_values_list) == self.current_values_list[self.current_parameters_list.index(['percentage'])], "Not enough percentage values are defined for a PC neuron. In a multi-compartmental PC neuron, when multiple compartments in soma are being targeted, the percentage of each of those connection should be declared separately. Check configuration file tutorial."
@@ -505,9 +584,9 @@ class cortical_system(object):
             except:
                 _current_perc = 'N/A'
             pre_group_ref_idx = [self.customized_neurons_list.index(gr) for gr in self.customized_neurons_list if
-                                     gr['idx'] == int(self.current_values_list[self.current_parameters_list.index('pre_syn_idx')])][0]
+                                     int(gr['idx']) == int(self.current_values_list[self.current_parameters_list.index('pre_syn_idx')])][0]
             post_group_ref_idx = [self.customized_neurons_list.index(gr) for gr in self.customized_neurons_list if
-                              gr['idx'] == int(self.current_values_list[self.current_parameters_list.index('post_syn_idx')])][0]
+                              int(gr['idx']) == int(self.current_values_list[self.current_parameters_list.index('post_syn_idx')])][0]
             _pre_type = self.customized_neurons_list[pre_group_ref_idx]['type']   # Pre-synaptic neuron type
             _post_type = self.customized_neurons_list[post_group_ref_idx]['type']  # Post-synaptic neuron type
             assert _post_type!= 'PC', 'Error: The post_synaptc group is a multicompartmental PC but the target compartment is not selected. Use [C] tag. '
@@ -612,19 +691,30 @@ class cortical_system(object):
                 assert (p_arg == 'N/A' or p_arg == self.customized_synapses_list[-1]['sparseness']) and percentage!='N/A','Error: The system is in local mode and set to optimize the probabilities based on the percentages. In this case the probability should set to "N/A" which is not. Check the following line:\n%s'%self.line
                 exec "del %s" % S_name
                 try :
-                    self._Synapses_Optimizer(_number_of_synapse,current_idx,S_name,SE_name,SPre_name,SPost_name,SNS_name,p_arg,n_arg)
+                    self._Synapses_Optimizer(syn,_number_of_synapse,S_name,SE_name,SPre_name,SPost_name,SNS_name,p_arg,float(percentage),n_arg)
                 except NameError:
-                    self._Synapses_Optimizer(_number_of_synapse, current_idx, S_name, SE_name, SPre_name, SPost_name,SNS_name, p_arg)
+                    self._Synapses_Optimizer(syn,_number_of_synapse, S_name, SE_name, SPre_name, SPost_name,SNS_name, p_arg,float(percentage))
             else:
                 exec "globals().update({'%s':%s})" % (S_name, S_name)
+            exec "%s._name = 'synapses_%d'" % (S_name, current_idx + 1)
             self.monitors(monitors.split(' '), S_name,
                           self.customized_synapses_list[-1]['equation'])  # taking care of the monitors
+
+            num_tmp = 0
             exec "num_tmp = len(%s.i)"%S_name
             print "number of synapses: %d" %num_tmp
-
-    def _Synapses_Optimizer(self,_number_of_synapse,current_idx,S_name,SE_name,SPre_name,SPost_name,SNS_name,p_arg,n_arg='no_n_arg' ):
+        try:
+            if 'percentage' in self.current_parameters_list:
+                tmp_idx = self.current_parameters_list.index('p')
+                indices = [iii for iii, ltr in enumerate(self.line) if ltr == ',']
+                self.line = self.line[:indices[tmp_idx] + 1] + self.line[indices[tmp_idx] + 1:indices[tmp_idx + 1]].replace(
+                    'N/A', str(self.optimized_probabilities).replace('[','').replace(']','').replace(',','+').replace("'",'').replace(" ",'')) + self.line[indices[tmp_idx + 1]:]
+                self.optimized_probabilities = []
+        except:
+            pass
+    def _Synapses_Optimizer(self,syn,_number_of_synapse,S_name,SE_name,SPre_name,SPost_name,SNS_name,p_arg,percentage,n_arg='no_n_arg' ):
         assert self.total_synapses != 0 , "System is in [local] mode and the synapses are to be optimized, but the total number of synapses are not defined."
-        if n_arg == 'no_n_arg':
+        if n_arg == 'no_n_arg' or n_arg == 'N/A':
             del n_arg
         # self.optimization_notfound = 1
         # # check if the optimized probabtilities are already written to the file:
@@ -639,19 +729,18 @@ class cortical_system(object):
         #     self.optimization_notfound = 0
 
         # if self.optimization_notfound:
-        _optimization_direction = 'decrease' if _number_of_synapse > self.synapses_perc_list[current_idx] * \
-                                                                     self.total_synapses else 'increase'
+        _optimization_direction = 'decrease' if _number_of_synapse > percentage * self.total_synapses else 'increase'
         constant = 0.01
         p_arg_list = []
-
-        target_number = self.synapses_perc_list[current_idx] * self.total_synapses
+        p_arg_list.append(p_arg)
+        target_number = percentage * self.total_synapses
         while True:
             if abs((target_number - _number_of_synapse) / target_number) < 0.05:
                 exec "globals().update({'%s':%s})" % (S_name, S_name)
                 break
             if _optimization_direction == 'decrease':
                 if _number_of_synapse < target_number:
-                    print "go to fixating mode"
+                    self._status_printer("Change direction")
                     del p_arg_list[-1]
                     p_arg = p_arg_list[-1]
                     constant = constant/2
@@ -662,7 +751,7 @@ class cortical_system(object):
 
             elif _optimization_direction == 'increase':
                 if _number_of_synapse > target_number :
-                    print "go to fixating mode"
+                    self._status_printer("Change direction")
                     del p_arg_list[-1]
                     p_arg = p_arg_list[-1]
                     constant = constant/2
@@ -686,7 +775,7 @@ class cortical_system(object):
                      % (S_name, self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
                         self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SPre_name,
                         SNS_name)
-            syn_con_str = "%s.connect('i!=j', p=' " % S_name
+            syn_con_str = "%s.connect('i!=j', p='" % S_name
             # Connecting the synapses based on either [the defined probability and the distance] or [only the distance] plus considering the number of connections
             try:
                 # if self.sys_mode == 'local':
@@ -708,13 +797,11 @@ class cortical_system(object):
                 syn_con_str += "')"
             exec syn_con_str
             exec "_number_of_synapse = len(%s.i)" % S_name
-            print "probability: %s" %p_arg
+            self._status_printer("probability: %s" %p_arg)
         assert 'p' in self.current_parameters_list, 'Error: probabilities are to be optimized but the "p" column is not defined in synapses definitions. '
-        tmp_idx = self.current_parameters_list.index('p')
-        indices = [i for i, ltr in enumerate(self.line) if ltr == ',']
-        self.line = self.line[:indices[tmp_idx]+1] + self.line[indices[tmp_idx]+1:indices[tmp_idx+1]].replace('N/A',str(p_arg)) + self.line[indices[tmp_idx+1]:]
-        # self.optimized_probabilities.append(p_arg)
-        print "optimization for %s finished"%S_name
+
+        self.optimized_probabilities.append(p_arg)
+        print "\noptimization for %s finished"%S_name
         # else:
         #     print "Warning: the CX_system is running in local mode but the percentages are already determined and saved in the configuration file . If this is not intentional, either remove the last line of configuration file to re-optimize the percentages, or change the mode to 'expanded' mode."
         #     try:
@@ -875,7 +962,11 @@ class cortical_system(object):
         xticks([0, 1], ['Source', 'Target'])
         ylabel('Neuron index')
 
-CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Connections.csv' , os.getcwd())
+    def _status_printer(self,str):
+        cleaner = ' ' * 100
+        print '\r' + cleaner + '\r' + str,
+
+CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/generated.csv' , os.getcwd())
 #
 #
 run(500*ms,report = 'text')
@@ -886,26 +977,26 @@ run(500*ms,report = 'text')
 #                  use_GPU=True)
 #
 #
-# CM.gather_result()
-# # CM.visualise_connectivity(S0_Fixed)
-# for group in CM.monitor_name_bank:
-#     mon_num = len(CM.monitor_name_bank[group])
-#     exec "f, axarr = plt.subplots(%d, sharex=True)"%mon_num
-#     for item_idx,item in enumerate(CM.monitor_name_bank[group]):
-#         if 'SpMon' in item :
-#             if len (CM.monitor_name_bank[group]) ==1  :
-#                 exec "axarr.plot(%s.t/ms,%s.i,'.k')" % ( item, item);
-#                 exec "axarr.set_title('%s')" % ( item);
-#             else:
-#                 exec "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item)
-#                 exec "axarr[%d].set_title('%s')"% (item_idx, item)
-#         elif 'StMon' in item:
-#             underscore= item.index('__')
-#             variable = item[underscore+2:]
-#             exec 'y_num=len(%s.%s)'%(item,variable)
-#             try :
-#                 exec "multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item)
-#             except:
-#                 exec "multi_y_plotter(axarr , y_num , '%s',%s , '%s')" % ( variable, item, item)
-# show()
+CM.gather_result()
+# CM.visualise_connectivity(S0_Fixed)
+for group in CM.monitor_name_bank:
+    mon_num = len(CM.monitor_name_bank[group])
+    exec "f, axarr = plt.subplots(%d, sharex=True)"%mon_num
+    for item_idx,item in enumerate(CM.monitor_name_bank[group]):
+        if 'SpMon' in item :
+            if len (CM.monitor_name_bank[group]) ==1  :
+                exec "axarr.plot(%s.t/ms,%s.i,'.k')" % ( item, item);
+                exec "axarr.set_title('%s')" % ( item);
+            else:
+                exec "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item)
+                exec "axarr[%d].set_title('%s')"% (item_idx, item)
+        elif 'StMon' in item:
+            underscore= item.index('__')
+            variable = item[underscore+2:]
+            exec 'y_num=len(%s.%s)'%(item,variable)
+            try :
+                exec "multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item)
+            except:
+                exec "multi_y_plotter(axarr , y_num , '%s',%s , '%s')" % ( variable, item, item)
+show()
 
