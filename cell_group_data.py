@@ -43,6 +43,7 @@ class CellGroupData:
 
         self.own_Ncell_dict, self.ordered_own_Ncell_list, self.proportion_MC, self.proportion_BC = \
             self._cx_ncells(_cell_group_dict,_cell_N_dict)
+
         self.own_connections2markram_connections_map, self.own_data_vector = self._cx_nsynapses(_cell_group_dict,_cell_N_dict)
 
     def _cx_ncells(self,_cell_group_dict,_cell_N_dict):
@@ -81,17 +82,6 @@ class CellGroupData:
         ordered_own_Ncell_list=sorted(own_Ncell_dict.items())
 
         return own_Ncell_dict, ordered_own_Ncell_list, proportion_MC, proportion_BC
-        #check the sum
-        # for layer in layers:
-        #     print layer
-        #     print sum(list(v for k, v in own_Ncell_dict.iteritems() if layer in k.lower()))
-        # cellsum=0
-        # for group_tuple in ordered_own_Ncell_list:
-        #     cellsum += group_tuple[1]
-
-        # Here you have all the N neurons
-        # print ordered_own_Ncell_list
-        # print cellsum
 
     def _cx_nsynapses(self,_cell_group_dict,_cell_N_dict):
         own_cell_groups=set(_cell_group_dict.values())
@@ -164,59 +154,12 @@ class CellGroupData:
                     param_values.append(data[markram_connection][param])
                 own_data_vector[own_connection][param]=param_values
 
+        # Now assign unassigned inhibitory connections to BC and MC connections
+        layers=['23','4','5','6']
+        for layer in layers:
+            for group in ['MC', 'BC']:
+                own_group_tmp = '{0}_{1}'.format(layer,group)
 
-
-        # Map own connection parameters to Markram connection parameters; note, weighted average except for synapse count
-        # tmp_param_list = []
-        # tmp_N_cell_list = []
-        # for own_cell_group in own_cell_groups:
-        #     markram_groups_tmp=own2markram_group_dict[own_cell_group]
-        #     for connection_parameter in connection_parameters:
-        #         list_of_connections=own_group2markram_connections_map[own_cell_group]
-        #         for connection in list_of_connections:
-        #             tmp_param_list.append(data[connection][connection_parameter])
-        #             match=re.search(search_any_pre_group, connection)
-        #             markram_group = str(match.group())
-        #             tmp_N_cell_list.append(_cell_N_dict[markram_group[:-1]])
-        #         tmp_param_array = np.asarray(tmp_param_list)
-        #         tmp_N_cell_array = np.asarray(tmp_N_cell_list)
-        #         tmp_weighted_param_array = np.multiply(tmp_param_array,tmp_N_cell_array)
-        #         # own_data[]
-        #
-        #         tmp_param_list = []
-        #         tmp_N_cell_list = []
-        #
-
-                # count = 0
-        # all_matches=[]
-        #
-        #
-        # for i in range(len(data.keys())):
-        #     # for j in range(len(data.keys()[i])):
-        #     # match=re.search(search_pattern, data.keys()[i][j])
-        #     # match = re.search(search_pre_layer, data.keys()[i])
-        #     # match = re.search(search_post_layer, data.keys()[i])
-        #     # match = re.search(search_pre_group, data.keys()[i])
-        #     # match = re.search(search_post_group, data.keys()[i])
-        #     match = re.search(search_any_pre_group, data.keys()[i])
-        #     if match:
-        #         all_matches.append(match.group()[:-1])
-        #         # print str(match.group())
-        #         # print data.keys()[i]
-        #         # pprint(data.values()[i])
-        #         # break
-        #         count += 1
-        # # print all_matches
-        # group_names = set(all_matches)
-        #
-        # sorted_group_names =list(group_names)
-        # sorted_group_names.sort()
-        # # print sorted_group_names
-        # print 'count is = %s' % str(count)
-        # print 'N group names = %s' % str(len(group_names))
-        # print 'Group names are: \n'
-        # for gn in sorted_group_names:
-        #     print gn + ', '
 
         return own_connections2markram_connections_map, own_data_vector
 
