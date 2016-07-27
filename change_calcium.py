@@ -1,6 +1,8 @@
 from __future__ import division
 import numpy as np
 from matplotlib import pyplot
+import pandas as pd
+
 
 class ChangeCalcium:
     # TODO create init or not depending how you want to use this class later, instantiation or not
@@ -27,19 +29,22 @@ class ChangeCalcium:
         }
         _excitatory_markram_groups = ['L23_PC','L4_PC','L4_SP','L4_SS','L5_STPC','L5_TTPC1','L5_TTPC2','L5_UTPC','L6_BPC',
                                       'L6_TPC_L1','L6_TPC_L4','L6_UTPC']
-    
+
         _steep_post_inhibitory_groups = ['L23_DBC','L4_DBC','L5_DBC','L6_DBC','L23_BTC','L4_BTC','L5_BTC','L6_BTC','L23_MC',
                                          'L4_MC','L5_MC','L6_MC','L23_BP','L4_BP','L5_BP','L6_BP']
-    
+
         _shallow_post_inhibitory_groups = ['L23_LBC','L4_LBC','L5_LBC','L6_LBC','L23_NBC','L4_NBC','L5_NBC','L6_NBC','L23_SBC'
                                          'L4_SBC','L5_SBC','L6_SBC','L23_ChC','L4_ChC','L5_ChC','L6_ChC']
-    
-        _synaptic_efficiency_dict = {
+
+        self._synaptic_efficiency_dict = {
             'steep_post' : _excitatory_markram_groups + _steep_post_inhibitory_groups,
             'shallow_post' : _shallow_post_inhibitory_groups }
     
-        own2markram_group_dict = self._InvertGroupDict()
-    
+        self._own2markram_group_dict = self._InvertGroupDict(_cell_group_dict)
+
+        file_pathways_anatomy_vannilized = 'pandas_playground/pathways_anatomy_vannilized.json'  # OUTPUT FILE
+
+        self._data = pd.read_json(file_pathways_anatomy_vannilized, orient='index')
 
     def GetSynapseStrength(self,original_synapse_strength, own_connection,Ca=2.0):
         # The original synapse strength is assumed to represent the value at Ca = 2 mM
@@ -47,12 +52,12 @@ class ChangeCalcium:
         # DONE calculate final_synapse_strength
         # K12 = 2.79
         # K12 = 1.09
-        #
+        K12=np.average([2.79,1.09])
 
 
 
         Ca = np.arange(0.7,5,0.1)
-        Ca0=2
+        Ca0=2.0
         # Calculate final synapse strength
         final_synapse_strength = (np.power(Ca,4)/(np.power(K12,4) + np.power(Ca,4)))
         relative_final_synapse_strength = final_synapse_strength / original_synapse_strength
@@ -60,15 +65,15 @@ class ChangeCalcium:
         # Return
         return Ca, final_synapse_strength, relative_final_synapse_strength
 
-    def _InvertGroupDict(self):
+    def _InvertGroupDict(self,_cell_group_dict):
         # Inverts the cell group markram2own mapping to own2markram mapping
-        own_cell_groups = set(self._cell_group_dict.values())
+        own_cell_groups = set(_cell_group_dict.values())
 
         # Map own cell groups to Markram cell groups
         markram_groups_tmp = []
         own2markram_group_dict = {}
         for own_cell_group in own_cell_groups:
-            [markram_groups_tmp.append(name) for name, group in self._cell_group_dict.items() if
+            [markram_groups_tmp.append(name) for name, group in _cell_group_dict.items() if
              group == own_cell_group]  # search cell_group_dict by value
             own2markram_group_dict[own_cell_group] = markram_groups_tmp
             markram_groups_tmp = []
