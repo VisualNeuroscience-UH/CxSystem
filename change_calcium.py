@@ -43,14 +43,14 @@ class ChangeCalcium:
 
     def GetSynapseStrength(self,original_synapse_strength, own_connection,Ca=2.0):
         # The original synapse strength is assumed to represent the value at Ca = 2 mM
-        # TODO change this to GetSynapseStrength(self,original_synapse_strength, Ca, own_connection):
-        # TODO 1) map from own to markram connection
         # TODO 2) map from markram connection to K12
         # DONE calculate final_synapse_strength
         # K12 = 2.79
+        # K12 = 1.09
+        #
 
 
-        K12 = 1.09
+
         Ca = np.arange(0.7,5,0.1)
         Ca0=2
         # Calculate final synapse strength
