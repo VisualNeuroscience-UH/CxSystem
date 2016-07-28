@@ -59,4 +59,9 @@ Accordingly, most of the *exec* commands inside the main object cortical_system(
 
 	globals().update({'NG0':NG0})
 
+Fig.1 illustrates the schematic of the cortical system internal component: 
 
+.. figure:: ../main_uml.png
+   :align: center 
+
+   Fig.1 simplified UML diagram of the cortical system
