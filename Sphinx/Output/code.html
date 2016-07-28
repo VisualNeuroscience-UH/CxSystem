@@ -187,7 +187,7 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>args</strong> &#8211; This method will have at least 4 main positional argumenst directly passed from __init__ method: The transmitter, e.g. ge or gi, presynaptic neurong group index, post synaptic group index, and type of Synaptic connection , i.e. STDP or Fixed. Description of other possible arguments can be found in Configuration file tutorial.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>args</strong> &#8211; This method will have at least 4 main positional argumenst directly passed from __init__ method: The receptor, e.g. ge or gi, presynaptic neurong group index, post synaptic group index, and type of Synaptic connection , i.e. STDP or Fixed. Description of other possible arguments can be found in Configuration file tutorial.</td>
 </tr>
 </tbody>
 </table>
@@ -211,11 +211,11 @@
 <span id="brian2-objects-definitions-module"></span><h2>Brian2 Objects definitions module<a class="headerlink" href="#module-brian2_obj_defs" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="brian2_obj_defs.customized_neuron">
-<em class="property">class </em><code class="descclassname">brian2_obj_defs.</code><code class="descname">customized_neuron</code><span class="sig-paren">(</span><em>number_of_neurons</em>, <em>cell_type</em>, <em>layers_idx</em>, <em>network_center=0j</em>, <em>resolution=0.1</em><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_defs.customized_neuron" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">brian2_obj_defs.</code><code class="descname">customized_neuron</code><span class="sig-paren">(</span><em>idx</em>, <em>number_of_neurons</em>, <em>cell_type</em>, <em>layers_idx</em>, <em>network_center=0j</em>, <em>resolution=0.1</em><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_defs.customized_neuron" title="Permalink to this definition">¶</a></dt>
 <dd><p>Using this class, a dictionary object is created which contains all parameters and variables that are needed to     create a group of that customized cell. This dictionary will eventually be used in process of building the cortical module.    New types of neurons should be implemented in this class.</p>
 <dl class="method">
 <dt id="brian2_obj_defs.customized_neuron.__init__">
-<code class="descname">__init__</code><span class="sig-paren">(</span><em>number_of_neurons</em>, <em>cell_type</em>, <em>layers_idx</em>, <em>network_center=0j</em>, <em>resolution=0.1</em><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_defs.customized_neuron.__init__" title="Permalink to this definition">¶</a></dt>
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>idx</em>, <em>number_of_neurons</em>, <em>cell_type</em>, <em>layers_idx</em>, <em>network_center=0j</em>, <em>resolution=0.1</em><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_defs.customized_neuron.__init__" title="Permalink to this definition">¶</a></dt>
 <dd><p>initialize the customized_neuron based on the arguments.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -336,6 +336,25 @@ dgialpha/dt = (gi-gialpha)/tau_i : siemens
 <dt id="brian2_obj_defs.customized_neuron.SS">
 <code class="descname">SS</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_defs.customized_neuron.SS" title="Permalink to this definition">¶</a></dt>
 <dd><p>This method build up the equation for SS neurons. The final equation is then saved in output_neuron[&#8216;equation&#8217;].</p>
+<ul>
+<li><p class="first">The equation of the neuron is as follows:</p>
+<blockquote>
+<div><div class="highlight-python"><div class="highlight"><pre><span></span>dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge_soma * (Ee-vm) + gi_soma * (Ei-vm)) / C : volt (unless refractory)
+dge_soma/dt = -ge_soma/tau_e : siemens
+dgi_soma/dt = -gi_soma/tau_i : siemens
+x : meter
+y : meter
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="brian2_obj_defs.customized_neuron.UMi">
+<code class="descname">UMi</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#brian2_obj_defs.customized_neuron.UMi" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method build up the equation for Unassigned Markram inhibitory (UMi) neurons. The final equation is then saved in output_neuron[&#8216;equation&#8217;].</p>
 <ul>
 <li><p class="first">The equation of the neuron is as follows:</p>
 <blockquote>
