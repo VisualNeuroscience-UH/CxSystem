@@ -10,7 +10,7 @@ class ChangeCalcium:
     # shallow group includes all connections between exc cells and LBC, NBC, SBC, ChC, K1/2 = 1.09
     # all others, K = mean (2.79,1.09)
     # ks Markram cell 2015 suppl fig S11
-    # Mapping from Markram et al cell groups to own cell groups
+
     def __init__(self):
         # _cell_group_dict = {
         #     'L1_DAC': 'L1_I', 'L1_DLAC': 'L1_I', 'L1_HAC': 'L1_I', 'L1_NGC-DA': 'L1_I', 'L1_NGC-SA': 'L1_I',
@@ -27,13 +27,13 @@ class ChangeCalcium:
         #     'L6_LBC': 'L6_BC', 'L6_MC': 'L6_MC', 'L6_NBC': 'L6_BC', 'L6_NGC': 'L6_UM_I', 'L6_SBC': 'L6_BC',
         #     'L6_TPC_L1': 'L6_PC2', 'L6_TPC_L4': 'L6_PC1', 'L6_UTPC': 'L6_PC1',
         # }
-        _excitatory_markram_groups = ['L23_PC','L4_PC','L4_SP','L4_SS','L5_STPC','L5_TTPC1','L5_TTPC2','L5_UTPC','L6_BPC',
-                                      'L6_TPC_L1','L6_TPC_L4','L6_UTPC']
+        _excitatory_markram_groups = ['L23_PC','L4_PC','L4_SP','L4_SS','L5_STPC','L5_TTPC1','L5_TTPC2','L5_UTPC','L6_IPC',
+                                      'L6_BPC', 'L6_TPC_L1','L6_TPC_L4','L6_UTPC']
 
         _steep_post_inhibitory_groups = ['L23_DBC','L4_DBC','L5_DBC','L6_DBC','L23_BTC','L4_BTC','L5_BTC','L6_BTC','L23_MC',
                                          'L4_MC','L5_MC','L6_MC','L23_BP','L4_BP','L5_BP','L6_BP']
 
-        _shallow_post_inhibitory_groups = ['L23_LBC','L4_LBC','L5_LBC','L6_LBC','L23_NBC','L4_NBC','L5_NBC','L6_NBC','L23_SBC'
+        _shallow_post_inhibitory_groups = ['L23_LBC','L4_LBC','L5_LBC','L6_LBC','L23_NBC','L4_NBC','L5_NBC','L6_NBC','L23_SBC',
                                          'L4_SBC','L5_SBC','L6_SBC','L23_ChC','L4_ChC','L5_ChC','L6_ChC']
 
         self._excitatory_markram_groups = _excitatory_markram_groups
@@ -49,7 +49,7 @@ class ChangeCalcium:
         self._data = pd.read_json(file_pathways_anatomy_vannilized, orient='index')
 
     def GetSynapseStrength(self,original_synapse_strength, own_connection,Ca=2.0):
-        # The original synapse strength is assumed to represent the value at Ca = 2 mM
+        # The original synapse strength (with no units) is assumed to represent the value at [Ca] = 2 mM
         # First map from own connection to markram connections. Next select DataFrame with markram_pre column =
         # _excitatory_markram_groups and markram_post column = either steep_post, shallow_post or other.
         #  These selections map to K12. Calculate the mean of K12 values. Finally calculate final_synapse_strength
@@ -57,23 +57,26 @@ class ChangeCalcium:
 
         data=self._data # shorten
 
-        # markram_connections = list(data.index[data['vanni_index'] == own_connection])
-
         # Select data matching own connection
         markram_connections = data[data['vanni_index'] == own_connection]
 
-        # if markram_connections['markram_pre'] in self._excitatory_markram_groups
+        assert not markram_connections.empty, 'No matching connections, a typo or missing matching Markram connection'
+        markram_pres = markram_connections['markram_pre']
+        markram_posts = markram_connections['markram_post']
 
-        # K12 = 2.79
-        # K12 = 1.09
-        K12=np.average([2.79,1.09])
-
-
+        if all(markram_pres.isin(self._excitatory_markram_groups)) and all(markram_posts.isin(self._synaptic_efficiency_dict['steep_post'])):
+            K12 = 2.79
+        elif all(markram_pres.isin(self._excitatory_markram_groups)) and all(markram_posts.isin(self._synaptic_efficiency_dict['shallow_post'])):
+            K12 = 1.09
+        else:
+            K12 = np.average([2.79, 1.09])
 
         Ca0=2.0
         # Calculate final synapse strength
-        final_synapse_strength = (np.power(Ca,4)/(np.power(K12,4) + np.power(Ca,4)))
-        relative_final_synapse_strength = final_synapse_strength / original_synapse_strength
+        final_synapse_strength =  original_synapse_strength * (np.power(Ca,4)/(np.power(K12,4) + np.power(Ca,4)))
+        final_synapse_strength_at_Ca2 = original_synapse_strength * (np.power(Ca0, 4) / (np.power(K12, 4) + np.power(Ca0, 4)))
+
+        relative_final_synapse_strength = final_synapse_strength / final_synapse_strength_at_Ca2
 
         # Return
         return Ca, final_synapse_strength, relative_final_synapse_strength
@@ -97,11 +100,14 @@ if __name__ == '__main__':
     Ca_obj= ChangeCalcium()
     Ca = np.arange(0.7, 5, 0.1)
 
-    Ca, fss, rfss = Ca_obj.GetSynapseStrength(1,'L6_PC1:L6_PC1',2.0)
-    #TODO plot PSP vs conductance change, normalize to Ca=2 mM
+    Ca, fss, rfss = Ca_obj.GetSynapseStrength(1,'L23_PC:L23_MC',Ca)
     # Units are nano Siemens (nS), and range is 0.11 to 1.5 nS (Markram 2015 Cell, Figure 10)
     # Total conductance about 1 microS, 3/4 excitatory, 1/4 inhibitory
-    # pyplot.subplot(1, 1, 1)
-    pyplot.plot(Ca,fss, color='blue', lw=2)
+
+    # Testing
+    pyplot.plot(Ca,rfss, color='blue', lw=2)
     pyplot.xscale('log')
+    pyplot.yscale('log')
+    pyplot.xlim([0.7, 5])
+    pyplot.ylim([0.03, 10])
     pyplot.show()
