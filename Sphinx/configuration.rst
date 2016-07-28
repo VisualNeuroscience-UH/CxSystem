@@ -3,34 +3,73 @@
 Configuration File Tutorial
 ===========================
 
-Each line of the configuration file that has to be interpreted, aka target line, defines either a Neuron_Group() or Synapses() in brian2. A line is considered as target line if it contains a target tag. Currently there are three target tags in the system: [IN], [G], [S] and a indexing tag, e.g. [0]. Each of these tags are thoroughly discussed later in this document. Each line that starts with the character *[* will be considered as a potential target line. Hence any other line that starts with other characters is equal to a comment line. Though you can use *#* in the beginning of the line to be tidy. Note that in this tutorial, mandatory arguments are shown inside <> while optional arguments are presented in {}. 
+The configuration file is in .CSV format. There two categories of lines in the configuration file: 
 
------------------
-
-**indexing tag**: 
-
-Each line should start with a indexing tag. This indexing tag is only used to make following the line numbers easier for the user. Although this indexing tag is required to be in each and every line, it does not have any effect on the line interpretation result. Example: 
+* **Column-titles line**: These lines, starting with *row_type* keyword, defines the column titles for all the lines between the the next line to the next *Column-titles line*:
 
 ::
 
-	[0][G] ...  
-	[1][G] ...  
+	row_type,sys_mode,total_synapses
 
-----------------
+This column-titles line indicates that all the lines between the next line and the next column-titles line have four types of columns:  row_type,sys_mode,total_synapses,do_optimize. In the next sections, all of these parameters will be described thoroughly. 
 
-**Monitors**: 
+* **Column-values line**: These lines define the column values corresponding to column titles in the last column-title line:
 
-In Brian2 monitors can be assigned to a neuron group or synapses. When using the configuration file, you are able to set monitors for any target line, i.e. neuron groups or synapses. The monitors are defined in the following way: 
+::
 
-[M]: 
- If the [M]onitor tag is present in a target line, a monitor object will be created for the neuron group or synapse of that target line. Note that it is not possible to have different clocks for monitors in Brian2GeNN. Hence, try to use the monitors wisely to prevent generating bulk data. Following tags can be used for configuring a specific monitor: 
+	params,local,7000
+
+These four values are in correspondence with the column titles of the previous column-title line example. In other words, the last two examples defines the following values:
+
+::
+
+	row_type = params 
+	sys_mode = local
+	total_synapses = 7000
+
+Currently there are three types of **row_type** implemented: 
+
+* params: defines the run-time parameters of the system run (partially equivalent to the VCX_run)
+* G: defines the neurongroups in the system 
+* S: defines the synapses connecting the neurongroups in the system
+
+In the next sections, each of these row_types has its own types of columns and are thoroughly explained with examples. Note that **mandatory** arguments are wrapped with **<>** whereas the **optional** ones are in **[]**. The corresponding **data type** is also presented using **{}**.
+
+params
+-------------------
+
+Currently there are three run-time variables implemented in the system:
+
+	:params:  **<total_synapses>{int}:**  Defines the total number of synapses in the system.
+		  
+		**<sys_mode>{local, expanded}:** The system can be run in two modes: **local** and **expanded** mode.
+	
+		**<do_optimize>{0,1}:** In Brian2, it is not possible to define number of synapses, but the probability. An optimization mechanism is implemented for when the synaptic connections should be defined based on specific percentages of a total number of synapses in the system. This parameter defines whether or not the synapstic connection probabilities should be determined and optimized so that they reproduce aproximately the same amount of connections in the system. 
+
+* Note1: The optimization should be used when the system is working in the "local" mode, as the catch is to determine the probabiltiies based on the percentages of the total number of synapses, and then expand the system to larger scales. 
+
+* Note2: using the system in the "local" mode whilst the "do_optimized" flag is enabled will **not** run the simulation. This will only determine the probability of each connection based on the percentages and total number of synapses and creating a new csv file based on the the optimized probabilties. 
+
+Example of the params Column-titles & Column-values lines: 
+
+::
+
+	row_type,sys_mode,total_synapses,do_optimize
+	params,local,35000,0
+
+Monitors
+--------------
+
+Before starting describing the different row_types in the csv files, it is important to understand how the monitors are defined in the system. In Brian2 monitors can be assigned to a neuron group or synapses. When using the configuration file, you are able to set monitors for any target line, i.e. neuron groups or synapses. The monitors are defined in the following way: 
+
+If the monitor column is present in a Column-titles line and the value in Column-values line is not 'N/A', a monitor object will be created for the neuron group or synapse of that target line. Note that it is not possible to have different clocks for monitors in Brian2GeNN. Hence, try to use the monitors wisely to prevent generating bulk data. Following tags can be used for configuring a specific monitor: 
 
  [Sp]:
   This tag defines the [Sp]ikeMonitor() in brian2. Example:
 
 ::
 
-	  ... [M] [Sp]
+	  ...,[Sp]
 
 The ellipsis represents the predecessor tags in the target line. 
 
@@ -39,93 +78,127 @@ The ellipsis represents the predecessor tags in the target line.
 
 ::
 
-	... [M] [St]<state variable1>+<state variable2> 
+	...,[St]<state variable1>+<state variable2> 
 
 
 Similar to [Sp], the ellipsis represents the predecessor tags in the target line. State variables are separated with *+*. An example of using [Sp] alongside with a [St] with three state variables of *ge_soma*,*gi_soma*, and *vm*:
 
 ::
 
-	... [M] [Sp] [St]ge_soma+gi_soma+vm
+	...,[Sp] [St]ge_soma+gi_soma+vm
 
 By default all of the possible indices are being monitored (record = True). However, one might intend to monitor specific indices of neuron_group/synapses. This can be achieved by using the [rec] tag followed by the indices of interest. In the following example two state monitors are defined for *apre* and *wght* of the Synapses() object. In the former state monitor the first 20 indices are being recorded whilst in the latter (*wght*), even indices between 0 and 20 are being recorded:
 
 ::
 
-	... [M] [St]apre[rec]arange(0,20)+wght[rec]arange(0,20,2)
+	...,[St]apre[rec](0-20)+wght[rec](0-20-2)
 
 Occasionally, one might want to assign a specific type of monitor to several consecutive target lines. In this case, the generic monitor(s) can be defined in the first target line and a **-->** symbol should be written at the end of the line. **-->** indicates that all the next lines should be assigned with the same monitor. For finishing this assignment, a **<--** symbol should be put at the last target line of interest. Note that it is possible to overwrite the defined monitors of some lines between the **-->** and **<--** symbols simply by adding the monitor of the interest. 
 
 ::
 
-	... [M] [St]ge_soma -->
-	... 
-	... [M] [Sp] 
-	... <--
+	...,[St]ge_soma -->
+	..., 
+	...,[Sp] 
+	..., <--
 
 In this example, an statemonitor over *ge_soma* is assigned on all four lines by using the **-->** and **<--** symbol. In the third line, however, this statemonitor is overwritten by a Spikemonitor. 
 
---------------------
-
-**Input**:
 
 
-Currently the video input in implemented in the cortical system. The stimuli is created using a *.mat* file. This stimuli is in form of spike and is fed to a SpikeGeneratorGroup() . This group is then connected to a relay neuron group with synapses(). The main purpose of the relay neurons is to have positions for input neurons (SpikeGeneratorGroup does not support positions). The input can be defined using the following tag: 
 
-[IN]: 
- Defines the [IN]put of the system (video only). The format of the input line is as follows: 
 
-::
 
-	<index><[IN]> <.mat file location> <frequency> {monitors}
+Input
+---------
+
+The input is defined with the "IN" keyword. Currently the video input in implemented in the cortical system. The stimuli is created using a *.mat* file. This stimuli is in form of spike and is fed to a SpikeGeneratorGroup() . This group is then connected to a relay neuron group with synapses(). The main purpose of the relay neurons is to have positions for input neurons (SpikeGeneratorGroup does not support positions). The input can be defined using the following tag: 
+
+	:params: **<idx>{int}:** Index of the neuron group.
+
+		**<input file location>:** relative path to the input .mat file. 
+
+		**<frequency>** 
+
+		**[monitors]** 
+
 
 This is an example of defining an input for the system: 
 
 ::
+	
+	row_type,idx,path,freq,monitors	
+	IN,0, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]
 
-	[0][IN] /home/$USER/V1_input.mat 190*Hz [M] [Sp]
 
-In this example an input is created based on the *V1_inpu.mat* file with a frequency of 190*Hz and a SpikeMonitor is set on it.
+In this example an input neuron group with index 0 is created based on the *V1_inpu.mat* file with a frequency of 190*Hz and a SpikeMonitor is set on it.
 
-------------------------
+NeuronGroup
+------------
 
-**Neuron Group**
+The neurongroups are defined using the G (as in Group) keyword. This row_type is basicall used for defining the neuron groups in brian2. Following parameters are implemented for defining the Neuorongroup: 
 
-[G]: 
- Defines the brian2 Neuron_Group(). The format of the NeuronGroup target line is as follows:
+	:param: **<idx>{int}:** Index of the neuron group.
 
-::
+		**<number_of_neurons>{int}:** Number of neurons in the neuron group. 
 
-	 <index><[G]> <number of neurons> <cell type> <layer index> {threshold} {reset} {refractory} {cell group center} {monitors}
+		**<neuron_type>{L1i, UMi, PC,BC,MC,SS}:** cell category of the neuron group. 
 
-where the *[index]* is the line number, *<number of neurons>* is the number of neurons in that particular neuron group. The *<cell type>* is the category of the cells of the group, which is one of the following groups: 
+		**<layer_idx>:** Layer index of the cell groups. 
 
-+------+-------------------+
-| type | Cell  Category    | 
-+======+===================+
-| SS   | Stellate cell     |
-+------+-------------------+
-| PC   | Pyramidal cell    |
-+------+-------------------+
-| BC   | Pyramidal cell    |
-+------+-------------------+
-| MC   | Martinotti cell   |
-+------+-------------------+
-| L1i  | Layer 1 inhibitory|
-+------+-------------------+
+		**[threshold]:** threshold value for the neurons in the neuron group. 
+
+		**[reset]:** reset value for the neurons in the neuron group.
+
+ 		**[refractory]:** reset value for the neurons in the neuron group.
+
+ 		**[net_center]:** center location of the neuron_group.
+
+ 		**[monitors]:** center location of the neuron_group.
+
+--------------
+
+In this section, some of the above-mentioned parameters are clarified. 
+
+**idx:**
+
+The index of the neuron groups are important for creating the synaptic connections between them. As it will be described in the synaptic definitions, creating a synaptic connections needs a pre_synatpic and post_synaptic group index that should be used directly from this index value.   
+
+**<neuron_type>:**
+
+The *<neuron_type>* is the category of the cells of the group, which is one of the following groups: 
+
++------+------------------------+
+| type | Cell  Category         | 
++======+========================+
+| SS   | Stellate cell          |
++------+------------------------+
+| PC   | Pyramidal cell         |
++------+------------------------+
+| BC   | Pyramidal cell         |
++------+------------------------+
+| MC   | Martinotti cell        |
++------+------------------------+
+| L1i  | Layer 1 inhibitory     |
++------+------------------------+
+| UMi  | Unassigned Markram cell|
++------+------------------------+
+
 
 The *<layer index>* argument defines the layer in which the neuron group is located. Except for PC cells, all types of neurons are defined as a soma-only neuron, hence their layer is an integer. In case of layer 2/3 using 2 is sufficient. For instance the following example defines a group of 46 SS neurons in layer 2/3: 
 
 ::
 
-	[0][G] 46 SS 2 
+	row_type,idx,number_of_neurons,neuron_type,layer_idx
+	G,1,46,SS,2
 
-
-Currently PC cells are the only multi compartmental neurons that could possibly cover more than one layer. In this case, the layer index should be defined as a list where the first element defines the soma location and the second element defines the farthest apical dendrite compartment. In the following example, a PC group of 55 neurons is defined in which the basal dendrites, soma and proximal apical dendrite is located in layer 6 and the apical dendrites covers layer layer 5 to 2: 
+Currently PC cells are the only multi-compartmental neurons that could possibly cover more than one layer. In this case, the layer index should be defined as a list where the first element defines the soma location and the second element defines the farthest apical dendrite compartment. In the following example, a PC group of 55 neurons is defined in which the basal dendrites, soma and proximal apical dendrite is located in layer 6 and the apical dendrites covers layer layer 5 to 2: 
 
 ::
 
-	[1][G] 55 PC [6,2]
+	row_type,idx,number_of_neurons,neuron_type,layer_idx
+	G,2,55,PC,[6->2]
+
 
 The compartment formation is then as follows: 
 
@@ -145,42 +218,69 @@ The compartment formation is then as follows:
 | 6    | Basal dendrite    |
 +------+-------------------+
 
+**[threshold],[reset] and [refractory]:**
+
 By default following values are assigned to threshold, reset and refractory of any neurongroup: 
 
 - *threshold*: *vm>Vcut*
 - *reset*: *vm=V_res*
 - *refractory*: *4* * *ms*
 
-Any of this variables can be overwritten by using the keyword arguments [threshold], [reset] and [refractory]. As the name implies, the optional argument *[cell group center]* defines the center of the neuron group. The center can be defined with the [CN] tag followed by the center position.  If not defined, the center will be the default value of 0+0j. The following example creates a neuron group consist of 75 BC neurons located in 5+0j, with a spike monitors assigned to it: 
+Any of this variables can be overwritten by using the keyword arguments [threshold], [reset] and [refractory]. As the name implies, the optional argument *[cell group center]* defines the center of the neuron group. 
+
+
+**[net_center]:**
+
+The center can be defined with the [net-center] tag in the *Column-titles line* and corresponding center position in the *Column-value line*.  If not defined, the center will be the default value of 0+0j. The following example creates a neuron group consist of 75 BC neurons located in 5+0j, with a spike monitors assigned to it: 
 
 ::
 
-	[2][G] 75 BC 2 [CN] 5+0j [M] [Sp]
+	row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors
+	G,2,75,BC,2,5+0j,[Sp]
 
+Synapses
 ---------------------
 
-**Synapses**
+S (as in Synapses) keyword defines the brian2 Synapses() object.  Following parameters are implemented for defining the Synapses():
 
-[S]:
- Defines the brian2 Synapses(). The format of the Synapses() target line is as follows: 
+'receptor','pre_syn_idx','post_syn_idx','syn_type','p','n','monitors','percentage' 
 
-::
+	:param: **<receptor>{ge,gi}** 
 
-	<index><[S]> <receptor> <presynaptic group index> <postsynaptic group index> <synapse type> {probability} {number of connections} {monitors}
+		**<pre_syn_idx>{int}** 
+
+		**<post_syn_idx>{int}** 
+
+		**<syn_type>{Fixed,STDP}**
+
+		**[p]:** probability 
+
+		**[n]:** number of synapses per connection
+
+		**[monitors]**
+
+ 		**[percentage]** percentage of the total synapses
+
+
+--------------
+ 
 
 where the *[index]* is the line number, *<receptor>* defines the receptor type, e.g. ge and gi, *<presynaptic group index>* and *<postsynaptic group index>* defines the index of the presynaptic and postsynaptic group respectively. These indices could be determined using the *indexing tag* in the neuron groups target lines. The next field defines the type of the synapse. Currently there are two types of synapses implemented: Fixed and STDP. The following example defines a excitatory STDP synaptic connection between neuron groups with indices of 2 and 4, in which the *ge* is the receptor: 
 
 ::
 
-	[0][S] ge 2 4 STDP 
+	row_type,receptor,pre_syn_idx,post_syn_idx,syn_type
+	S,ge,2,4,STDP 
 
 In case the postsynaptic group is multi-compartmental, the target compartment should be defined using the [C] tag. Let us review this concept with an example: 
 
 ::
 
-	[0][G] 46 SS 4
-	[1][G] 50 PC [4,1]
-	[2][S] ge 0 1[C]1 STDP
+	row_type,idx,number_of_neurons,neuron_type,layer_idx
+	G,0,46,SS,4
+	G,1,50,PC,[4,1]
+	row_type,receptor,pre_syn_idx,post_syn_idx,syn_type
+	S,ge,0,1[C]1,STDP
 
 Clearly Neurongroup 0 is group of 46 SS cells and Neurongroup 1 is a group of 50 PC cells. The latter is multi-compartmental with a layer index of [4,1]. Hence the compartments formation are as follows: 
 
@@ -205,20 +305,21 @@ The synapses() object is targeting the 1st compartment of the PC cells, i.e.  Ap
 
 ::
 
-	[2][S] ge 0 1[C]0012 STDP
+	row_type,receptor,pre_syn_idx,post_syn_idx,syn_type
+	S,ge,0,1[C]0bsa,STDP
 
 
-As you can see, the compartment *[C]0* is followed by three numbers *012*. This indicates that the among the three sub-compartments inside the compartment number 0, i.e. Basal dendrite, Soma and Apical dendrite[0], indices of 0,1 and 2 are being targeted. Regardless of the layer, the indices of these three compartments are always as:
+As you can see, the compartment *[C]0* is followed by three characters *bsa*. This indicates that the among the three sub-compartments inside the compartment number 0, i.e. Basal dendrite, Soma and Apical dendrite[0], letters of b,s and a are being targeted. Regardless of the layer, the indices of these three compartments are always as:
 
 +------+-------------------+
 | Comp.| Compartment  type |
 | Index|                   |
 +======+===================+
-| 2    |Apical dendrite[0] |
+| a    |Apical dendrite[0] |
 +------+-------------------+
-| 1    |         Soma      |
+| s    |         Soma      |
 +------+-------------------+
-| 0    | Basal dendrite    |
+| b    | Basal dendrite    |
 +------+-------------------+
 
 So for instance, in case an inhibitory connection tends to target the soma only, the synaptic definition should be changed to:
@@ -226,7 +327,8 @@ So for instance, in case an inhibitory connection tends to target the soma only,
 
 ::
 
-	[2][S] ge 0 1[C]01 STDP
+	row_type,receptor,pre_syn_idx,post_syn_idx,syn_type
+	S,ge,0,1[C]0s,STDP
 
 
 If both basal dendrite and apical dendrite[0] was being targeted, the syntax should change to: 
@@ -234,21 +336,41 @@ If both basal dendrite and apical dendrite[0] was being targeted, the syntax sho
 
 ::
 
-	[2][S] ge 0 1[C]002 STDP
+	row_type,receptor,pre_syn_idx,post_syn_idx,syn_type
+	S,ge,0,1[C]0ba,STDP
 
 By default the probability of the synaptic connections are determined based on the distance between the neurons, which depends on sparseness and ilam variables in the brian2_obj_namespaces module. In case the maximum probability of the connection should be overwritten, [p] tag can be used. In the following example the maximum probability of the connection is overwriten as 0.06 (6%): 
 
 ::
 
-	[2][S] ge 0 1[C]002 STDP [p] 0.06
+	row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p
+	S,ge,0,1[C]0ba,STDP,0.06
 
 By default the number of connections that happens between a pair of neurons is also equal to 1. This can also be overwritten to another integer value by using the [n] tag. So, for having a probability of 6% over 3 connection per pair of neuron: 
 
 ::
 
-	[2][S] ge 0 1[C]002 STDP [p] 0.06 [n] 3 
+	row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p,n
+	S,ge,0,1[C]0ba,STDP,0.06,3 
 
 
+When the system is in "local" mode and do_optimize flag is 1, it is needed to define the percentage of all synapses. For instance when the total number of synapses in the system is 10000 and a synaptic group takes 20% of the connections: 
+
+::
+
+	row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,percentage 
+	S,ge,0,1[C]0ba,STDP,0.2
+	... 
+
+This will optimize the probability of that synaptic connection in a way to have 0.2 * 10000 synapses. One might want to have multiple synapse per connection between two NeuronGroup. This is defined in the following example using the 'n' keyword in the *Column-titles line*:
 
 
+::
+
+	row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,n,percentage 
+	S,ge,0,1[C]0ba,STDP,4,0.2
+	... 
+
+This example will optimize the probability of the connection in a way that there are 0.2*10000 connections and there are 4 synapses for each connection between the neurongroups. 
+ 
 
