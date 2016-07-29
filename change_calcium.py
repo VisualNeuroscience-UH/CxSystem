@@ -5,28 +5,26 @@ import pandas as pd
 
 
 class ChangeCalcium:
-    # TODO create init or not depending how you want to use this class later, instantiation or not
-    # steep_group includes all connections between exc cells and DBC, BTC, MC,BP, and between 2 exc cells, K1/2 = 2.79
-    # shallow group includes all connections between exc cells and LBC, NBC, SBC, ChC, K1/2 = 1.09
-    # all others, K = mean (2.79,1.09)
-    # ks Markram cell 2015 suppl fig S11
+    """
+    Change synaptic efficiency as a function of calcium concentration. Markram connections are grouped to three
+    categories, steep, shallow and others, depending on how they change  synaptic efficiency as a function of external
+    calcium concentration. The equation comes from Rozov_2001_JPhysiol. Check Markram cell 2015 suppl fig S11
+
+    This class contains internal data from the Markram Cell 2015 paper:
+        steep_group : connections between exc cells and DBC, BTC, MC,BP, and between 2 exc cells; K1/2 = 2.79
+        shallow group : connections between exc cells and LBC, NBC, SBC, ChC; K1/2 = 1.09
+        other connections : all other connections; K1/2  is the average of 2.79 and 1.09.
+
+    This class has one method for changing the synapse strength:
+    GetSynapseStrength  (original_synapse_strength (scalar without units), own_connection (string),Ca=2.0)
+
+    Depends on pandas_playground/pathways_anatomy_vannilized.json
+
+    Author Simo Vanni 7/2016
+    """
 
     def __init__(self):
-        # _cell_group_dict = {
-        #     'L1_DAC': 'L1_I', 'L1_DLAC': 'L1_I', 'L1_HAC': 'L1_I', 'L1_NGC-DA': 'L1_I', 'L1_NGC-SA': 'L1_I',
-        #     'L1_SLAC': 'L1_I',
-        #     'L23_BP': 'L23_UM_I', 'L23_BTC': 'L23_UM_I', 'L23_ChC': 'L23_UM_I', 'L23_DBC': 'L23_UM_I', 'L23_LBC': 'L23_BC',
-        #     'L23_MC': 'L23_MC', 'L23_NBC': 'L23_BC', 'L23_NGC': 'L23_UM_I', 'L23_PC': 'L23_PC', 'L23_SBC': 'L23_BC',
-        #     'L4_BP': 'L4_UM_I', 'L4_BTC': 'L4_UM_I', 'L4_ChC': 'L4_UM_I', 'L4_DBC': 'L4_UM_I', 'L4_LBC': 'L4_BC',
-        #     'L4_MC': 'L4_MC', 'L4_NBC': 'L4_BC', 'L4_NGC': 'L4_UM_I', 'L4_PC': 'L4_PC1', 'L4_SBC': 'L4_BC',
-        #     'L4_SP': 'L4_PC2',
-        #     'L4_SS': 'L4_SS', 'L5_BP': 'L5_UM_I', 'L5_BTC': 'L5_UM_I', 'L5_ChC': 'L5_UM_I', 'L5_DBC': 'L5_UM_I',
-        #     'L5_LBC': 'L5_BC', 'L5_MC': 'L5_MC', 'L5_NBC': 'L5_BC', 'L5_NGC': 'L5_UM_I', 'L5_SBC': 'L5_BC',
-        #     'L5_STPC': 'L5_PC', 'L5_TTPC1': 'L5_PC', 'L5_TTPC2': 'L5_PC', 'L5_UTPC': 'L5_PC', 'L6_BP': 'L6_UM_I',
-        #     'L6_BPC': 'L6_PC1', 'L6_BTC': 'L6_UM_I', 'L6_ChC': 'L6_UM_I', 'L6_DBC': 'L6_UM_I', 'L6_IPC': 'L6_PC1',
-        #     'L6_LBC': 'L6_BC', 'L6_MC': 'L6_MC', 'L6_NBC': 'L6_BC', 'L6_NGC': 'L6_UM_I', 'L6_SBC': 'L6_BC',
-        #     'L6_TPC_L1': 'L6_PC2', 'L6_TPC_L4': 'L6_PC1', 'L6_UTPC': 'L6_PC1',
-        # }
+
         _excitatory_markram_groups = ['L23_PC','L4_PC','L4_SP','L4_SS','L5_STPC','L5_TTPC1','L5_TTPC2','L5_UTPC','L6_IPC',
                                       'L6_BPC', 'L6_TPC_L1','L6_TPC_L4','L6_UTPC']
 
@@ -37,12 +35,10 @@ class ChangeCalcium:
                                          'L4_SBC','L5_SBC','L6_SBC','L23_ChC','L4_ChC','L5_ChC','L6_ChC']
 
         self._excitatory_markram_groups = _excitatory_markram_groups
+
         self._synaptic_efficiency_dict = {
             'steep_post' : _excitatory_markram_groups + _steep_post_inhibitory_groups,
             'shallow_post' : _shallow_post_inhibitory_groups }
-
-    
-        # self._own2markram_group_dict = self._InvertGroupDict(_cell_group_dict)
 
         file_pathways_anatomy_vannilized = 'pandas_playground/pathways_anatomy_vannilized.json'  # OUTPUT FILE
 
@@ -50,7 +46,7 @@ class ChangeCalcium:
 
     def GetSynapseStrength(self,original_synapse_strength, own_connection,Ca=2.0):
         # The original synapse strength (with no units) is assumed to represent the value at [Ca] = 2 mM
-        # First map from own connection to markram connections. Next select DataFrame with markram_pre column =
+        # First map from own_connection (string) to markram connections. Next select DataFrame with markram_pre column =
         # _excitatory_markram_groups and markram_post column = either steep_post, shallow_post or other.
         #  These selections map to K12. Calculate the mean of K12 values. Finally calculate final_synapse_strength
         # for own connection and original synapse strength.
@@ -81,22 +77,10 @@ class ChangeCalcium:
         # Return
         return Ca, final_synapse_strength, relative_final_synapse_strength
 
-    # def _InvertGroupDict(self,_cell_group_dict):
-    #     # Inverts the cell group markram2own mapping to own2markram mapping
-    #     own_cell_groups = set(_cell_group_dict.values())
-    #
-    #     # Map own cell groups to Markram cell groups
-    #     markram_groups_tmp = []
-    #     own2markram_group_dict = {}
-    #     for own_cell_group in own_cell_groups:
-    #         [markram_groups_tmp.append(name) for name, group in _cell_group_dict.items() if
-    #          group == own_cell_group]  # search cell_group_dict by value
-    #         own2markram_group_dict[own_cell_group] = markram_groups_tmp
-    #         markram_groups_tmp = []
-    #     return own2markram_group_dict
-
 
 if __name__ == '__main__':
+
+    # Testing
     Ca_obj= ChangeCalcium()
     Ca = np.arange(0.7, 5, 0.1)
 
