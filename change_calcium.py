@@ -84,7 +84,7 @@ if __name__ == '__main__':
     Ca_obj= ChangeCalcium()
     Ca = np.arange(0.7, 5, 0.1)
 
-    Ca, fss, rfss = Ca_obj.GetSynapseStrength(1,'L23_PC:L23_MC',Ca)
+    Ca, fss, rfss = Ca_obj.GetSynapseStrength(0.11e-9,'L23_PC:L23_BC',Ca)
     # Units are nano Siemens (nS), and range is 0.11 to 1.5 nS (Markram 2015 Cell, Figure 10)
     # Total conductance about 1 microS, 3/4 excitatory, 1/4 inhibitory
 
