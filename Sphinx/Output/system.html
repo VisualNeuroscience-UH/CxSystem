@@ -25,7 +25,7 @@
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="top" title="CX_System 1.0 documentation" href="Documentation.html" />
     <link rel="next" title="Configuration File Tutorial" href="configuration.html" />
-    <link rel="prev" title="Brief intorduction to Cortical System" href="project.html" /> 
+    <link rel="prev" title="Brief introduction to Cortical System" href="project.html" /> 
   </head>
   <body role="document">
     <div class="related" role="navigation" aria-label="related navigation">
@@ -41,7 +41,7 @@
           <a href="configuration.html" title="Configuration File Tutorial"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="project.html" title="Brief intorduction to Cortical System"
+          <a href="project.html" title="Brief introduction to Cortical System"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="Documentation.html">CX_System 1.0 documentation</a> &raquo;</li> 
       </ul>
@@ -57,11 +57,11 @@
 <p>The implemented system employs the Brian2GeNN python module to generate GeNN (GPU enhanced Neuronal Network simulation environment) code for eventually running the brian2 codes on GeNN. In order to understand how this system works, one should initially understand how Brian2GeNN restrains brian2. Most of the exclusions are presented in <a class="reference external" href="http://brian2genn.readthedocs.io/en/latest/introduction/exclusions.html">Brian2GeNN documentation</a>. Perhaps the most effective limitation is lack of support for using Multiple networks in brian2, i.e. only the <em>magic network</em> can be used. Using the <em>magic network</em>, only the &#8220;visible&#8221; objects that are explicitly defined in the code will be collected. In other words, any brian2 object that is created in a custom class, will not be collected and will eventually raise an error. Two solutions are available for this issue:</p>
 <p><strong>- Build a Syntax Bank:</strong></p>
 <p>In this method, a syntax string is built for all brian2 internal objects. These syntaxes are then run after the main object call. Suppose the cortical system object is named <em>CX</em> and a NeuronGroup() object called <em>NG</em> is created in a method inside the <em>CX</em>:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">NG</span> <span class="o">=</span> <span class="n">NeuronGroup</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">eqs</span><span class="p">)</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">NG</span> <span class="o">=</span> <span class="n">NeuronGroup</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">eqs</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>As mentioned earlier, <em>NG</em> will not be collected for magic network as it is inside a method of <em>CX</em>. However, we can &#8220;anticipate&#8221; a syntax for this neuron group and save it in a syntax bank attribute in <em>CX</em>:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">syn1</span> <span class="o">=</span> <span class="s">&quot;NG = NeuronGroup(1, eqs)&quot;</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">syn1</span> <span class="o">=</span> <span class="s2">&quot;NG = NeuronGroup(1, eqs)&quot;</span>
 <span class="n">CX</span><span class="o">.</span><span class="n">syntax_bank</span> <span class="o">=</span> <span class="n">append</span><span class="p">(</span><span class="n">CX</span><span class="o">.</span><span class="n">syntax_bank</span><span class="p">,</span> <span class="n">syn1</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -101,7 +101,7 @@
 <p><strong>- Update Globals():</strong></p>
 <p>Although mentioned as a dangerous method in the literature, updating the Globals() directly, is a practical approach in our case. This method is partially similar to previous method as it also needs all the prefixes and corresponding variables. However, the variables does not have to <em>wait</em> inside the syntax bank to be run after the main object call. They can be implicitly executed inside the main object and still become &#8220;visible&#8221; to the magic network by putting them in Globals(). In this case, the user does not have to face a manual syntax-executer outside of the main object call.</p>
 <p>Accordingly, most of the <em>exec</em> commands inside the main object cortical_system() are creating the required variable and making them visible to <em>magic network</em> of brian2 by updating the Globals() and putting them inside that. In the following example, the NG0 is put in the Globals():</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="nb">globals</span><span class="p">()</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s">&#39;NG0&#39;</span><span class="p">:</span><span class="n">NG0</span><span class="p">})</span>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="nb">globals</span><span class="p">()</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="s1">&#39;NG0&#39;</span><span class="p">:</span><span class="n">NG0</span><span class="p">})</span>
 </pre></div>
 </div>
 <p>Fig.1 illustrates the schematic of the cortical system internal component:</p>
@@ -119,7 +119,7 @@
         <div class="sphinxsidebarwrapper">
   <h4>Previous topic</h4>
   <p class="topless"><a href="project.html"
-                        title="previous chapter">Brief intorduction to Cortical System</a></p>
+                        title="previous chapter">Brief introduction to Cortical System</a></p>
   <h4>Next topic</h4>
   <p class="topless"><a href="configuration.html"
                         title="next chapter">Configuration File Tutorial</a></p>
@@ -160,14 +160,14 @@
           <a href="configuration.html" title="Configuration File Tutorial"
              >next</a> |</li>
         <li class="right" >
-          <a href="project.html" title="Brief intorduction to Cortical System"
+          <a href="project.html" title="Brief introduction to Cortical System"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="Documentation.html">CX_System 1.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">
         &copy; Copyright 2016, Vafa Andalibi.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.1.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.3.5.
     </div>
   </body>
 </html>

@@ -56,19 +56,19 @@
 <span id="config-file"></span><h1>Configuration File Tutorial<a class="headerlink" href="#configuration-file-tutorial" title="Permalink to this headline">¶</a></h1>
 <p>The configuration file is in .CSV format. There two categories of lines in the configuration file:</p>
 <ul class="simple">
-<li><strong>Column-titles line</strong>: These lines, starting with <em>row_type</em> keyword, defines the column titles for all the lines between the the next line to the next <em>Column-titles line</em>:</li>
+<li><strong>Titles-line</strong>: These lines, starting with <em>row_type</em> keyword, defines the column titles for all the lines between the the next line and the next <em>Titles-line</em>:</li>
 </ul>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">row_type</span><span class="p">,</span><span class="n">sys_mode</span><span class="p">,</span><span class="n">total_synapses</span>
 </pre></div>
 </div>
-<p>This column-titles line indicates that all the lines between the next line and the next column-titles line have four types of columns:  row_type,sys_mode,total_synapses,do_optimize. In the next sections, all of these parameters will be described thoroughly.</p>
+<p>This Titles-line indicates that all the lines between the next line and the next Titles-line have four types of columns:  row_type,sys_mode,total_synapses,do_optimize. In the next sections, all of these parameters will be described thoroughly.</p>
 <ul class="simple">
-<li><strong>Column-values line</strong>: These lines define the column values corresponding to column titles in the last column-title line:</li>
+<li><strong>Values-line</strong>: These lines define the column values corresponding to column titles in the last Titles-line:</li>
 </ul>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">params</span><span class="p">,</span><span class="n">local</span><span class="p">,</span><span class="mi">7000</span>
 </pre></div>
 </div>
-<p>These four values are in correspondence with the column titles of the previous column-title line example. In other words, the last two examples defines the following values:</p>
+<p>These four values are in correspondence with the column titles of the previous Titles-line example. In other words, the last two examples defines the following values:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">row_type</span> <span class="o">=</span> <span class="n">params</span>
 <span class="n">sys_mode</span> <span class="o">=</span> <span class="n">local</span>
 <span class="n">total_synapses</span> <span class="o">=</span> <span class="mi">7000</span>
@@ -77,13 +77,13 @@
 <p>Currently there are three types of <strong>row_type</strong> implemented:</p>
 <ul class="simple">
 <li>params: defines the run-time parameters of the system run (partially equivalent to the VCX_run)</li>
-<li>G: defines the neurongroups in the system</li>
-<li>S: defines the synapses connecting the neurongroups in the system</li>
+<li>G: defines the NeuronGroup()s in the system</li>
+<li>S: defines the Synapses() connecting the NeuronGroup()s in the system</li>
 </ul>
 <p>In the next sections, each of these row_types has its own types of columns and are thoroughly explained with examples. Note that <strong>mandatory</strong> arguments are wrapped with <strong>&lt;&gt;</strong> whereas the <strong>optional</strong> ones are in <strong>[]</strong>. The corresponding <strong>data type</strong> is also presented using <strong>{}</strong>.</p>
 <div class="section" id="params">
 <h2>params<a class="headerlink" href="#params" title="Permalink to this headline">¶</a></h2>
-<p>Currently there are three run-time variables implemented in the system:</p>
+<p>Currently there are three configurable run-time variables implemented in the system:</p>
 <blockquote>
 <div><table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -91,17 +91,17 @@
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">params:</th><td class="field-body"><p class="first"><strong>&lt;total_synapses&gt;{int}:</strong>  Defines the total number of synapses in the system.</p>
 <p><strong>&lt;sys_mode&gt;{local, expanded}:</strong> The system can be run in two modes: <strong>local</strong> and <strong>expanded</strong> mode.</p>
-<p class="last"><strong>&lt;do_optimize&gt;{0,1}:</strong> In Brian2, it is not possible to define number of synapses, but the probability. An optimization mechanism is implemented for when the synaptic connections should be defined based on specific percentages of a total number of synapses in the system. This parameter defines whether or not the synapstic connection probabilities should be determined and optimized so that they reproduce aproximately the same amount of connections in the system.</p>
+<p class="last"><strong>&lt;do_optimize&gt;{0,1}:</strong> In Brian2, it is not possible to define number of synapses, but only the probability. An optimization mechanism is implemented for when the synaptic connections should be defined based on specific percentages of a total number of synapses in the system. This parameter defines whether or not the synaptic connection probabilities should be determined and optimized so that they reproduce approximately the same amount of connections in the system.</p>
 </td>
 </tr>
 </tbody>
 </table>
 </div></blockquote>
 <ul class="simple">
-<li>Note1: The optimization should be used when the system is working in the &#8220;local&#8221; mode, as the catch is to determine the probabiltiies based on the percentages of the total number of synapses, and then expand the system to larger scales.</li>
-<li>Note2: using the system in the &#8220;local&#8221; mode whilst the &#8220;do_optimized&#8221; flag is enabled will <strong>not</strong> run the simulation. This will only determine the probability of each connection based on the percentages and total number of synapses and creating a new csv file based on the the optimized probabilties.</li>
+<li>Note1: The optimization should be used when the system is working in the <strong>local</strong> mode, as the catch is to determine the probabilities based on the percentages of the total number of synapses, and then expand the system to larger scales.</li>
+<li>Note2: using the system in the &#8220;local&#8221; mode whilst the &#8220;do_optimized&#8221; flag is enabled will <strong>not</strong> run the simulation. This will only determine the probability of each connection based on the percentages and total number of synapses and creating a new .CSV file based on the the optimized probabilities.</li>
 </ul>
-<p>Example of the params Column-titles &amp; Column-values lines:</p>
+<p>Example of the params Titles &amp; Values-lines:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">row_type</span><span class="p">,</span><span class="n">sys_mode</span><span class="p">,</span><span class="n">total_synapses</span><span class="p">,</span><span class="n">do_optimize</span>
 <span class="n">params</span><span class="p">,</span><span class="n">local</span><span class="p">,</span><span class="mi">35000</span><span class="p">,</span><span class="mi">0</span>
 </pre></div>
@@ -109,8 +109,8 @@
 </div>
 <div class="section" id="monitors">
 <h2>Monitors<a class="headerlink" href="#monitors" title="Permalink to this headline">¶</a></h2>
-<p>Before starting describing the different row_types in the csv files, it is important to understand how the monitors are defined in the system. In Brian2 monitors can be assigned to a neuron group or synapses. When using the configuration file, you are able to set monitors for any target line, i.e. neuron groups or synapses. The monitors are defined in the following way:</p>
-<p>If the monitor column is present in a Column-titles line and the value in Column-values line is not &#8216;N/A&#8217;, a monitor object will be created for the neuron group or synapse of that target line. Note that it is not possible to have different clocks for monitors in Brian2GeNN. Hence, try to use the monitors wisely to prevent generating bulk data. Following tags can be used for configuring a specific monitor:</p>
+<p>Before starting describing the different row_types in the .CSV files, it is important to understand how the monitors are defined in the system. In Brian2 monitors can be assigned to a NeuronGroup() or Synapses(). Similarly, when using the configuration file, you are able to set monitors for any target line, i.e. NeuronGroup()s or Synapses(). The monitors are defined in the following way:</p>
+<p>If the monitor column is present in a Titles-line and the value in Values-line is not &#8216;N/A&#8217;, a monitor object will be created for the NeuronGroup() or Synapses() of that specific line. Note that it is not possible to have different clocks for monitors in Brian2GeNN. Hence, try to use the monitors wisely to prevent generating bulk data. Following tags can be used for configuring a specific monitor:</p>
 <blockquote>
 <div><dl class="docutils">
 <dt>[Sp]:</dt>
@@ -120,7 +120,7 @@
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">...</span><span class="p">,[</span><span class="n">Sp</span><span class="p">]</span>
 </pre></div>
 </div>
-<p>The ellipsis represents the predecessor tags in the target line.</p>
+<p>The ellipsis represents the predecessor kewords in the line.</p>
 <blockquote>
 <div><dl class="docutils">
 <dt>[St]:</dt>
@@ -130,32 +130,33 @@
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">...</span><span class="p">,[</span><span class="n">St</span><span class="p">]</span><span class="o">&lt;</span><span class="n">state</span> <span class="n">variable1</span><span class="o">&gt;+&lt;</span><span class="n">state</span> <span class="n">variable2</span><span class="o">&gt;</span>
 </pre></div>
 </div>
-<p>Similar to [Sp], the ellipsis represents the predecessor tags in the target line. State variables are separated with <em>+</em>. An example of using [Sp] alongside with a [St] with three state variables of <em>ge_soma</em>,*gi_soma*, and <em>vm</em>:</p>
+<p>Similar to [Sp], the ellipsis represents the predecessor keywords in the line. State variables are separated with <em>+</em>. An example of using [Sp] alongside with a [St] with three state variables of <em>ge_soma</em>,*gi_soma*, and <em>vm</em>:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">...</span><span class="p">,[</span><span class="n">Sp</span><span class="p">]</span> <span class="p">[</span><span class="n">St</span><span class="p">]</span><span class="n">ge_soma</span><span class="o">+</span><span class="n">gi_soma</span><span class="o">+</span><span class="n">vm</span>
 </pre></div>
 </div>
-<p>By default all of the possible indices are being monitored (record = True). However, one might intend to monitor specific indices of neuron_group/synapses. This can be achieved by using the [rec] tag followed by the indices of interest. In the following example two state monitors are defined for <em>apre</em> and <em>wght</em> of the Synapses() object. In the former state monitor the first 20 indices are being recorded whilst in the latter (<em>wght</em>), even indices between 0 and 20 are being recorded:</p>
+<p>By default all of the possible indices are being monitored (record = True). However, one might intend to monitor specific indices of NeuronGroup()/Synapses(). This can be achieved by using the [rec] tag followed by the indices of interest. In the following example two state monitors are defined for <em>apre</em> and <em>wght</em> of the Synapses() object. In the former state monitor the first 20 indices are being recorded whilst in the latter (<em>wght</em>), even indices between 0 and 20 are being recorded:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">...</span><span class="p">,[</span><span class="n">St</span><span class="p">]</span><span class="n">apre</span><span class="p">[</span><span class="n">rec</span><span class="p">](</span><span class="mi">0</span><span class="o">-</span><span class="mi">20</span><span class="p">)</span><span class="o">+</span><span class="n">wght</span><span class="p">[</span><span class="n">rec</span><span class="p">](</span><span class="mi">0</span><span class="o">-</span><span class="mi">20</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Occasionally, one might want to assign a specific type of monitor to several consecutive target lines. In this case, the generic monitor(s) can be defined in the first target line and a <strong>&#8211;&gt;</strong> symbol should be written at the end of the line. <strong>&#8211;&gt;</strong> indicates that all the next lines should be assigned with the same monitor. For finishing this assignment, a <strong>&lt;&#8211;</strong> symbol should be put at the last target line of interest. Note that it is possible to overwrite the defined monitors of some lines between the <strong>&#8211;&gt;</strong> and <strong>&lt;&#8211;</strong> symbols simply by adding the monitor of the interest.</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="o">...</span><span class="p">,[</span><span class="n">St</span><span class="p">]</span><span class="n">ge_soma</span> <span class="o">--&gt;</span>
+<span class="o">...</span><span class="p">,</span><span class="n">N</span><span class="o">/</span><span class="n">A</span>
 <span class="o">...</span><span class="p">,</span>
 <span class="o">...</span><span class="p">,[</span><span class="n">Sp</span><span class="p">]</span>
 <span class="o">...</span><span class="p">,</span> <span class="o">&lt;--</span>
 </pre></div>
 </div>
-<p>In this example, an statemonitor over <em>ge_soma</em> is assigned on all four lines by using the <strong>&#8211;&gt;</strong> and <strong>&lt;&#8211;</strong> symbol. In the third line, however, this statemonitor is overwritten by a Spikemonitor.</p>
+<p>In this example, an StateMonitor() over <em>ge_soma</em> is assigned on lines 1,3,4,5 by using the <strong>&#8211;&gt;</strong> and <strong>&lt;&#8211;</strong> symbol. In the second line, the usage of default StateMonitor() is over-written by using the N/A keyword, indicating that the second line is not monitored. In the third line, however, this StateMonitor() is overwritten by a SpikeMonitor().</p>
 </div>
 <div class="section" id="input">
 <h2>Input<a class="headerlink" href="#input" title="Permalink to this headline">¶</a></h2>
-<p>The input is defined with the &#8220;IN&#8221; keyword. Currently the video input in implemented in the cortical system. The stimuli is created using a <em>.mat</em> file. This stimuli is in form of spike and is fed to a SpikeGeneratorGroup() . This group is then connected to a relay neuron group with synapses(). The main purpose of the relay neurons is to have positions for input neurons (SpikeGeneratorGroup does not support positions). The input can be defined using the following tag:</p>
+<p>The input is defined with the &#8220;IN&#8221; keyword. Currently the video input in implemented in the cortical system. The stimuli is created using a <em>.mat</em> file. This stimuli is in form of spike and is fed to a SpikeGeneratorGroup() . This group is then connected to a relay NeuronGroup() with a synapses() object. The main purpose of the relay neurons is to have positions for input neurons (SpikeGeneratorGroup does not support positions). The input can be defined using the following keyword:</p>
 <blockquote>
 <div><table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">params:</th><td class="field-body"><p class="first"><strong>&lt;idx&gt;{int}:</strong> Index of the neuron group.</p>
+<tr class="field-odd field"><th class="field-name">params:</th><td class="field-body"><p class="first"><strong>&lt;idx&gt;{int}:</strong> Index of the NeuronGroup().</p>
 <p><strong>&lt;input file location&gt;:</strong> relative path to the input .mat file.</p>
 <p><strong>&lt;frequency&gt;</strong></p>
 <p class="last"><strong>[monitors]</strong></p>
@@ -169,25 +170,25 @@
 IN,0, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]
 </pre></div>
 </div>
-<p>In this example an input neuron group with index 0 is created based on the <em>V1_inpu.mat</em> file with a frequency of 190*Hz and a SpikeMonitor is set on it.</p>
+<p>In this example an input NeuronGroup() with index 0 is created based on the <em>V1_inpu.mat</em> file with a frequency of 190*Hz and a SpikeMonitor() is set on it.</p>
 </div>
 <div class="section" id="neurongroup">
-<h2>NeuronGroup<a class="headerlink" href="#neurongroup" title="Permalink to this headline">¶</a></h2>
-<p>The neurongroups are defined using the G (as in Group) keyword. This row_type is basicall used for defining the neuron groups in brian2. Following parameters are implemented for defining the Neuorongroup:</p>
+<h2>NeuronGroup()<a class="headerlink" href="#neurongroup" title="Permalink to this headline">¶</a></h2>
+<p>The NeuronGroup()s are defined using the G (as in Group) keyword. This row_type is basically used for defining the NeuronGroup()s in brian2. Following parameters are implemented for defining the NeuronGroup():</p>
 <blockquote>
 <div><table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">param:</th><td class="field-body"><p class="first"><strong>&lt;idx&gt;{int}:</strong> Index of the neuron group.</p>
-<p><strong>&lt;number_of_neurons&gt;{int}:</strong> Number of neurons in the neuron group.</p>
-<p><strong>&lt;neuron_type&gt;{L1i, UMi, PC,BC,MC,SS}:</strong> cell category of the neuron group.</p>
+<tr class="field-odd field"><th class="field-name">param:</th><td class="field-body"><p class="first"><strong>&lt;idx&gt;{int}:</strong> Index of the NeuronGroup().</p>
+<p><strong>&lt;number_of_neurons&gt;{int}:</strong> Number of neurons in the NeuronGroup().</p>
+<p><strong>&lt;neuron_type&gt;{L1i,UMi,PC,BC,MC,SS}:</strong> cell category of the NeuronGroup().</p>
 <p><strong>&lt;layer_idx&gt;:</strong> Layer index of the cell groups.</p>
-<p><strong>[threshold]:</strong> threshold value for the neurons in the neuron group.</p>
-<p><strong>[reset]:</strong> reset value for the neurons in the neuron group.</p>
-<p><strong>[refractory]:</strong> reset value for the neurons in the neuron group.</p>
-<p><strong>[net_center]:</strong> center location of the neuron_group.</p>
-<p class="last"><strong>[monitors]:</strong> center location of the neuron_group.</p>
+<p><strong>[threshold]:</strong> threshold value for the neurons in the NeuronGroup().</p>
+<p><strong>[reset]:</strong> reset value for the neurons in the NeuronGroup().</p>
+<p><strong>[refractory]:</strong> reset value for the neurons in the NeuronGroup().</p>
+<p><strong>[net_center]:</strong> center location of the NeuronGroup().</p>
+<p class="last"><strong>[monitors]:</strong> center location of the NeuronGroup().</p>
 </td>
 </tr>
 </tbody>
@@ -196,7 +197,7 @@ IN,0, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]
 <hr class="docutils" />
 <p>In this section, some of the above-mentioned parameters are clarified.</p>
 <p><strong>idx:</strong></p>
-<p>The index of the neuron groups are important for creating the synaptic connections between them. As it will be described in the synaptic definitions, creating a synaptic connections needs a pre_synatpic and post_synaptic group index that should be used directly from this index value.</p>
+<p>The index of the NeuronGroup()s are important for creating the synaptic connections between them. As it will be described in the synaptic definitions, creating a synaptic connections needs a presynaptic and postsynaptic group index that should be used directly from this index value.</p>
 <p><strong>&lt;neuron_type&gt;:</strong></p>
 <p>The <em>&lt;neuron_type&gt;</em> is the category of the cells of the group, which is one of the following groups:</p>
 <table border="1" class="docutils">
@@ -211,16 +212,16 @@ IN,0, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]
 </thead>
 <tbody valign="top">
 <tr class="row-even"><td>SS</td>
-<td>Stellate cell</td>
+<td>spiny stellate</td>
 </tr>
 <tr class="row-odd"><td>PC</td>
-<td>Pyramidal cell</td>
+<td>Pyramidal</td>
 </tr>
 <tr class="row-even"><td>BC</td>
-<td>Pyramidal cell</td>
+<td>Pyramidal</td>
 </tr>
 <tr class="row-odd"><td>MC</td>
-<td>Martinotti cell</td>
+<td>Martinotti</td>
 </tr>
 <tr class="row-even"><td>L1i</td>
 <td>Layer 1 inhibitory</td>
@@ -230,7 +231,7 @@ IN,0, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]
 </tr>
 </tbody>
 </table>
-<p>The <em>&lt;layer index&gt;</em> argument defines the layer in which the neuron group is located. Except for PC cells, all types of neurons are defined as a soma-only neuron, hence their layer is an integer. In case of layer 2/3 using 2 is sufficient. For instance the following example defines a group of 46 SS neurons in layer 2/3:</p>
+<p>The <em>&lt;layer index&gt;</em> argument defines the layer in which the NeuronGroup() is located. Except for PC cells, all types of neurons are defined as a soma-only neuron, hence their layer is an integer. In case of layer 2/3 using 2 is sufficient. For instance the following example defines a group of 46 SS neurons in layer 2/3:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">row_type</span><span class="p">,</span><span class="n">idx</span><span class="p">,</span><span class="n">number_of_neurons</span><span class="p">,</span><span class="n">neuron_type</span><span class="p">,</span><span class="n">layer_idx</span>
 <span class="n">G</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">46</span><span class="p">,</span><span class="n">SS</span><span class="p">,</span><span class="mi">2</span>
 </pre></div>
@@ -252,7 +253,7 @@ G,2,55,PC,[6-&gt;2]
 </tr>
 </thead>
 <tbody valign="top">
-<tr class="row-even"><td>3/2</td>
+<tr class="row-even"><td>2/3</td>
 <td>Apical dendrite[3]</td>
 </tr>
 <tr class="row-odd"><td>4</td>
@@ -273,24 +274,23 @@ G,2,55,PC,[6-&gt;2]
 </tbody>
 </table>
 <p><strong>[threshold],[reset] and [refractory]:</strong></p>
-<p>By default following values are assigned to threshold, reset and refractory of any neurongroup:</p>
+<p>By default following values are assigned to threshold, reset and refractory of any NeuronGroup():</p>
 <ul class="simple">
 <li><em>threshold</em>: <em>vm&gt;Vcut</em></li>
 <li><em>reset</em>: <em>vm=V_res</em></li>
 <li><em>refractory</em>: <em>4</em> * <em>ms</em></li>
 </ul>
-<p>Any of this variables can be overwritten by using the keyword arguments [threshold], [reset] and [refractory]. As the name implies, the optional argument <em>[cell group center]</em> defines the center of the neuron group.</p>
+<p>Any of this variables can be overwritten by using the keyword arguments <em>threshold</em>, reset and <em>refractory</em>.</p>
 <p><strong>[net_center]:</strong></p>
-<p>The center can be defined with the [net-center] tag in the <em>Column-titles line</em> and corresponding center position in the <em>Column-value line</em>.  If not defined, the center will be the default value of 0+0j. The following example creates a neuron group consist of 75 BC neurons located in 5+0j, with a spike monitors assigned to it:</p>
+<p>The center of a NeuronGroup() can be defined with the net-center tag in the <em>Titles-line</em> and corresponding center position in the <em>Value line</em>.  If not defined, the center will be the default value of 0+0j. The following example creates a NeuronGroup() consist of 75 BC neurons located in 5+0j, with a spike monitors assigned to it:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">row_type</span><span class="p">,</span><span class="n">idx</span><span class="p">,</span><span class="n">number_of_neurons</span><span class="p">,</span><span class="n">neuron_type</span><span class="p">,</span><span class="n">layer_idx</span><span class="p">,</span><span class="n">net_center</span><span class="p">,</span><span class="n">monitors</span>
 <span class="n">G</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">75</span><span class="p">,</span><span class="n">BC</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">5</span><span class="o">+</span><span class="mi">0j</span><span class="p">,[</span><span class="n">Sp</span><span class="p">]</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="synapses">
-<h2>Synapses<a class="headerlink" href="#synapses" title="Permalink to this headline">¶</a></h2>
-<p>S (as in Synapses) keyword defines the brian2 Synapses() object.  Following parameters are implemented for defining the Synapses():</p>
-<p>&#8216;receptor&#8217;,&#8217;pre_syn_idx&#8217;,&#8217;post_syn_idx&#8217;,&#8217;syn_type&#8217;,&#8217;p&#8217;,&#8217;n&#8217;,&#8217;monitors&#8217;,&#8217;percentage&#8217;</p>
+<h2>Synapses()<a class="headerlink" href="#synapses" title="Permalink to this headline">¶</a></h2>
+<p>S keyword (as in Synapses)  defines the brian2 Synapses() object.  Following parameters are implemented for defining the Synapses():</p>
 <blockquote>
 <div><table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -310,7 +310,7 @@ G,2,55,PC,[6-&gt;2]
 </table>
 </div></blockquote>
 <hr class="docutils" />
-<p>where the <em>[index]</em> is the line number, <em>&lt;receptor&gt;</em> defines the receptor type, e.g. ge and gi, <em>&lt;presynaptic group index&gt;</em> and <em>&lt;postsynaptic group index&gt;</em> defines the index of the presynaptic and postsynaptic group respectively. These indices could be determined using the <em>indexing tag</em> in the neuron groups target lines. The next field defines the type of the synapse. Currently there are two types of synapses implemented: Fixed and STDP. The following example defines a excitatory STDP synaptic connection between neuron groups with indices of 2 and 4, in which the <em>ge</em> is the receptor:</p>
+<p>where the <em>&lt;receptor&gt;</em> defines the receptor type, i.e. ge for excitatory and gi for inhibitory connections, <em>&lt;presynaptic group index&gt;</em> and <em>&lt;postsynaptic group index&gt;</em> defines the index of the presynaptic and postsynaptic group respectively. These indices should be determined using the <em>indexing tag</em> in the NeuronGroup()s lines. The next field defines the type of the synapse. Currently there are two types of Synapses() implemented: Fixed and STDP. The following example defines a excitatory STDP synaptic connection between NeuronGroup()s with indices of 2 and 4, in which the <em>ge</em> is the receptor:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">row_type</span><span class="p">,</span><span class="n">receptor</span><span class="p">,</span><span class="n">pre_syn_idx</span><span class="p">,</span><span class="n">post_syn_idx</span><span class="p">,</span><span class="n">syn_type</span>
 <span class="n">S</span><span class="p">,</span><span class="n">ge</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">4</span><span class="p">,</span><span class="n">STDP</span>
 </pre></div>
@@ -318,12 +318,12 @@ G,2,55,PC,[6-&gt;2]
 <p>In case the postsynaptic group is multi-compartmental, the target compartment should be defined using the [C] tag. Let us review this concept with an example:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span>row_type,idx,number_of_neurons,neuron_type,layer_idx
 G,0,46,SS,4
-G,1,50,PC,[4,1]
+G,1,50,PC,[4-&gt;1]
 row_type,receptor,pre_syn_idx,post_syn_idx,syn_type
 S,ge,0,1[C]1,STDP
 </pre></div>
 </div>
-<p>Clearly Neurongroup 0 is group of 46 SS cells and Neurongroup 1 is a group of 50 PC cells. The latter is multi-compartmental with a layer index of [4,1]. Hence the compartments formation are as follows:</p>
+<p>Clearly NeuronGroup() 0 is group of 46 SS cells and NeuronGroup() 1 is a group of 50 PC cells. The latter is multi-compartmental with a layer index of [4,1]. Hence the compartments formation are as follows:</p>
 <table border="1" class="docutils">
 <colgroup>
 <col width="19%" />
@@ -360,7 +360,7 @@ Index</th>
 </tr>
 </tbody>
 </table>
-<p>The synapses() object is targeting the 1st compartment of the PC cells, i.e.  Apical dendrite[1]. Consider the following example in which the target is the compartment number 0 in the target neuron group:</p>
+<p>The synapses() object is targeting the 1st compartment of the PC cells, i.e.  Apical dendrite[1]. Consider the following example in which the target is the compartment number 0 in the target NeuronGroup():</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span>row_type,receptor,pre_syn_idx,post_syn_idx,syn_type
 S,ge,0,1[C]0bsa,STDP
 </pre></div>
@@ -399,7 +399,7 @@ S,ge,0,1[C]0s,STDP
 S,ge,0,1[C]0ba,STDP
 </pre></div>
 </div>
-<p>By default the probability of the synaptic connections are determined based on the distance between the neurons, which depends on sparseness and ilam variables in the brian2_obj_namespaces module. In case the maximum probability of the connection should be overwritten, [p] tag can be used. In the following example the maximum probability of the connection is overwriten as 0.06 (6%):</p>
+<p>By default the probability of the synaptic connections are determined based on the distance between the neurons, which depends on sparseness and ilam variables in the brian2_obj_namespaces module. In case the maximum probability of the connection should be overwritten, [p] tag can be used. In the following example the maximum probability of the connection is overwritten as 0.06 (6%):</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span>row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p
 S,ge,0,1[C]0ba,STDP,0.06
 </pre></div>
@@ -415,13 +415,13 @@ S,ge,0,1[C]0ba,STDP,0.2
 ...
 </pre></div>
 </div>
-<p>This will optimize the probability of that synaptic connection in a way to have 0.2 * 10000 synapses. One might want to have multiple synapse per connection between two NeuronGroup. This is defined in the following example using the &#8216;n&#8217; keyword in the <em>Column-titles line</em>:</p>
+<p>This will optimize the probability of that synaptic connection in a way to have 0.2 * 10000 synapses. One might want to have multiple synapse per connection between two NeuronGroup()s. This is defined in the following example using the &#8216;n&#8217; keyword in the <em>Titles-line</em>:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span>row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,n,percentage
 S,ge,0,1[C]0ba,STDP,4,0.2
 ...
 </pre></div>
 </div>
-<p>This example will optimize the probability of the connection in a way that there are 0.2*10000 connections and there are 4 synapses for each connection between the neurongroups.</p>
+<p>This example will optimize the probability of the connection in a way that there are 0.2*10000/4 connections and there are 4 synapses for each connection between the NeuronGroup()s.</p>
 </div>
 </div>
 
@@ -437,8 +437,8 @@ S,ge,0,1[C]0ba,STDP,4,0.2
 <li><a class="reference internal" href="#params">params</a></li>
 <li><a class="reference internal" href="#monitors">Monitors</a></li>
 <li><a class="reference internal" href="#input">Input</a></li>
-<li><a class="reference internal" href="#neurongroup">NeuronGroup</a></li>
-<li><a class="reference internal" href="#synapses">Synapses</a></li>
+<li><a class="reference internal" href="#neurongroup">NeuronGroup()</a></li>
+<li><a class="reference internal" href="#synapses">Synapses()</a></li>
 </ul>
 </li>
 </ul>
