@@ -2,6 +2,7 @@
 # Henri Hokkanen 21 July 2016
 
 import pandas as pd
+import re
 
 file_pathways_anatomy_vannilized = 'pathways_anatomy_vannilized.json' # INPUT
 file_pathways_anatomy_vanni = 'pathways_anatomy_vanni.json' # OUTPUT
@@ -21,6 +22,8 @@ def get_vanni_connection_params(connection_index):
 	    'L6_SBC': 67, 'L6_NGC': 17, 'L6_LBC': 463, 'L6_BTC': 54, 'L6_NBC': 198, 'L6_BPC': 3174, 'L6_IPC': 3476,
 	    'L6_TPC_L1': 1637, 'L6_DBC': 31, 'L6_TPC_L4': 1440, 'L6_UTPC': 1735, 'L6_BP': 7
 	    }
+
+	inhibitory_types = ['BC', 'MC', 'I', 'UM_I']
 
 	data = pd.read_json(file_pathways_anatomy_vannilized, orient='index')
 
@@ -112,7 +115,26 @@ def get_vanni_connection_params(connection_index):
 	po = tot_synapses / (N_possible * weighted_spc)
 	po2 = tot_synapses / (N_possible * weighted_spc2)
 
-	conn_params = pd.DataFrame(data={'connection_probability': po, 'mean_number_of_synapses_per_connection': weighted_spc, 'total_synapse_count': tot_synapses},index=[connection_index])
+	# Layer and cell type 
+	layer_pre, celltype_pre = re.split('(\w{2,3})_(.*)', pre_group)[1:3]
+	layer_post, celltype_post = re.split('(\w{2,3})_(.*)', post_group)[1:3]
+
+
+	# Aggregate everything
+
+	conn_params = pd.DataFrame(index=[connection_index], data={
+		'neurongroup_pre': pre_group,
+		'neurongroup_post': post_group,
+		'layer_pre': layer_pre,
+		'layer_post': layer_post,
+		'celltype_pre': celltype_pre,
+		'celltype_post': celltype_post,
+		'is_inhibitory_pre': celltype_pre in inhibitory_types,
+		'is_inhibitory_post': celltype_post in inhibitory_types,
+		'connection_probability': po,
+		'mean_number_of_synapses_per_connection': weighted_spc, 
+		'total_synapse_count': tot_synapses
+		})
 	
 	return conn_params
 
@@ -125,4 +147,9 @@ vanni_connections = data.vanni_index.unique()
 frames = [ get_vanni_connection_params(conn) for conn in vanni_connections ]
 result = pd.concat(frames)
 
+# Sort it like Markram
+sort_order = ['layer_pre', 'is_inhibitory_pre', 'celltype_pre', 'layer_post', 'is_inhibitory_post', 'celltype_post']
+result = result.sort_values(by=sort_order)
+
+# Save everything
 result.astype(str).to_json(file_pathways_anatomy_vanni, orient='index')
