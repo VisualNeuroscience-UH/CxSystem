@@ -396,21 +396,20 @@ class neuron_namespaces (object):
 
 
     def _L1i(self,output_neuron):
-        self.output_namespace['C'] = 100 * pF  # Somatosensory cortex,
-        # Beierlein 2000 - Badel et al., 2008: 90 pF
-
-        self.output_namespace['gL'] = 10 * nS  # Beierlein 2000 -  Badel et al -> 10 nS (calculated from tau_m)
-        self.output_namespace['taum'] = self.output_namespace['C'] / self.output_namespace['gL']  # Badel et al. 2008: 9 ms
+        self.output_namespace['gL'] = 3.2 * nS  # 3.2 nsiemens mean of cell types in L1, Muralidhar 2014 Front Neuroanat, Table 3, mean of 1/"input resistance for steady state"
+        self.output_namespace['taum'] =19.8 * ms  #  19.8 ms mean of cell types in L1, Muralidhar 2014 Front Neuroanat, Table 3, mean of "time constant for delta pulse"
+        self.output_namespace['C'] = self.output_namespace['taum'] * self.output_namespace['gL']  #
         self.output_namespace['Vr'] =-67.66 * mV
-        self.output_namespace['EL'] = -67.66 * mV  # mean of neuro-electro portal#-64 * mV # Badel et al. 2008
-        self.output_namespace['VT'] = -38.8 * mV  # mean of neuro-electro portal#self.output_namespace['EL'] + 15  * mV # Badel et al. 2008  #15
-        self.output_namespace['V_res'] = self.output_namespace['VT'] - 4 * mV  # -55 * mV #self.output_namespace['VT']-4*mV
+        self.output_namespace['EL'] = -67.66 * mV  #
+        self.output_namespace['VT'] = -36.8 * mV  # -36.8 mV, mean of cell types in L1, Muralidhar 2014 Front Neuroanat, Table 3, mean of "ap threshold"
+        self.output_namespace['V_res'] = self.output_namespace['VT'] - 4 * mV  #
         self.output_namespace['DeltaT'] = 2 * mV
         self.output_namespace['Vcut'] = self.output_namespace['VT'] + 5 * self.output_namespace['DeltaT']
         self.output_namespace['Ee'] = 0 * mV
         self.output_namespace['Ei'] = -75 * mV
-        self.output_namespace['tau_e'] = 1.7 * ms  # Markram Cell 2015
-        self.output_namespace['tau_i'] = 8.3 * ms  # Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5)
+        self.output_namespace['tau_e'] = 10 * ms  # 10 ms LateSpiking Chu 2003 JNeurosci,
+        self.output_namespace['tau_i'] = 336.2 * ms  # 336.2 ms, mean of cell types in L1, Muralidhar 2014 Front Neuroanat, text page 10. Combination of GABA-A and GABA-B contributions. Definition of decay time different but order of magnitude right
+
 
     def _UMi(self,output_neuron):
         self.output_namespace['C'] = 100 * pF  # Somatosensory cortex,
