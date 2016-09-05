@@ -10,7 +10,7 @@ with open('./generated_config_file.csv', 'w') as config_file:
     config_file.write('params,local,0\n')
     config_file.write('row_type,idx,path,freq,monitors\n')
     config_file.write('IN,0, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]\n')
-    config_file.write('row_type,idx, number_of_neurons, neuron_type, layer_idx, net_center, monitors\n')
+    config_file.write('row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors\n')
     group_index=1
     NG_options = {
         'L1_I': 'L1i',
@@ -38,6 +38,29 @@ with open('./generated_config_file.csv', 'w') as config_file:
     default_center = '5+0j'
     default_NG_monitor = ',N/A'
     group_items = []
+    UMi_dict = {}
+    for item in vanni_data['vanni_pre'].unique():
+        layer_str = item[0:item.index('_')]
+        layer_idx = [layer_options[lay] for lay in layer_options.keys() if lay in layer_str][0]
+        N_type = [NG_options[opt] for opt in NG_options.keys() if opt in item][0]
+        NN = sum(np.unique(vanni_data.ix[np.where(vanni_data['vanni_pre'] == item)[0]]['neuron_number_pre']))
+        if N_type == 'UMi' or N_type == 'BC' or N_type == 'MC':
+            try:
+                if type(UMi_dict[layer_idx]) != dict:
+                    UMi_dict[layer_idx] = {}
+            except:
+                UMi_dict[layer_idx] = {}
+            if N_type == 'UMi':
+                UMi_dict[layer_idx]['UMi'] = NN
+            if N_type == 'BC' :
+                UMi_dict[layer_idx]['BC'] = NN
+            if N_type == 'MC':
+                UMi_dict[layer_idx]['MC'] = NN
+    for item in UMi_dict:
+        UMi_dict[item]['BC'] = int(UMi_dict[item]['BC'] + (float(UMi_dict[item]['BC']) / (
+            UMi_dict[item]['BC']+UMi_dict[item]['MC']))*UMi_dict[item]['UMi'])
+        UMi_dict[item]['MC'] = int(UMi_dict[item]['MC'] + (float(UMi_dict[item]['MC']) / (
+            UMi_dict[item]['BC'] + UMi_dict[item]['MC'])) * UMi_dict[item]['UMi'])
     for item in vanni_data['vanni_pre'].unique():
         layer_str = item[0:item.index('_')]
         layer_idx = [layer_options[lay] for lay in layer_options.keys() if lay in layer_str][0]
@@ -47,11 +70,19 @@ with open('./generated_config_file.csv', 'w') as config_file:
                 layer_idx = '[' + layer_idx + '->' + PC_layer_options[layer_idx+item[item.index('_')+1:][2]] + ']'
             else:
                 layer_idx = '[' + layer_idx + '->1]'
-        NN = sum(np.unique(vanni_data.ix[np.where(vanni_data['vanni_pre'] == item)[0]]['neuron_number_pre']))
+        if N_type == 'BC' :
+            NN = UMi_dict[layer_idx]['BC']
+        elif N_type == 'MC':
+            NN = UMi_dict[layer_idx]['MC']
+        else:
+            NN = sum(np.unique(vanni_data.ix[np.where(vanni_data['vanni_pre'] == item)[0]]['neuron_number_pre']))
         line = 'G,%d,%d,%s,%s,%s%s\n' %(group_index,NN,N_type,layer_idx,default_center, default_NG_monitor )
-        group_index+=1
-        config_file.write(line)
-        group_items.append(item)
+        if N_type == 'UMi':
+            line+= 'Skipped because UMi group found'
+        if not 'Skipped because UMi group found' in line :
+            config_file.write(line)
+            group_index += 1
+            group_items.append(item)
     config_file.write('row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p,n,monitors,percentage\n')
     syn_num = len(henry_data[:])
     receptor_options={
@@ -63,25 +94,61 @@ with open('./generated_config_file.csv', 'w') as config_file:
     }
     default_syn_type = 'Fixed'
     default_syn_monitor = 'N/A'
+    default_percentage = 'N/A'
     for syn_index in range(0,syn_num):
         line = 'S,ge,0,1,Fixed,0.043,N/A,[St]wght[rec](0-20),0.60'
         line = 'S,'
         syn_name = henry_data.ix[syn_index].name
         syn_name_pre = syn_name[0:syn_name.index(':')]
         syn_name_post = syn_name[syn_name.index(':')+1:]
+        if 'UM' in syn_name_pre or 'UM' in syn_name_post :
+            continue
         receptor =  [receptor_options[NG_type] for NG_type in receptor_options.keys() if NG_type in syn_name_pre][0]
         line += receptor + ','
         pre_group_item = [it for it in group_items if syn_name_pre == it][0]
         pre_group_idx = group_items.index(pre_group_item)
         post_group_item = [it for it in group_items if syn_name_post == it][0]
         post_group_idx = group_items.index(post_group_item)
-        line+= '%d'%pre_group_idx + ','
-        line+= '%d'%post_group_idx + ','
+        line += '%d' %(pre_group_idx+1)+ ','
+        if 'PC' in post_group_item:
+            line += '%d' % (post_group_idx+1)
+            pre_layer_idx = pre_group_item[1:pre_group_item.index('_')]
+            if '3' in pre_layer_idx :
+                pre_layer_idx = '2'
+            post_layer_start_idx = post_group_item[1:post_group_item.index('_')] if int(post_group_item[1:post_group_item.index('_')]) != 23 else '2'
+            if post_layer_start_idx == '4' or post_layer_start_idx == '6':
+                post_group_layers_list = range(int(post_layer_start_idx ), int(PC_layer_options[post_layer_start_idx + post_group_item[-1]])-1,-1)
+                if 3 in post_group_layers_list :
+                    del post_group_layers_list[post_group_layers_list.index(3)]
+            else:
+                post_group_layers_list = range(int(post_layer_start_idx ),int(PC_layer_options[post_layer_start_idx])-1,-1)
+                if 3 in post_group_layers_list :
+                    del post_group_layers_list[post_group_layers_list.index(3)]
+            if receptor == 'gi':
+                if pre_layer_idx == '1':
+                    # assert 1 in post_group_layers_list, 'presynaptic group is L1i but and is targetting a group which deos not have any compartment in layer1, is this normal?'
+                    if not 1 in post_group_layers_list:
+                        line+= 'skip this line since there is no layer 1 compartment in the group'
+                    line += '[C]%d,'%len(post_group_layers_list)
+                else:
+                    line += '[C]%d,' % len(post_group_layers_list)
+            elif receptor == 'ge':
+                if pre_layer_idx == post_layer_start_idx :
+                    line+='[C]0ab,'
+                else:
+                    closest_comp = min(post_group_layers_list, key=lambda x:abs(x-int(pre_layer_idx)))
+                    line+='[C]%d,' % closest_comp
+            else:
+                raise ValueError('receptor type should be either ge or gi, but it is %s'%receptor)
+        else:
+            line+= '%d'%(post_group_idx+1) + ','
         line+= default_syn_type+ ','
         line+= '%f'%henry_data.ix[syn_index]['connection_probability']+ ','
         line += '%d' % henry_data.ix[syn_index]['mean_number_of_synapses_per_connection'] + ','
-        line += default_syn_monitor + '\n'
-        config_file.write(line)
+        line += default_syn_monitor + ','
+        line += default_percentage + '\n'
+        if not 'skip this line since there is no layer 1 compartment in the group' in line:
+            config_file.write(line)
 
 
         # _mapping = {
