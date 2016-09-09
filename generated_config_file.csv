@@ -1,7 +1,9 @@
 row_type,sys_mode,do_optimize
 params,local,0
-row_type,idx,path,freq,monitors
-IN,0, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]
+#row_type,idx,type,path,freq,monitors
+#IN,0, video,  ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]
+row_type,idx,type,number_of_neurons,spike_times,net_center,monitors
+IN,0, VPM,[200 300]*msecond, 5+0j ,[Sp]
 row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors
 G,1,338,L1i,1,5+0j,N/A
 G,2,1198,BC,2,5+0j,N/A

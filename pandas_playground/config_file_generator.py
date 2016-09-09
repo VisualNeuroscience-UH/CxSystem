@@ -8,8 +8,8 @@ henry_data = pd.read_json(os.path.abspath('./pathways_anatomy_vanni.json'), orie
 with open('./generated_config_file.csv', 'w') as config_file:
     config_file.write('row_type,sys_mode,do_optimize\n')
     config_file.write('params,local,0\n')
-    config_file.write('row_type,idx,path,freq,monitors\n')
-    config_file.write('IN,0, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]\n')
+    config_file.write('row_type,idx,type,path,freq,monitors\n')
+    config_file.write('IN,video,0, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]\n')
     config_file.write('row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors\n')
     group_index=1
     NG_options = {

@@ -1,3 +1,5 @@
+import brian2_obj_defs
+
 __author__ = 'V_AD'
 from brian_genn_version  import *
 import brian2genn
@@ -7,6 +9,7 @@ from brian2_obj_defs import *
 from Plotter import *
 from save_data import *
 from stimuli import *
+import ast
 import copy # for copying Equation object
 
 class cortical_system(object):
@@ -89,7 +92,7 @@ class cortical_system(object):
                 self.line = self.line.replace('\n', '')
                 self.line = self.line.lstrip()
                 if 'do_optimize' in self.line or self.line[0:6] == 'params':
-                    _splitted_line = [non_empty for non_empty in self.line.split(',') if non_empty != '']
+                    _splitted_line = [non_empty.strip() for non_empty in self.line.split(',') if non_empty != '']
                     if 'row_type' in self.line:
                         self.current_parameters_list = _splitted_line[1:]
                     elif _splitted_line[0] in self._options:
@@ -121,7 +124,7 @@ class cortical_system(object):
                                 continue
                         except:
                             continue
-                        _splitted_line = [non_empty for non_empty in self.line.split(',') if non_empty != '']
+                        _splitted_line = [non_empty.strip() for non_empty in self.line.split(',') if non_empty != '']
                         if 'row_type' in self.line:
                             self.current_parameters_list = _splitted_line[1:]
                         elif _splitted_line[0] in self._options:
@@ -137,7 +140,7 @@ class cortical_system(object):
                             continue
                     except:
                         continue
-                    _splitted_line = [non_empty for non_empty in self.line.split(',') if non_empty != '']
+                    _splitted_line = [non_empty.strip() for non_empty in self.line.split(',') if non_empty != '']
                     if 'row_type' in self.line:
                         self.current_parameters_list = _splitted_line[1:]
                     elif _splitted_line[0] in self._options:
@@ -652,16 +655,19 @@ class cortical_system(object):
             syn_con_str = "%s.connect('i!=j', p= " % S_name
             # Connecting the synapses based on either [the defined probability and the distance] or [only the distance] plus considering the number of connections
             try:
-                if self.sys_mode== 'local':
+                if '_relay_vpm' in self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]:
+                    syn_con_str += "'exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(2*0.025**2))/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
+                                   % (self.customized_synapses_list[-1]['ilam'])
+
+                elif self.sys_mode== 'local':
                     syn_con_str += "'%f'" %(float(p_arg))
                     if (p_arg != 'N/A' and n_arg!='N/A') and  percentage == 'N/A':
                         print "Info: Target percentage is not defined in local mode and some synapses are working based on p and n (see brian2 syanpses())."
                 elif self.sys_mode == 'expanded':
                     syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
                                    % (float(p_arg), self.customized_synapses_list[-1]['ilam'])
-                # else:
-                #     syn_con_str += "'%s*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
-                #                    % (p, self.customized_synapses_list[-1]['ilam'])
+
+
             except:
                 p_arg = self.customized_synapses_list[-1]['sparseness']
                 if self.sys_mode== 'local':
@@ -669,9 +675,6 @@ class cortical_system(object):
                 elif self.sys_mode == 'expanded' :
                     syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
                                    % (p_arg, self.customized_synapses_list[-1]['ilam'])
-                # else:
-                #     syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
-                #                    % (p, self.customized_synapses_list[-1]['ilam'])
             try:
                 syn_con_str += ',n=%d)' % int(n_arg)
             except:
@@ -778,19 +781,10 @@ class cortical_system(object):
             syn_con_str = "%s.connect('i!=j', p='" % S_name
             # Connecting the synapses based on either [the defined probability and the distance] or [only the distance] plus considering the number of connections
             try:
-                # if self.sys_mode == 'local':
                 syn_con_str += "%s" % (p_arg)
-                # elif self.sys_mode == 'expanded':
-                #     syn_con_str += "'%s*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
-                #                    % (p_arg, self.customized_synapses_list[-1]['ilam'])
             except:
                 p_arg = self.customized_synapses_list[-1]['sparseness']
-                # if self.sys_mode == 'local':
                 syn_con_str += "%f" % (p_arg)
-                # elif self.sys_mode == 'expanded':
-                #     syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
-                #                    % (self.customized_synapses_list[-1]['sparseness'],
-                #                       self.customized_synapses_list[-1]['ilam'])
             try:
                 syn_con_str += "',n=%s)" % n_arg
             except:
@@ -863,83 +857,172 @@ class cortical_system(object):
         * SG_str: The string containing the syntax for creating the SpikeGeneratorGroup() based on the input .mat file.
         * number_of_neurons: The number of neurons that exist in the input .mat file.
         '''
+        NG_name = ''
+        def video(self):
+            print "creating an input based on the video input."
+            path = self.current_values_list[_all_columns.index('path')].strip()
+            freq = self.current_values_list[_all_columns.index('freq')]
+            inp = stimuli()
+            inp.generate_inputs(path,freq )
+            spikes_str, times_str, SG_str, number_of_neurons = inp.load_input_seq(path)
+            Spikes_Name = spikes_str.split('=')[0].rstrip()
+            Time_Name = times_str.split('=')[0].rstrip()
+            SG_Name = SG_str.split('=')[0].rstrip()
+
+            # Internal switch for brian2GeNN:
+            if self.use_genn == 1:
+                set_device('genn')
+
+            exec spikes_str in globals(), locals() # runnig the string containing the syntax for Spike indices in the input neuron group.
+            exec times_str in globals(), locals()# running the string containing the syntax for time indices in the input neuron group.
+            exec SG_str in globals(), locals()# running the string containing the syntax for creating the SpikeGeneratorGroup() based on the input .mat file.
+            exec "globals().update({'%s':%s,'%s':%s,'%s':%s})" % \
+                 (Spikes_Name, Spikes_Name, Time_Name, Time_Name, SG_Name, SG_Name) in globals(), locals() # updating the Globals()
+
+            # current_idx = len(self.customized_neurons_list)
+            # relay_group = {}
+            # relay_group['idx'] = int(idx)
+            # relay_group['type'] = 'in'
+            # relay_group['z_positions'] = squeeze(inp.get_input_positions(path))
+            # relay_group['w_positions'] = 17 * log(relay_group['z_positions'] + 1)
+            # relay_group['equation'] = ''
+            self.customized_neurons_list[current_idx]['z_positions'] = squeeze(inp.get_input_positions(path))
+            self.customized_neurons_list[current_idx]['w_positions'] = 17 * log(relay_group['z_positions'] + 1)
+            NG_name = self._NeuronGroup_prefix + str(current_idx) + '_relay_video' #  Generated variable name for the NeuonGroup() object in brian2.
+            self.neurongroups_list.append(NG_name)
+            NN_name = self._NeuronNumber_prefix + str(current_idx) #  Generated vriable name for corresponding Neuron Number.
+            NE_name = self._NeuronEquation_prefix + str(current_idx) # Generated vriable name for the NeuonGroup() equation.
+            NT_name = self._NeuronThreshold_prefix + str(current_idx) # Generated vriable name for the NeuonGroup() threshold.
+            NRes_name = self._NeuronReset_prefix + str(current_idx) # Generated vriable name for the NeuonGroup() reset value.
+            Eq = """'''emit_spike : 1
+                x : meter
+                y : meter'''"""
+            exec "%s=%s" % (NN_name, number_of_neurons) in globals(), locals()
+            exec "%s=%s" % (NE_name, Eq) in globals(), locals()
+            exec "%s=%s" % (NT_name, "'emit_spike>=1'") in globals(), locals()
+            exec "%s=%s" % (NRes_name, "'emit_spike=0'") in globals(), locals()
+            exec "%s= NeuronGroup(%s, model=%s, threshold=%s, reset=%s)" \
+                 % (NG_name, NN_name, NE_name, NT_name, NRes_name) in globals(), locals()
+            # setting the position of the neurons based on the positions in the .mat input file:
+            exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % (
+                NG_name, current_idx, NG_name, current_idx) in globals(), locals()
+            # self.save_data.syntax_bank.append(
+            #     "%s.save_data.data['positions_all']['%s'] = %s.customized_neurons_list[%d]['positions']" % (
+            #         self.name, NG_name, self.name, current_idx))
+            self.save_data.data['positions_all']['z_coord'][NG_name] = self.customized_neurons_list[current_idx][
+                'z_positions']
+            self.save_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx][
+                'w_positions']
+            SGsyn_name = 'SGEN_Syn' # variable name for the Synapses() objecct that connects SpikeGeneratorGroup() and relay neurons.
+            exec "%s = Synapses(GEN, %s, pre='emit_spike+=1', connect='i==j')" % (SGsyn_name, NG_name) in globals(), locals()# connecting the SpikeGeneratorGroup() and relay group.
+
+            exec "globals().update({'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s})" % \
+                 (NN_name, NN_name, NE_name, NE_name, NT_name, NT_name, NRes_name, NRes_name, NG_name, NG_name, SGsyn_name,
+                  SGsyn_name) in globals(), locals()# updating the Globals()
+            self.monitors(mons.split(' '), NG_name, self.customized_neurons_list[-1]['equation'])  # taking care of the monitors
+
+
+        def VPM(self): #ventral posteromedial (VPM) thalamic nucleus
+            spike_times = self.current_values_list[_all_columns.index('spike_times')].strip().replace(' ',',')
+            spike_times_list = ast.literal_eval(spike_times[0:spike_times.index('*')])
+            spike_times_unit = spike_times[spike_times.index('*')+1:]
+            exec 'spike_times_ = spike_times_list * %s' %spike_times_unit in globals(), locals()
+            try:
+                net_center = self.current_values_list[_all_columns.index('net_center')].strip()
+            except:
+                net_center = 0 + 0j
+            net_center = complex (net_center)
+            number_of_neurons = self.current_values_list[_all_columns.index('number_of_neurons')].strip()
+            print "creating an input based on the central %s neurons."%number_of_neurons
+            Spikes_Name = 'GEN_SP'
+            Time_Name = 'GEN_TI'
+            SG_Name = 'GEN'
+            spikes_str = 'GEN_SP=tile(arange(%s),%d)'%(number_of_neurons,len(spike_times_))
+            times_str = 'GEN_TI = repeat(%s,%s)*%s'%(spike_times[0:spike_times.index('*')],number_of_neurons,spike_times_unit)
+            SG_str = 'GEN = SpikeGeneratorGroup(%s, GEN_SP, GEN_TI)'%number_of_neurons
+            # Internal switch for brian2GeNN:
+            if self.use_genn == 1:
+                set_device('genn')
+
+            exec spikes_str in globals(), locals()  # runnig the string containing the syntax for Spike indices in the input neuron group.
+            exec times_str in globals(), locals()  # running the string containing the syntax for time indices in the input neuron group.
+            exec SG_str in globals(), locals()  # running the string containing the syntax for creating the SpikeGeneratorGroup() based on the input .mat file.
+            exec "globals().update({'%s':%s,'%s':%s,'%s':%s})" % \
+                 (Spikes_Name, Spikes_Name, Time_Name, Time_Name, SG_Name,
+                  SG_Name) in globals(), locals()  # updating the Globals()
+            vpm_customized_neuron = customized_neuron(current_idx, int(number_of_neurons),'L1i','0',net_center)
+            self.customized_neurons_list[current_idx]['z_positions'] = vpm_customized_neuron.output_neuron['z_positions']
+            self.customized_neurons_list[current_idx]['w_positions'] = vpm_customized_neuron.output_neuron['w_positions']
+
+            NG_name = self._NeuronGroup_prefix + str(current_idx) + '_relay_vpm'  # Generated variable name for the NeuonGroup() object in brian2.
+            self.neurongroups_list.append(NG_name)
+            NN_name = self._NeuronNumber_prefix + str(current_idx)  # Generated vriable name for corresponding Neuron Number.
+            NE_name = self._NeuronEquation_prefix + str(current_idx)  # Generated vriable name for the NeuonGroup() equation.
+            NT_name = self._NeuronThreshold_prefix + str(current_idx)  # Generated vriable name for the NeuonGroup() threshold.
+            NRes_name = self._NeuronReset_prefix + str(current_idx)  # Generated vriable name for the NeuonGroup() reset value.
+            Eq = """'''emit_spike : 1
+                            x : meter
+                            y : meter'''"""
+            exec "%s=%s" % (NN_name, number_of_neurons) in globals(), locals()
+            exec "%s=%s" % (NE_name, Eq) in globals(), locals()
+            exec "%s=%s" % (NT_name, "'emit_spike>=1'") in globals(), locals()
+            exec "%s=%s" % (NRes_name, "'emit_spike=0'") in globals(), locals()
+            exec "%s= NeuronGroup(%s, model=%s, threshold=%s, reset=%s)" \
+                 % (NG_name, NN_name, NE_name, NT_name, NRes_name) in globals(), locals()
+            # setting the position of the neurons based on the positions in the .mat input file:
+            exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % (
+                NG_name, current_idx, NG_name, current_idx) in globals(), locals()
+            # self.save_data.syntax_bank.append(
+            #     "%s.save_data.data['positions_all']['%s'] = %s.customized_neurons_list[%d]['positions']" % (
+            #         self.name, NG_name, self.name, current_idx))
+            self.save_data.data['positions_all']['z_coord'][NG_name] = self.customized_neurons_list[current_idx][
+                'z_positions']
+            self.save_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx][
+                'w_positions']
+            SGsyn_name = 'SGEN_Syn'  # variable name for the Synapses() objecct that connects SpikeGeneratorGroup() and relay neurons.
+            exec "%s = Synapses(GEN, %s, pre='emit_spike+=1', connect= 'i!=j')" % (
+            SGsyn_name, NG_name) in globals(), locals()  # connecting the SpikeGeneratorGroup() and relay group.
+            exec "globals().update({'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s})" % \
+                 (NN_name, NN_name, NE_name, NE_name, NT_name, NT_name, NRes_name, NRes_name, NG_name, NG_name,
+                  SGsyn_name,
+                  SGsyn_name) in globals(), locals()  # updating the Globals()
+            self.monitors(mons.split(' '), NG_name,
+                          self.customized_neurons_list[-1]['equation'])  # taking care of the monitors
+
         assert self.sys_mode != '', "Error: System mode not defined."
-        _all_columns = ['idx','path','freq','monitors']
-        _obligatory_params = [0,1,2]
-        assert len (self.current_values_list) >= len (_obligatory_params ), 'One or more of of the columns for\
-         input definition is missing. Following obligatory columns should be defined:\n%s\n' %str([_all_columns[ii] for ii in _obligatory_params])
-        assert 'N/A' not in [self.current_values_list[ii] for ii in _obligatory_params], 'Following obligatory values cannot be "N/A":\n%s'% str([_all_columns[ii] for ii in _obligatory_params])
-        # args = args[0]
-        # if '[M]' in args: # extracting the monitor tags
-        #     mon_args = args[args.index('[M]') + 1:]
-        #     args = args[0:args.index('[M]')]
-        path = self.current_values_list[_all_columns.index('path')].strip()
-        freq = self.current_values_list[_all_columns.index('freq')]
-        idx = self.current_values_list[_all_columns.index('idx')]
-        try :
+        assert 'type' in self.current_parameters_list, 'The type of the input is not defined in the configuration file.'
+        _input_params = {
+            'video': [['idx', 'type', 'path', 'freq', 'monitors'], [0, 1, 2],video],
+            'VPM': [['idx', 'type','number_of_neurons','spike_times','net_center','monitors' ], [0, 1,2,3],VPM]
+        }
+        assert self.current_values_list[self.current_parameters_list.index('type')] in _input_params.keys(), 'The input type %s of the configuration file is not defined' %self.current_parameters_list[_all_columns.index('type')]
+        _all_columns = _input_params[self.current_values_list[self.current_parameters_list.index('type')]][0]
+        _obligatory_params = _input_params[self.current_values_list[self.current_parameters_list.index('type')]][1]
+        assert len(self.current_values_list) >= len(_obligatory_params), 'One or more of of the columns for\
+                     input definition is missing. Following obligatory columns should be defined:\n%s\n' % str(
+            [_all_columns[ii] for ii in _obligatory_params])
+        assert 'N/A' not in [self.current_values_list[ii] for ii in
+                             _obligatory_params], 'Following obligatory values cannot be "N/A":\n%s' % str(
+            [_all_columns[ii] for ii in _obligatory_params])
+        assert len(self.current_parameters_list) == len(self.current_values_list) , 'The number of columns for the input are not equal to number of values in the configuration file.'
+        try:
             mons = self.current_values_list[_all_columns.index('monitors')]
         except:
             mons = 'N/A'
+        idx = self.current_values_list[_all_columns.index('idx')]
         assert idx not in self.NG_indices, "Error: multiple indices with same values exist in the configuration file."
         self.NG_indices.append(idx)
-        inp = stimuli()
-        inp.generate_inputs(path,freq )
-        spikes_str, times_str, SG_str, number_of_neurons = inp.load_input_seq(path)
-        Spikes_Name = spikes_str.split('=')[0].rstrip()
-        Time_Name = times_str.split('=')[0].rstrip()
-        SG_Name = SG_str.split('=')[0].rstrip()
-
-        # Internal switch for brian2GeNN:
-        if self.use_genn == 1:
-            set_device('genn')
-
-        exec spikes_str # runnig the string containing the syntax for Spike indices in the input neuron group.
-        exec times_str # running the string containing the syntax for time indices in the input neuron group.
-        exec SG_str # running the string containing the syntax for creating the SpikeGeneratorGroup() based on the input .mat file.
-        exec "globals().update({'%s':%s,'%s':%s,'%s':%s})" % \
-             (Spikes_Name, Spikes_Name, Time_Name, Time_Name, SG_Name, SG_Name) # updating the Globals()
-
         current_idx = len(self.customized_neurons_list)
         relay_group = {}
         relay_group['idx'] = int(idx)
         relay_group['type'] = 'in'
-        relay_group['z_positions'] = squeeze(inp.get_input_positions(path))
-        relay_group['w_positions'] = 17 * log(relay_group['z_positions'] + 1)
+        relay_group['z_positions'] = []
+        relay_group['w_positions'] = []
         relay_group['equation'] = ''
         self.customized_neurons_list.append(relay_group)
-        NG_name = self._NeuronGroup_prefix + str(current_idx) + '_' + 'relay' #  Generated vriable name for the NeuonGroup() object in brian2.
-        self.neurongroups_list.append(NG_name)
-        NN_name = self._NeuronNumber_prefix + str(current_idx) #  Generated vriable name for corresponding Neuron Number.
-        NE_name = self._NeuronEquation_prefix + str(current_idx) # Generated vriable name for the NeuonGroup() equation.
-        NT_name = self._NeuronThreshold_prefix + str(current_idx) # Generated vriable name for the NeuonGroup() threshold.
-        NRes_name = self._NeuronReset_prefix + str(current_idx) # Generated vriable name for the NeuonGroup() reset value.
-        Eq = """'''emit_spike : 1
-            x : meter
-            y : meter'''"""
-        exec "%s=%s" % (NN_name, number_of_neurons)
-        exec "%s=%s" % (NE_name, Eq)
-        exec "%s=%s" % (NT_name, "'emit_spike>=1'")
-        exec "%s=%s" % (NRes_name, "'emit_spike=0'")
-        exec "%s= NeuronGroup(%s, model=%s, threshold=%s, reset=%s)" \
-             % (NG_name, NN_name, NE_name, NT_name, NRes_name)
-        # setting the position of the neurons based on the positions in the .mat input file:
-        exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % (
-            NG_name, current_idx, NG_name, current_idx)
-        # self.save_data.syntax_bank.append(
-        #     "%s.save_data.data['positions_all']['%s'] = %s.customized_neurons_list[%d]['positions']" % (
-        #         self.name, NG_name, self.name, current_idx))
-        self.save_data.data['positions_all']['z_coord'][NG_name] = self.customized_neurons_list[current_idx][
-            'z_positions']
-        self.save_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx][
-            'w_positions']
-        SGsyn_name = 'SGEN_Syn' # variable name for the Synapses() objecct that connects SpikeGeneratorGroup() and relay neurons.
-        exec "%s = Synapses(GEN, %s, pre='emit_spike+=1', connect='i==j')" % (SGsyn_name, NG_name) # connecting the SpikeGeneratorGroup() and relay group.
+        _input_params[self.current_values_list[self.current_parameters_list.index('type')]][2](self)
 
-        exec "globals().update({'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s})" % \
-             (NN_name, NN_name, NE_name, NE_name, NT_name, NT_name, NRes_name, NRes_name, NG_name, NG_name, SGsyn_name,
-              SGsyn_name) # updating the Globals()
 
-        self.monitors(mons.split(' '), NG_name, self.customized_neurons_list[-1]['equation']) # taking care of the monitors
 
     def gather_result(self):
         '''
@@ -968,7 +1051,7 @@ class cortical_system(object):
 
 
 if __name__ == '__main__' :
-    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/generated_config_file.csv' , os.getcwd())
+    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/generated_connections1.csv' , os.getcwd())
     #
     #
     run(500*ms,report = 'text')
