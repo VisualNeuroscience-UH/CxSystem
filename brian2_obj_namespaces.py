@@ -112,6 +112,8 @@ class synapse_namespaces(object):
         'sp_L1i_SS': 0.071 * conn_prob_gain,
         'sp_L1i_PC': 0.071 * conn_prob_gain,
         'sp_L1i_L1i':0.05 * conn_prob_gain,
+        'sp_L1i_BC':0.015 * conn_prob_gain,
+        'sp_L1i_MC':0.03 * conn_prob_gain,
         'sp_UMi_SS': 0.071 * conn_prob_gain,
         'sp_UMi_PC': 0.071 * conn_prob_gain,
         'sp_UMi_L1i': 0.05 * conn_prob_gain,
