@@ -56,6 +56,7 @@ class synapse_namespaces(object):
         'cw_PC_MC':_weights['we_e_LTS']*gain_parameter_E,
         'cw_PC_L1i':_weights['we_e_FS']*gain_parameter_E,
         'cw_PC_UMi': _weights['we_e_FS'] * gain_parameter_E,
+        'cw_BC_L1i': _weights['we_i'] * gain_parameter_I, #todo check this value
         'cw_BC_SS':_weights['we_i']*gain_parameter_I,
         'cw_BC_PC':_weights['we_i']*gain_parameter_I,
         'cw_BC_BC':_weights['we_i']*gain_parameter_I,
@@ -67,6 +68,8 @@ class synapse_namespaces(object):
         'cw_MC_L1i':_weights['we_i']*gain_parameter_I,
         'cw_MC_UMi': _weights['we_i'] * gain_parameter_I,
         'cw_L1i_SS':_weights['we_i']*gain_parameter_I,
+        'cw_L1i_BC': _weights['we_i'] * gain_parameter_I, #todo: check this value
+        'cw_L1i_MC': _weights['we_i'] * gain_parameter_I, #todo: check this value
         'cw_L1i_PC':_weights['we_i']*gain_parameter_I,
         'cw_L1i_L1i':_weights['we_i']*gain_parameter_I,
         'cw_UMi_SS': _weights['we_i'] * gain_parameter_I,
@@ -101,7 +104,8 @@ class synapse_namespaces(object):
         'sp_PC_UMi': 0.053 * conn_prob_gain,
         'sp_BC_SS':0.071 * conn_prob_gain,
         'sp_BC_PC': 0.05 * conn_prob_gain,
-        'sp_BC_BC':0.071 * conn_prob_gain,
+        'sp_BC_L1i':0.005 * conn_prob_gain, #todo: check this value
+        'sp_BC_BC': 0.071 * conn_prob_gain,
         'sp_BC_MC':0.071 * conn_prob_gain,
         'sp_MC_SS':0.081 * conn_prob_gain,
         'sp_MC_PC':0.081 * conn_prob_gain,
@@ -214,7 +218,7 @@ class synapse_namespaces(object):
     _M_V1 = 2.3
 
     dist = {
-        'ilam_in_SS': 0.1/mm,
+        'ilam_in_SS': 0.01/mm, #TODO : check this value, it was 0.01, but it was not resulting any synaptic connection
         'ilam_in_PC': 0.01/mm, #TODO : These parameters are still to be checked, 0.01 cause high probability eventhough the shape is similar to gaussian. It would be better if we change them to some value near 1.
         'ilam_in_BC': 0.01/mm,
         'ilam_in_L1i':0.01/mm,
@@ -250,6 +254,8 @@ class synapse_namespaces(object):
 
         'ilam_L1i_SS':2.3 / _M_V1 / mm,
         'ilam_L1i_PC': 2.3 / _M_V1 / mm,
+        'ilam_L1i_BC': 2.3 / _M_V1 / mm,#todo: check this value
+        'ilam_L1i_MC': 2.3 / _M_V1 / mm,#todo: check this value
         'ilam_L1i_L1i': 2.3 / _M_V1 / mm,
         'ilam_L1i_UMi': 2.3 / _M_V1 / mm,
 

@@ -125,26 +125,42 @@ with open('./generated_config_file.csv', 'w') as config_file:
                 if 3 in post_group_layers_list :
                     del post_group_layers_list[post_group_layers_list.index(3)]
             if receptor == 'gi':
-                if pre_layer_idx == '1':
+
+                if pre_layer_idx == '1' and '_I' in pre_group_item: # for layer 1 inhibitory
                     # assert 1 in post_group_layers_list, 'presynaptic group is L1i but and is targetting a group which deos not have any compartment in layer1, is this normal?'
                     if not 1 in post_group_layers_list:
                         line+= 'skip this line since there is no layer 1 compartment in the group'
-                    line += '[C]%d,'%len(post_group_layers_list)
+                    line += '[C]%d,'%(len(post_group_layers_list)-1)
+                elif '_MC' in pre_group_item:
+                    farthest_comp = max(post_group_layers_list[1:], key=lambda x:abs(x-int(pre_layer_idx))) # farthest distal dendrite (soma layer not acceptable hence the [1:])
+                    line += '[C]%d,' %post_group_layers_list.index(farthest_comp)
+                elif '_BC' in pre_group_item:
+                    line += '[C]0s,'
                 else:
-                    line += '[C]%d,' % len(post_group_layers_list)
+                    raise ValueError('receptor is gi but the cell group in not defined')
             elif receptor == 'ge':
                 if pre_layer_idx == post_layer_start_idx :
                     line+='[C]0ab,'
                 else:
                     closest_comp = min(post_group_layers_list, key=lambda x:abs(x-int(pre_layer_idx)))
-                    line+='[C]%d,' % closest_comp
+                    line+='[C]%d' % post_group_layers_list.index(closest_comp)
+                    if post_group_layers_list.index(closest_comp) == 0 :
+                        line += 'ab'
+                    line+=','
             else:
                 raise ValueError('receptor type should be either ge or gi, but it is %s'%receptor)
         else:
             line+= '%d'%(post_group_idx+1) + ','
         line+= default_syn_type+ ','
-        line+= '%f'%henry_data.ix[syn_index]['connection_probability']+ ','
-        line += '%d' % henry_data.ix[syn_index]['mean_number_of_synapses_per_connection'] + ','
+        if '[C]0' in line:
+            targ_comp_num = len(line[line.index('[C]0')+4:len(line[0:line.index('[C]0')])+line[line.index('[C]0'):].index(',')])
+            line += '%s' % str(list(np.repeat(henry_data.ix[syn_index]['connection_probability']/targ_comp_num,targ_comp_num))).replace(', ','+').replace('[','').replace(']','') + ','
+            line += '%s' % str(list(
+                np.repeat(int(henry_data.ix[syn_index]['mean_number_of_synapses_per_connection']), targ_comp_num))).replace(
+                ', ', '+').replace('[', '').replace(']', '') + ','
+        else:
+            line+= '%f'%henry_data.ix[syn_index]['connection_probability']+ ','
+            line += '%d' % henry_data.ix[syn_index]['mean_number_of_synapses_per_connection'] + ','
         line += default_syn_monitor + ','
         line += default_percentage + '\n'
         if not 'skip this line since there is no layer 1 compartment in the group' in line:

@@ -85,7 +85,7 @@ class cortical_system(object):
         self.sys_mode = ''
         self.config_path = config_path
         self.optimized_probabilities = []
-
+        self.total_number_of_synapses = 0
 
         with open(self.config_path, 'r') as f:
             for self.line in f:
@@ -575,7 +575,7 @@ class cortical_system(object):
                     self.current_values_list.append('_a' + str(_post_com_idx))
             if type(self.current_values_list[0]) != list :
                 self.current_values_list = [self.current_values_list]
-            if 'percentage' in self.current_parameters_list:
+            if 'percentage' in self.current_parameters_list and _current_percs!='N/A':
                 assert len(self.current_values_list) == len(_current_percs),"Not enough percentage values are defined for a PC neuron. In a multi-compartmental PC neuron, when multiple compartments in soma are being targeted, the percentage of each of those connection should be declared separately. Check configuration file tutorial."
             # for value_set in self.current_values_list :
             #     if value_set[self.current_parameters_list.index('percentage')] != 'N/A':
@@ -661,8 +661,8 @@ class cortical_system(object):
 
                 elif self.sys_mode== 'local':
                     syn_con_str += "'%f'" %(float(p_arg))
-                    if (p_arg != 'N/A' and n_arg!='N/A') and  percentage == 'N/A':
-                        print "Info: Target percentage is not defined in local mode and some synapses are working based on p and n (see brian2 syanpses())."
+                    # if (p_arg != 'N/A' and n_arg!='N/A') and  percentage == 'N/A':
+                    #     print "Info: Target percentage is not defined in local mode and some synapses are working based on p and n (see brian2 syanpses())."
                 elif self.sys_mode == 'expanded':
                     syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
                                    % (float(p_arg), self.customized_synapses_list[-1]['ilam'])
@@ -705,7 +705,9 @@ class cortical_system(object):
 
             num_tmp = 0
             exec "num_tmp = len(%s.i)"%S_name
-            print "number of synapses: %d" %num_tmp
+            self.total_number_of_synapses += num_tmp
+            print "Number of synapses from %s to %s: %d \t Total number of synapses: %d" %(self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']],num_tmp, self.total_number_of_synapses)
+
         try:
             if 'percentage' in self.current_parameters_list:
                 tmp_idx = self.current_parameters_list.index('p')
@@ -1051,7 +1053,7 @@ class cortical_system(object):
 
 
 if __name__ == '__main__' :
-    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/generated_connections1.csv' , os.getcwd())
+    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/generated_config_file.csv' , os.getcwd())
     #
     #
     run(500*ms,report = 'text')
