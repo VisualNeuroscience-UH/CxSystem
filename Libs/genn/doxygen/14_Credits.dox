@@ -1,0 +1,24 @@
+
+//----------------------------------------------------------------------------
+/*! \page Credits Credits
+ 
+GeNN was created by Thomas Nowotny. 
+
+Addition of Izhikevich model, debugging modes and sparse connectivity by Esin Yavuz.
+
+Block size optimisations and delayed synapses by James Turner.
+
+Automatic brackets and dense to sparse network conversion by Alan Diamond.
+
+User-defined synaptic and postsynaptic methods by Alex Cope and Esin Yavuz.
+
+Example projects were provided by Alan Diamond, James Turner, Esin Yavuz and Thomas Nowotny.
+
+<br />
+
+
+-----
+\link ListOfVariables Previous\endlink | \link Credits Top\endlink 
+
+*/
+//----------------------------------------------------------------------------

@@ -1,0 +1,19 @@
+#--------------------------------------------------------------------------
+#  Author: Thomas Nowotny
+#  
+#  Institute: Center for Computational Neuroscience and Robotics
+#             University of Sussex
+#             Falmer, Brighton BN1 9QJ, UK
+#  
+#  email to:  T.Nowotny@sussex.ac.uk
+#  
+#  initial version: 2010-02-07
+#  
+#--------------------------------------------------------------------------
+
+CFLAGS		=/nologo /EHsc /I$(GENN_PATH)\lib\include\numlib
+
+all: gen_input_structured.exe gen_pnlhi_syns.exe gen_kcdn_syns.exe gen_kcdn_syns_fixto10K.exe gen_pnkc_syns.exe gen_pnkc_syns_indivID.exe gen_syns_sparse.exe gen_syns_sparse_izhModel.exe
+
+clean:
+	-del *.exe *.obj 2>nul
