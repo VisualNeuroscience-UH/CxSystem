@@ -1,5 +1,3 @@
-import brian2_obj_defs
-
 __author__ = 'V_AD'
 from brian_genn_version  import *
 import brian2genn
@@ -35,7 +33,7 @@ class cortical_system(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self, config_path, save_path, use_genn=0):
+    def __init__(self, config_path, save_path, result_filename = 'CX_data.mat', use_genn=0):
         '''
         Initialize the cortical system by parsing the configuration file.
 
@@ -55,6 +53,11 @@ class cortical_system(object):
         * save_data: The save_data() object for saving the final data.
 
         '''
+        self.save_path = save_path
+        if os.getcwd() in self.save_path :
+            self.save_path = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+            self.save_path = os.path.join(self.save_path,'CX_Output')
+        self.result_filename  = result_filename
         self.use_genn = use_genn
         self._options = {
             'G': self.neuron_group,
@@ -77,7 +80,7 @@ class cortical_system(object):
         self.monitor_name_bank = {}  # The dictionary containing the name of the monitors that are defined for any NeuronGroup() or Synapses().
         self.default_monitors = []  # In case --> and <-- symbols are used in the configuration file, this default monitor will be applied on all the target lines in between those marks.
         self.monitor_idx = 0
-        self.save_data = save_data(save_path)  # The save_data() object for saving the final data.
+        self.save_data = save_data(self.save_path,self.result_filename )  # The save_data() object for saving the final data.
         self.save_data.creat_key('positions_all')
         self.save_data.data['positions_all']['w_coord'] = {}
         self.save_data.data['positions_all']['z_coord'] = {}
@@ -680,7 +683,8 @@ class cortical_system(object):
             except:
                 syn_con_str += ')'
             exec syn_con_str
-            exec "_number_of_synapse = len(%s.i)" % S_name #at this stage, _number_of_synapse contains the inital number of synapses.
+            if self.use_genn == 0 :
+                exec "_number_of_synapse = len(%s.i)" % S_name #at this stage, _number_of_synapse contains the inital number of synapses.
 
             exec "%s.wght=%s['wght0']" % (S_name, SNS_name)  # set the weights
 
@@ -703,10 +707,11 @@ class cortical_system(object):
             self.monitors(monitors.split(' '), S_name,
                           self.customized_synapses_list[-1]['equation'])  # taking care of the monitors
 
-            num_tmp = 0
-            exec "num_tmp = len(%s.i)"%S_name
-            self.total_number_of_synapses += num_tmp
-            print "Number of synapses from %s to %s: %d \t Total number of synapses: %d" %(self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']],num_tmp, self.total_number_of_synapses)
+            if self.use_genn == 0 :
+                num_tmp = 0
+                exec "num_tmp = len(%s.i)"%S_name
+                self.total_number_of_synapses += num_tmp
+                print "Number of synapses from %s to %s: %d \t Total number of synapses: %d" %(self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']],num_tmp, self.total_number_of_synapses)
 
         try:
             if 'percentage' in self.current_parameters_list:
@@ -1053,17 +1058,14 @@ class cortical_system(object):
 
 
 if __name__ == '__main__' :
-    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/generated_config_file.csv' , os.getcwd())
-    #
-    #
+    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/generated_connections1.csv' , os.getcwd(), result_filename ='Custom_Name.mat',use_genn=1 )
     run(500*ms,report = 'text')
-    # if CM.use_genn == 1 :
-    #     device.build(directory='tester',
-    #                 compile=True,
-    #                  run=True,
-    #                  use_GPU=True)
-    #
-    #
+    if CM.use_genn == 1 :
+        device.build(directory=os.path.join(CM.save_path,'GeNN_Output'),
+                    compile=True,
+                     run=True,
+                     use_GPU=True)
+
     CM.gather_result()
     # CM.visualise_connectivity(S0_Fixed)
     for group in CM.monitor_name_bank:

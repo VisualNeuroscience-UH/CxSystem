@@ -3,12 +3,13 @@ import scipy.io
 from brian_genn_version  import *
 from numpy import *
 import os
+import re
 
 class save_data(object):
     '''
     As the name implies, this module is used for gathering the data and saving the result.
     '''
-    def __init__(self,save_path):
+    def __init__(self,save_path,result_filename ):
         '''
         The initialization method for save_data object.
 
@@ -19,6 +20,7 @@ class save_data(object):
         * data: the main variable to be saved. It contains all the data about the positions of the NeuronGroup()s as well as the monitor results.
         * syntax_bank: Since the monitors are explicitly defined in the Globals(), extracting the data from them requires addressing their name explicitely. To automatize this process, the syntaxes for extracting the data from the target monitors are generated and saved in this variable, so that they can be run at the end of the simulation.
         '''
+        self.result_filename = result_filename
         self.save_path = save_path
         self.data = {}
         self.syntax_bank = []
@@ -41,7 +43,10 @@ class save_data(object):
         '''
         The metohd for saving the data varibale in .mat file.
         '''
-        data_save_path = os.path.join(self.save_path, 'data.mat')
+
+        if not os.path.exists(self.save_path):
+            os.makedirs(self.save_path)
+        data_save_path = os.path.join(self.save_path, self.result_filename )
         scipy.io.savemat(data_save_path, self.data )
         # scipy.io.savemat(pars_save_path, self.pars) # this is in case you want to keep track of parameter changes
 
