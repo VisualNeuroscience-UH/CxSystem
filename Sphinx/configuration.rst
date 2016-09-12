@@ -1,4 +1,4 @@
-﻿.. _config_file:
+﻿﻿.. _config_file:
 
 Configuration File Tutorial
 ===========================
