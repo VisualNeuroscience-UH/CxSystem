@@ -55,7 +55,8 @@ class cortical_system(object):
 
         '''
         self.main_module = sys.modules['__main__']
-        if __name__ != '__main__': self.CX_module = sys.modules['cortical_system']
+        try : self.CX_module = sys.modules['cortical_system']
+        except: pass
         self.save_path = save_path
         if os.getcwd() in self.save_path :
             print "Warning: the output of the system is saved in ../CX_Output"
@@ -297,7 +298,9 @@ class cortical_system(object):
         # setattr(self.main_module, NRef_name, eval(NRef_name))
         # setattr(self.main_module, NNS_name, eval(NNS_name))
         setattr(self.main_module, NG_name, eval(NG_name))
-        if __name__ != '__main__': setattr(self.CX_module, NG_name, eval(NG_name))
+        try: setattr(self.CX_module, NG_name, eval(NG_name))
+        except: pass
+
 
         # passing remainder of the arguments to monitors() method to take care of the arguments.
         self.monitors(monitors.split(' '), NG_name, self.customized_neurons_list[-1]['equation'])
@@ -358,8 +361,8 @@ class cortical_system(object):
                 exec "%s=%s(%s)" % (Mon_name, monitor_options['[Sp]'][1], object_name)
 
                 setattr(self.main_module, Mon_name, eval(Mon_name))
-                if __name__ != '__main__': setattr(self.CX_module, Mon_name, eval(Mon_name))
-
+                try: setattr(self.CX_module, Mon_name, eval(Mon_name))
+                except: pass
 
                 # update monitor index:
                 self.monitor_idx += 1
@@ -417,8 +420,8 @@ class cortical_system(object):
                     exec Mon_str
 
                     setattr(self.main_module, Mon_name, eval(Mon_name))
-                    if __name__ != '__main__': setattr(self.CX_module, Mon_name, eval(Mon_name))
-
+                    try: setattr(self.CX_module, Mon_name, eval(Mon_name))
+                    except: pass
 
                     self.monitor_idx += 1
 
@@ -657,8 +660,8 @@ class cortical_system(object):
                     self._Synapses_Optimizer(syn,_number_of_synapse, S_name, SE_name, SPre_name, SPost_name,SNS_name, p_arg,float(percentage))
             else:
                 setattr(self.main_module, S_name, eval(S_name))
-                if __name__ != '__main__': setattr(self.CX_module, S_name, eval(S_name))
-
+                try: setattr(self.CX_module, S_name, eval(S_name))
+                except: pass
 
             exec "%s._name = 'synapses_%d'" % (S_name, current_idx + 1)
             self.monitors(monitors.split(' '), S_name,
@@ -691,7 +694,8 @@ class cortical_system(object):
         while True:
             if abs((target_number - _number_of_synapse) / target_number) < 0.05:
                 setattr(self.main_module, S_name, eval(S_name))
-                if __name__ != '__main__': setattr(self.CX_module, S_name, eval(S_name))
+                try: setattr(self.CX_module, S_name, eval(S_name))
+                except: pass
 
                 break
             if _optimization_direction == 'decrease':
@@ -807,9 +811,9 @@ class cortical_system(object):
             # DO NOT DELETE NEXT 2 LINES
             # setattr(self.main_module, Spikes_Name, eval(Spikes_Name)) in globals(), locals()
             # setattr(self.main_module, Time_Name, eval(Time_Name)) in globals(), locals()
-            setattr(self.main_module, SG_Name, eval(SG_Name)) in globals(), locals()
-            if __name__ != '__main__': setattr(self.CX_module, SG_Name, eval(SG_Name)) in globals(), locals()
-
+            setattr(self.main_module, SG_Name, eval(SG_Name))
+            try: setattr(self.CX_module, SG_Name, eval(SG_Name))
+            except: pass
 
             self.customized_neurons_list[current_idx]['z_positions'] = squeeze(inp.get_input_positions(path))
             self.customized_neurons_list[current_idx]['w_positions'] = 17 * log(relay_group['z_positions'] + 1)
@@ -844,10 +848,13 @@ class cortical_system(object):
             # setattr(self.main_module, NE_name, eval(NE_name))  in globals(), locals()
             # setattr(self.main_module, NT_name, eval(NT_name))  in globals(), locals()
             # setattr(self.main_module, NRes_name, eval(NRes_name)) in globals(), locals()
-            setattr(self.main_module, NG_name, eval(NG_name))  in globals(), locals()
-            setattr(self.main_module, SGsyn_name, eval(SGsyn_name))  in globals(), locals()
-            if __name__ != '__main__': setattr(self.CX_module, NG_name, eval(NG_name))  in globals(), locals()
-            if __name__ != '__main__': setattr(self.CX_module, SGsyn_name, eval(SGsyn_name))  in globals(), locals()
+            setattr(self.main_module, NG_name, eval(NG_name))
+            setattr(self.main_module, SGsyn_name, eval(SGsyn_name))
+            try:
+                setattr(self.CX_module, NG_name, eval(NG_name))
+                setattr(self.CX_module, SGsyn_name, eval(SGsyn_name))
+            except:
+                pass
 
             self.monitors(mons.split(' '), NG_name, self.customized_neurons_list[-1]['equation'])  # taking care of the monitors
 
@@ -881,9 +888,9 @@ class cortical_system(object):
             # DO NOT DELETE NEXT 2 LINES
             # setattr(self.main_module, Spikes_Name, eval(Spikes_Name)) in globals(), locals()
             # setattr(self.main_module, Time_Name, eval(Time_Name)) in globals(), locals()
-            setattr(self.main_module, SG_Name, eval(SG_Name)) in globals(), locals()
-            if __name__ != '__main__': (self.CX_module, SG_Name, eval(SG_Name)) in globals(), locals()
-
+            setattr(self.main_module, SG_Name, eval(SG_Name))
+            try: setattr(self.CX_module, SG_Name, eval(SG_Name))
+            except: pass
 
             vpm_customized_neuron = customized_neuron(current_idx, int(number_of_neurons),'L1i','0',net_center)
             self.customized_neurons_list[current_idx]['z_positions'] = vpm_customized_neuron.output_neuron['z_positions']
@@ -920,10 +927,13 @@ class cortical_system(object):
             # setattr(self.main_module, NE_name, eval(NE_name)) in globals(), locals()
             # setattr(self.main_module, NT_name, eval(NT_name)) in globals(), locals()
             # setattr(self.main_module, NRes_name, eval(NRes_name)) in globals(), locals()
-            setattr(self.main_module, NG_name, eval(NG_name)) in globals(), locals()
-            setattr(self.main_module, SGsyn_name, eval(SGsyn_name)) in globals(), locals()
-            if __name__ != '__main__': setattr(self.CX_module, NG_name, eval(NG_name)) in globals(), locals()
-            if __name__ != '__main__': setattr(self.CX_module, SGsyn_name, eval(SGsyn_name)) in globals(), locals()
+            setattr(self.main_module, NG_name, eval(NG_name))
+            setattr(self.main_module, SGsyn_name, eval(SGsyn_name))
+            try:
+                setattr(self.CX_module, NG_name, eval(NG_name))
+                setattr(self.CX_module, SGsyn_name, eval(SGsyn_name))
+            except:
+                pass
 
             self.monitors(mons.split(' '), NG_name,
                           self.customized_neurons_list[-1]['equation'])  # taking care of the monitors
