@@ -58,6 +58,7 @@ class cortical_system(object):
         if __name__ != '__main__': self.CX_module = sys.modules['cortical_system']
         self.save_path = save_path
         if os.getcwd() in self.save_path :
+            print "Warning: the output of the system is saved in ../CX_Output"
             self.save_path = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
             self.save_path = os.path.join(self.save_path,'CX_Output')
         self.result_filename  = result_filename
