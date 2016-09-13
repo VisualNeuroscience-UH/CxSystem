@@ -4,11 +4,12 @@ import brian2genn
 import os
 import sys
 from brian2_obj_defs import *
-from Plotter import *
+from matplotlib.pyplot import  *
 from save_data import *
 from stimuli import *
 import ast
 import copy # for copying Equation object
+import __builtin__
 
 class cortical_system(object):
     '''
@@ -33,7 +34,7 @@ class cortical_system(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self, config_path, save_path, result_filename = 'CX_data.mat', use_genn=0):
+    def __init__(self, config_path, save_path, result_filename = 'CX_data.mat', use_genn=0 , runtime=0):
         '''
         Initialize the cortical system by parsing the configuration file.
 
@@ -53,6 +54,8 @@ class cortical_system(object):
         * save_data: The save_data() object for saving the final data.
 
         '''
+        self.main_module = sys.modules['__main__']
+        if __name__ != '__main__': self.CX_module = sys.modules['cortical_system']
         self.save_path = save_path
         if os.getcwd() in self.save_path :
             self.save_path = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
@@ -154,13 +157,17 @@ class cortical_system(object):
         if self.sys_mode != '' and self.do_optimize:
             assert len(self.synapses_name_list) == len(self.synapses_perc_list), "When the percentage for a synapse is defined, it should be defined for all others as well. Error: One or more synaptses percentages are missing"
             assert sum(map(float,self.synapses_perc_list)) == 1 , "Error: the percentage of the synapses does not sum up to 1"
-            # if self.optimization_notfound ==1 :
-            #     with open(self.config_path, "a") as f:
-            #         f.write("\noptimized_probabilities: %s"%(','.join(str(x) for x in self.optimized_probabilities)))
-            #     print "optimized percentages saved in the configuration file, you can now use them and change the mode to expanded"
         if self.do_optimize == 1:
             sys.exit("Execution Compeleted. the synapses are optimized based on their percentages and the new connection file is generated. Use the name of the new configuration file to re-run the program.")
         print "Cortical Module initialization Done."
+        if runtime != 0 :
+            run(runtime, report='text')
+            if self.use_genn == 1:
+                device.build(directory=os.path.join(self.save_path, 'GeNN_Output'),
+                             compile=True,
+                             run=True,
+                             use_GPU=True)
+            self.gather_result()
 
     def set_runtime_parameters(self):
         for idx,parameter in enumerate(self.current_parameters_list):
@@ -186,17 +193,6 @@ class cortical_system(object):
             self.line = self.line[:indices[tmp_idx] + 1] + self.line[indices[tmp_idx] + 1:].replace('1', str(0))
         if self.do_optimize :
             print "Info: Probabilities are going to be optimized based on their percentages and the result is save in a new file. do_optimize flag set to zero."
-        # if self.do_optimize == 1:
-        #     self.optimization_notfound = 1
-        #     with open(self.config_path, "rb") as f:
-        #         f.seek(-2, 2)  # Jump to the second last byte.
-        #         while f.read(1) != b"\n":  # Until EOL is found...
-        #             f.seek(-2, 1)  # ...jump back the read byte plus one more.
-        #         last_line = f.readline()
-        #     if "optimized_probabilities:" in last_line:
-        #         last_line = last_line.replace("optimized_probabilities:", "")
-        #         self.optimized_probabilities = last_line.split(',')
-        #         self.optimization_notfound = 0
 
 
     def neuron_group(self, *args):
@@ -226,8 +222,6 @@ class cortical_system(object):
                                                                    % str([_all_columns[ii] for ii in _obligatory_params])
         assert 'N/A' not in [self.current_values_list[ii] for ii in
                              _obligatory_params], 'Following obligatory values cannot be "N/A":\n%s'% str([_all_columns[ii] for ii in _obligatory_params])
-        # args = args[0]
-        # mon_args = []  # contains the monitor arguments extracted from the target line.
         idx = -1
         net_center = 0 + 0j
         number_of_neurons = 0
@@ -245,12 +239,6 @@ class cortical_system(object):
         if net_center == 'N/A':
             net_center = 0 + 0j  # center position of the neuron group in visual field coordinates, description can be found in configuration file tutorial.
         net_center = complex(net_center)
-        # if '[M]' in args:  # check if target line contains monitors
-        #     mon_args = args[args.index('[M]') + 1:]
-        #     args = args[0:args.index('[M]')]
-        # if '[CN]' in args:  # check if target line contains center position.
-        #     net_center = complex(args[args.index('[CN]') + 1])
-        #     args = args[0:args.index('[CN]')]
         current_idx = len(self.customized_neurons_list)
         if neuron_type == 'PC':  # extract the layer index of PC neurons separately (since it is in form of a list like [4,1]
             exec 'layer_idx = array(' + layer_idx.replace('->',',') + ')'
@@ -271,8 +259,6 @@ class cortical_system(object):
         NRes_name = self._NeuronReset_prefix + str(current_idx)  # Generated vriable name for the NeuonGroup() reset value.
         NRef_name = self._NeuronRef_prefix + str(current_idx)  # Generated vriable name for the NeuonGroup() refractory value.
         NNS_name = self._NeuronNS_prefix + str(current_idx)  # Generated vriable name for the NeuonGroup() namespace.
-        # NPos_name = self._NeuronPos_prefix + str(current_idx)
-        # self.monitor_name_bank['NeuroGroups'].append(NG_name)
 
         # next  6 line create the variable that are needed for current target line NeuronGroup().
         exec "%s=self.customized_neurons_list[%d]['number_of_neurons']" % (NN_name, current_idx)
@@ -300,10 +286,18 @@ class cortical_system(object):
         NG_init += "\telif ((_key.find('ge')>=0) or (_key.find('gi')>=0)):\n"
         NG_init += "\t\tsetattr(%s,_key,0)" % NG_name
         exec NG_init
-        # updating the Globals()
-        exec "globals().update({'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s})" % \
-            (NN_name, NN_name, NE_name, NE_name, NT_name, NT_name, NRes_name, NRes_name, NRef_name, NRef_name, NNS_name,
-             NNS_name, NG_name, NG_name)
+
+
+        # DO NOT DELETE NEXT 6 LINES
+        # setattr(self.main_module,NN_name,eval(NN_name))
+        # setattr(self.main_module, NE_name, eval(NE_name))
+        # setattr(self.main_module, NT_name, eval(NT_name))
+        # setattr(self.main_module, NRes_name, eval(NRes_name))
+        # setattr(self.main_module, NRef_name, eval(NRef_name))
+        # setattr(self.main_module, NNS_name, eval(NNS_name))
+        setattr(self.main_module, NG_name, eval(NG_name))
+        if __name__ != '__main__': setattr(self.CX_module, NG_name, eval(NG_name))
+
         # passing remainder of the arguments to monitors() method to take care of the arguments.
         self.monitors(monitors.split(' '), NG_name, self.customized_neurons_list[-1]['equation'])
 
@@ -361,8 +355,11 @@ class cortical_system(object):
                 self.monitor_name_bank[object_name].append(Mon_name)
                 # build the monitor object based on the generated name:
                 exec "%s=%s(%s)" % (Mon_name, monitor_options['[Sp]'][1], object_name)
-                # update the Globals():
-                exec "globals().update({'%s':%s})" % (Mon_name, Mon_name)
+
+                setattr(self.main_module, Mon_name, eval(Mon_name))
+                if __name__ != '__main__': setattr(self.CX_module, Mon_name, eval(Mon_name))
+
+
                 # update monitor index:
                 self.monitor_idx += 1
             else:  # Work on StateMonitors() :
@@ -376,8 +373,6 @@ class cortical_system(object):
                         sub_mon_arg = sub_mon_arg.split()
                         sub_mon_arg.append('True')
                         sub_mon_tags.append('[rec]')
-                        # Mon_name = monitor_options['[St]'][0] + str(self.monitor_idx) + '_' + object_name + '_' + \
-                        #        sub_mon_arg
                     else:
                         tag_open_indices = [idx for idx, ltr in enumerate(sub_mon_arg) if
                                             ltr == '[']  # find the start index of all tags
@@ -419,8 +414,11 @@ class cortical_system(object):
                     Mon_str += ')'
                     # create the Monitor() object
                     exec Mon_str
-                    # Update the Globals()
-                    exec "globals().update({'%s':%s})" % (Mon_name, Mon_name)
+
+                    setattr(self.main_module, Mon_name, eval(Mon_name))
+                    if __name__ != '__main__': setattr(self.CX_module, Mon_name, eval(Mon_name))
+
+
                     self.monitor_idx += 1
 
     def synapse(self, *args):
@@ -453,38 +451,6 @@ class cortical_system(object):
             '[C]': self.neuron_group,
         }
 
-        # try:
-        #     perc_arg = args[0][args[0].index('[%]') + 1:]
-        #     args = list(args)
-        #     args[0] = args[0][0:args[0].index('[%]')]
-        #     args = tuple(args)
-        # except:
-        #     assert self.sys_mode == '', "Error: You have defined the system mode, however the percentages of the synapses are not defined in the synaptic definitions."
-        #     pass
-        # try: # extracting the monitors
-        #     mon_args = args[0][args[0].index('[M]') + 1:]
-        #     args = list(args)
-        #     args[0] = args[0][0:args[0].index('[M]')]
-        #     args = tuple(args)
-        # except:
-        #     pass
-        # try:  # extracting the number of connection in a synapse (n)
-        #     n_arg = args[0][args[0].index('[n]') + 1:args[0].index('[n]') + 2][0]
-        #     args = list(args)
-        #     args[0] = args[0][0:args[0].index('[n]')]
-        #     args = tuple(args)
-        # except:
-        #     pass
-        # try:  # extracting the probability (p)
-        #     p_arg = args[0][args[0].index('[p]') + 1:args[0].index('[p]') + 2][0]
-        #     args = list(args)
-        #     args[0] = args[0][0:args[0].index('[p]')]
-        #     args = tuple(args)
-        # except:
-        #     try:
-        #         p_arg = self.optimized_probabilities[len(self.customized_synapses_list)]
-        #     except:
-        #         pass
 
         if len(self.current_values_list[self.current_parameters_list.index('post_syn_idx')]) > 1 and '[' in self.current_values_list[self.current_parameters_list.index('post_syn_idx')]:  # This if is for when the post-synaptic neuron is a \
             # multicompartmental PC neuon, the rules are described in the configuration file description.
@@ -502,7 +468,6 @@ class cortical_system(object):
                         _current_percs = 'N/A'
                     except:
                         assert self.do_optimize == 0, "Error: if ther percentages in the synapses are not defined, the do_optimize should be set to 0. "
-            # if len(_current_percs) > 1 :
             try:
                 _current_probs = map(float,self.current_values_list[self.current_parameters_list.index('p')].split('+'))
 
@@ -539,22 +504,7 @@ class cortical_system(object):
                 if str(_post_com_idx)[0] == '0':  # this is in case the target is from compartment 0 which has 3 compartments itself (Description in configuration file tutorial).
                     assert len(_post_com_idx) > 1, 'Error: a soma of a compartmental neuron is being targeted but the exact compartment in the soma is not defined. After 0, use "b" for basal dendrites, "s" for soma and "a" for apical dendrites.'
 
-                    # if len(_post_com_idx) == 1:
-                    #     triple_args = []
-                    #     tmp_args = list(args[0])
-                    #     tmp_args.append('_basal')
-                    #     triple_args.append(tmp_args)
-                    #     tmp_args = list(args[0])
-                    #     tmp_args.append('_soma')
-                    #     triple_args.append(tmp_args)
-                    #     tmp_args = list(args[0])
-                    #     tmp_args.append('_a0')
-                    #     triple_args.append(tmp_args)
-                    #     args = triple_args
-                    # else:
                     triple_args = []
-                    # if self.current_values_list[self.current_parameters_list.index('percentage')] != 'N/A':
-                    #     comp_percs = self.current_values_list[self.current_parameters_list.index('percentage')].split('+')
 
                     for idx, tmp_idx in enumerate(_post_com_idx[1:]):
                         tmp_args = list(self.current_values_list)
@@ -580,9 +530,6 @@ class cortical_system(object):
                 self.current_values_list = [self.current_values_list]
             if 'percentage' in self.current_parameters_list and _current_percs!='N/A':
                 assert len(self.current_values_list) == len(_current_percs),"Not enough percentage values are defined for a PC neuron. In a multi-compartmental PC neuron, when multiple compartments in soma are being targeted, the percentage of each of those connection should be declared separately. Check configuration file tutorial."
-            # for value_set in self.current_values_list :
-            #     if value_set[self.current_parameters_list.index('percentage')] != 'N/A':
-            #         assert len(self.current_values_list) == self.current_values_list[self.current_parameters_list.index(['percentage'])], "Not enough percentage values are defined for a PC neuron. In a multi-compartmental PC neuron, when multiple compartments in soma are being targeted, the percentage of each of those connection should be declared separately. Check configuration file tutorial."
         else:
             try:
                 _current_perc = float(self.current_values_list[self.current_parameters_list.index('percentage')])
@@ -688,12 +635,18 @@ class cortical_system(object):
 
             exec "%s.wght=%s['wght0']" % (S_name, SNS_name)  # set the weights
 
-            try:  # update the Globals()
-                exec "globals().update({'%s':%s,'%s':%s,'%s':%s,'%s':%s})" % \
-                     (SE_name, SE_name, SPre_name, SPre_name, SPost_name, SPost_name, SNS_name, SNS_name)
-            except:  # in case of fixed connection
-                exec "globals().update({'%s':%s,'%s':%s,'%s':%s})" % \
-                     (SE_name, SE_name, SPre_name, SPre_name, SNS_name, SNS_name )
+
+            # DO NOT DELETE NEXT TRY EXCEPT
+            # try:
+                # setattr(self.main_module, SE_name, eval(SE_name))
+                # setattr(self.main_module, SPre_name, eval(SPre_name))
+                # setattr(self.main_module, SPost_name, eval(SPost_name))
+                # setattr(self.main_module, SNS_name, eval(SNS_name))
+            # except:  # in case of fixed connection
+                # setattr(self.main_module, SE_name, eval(SE_name))
+                # setattr(self.main_module, SPre_name, eval(SPre_name))
+                # setattr(self.main_module, SNS_name, eval(SNS_name))
+
             if self.sys_mode == 'local' and self.do_optimize:
                 assert (p_arg == 'N/A' or p_arg == self.customized_synapses_list[-1]['sparseness']) and percentage!='N/A','Error: The system is in local mode and set to optimize the probabilities based on the percentages. In this case the probability should set to "N/A" which is not. Check the following line:\n%s'%self.line
                 exec "del %s" % S_name
@@ -702,7 +655,10 @@ class cortical_system(object):
                 except NameError:
                     self._Synapses_Optimizer(syn,_number_of_synapse, S_name, SE_name, SPre_name, SPost_name,SNS_name, p_arg,float(percentage))
             else:
-                exec "globals().update({'%s':%s})" % (S_name, S_name)
+                setattr(self.main_module, S_name, eval(S_name))
+                if __name__ != '__main__': setattr(self.CX_module, S_name, eval(S_name))
+
+
             exec "%s._name = 'synapses_%d'" % (S_name, current_idx + 1)
             self.monitors(monitors.split(' '), S_name,
                           self.customized_synapses_list[-1]['equation'])  # taking care of the monitors
@@ -726,19 +682,6 @@ class cortical_system(object):
         assert self.total_synapses != 0 , "System is in [local] mode and the synapses are to be optimized, but the total number of synapses are not defined."
         if n_arg == 'no_n_arg' or n_arg == 'N/A':
             del n_arg
-        # self.optimization_notfound = 1
-        # # check if the optimized probabtilities are already written to the file:
-        # with open(self.config_path, "rb") as f:
-        #     f.seek(-2, 2)  # Jump to the second last byte.
-        #     while f.read(1) != b"\n":  # Until EOL is found...
-        #         f.seek(-2, 1)  # ...jump back the read byte plus one more.
-        #     last_line = f.readline()
-        # if "optimized_probabilities:" in last_line:
-        #     last_line = last_line.replace("optimized_probabilities:", "")
-        #     self.optimized_probabilities = last_line.split(',')
-        #     self.optimization_notfound = 0
-
-        # if self.optimization_notfound:
         _optimization_direction = 'decrease' if _number_of_synapse > percentage * self.total_synapses else 'increase'
         constant = 0.01
         p_arg_list = []
@@ -746,7 +689,9 @@ class cortical_system(object):
         target_number = percentage * self.total_synapses
         while True:
             if abs((target_number - _number_of_synapse) / target_number) < 0.05:
-                exec "globals().update({'%s':%s})" % (S_name, S_name)
+                setattr(self.main_module, S_name, eval(S_name))
+                if __name__ != '__main__': setattr(self.CX_module, S_name, eval(S_name))
+
                 break
             if _optimization_direction == 'decrease':
                 if _number_of_synapse < target_number:
@@ -803,32 +748,6 @@ class cortical_system(object):
 
         self.optimized_probabilities.append(p_arg)
         print "\noptimization for %s finished"%S_name
-        # else:
-        #     print "Warning: the CX_system is running in local mode but the percentages are already determined and saved in the configuration file . If this is not intentional, either remove the last line of configuration file to re-optimize the percentages, or change the mode to 'expanded' mode."
-        #     try:
-        #         exec "del %s" % S_name
-        #     except:
-        #         pass
-        #     exec "eq_tmp = copy.deepcopy(%s)" % SE_name  # after passing a model equation to a Syanpses(), a new line will automatically be added to equation, e.i. lastupdate: seconds. This is to remove that specific line
-        #     try:
-        #         exec "%s = Synapses(%s,%s,model = eq_tmp, pre = %s, post = %s, namespace= %s)" \
-        #              % (S_name, self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
-        #                 self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SPre_name,
-        #                 SPost_name, SNS_name)
-        #     except:  # for when there is no "post =...", i.e. fixed connection
-        #         exec "%s = Synapses(%s,%s,model = eq_tmp, pre = %s, namespace= %s)" \
-        #              % (S_name, self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
-        #                 self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SPre_name,
-        #                 SNS_name)
-        #     syn_con_str = "%s.connect('i!=j', p=' " % S_name
-        #     # Connecting the synapses based on either [the defined probability and the distance] or [only the distance] plus considering the number of connections
-        #     syn_con_str += "%s" % (self.optimized_probabilities[current_idx])
-        #     try:
-        #         syn_con_str += "',n=%s)" % n_arg
-        #     except:
-        #         syn_con_str += "')"
-        #     exec syn_con_str
-        #     exec "globals().update({'%s':%s})" % (S_name, S_name)
 
     def relay(self, *args):
         '''
@@ -883,16 +802,14 @@ class cortical_system(object):
             exec spikes_str in globals(), locals() # runnig the string containing the syntax for Spike indices in the input neuron group.
             exec times_str in globals(), locals()# running the string containing the syntax for time indices in the input neuron group.
             exec SG_str in globals(), locals()# running the string containing the syntax for creating the SpikeGeneratorGroup() based on the input .mat file.
-            exec "globals().update({'%s':%s,'%s':%s,'%s':%s})" % \
-                 (Spikes_Name, Spikes_Name, Time_Name, Time_Name, SG_Name, SG_Name) in globals(), locals() # updating the Globals()
 
-            # current_idx = len(self.customized_neurons_list)
-            # relay_group = {}
-            # relay_group['idx'] = int(idx)
-            # relay_group['type'] = 'in'
-            # relay_group['z_positions'] = squeeze(inp.get_input_positions(path))
-            # relay_group['w_positions'] = 17 * log(relay_group['z_positions'] + 1)
-            # relay_group['equation'] = ''
+            # DO NOT DELETE NEXT 2 LINES
+            # setattr(self.main_module, Spikes_Name, eval(Spikes_Name)) in globals(), locals()
+            # setattr(self.main_module, Time_Name, eval(Time_Name)) in globals(), locals()
+            setattr(self.main_module, SG_Name, eval(SG_Name)) in globals(), locals()
+            if __name__ != '__main__': setattr(self.CX_module, SG_Name, eval(SG_Name)) in globals(), locals()
+
+
             self.customized_neurons_list[current_idx]['z_positions'] = squeeze(inp.get_input_positions(path))
             self.customized_neurons_list[current_idx]['w_positions'] = 17 * log(relay_group['z_positions'] + 1)
             NG_name = self._NeuronGroup_prefix + str(current_idx) + '_relay_video' #  Generated variable name for the NeuonGroup() object in brian2.
@@ -913,9 +830,6 @@ class cortical_system(object):
             # setting the position of the neurons based on the positions in the .mat input file:
             exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % (
                 NG_name, current_idx, NG_name, current_idx) in globals(), locals()
-            # self.save_data.syntax_bank.append(
-            #     "%s.save_data.data['positions_all']['%s'] = %s.customized_neurons_list[%d]['positions']" % (
-            #         self.name, NG_name, self.name, current_idx))
             self.save_data.data['positions_all']['z_coord'][NG_name] = self.customized_neurons_list[current_idx][
                 'z_positions']
             self.save_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx][
@@ -923,9 +837,17 @@ class cortical_system(object):
             SGsyn_name = 'SGEN_Syn' # variable name for the Synapses() objecct that connects SpikeGeneratorGroup() and relay neurons.
             exec "%s = Synapses(GEN, %s, pre='emit_spike+=1', connect='i==j')" % (SGsyn_name, NG_name) in globals(), locals()# connecting the SpikeGeneratorGroup() and relay group.
 
-            exec "globals().update({'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s})" % \
-                 (NN_name, NN_name, NE_name, NE_name, NT_name, NT_name, NRes_name, NRes_name, NG_name, NG_name, SGsyn_name,
-                  SGsyn_name) in globals(), locals()# updating the Globals()
+
+            # DO NOT DELETE NEXT 4 LINES
+            # setattr(self.main_module, NN_name, eval(NN_name))  in globals(), locals()
+            # setattr(self.main_module, NE_name, eval(NE_name))  in globals(), locals()
+            # setattr(self.main_module, NT_name, eval(NT_name))  in globals(), locals()
+            # setattr(self.main_module, NRes_name, eval(NRes_name)) in globals(), locals()
+            setattr(self.main_module, NG_name, eval(NG_name))  in globals(), locals()
+            setattr(self.main_module, SGsyn_name, eval(SGsyn_name))  in globals(), locals()
+            if __name__ != '__main__': setattr(self.CX_module, NG_name, eval(NG_name))  in globals(), locals()
+            if __name__ != '__main__': setattr(self.CX_module, SGsyn_name, eval(SGsyn_name))  in globals(), locals()
+
             self.monitors(mons.split(' '), NG_name, self.customized_neurons_list[-1]['equation'])  # taking care of the monitors
 
 
@@ -933,7 +855,7 @@ class cortical_system(object):
             spike_times = self.current_values_list[_all_columns.index('spike_times')].strip().replace(' ',',')
             spike_times_list = ast.literal_eval(spike_times[0:spike_times.index('*')])
             spike_times_unit = spike_times[spike_times.index('*')+1:]
-            exec 'spike_times_ = spike_times_list * %s' %spike_times_unit in globals(), locals()
+            exec 'spike_times_ = spike_times_list * %s' %(spike_times_unit) in globals(), locals()
             try:
                 net_center = self.current_values_list[_all_columns.index('net_center')].strip()
             except:
@@ -954,9 +876,14 @@ class cortical_system(object):
             exec spikes_str in globals(), locals()  # runnig the string containing the syntax for Spike indices in the input neuron group.
             exec times_str in globals(), locals()  # running the string containing the syntax for time indices in the input neuron group.
             exec SG_str in globals(), locals()  # running the string containing the syntax for creating the SpikeGeneratorGroup() based on the input .mat file.
-            exec "globals().update({'%s':%s,'%s':%s,'%s':%s})" % \
-                 (Spikes_Name, Spikes_Name, Time_Name, Time_Name, SG_Name,
-                  SG_Name) in globals(), locals()  # updating the Globals()
+
+            # DO NOT DELETE NEXT 2 LINES
+            # setattr(self.main_module, Spikes_Name, eval(Spikes_Name)) in globals(), locals()
+            # setattr(self.main_module, Time_Name, eval(Time_Name)) in globals(), locals()
+            setattr(self.main_module, SG_Name, eval(SG_Name)) in globals(), locals()
+            if __name__ != '__main__': (self.CX_module, SG_Name, eval(SG_Name)) in globals(), locals()
+
+
             vpm_customized_neuron = customized_neuron(current_idx, int(number_of_neurons),'L1i','0',net_center)
             self.customized_neurons_list[current_idx]['z_positions'] = vpm_customized_neuron.output_neuron['z_positions']
             self.customized_neurons_list[current_idx]['w_positions'] = vpm_customized_neuron.output_neuron['w_positions']
@@ -979,9 +906,6 @@ class cortical_system(object):
             # setting the position of the neurons based on the positions in the .mat input file:
             exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % (
                 NG_name, current_idx, NG_name, current_idx) in globals(), locals()
-            # self.save_data.syntax_bank.append(
-            #     "%s.save_data.data['positions_all']['%s'] = %s.customized_neurons_list[%d]['positions']" % (
-            #         self.name, NG_name, self.name, current_idx))
             self.save_data.data['positions_all']['z_coord'][NG_name] = self.customized_neurons_list[current_idx][
                 'z_positions']
             self.save_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx][
@@ -989,10 +913,17 @@ class cortical_system(object):
             SGsyn_name = 'SGEN_Syn'  # variable name for the Synapses() objecct that connects SpikeGeneratorGroup() and relay neurons.
             exec "%s = Synapses(GEN, %s, pre='emit_spike+=1', connect= 'i!=j')" % (
             SGsyn_name, NG_name) in globals(), locals()  # connecting the SpikeGeneratorGroup() and relay group.
-            exec "globals().update({'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s,'%s':%s})" % \
-                 (NN_name, NN_name, NE_name, NE_name, NT_name, NT_name, NRes_name, NRes_name, NG_name, NG_name,
-                  SGsyn_name,
-                  SGsyn_name) in globals(), locals()  # updating the Globals()
+
+            # DO NOT DELETE NEXT 4 LINES
+            # setattr(self.main_module, NN_name, eval(NN_name))  in globals(), locals()
+            # setattr(self.main_module, NE_name, eval(NE_name)) in globals(), locals()
+            # setattr(self.main_module, NT_name, eval(NT_name)) in globals(), locals()
+            # setattr(self.main_module, NRes_name, eval(NRes_name)) in globals(), locals()
+            setattr(self.main_module, NG_name, eval(NG_name)) in globals(), locals()
+            setattr(self.main_module, SGsyn_name, eval(SGsyn_name)) in globals(), locals()
+            if __name__ != '__main__': setattr(self.CX_module, NG_name, eval(NG_name)) in globals(), locals()
+            if __name__ != '__main__': setattr(self.CX_module, SGsyn_name, eval(SGsyn_name)) in globals(), locals()
+
             self.monitors(mons.split(' '), NG_name,
                           self.customized_neurons_list[-1]['equation'])  # taking care of the monitors
 
@@ -1056,9 +987,15 @@ class cortical_system(object):
         cleaner = ' ' * 100
         print '\r' + cleaner + '\r' + str,
 
+    def multi_y_plotter(self,ax, len, variable,item,title):
+
+        for i in range(len):
+            tmp_str = 'ax.plot(item.t/ms, item.%s[%d])'%(variable,i);exec tmp_str
+            tmp_str = "ax.set_title('%s')" % (title);exec tmp_str
+
 
 if __name__ == '__main__' :
-    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/generated_connections1.csv' , os.getcwd(), result_filename ='Custom_Name.mat',use_genn=1 )
+    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Test_config_file.csv' , os.getcwd(), result_filename ='Custom_Name.mat',use_genn=0 )
     run(500*ms,report = 'text')
     if CM.use_genn == 1 :
         device.build(directory=os.path.join(CM.save_path,'GeNN_Output'),
@@ -1084,8 +1021,8 @@ if __name__ == '__main__' :
                 variable = item[underscore+2:]
                 exec 'y_num=len(%s.%s)'%(item,variable)
                 try :
-                    exec "multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item)
+                    exec "CM.multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item)
                 except:
-                    exec "multi_y_plotter(axarr , y_num , '%s',%s , '%s')" % ( variable, item, item)
+                    exec "CM.multi_y_plotter(axarr , y_num , '%s',%s , '%s')" % ( variable, item, item)
     show()
 
