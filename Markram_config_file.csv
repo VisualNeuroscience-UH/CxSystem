@@ -3,7 +3,7 @@ params,local,0
 #row_type,idx,type,path,freq,monitors
 #IN,0, video,  ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]
 row_type,idx,type,number_of_neurons,spike_times,net_center,monitors
-IN,0, VPM,60,[0.05]*second, 5+0j ,[Sp]
+IN,0, VPM,60,[0.05 0.2]*second, 5+0j ,[Sp]
 row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors
 G,1,338,L1i,1,5+0j,N/A
 G,2,1198,BC,2,5+0j,N/A
@@ -13,7 +13,7 @@ G,5,329,BC,4,5+0j,N/A
 G,6,137,MC,4,5+0j,N/A
 G,7,2674,PC,[4->2],5+0j,[Sp][rec](0-2000-100)
 G,8,1098,PC,[4->1],5+0j,[Sp][rec](0-1000-100)
-G,9,406,SS,4,5+0j,N/A
+G,9,406,SS,4,5+0j,[Sp][rec](0-400-50)
 G,10,558,BC,5,5+0j,N/A
 G,11,491,MC,5,5+0j,N/A
 G,12,5050,PC,[5->1],5+0j,[Sp][rec](0-5000-100)
