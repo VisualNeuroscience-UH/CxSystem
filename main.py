@@ -3,7 +3,7 @@ import os
 from brian_genn_version  import *
 
 
-CM = CX.cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Test_config_file.csv' , os.getcwd(), result_filename ='Custom_Name.mat',use_genn=0,runtime=500*ms )
+CM = CX.cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv' , os.getcwd(), result_filename ='Custom_Name.mat',use_genn=0,runtime=1000*ms )
 
 
 
