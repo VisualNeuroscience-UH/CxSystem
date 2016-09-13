@@ -3,7 +3,7 @@ params,local,0
 #row_type,idx,type,path,freq,monitors
 #IN,0, video,  ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]
 row_type,idx,type,number_of_neurons,spike_times,net_center,monitors
-IN,0, VPM,60,[0.2 0.3]*second, 5+0j ,[Sp]
+IN,0, VPM,60,[0.05]*second, 5+0j ,[Sp]
 row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors
 G,1,338,L1i,1,5+0j,N/A
 G,2,1198,BC,2,5+0j,N/A
@@ -23,11 +23,11 @@ G,15,372,MC,6,5+0j,N/A
 G,16,1637,PC,[6->1],5+0j,N/A
 row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p,n,monitors,percentage
 #### input to PC4 and SS4:
-S,ge,0,7[C]0s,Fixed,N/A,7,[St]wght[rec](0-20),N/A
-S,ge,0,8[C]0s,Fixed,N/A,7,[St]wght[rec](0-20),N/A
+S,ge,0,7[C]0ba,Fixed,N/A,7,[St]wght[rec](0-20),N/A
+S,ge,0,8[C]0ba,Fixed,N/A,7,[St]wght[rec](0-20),N/A
 S,ge,0,9,Fixed,N/A,7,[St]wght[rec](0-20),N/A
 #### input to PC5:
-S,ge,0,12[C]0s,Fixed,N/A,12,[St]wght[rec](0-20),N/A
+S,ge,0,12[C]0ba,Fixed,N/A,12,[St]wght[rec](0-20),N/A
 #### other connections:
 S,gi,1,1,Fixed,0.014016,15,N/A,N/A
 S,gi,1,2,Fixed,0.005965,11,N/A,N/A

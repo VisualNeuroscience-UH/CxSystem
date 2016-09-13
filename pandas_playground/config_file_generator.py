@@ -5,7 +5,7 @@ import os
 
 vanni_data = pd.read_json(os.path.abspath('./pathways_anatomy_vannilized.json'),  orient='index')
 henry_data = pd.read_json(os.path.abspath('./pathways_anatomy_vanni.json'), orient='index')
-with open('./generated_config_file.csv', 'w') as config_file:
+with open('./Markram_config_file.csv', 'w') as config_file:
     config_file.write('row_type,sys_mode,do_optimize\n')
     config_file.write('params,local,0\n')
     config_file.write('row_type,idx,type,path,freq,monitors\n')
