@@ -218,11 +218,11 @@ class synapse_namespaces(object):
     _M_V1 = 2.3
 
     dist = {
-        'ilam_in_SS': 0.01/mm, #TODO : check this value, it was 0.01, but it was not resulting any synaptic connection
-        'ilam_in_PC': 0.01/mm, #TODO : These parameters are still to be checked, 0.01 cause high probability eventhough the shape is similar to gaussian. It would be better if we change them to some value near 1.
-        'ilam_in_BC': 0.01/mm,
-        'ilam_in_L1i':0.01/mm,
-        'ilam_in_UMi': 0.01 / mm,
+        'ilam_in_SS': 0.1/mm, #TODO : check this value, it was 0.01, but it was not resulting any synaptic connection
+        'ilam_in_PC': 0.1/mm, #TODO : These parameters are still to be checked, 0.01 cause high probability eventhough the shape is similar to gaussian. It would be better if we change them to some value near 1.
+        'ilam_in_BC': 0.1/mm,
+        'ilam_in_L1i':0.1/mm,
+        'ilam_in_UMi': 0.1 / mm,
 
         'ilam_SS_SS':2.3 / _M_V1 / mm,
         'ilam_SS_PC': 2.3 / _M_V1 / mm,
@@ -323,7 +323,7 @@ class synapse_namespaces(object):
 class neuron_namespaces (object):
     'This class embeds all parameter sets associated to all neuron types and will return it as a namespace in form of dictionary'
     def __init__(self, output_neuron):
-        neuron_namespaces.type_ref = array(['PC', 'SS', 'BC', 'MC','L1i'])
+        neuron_namespaces.type_ref = array(['PC', 'SS', 'BC', 'MC','L1i','VPM'])
         assert output_neuron['type'] in neuron_namespaces.type_ref, "Error: cell type '%s' is not defined." % output_neuron['category']
         self.output_namespace = {}
         getattr(self, '_'+ output_neuron['type'])(output_neuron)
@@ -382,8 +382,6 @@ class neuron_namespaces (object):
         self.output_namespace['tau_i'] = 8.3 * ms
         # return self.final_namespace
 
-
-
     def _BC(self,output_neuron):
         self.output_namespace['C'] = 100 * pF  # Somatosensory cortex,
         # Beierlein 2000 - Badel et al., 2008: 90 pF
@@ -401,8 +399,6 @@ class neuron_namespaces (object):
         self.output_namespace['tau_e'] = 1.7 * ms  # Markram Cell 2015
         self.output_namespace['tau_i'] = 8.3 * ms  # Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5)
 
-
-
     def _L1i(self,output_neuron):
         self.output_namespace['gL'] = 3.2 * nS  # 3.2 nsiemens mean of cell types in L1, Muralidhar 2014 Front Neuroanat, Table 3, mean of 1/"input resistance for steady state"
         self.output_namespace['taum'] =19.8 * ms  #  19.8 ms mean of cell types in L1, Muralidhar 2014 Front Neuroanat, Table 3, mean of "time constant for delta pulse"
@@ -418,6 +414,8 @@ class neuron_namespaces (object):
         self.output_namespace['tau_e'] = 10 * ms  # 10 ms LateSpiking Chu 2003 JNeurosci,
         self.output_namespace['tau_i'] = 336.2 * ms  # 336.2 ms, mean of cell types in L1, Muralidhar 2014 Front Neuroanat, text page 10. Combination of GABA-A and GABA-B contributions. Definition of decay time different but order of magnitude right
 
+    def _VPM(self,output_neuron):
+        pass
 
     def _UMi(self,output_neuron):
         self.output_namespace['C'] = 100 * pF  # Somatosensory cortex,
