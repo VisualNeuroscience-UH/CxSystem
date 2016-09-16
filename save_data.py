@@ -4,6 +4,8 @@ from brian_genn_version  import *
 from numpy import *
 import os
 import re
+from datetime import datetime
+
 
 class save_data(object):
     '''
@@ -47,6 +49,9 @@ class save_data(object):
         if not os.path.exists(self.save_path):
             os.makedirs(self.save_path)
         data_save_path = os.path.join(self.save_path, self.result_filename )
+        if os.path.isfile(data_save_path):
+            datetime_str = '_' + str(datetime.now()).replace('-','').replace(' ','_').replace(':','')[0:str(datetime.now()).replace('-','').replace(' ','_').replace(':','').index('.')]
+            data_save_path = os.path.join(self.save_path, self.result_filename[0:self.result_filename.index('.')] + datetime_str)
         scipy.io.savemat(data_save_path, self.data )
         # scipy.io.savemat(pars_save_path, self.pars) # this is in case you want to keep track of parameter changes
 
