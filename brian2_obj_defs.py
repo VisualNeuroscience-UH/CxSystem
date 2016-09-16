@@ -1,6 +1,10 @@
+from networkx.drawing import layout
+
 __author__ = 'V_AD'
 from brian_genn_version  import *
 from brian2_obj_namespaces import *
+import random as rnd
+import operator
 
 
 class customized_neuron(object):
@@ -10,7 +14,7 @@ class customized_neuron(object):
     New types of neurons should be implemented in this class.
     '''
 
-    def __init__(self,idx, number_of_neurons, cell_type, layers_idx, network_center=0 + 0j, resolution=0.1):
+    def __init__(self,idx, number_of_neurons, cell_type, layers_idx, general_grid_radius ,min_distance, network_center=0 + 0j):
         '''
         initialize the customized_neuron based on the arguments.
 
@@ -28,7 +32,8 @@ class customized_neuron(object):
 
         * output_neuron: the main dictionary containing all the data about current Customized_neuron_group including: number of neurons, threshold, reset, refractory, neuron type, soma position(layer), dendrites layer, total number of compartments, namespace, equation, positions (both in cortical and visual coordinates).
         '''
-        customized_neuron._celltypes = array(['PC', 'SS', 'BC', 'MC', 'L1i'])
+        customized_neuron._celltypes = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM'])
+        assert general_grid_radius > min_distance , 'The distance between cells should be less than the grid radius'
         assert cell_type in customized_neuron._celltypes, "Error: cell type '%s' is not defined" % cell_type  # check cell type
         assert len(layers_idx) < 3, "Error: length of layers_idx array is larger than 2"  # check layer index
         if len(layers_idx) == 2:
@@ -61,28 +66,28 @@ class customized_neuron(object):
         self.output_neuron['namespace'] = neuron_namespaces(self.output_neuron).output_namespace
         self.output_neuron['equation'] = ''
         getattr(self, self.output_neuron['type'])()
-        _M_V1 = 2.3
-        _dx = _M_V1 * resolution
-        _grid_size = sqrt(self.output_neuron['number_of_neurons']) * _dx
-        self.output_neuron['z_positions'] = self._get_positions(self.output_neuron['number_of_neurons'], _grid_size, 1,
-                                                                'array', network_center)
-        self.output_neuron['w_positions'] = 17 * log(self.output_neuron['z_positions'] + 1)
+        self.output_neuron['z_center'] = network_center
+        self.output_neuron['w_center'] = 17 * log(self.output_neuron['z_center']+ 1)
+        self.output_neuron['w_positions'] = self._get_w_positions(self.output_neuron['number_of_neurons'],
+                                                                'fixed_grid', general_grid_radius,min_distance)
+        # self.output_neuron['w_positions'] = 17 * log(self.output_neuron['z_positions'] + 1)
+        self.output_neuron['z_positions'] =  map(lambda x: e ** (x/17) - 1,self.output_neuron['w_positions'] )
         print "Customized " + str(cell_type) + " neuron in layer " + str(layers_idx) + " initialized"
 
-    def _get_positions(self, N, grid_size, scale, layout, networkcenter):
 
-        _pos_ndx = array(range(N))
-        _side = int(sqrt(N))
-        if layout == 'array':
-            _positions = (_pos_ndx / _side) + 1j * (_pos_ndx % _side)
-            _positions = _positions / float(_side) * grid_size + networkcenter  # SV change 030915
-            print "grid_size: " + str(grid_size)
 
-        else:
-            if layout == 'random':
-                _positions = grid_size * numpy.random.rand(N, 2)
+    def _get_w_positions(self, N, layout,  general_grid_radius,min_distance):
 
-        return (_positions - 0.5 * grid_size * (1 + 1j))
+        r = general_grid_radius / mm
+        possible_pos_idx = arange (-r,r,min_distance/mm)
+        if layout == 'fixed_grid':
+            _positions = [(rnd.choice(possible_pos_idx),rnd.choice(possible_pos_idx)) for a1,a2 in zip(range(N),range(N))]
+            for idx,item in enumerate(_positions):
+                while sqrt(_positions[idx][0]**2 + _positions[idx][1]**2)>r:
+                    _positions[idx] =  (rnd.choice(possible_pos_idx),rnd.choice(possible_pos_idx))
+            # _positions =[tuple(map(operator.add,_itm, (float(real(_centre)),float(imag(_centre))))) for _itm in _positions]
+            _positions = [complex(_itm[0],_itm[1]) + self.output_neuron['w_center'] for _itm in _positions]
+        return _positions
 
     def PC(self):
         '''
@@ -306,6 +311,12 @@ class customized_neuron(object):
 
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
+
+    def VPM(self):
+        '''
+        This method build up the equation for VPM neurons. No equation is needed.
+        '''
+        self.output_neuron['equation'] = ''
 
 
 #################

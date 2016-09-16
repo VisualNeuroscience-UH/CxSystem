@@ -72,6 +72,8 @@ class cortical_system(object):
             'sys_mode': self._set_sys_mode, # either "local" or "expanded"
             'params': self.set_runtime_parameters,
             'do_optimize' : self._set_do_optimize,
+            'grid_radius': self._set_grid_radius,
+            'min_distance': self._set_min_distance,
 
         }
         self.current_parameters_list = []
@@ -94,6 +96,8 @@ class cortical_system(object):
         self.config_path = config_path
         self.optimized_probabilities = []
         self.total_number_of_synapses = 0
+        self.general_grid_radius = 0
+        self.min_distance = 0
 
         with open(self.config_path, 'r') as f:
             for self.line in f:
@@ -196,6 +200,14 @@ class cortical_system(object):
         if self.do_optimize :
             print "Info: Probabilities are going to be optimized based on their percentages and the result is save in a new file. do_optimize flag set to zero."
 
+    def _set_grid_radius(self,*args):
+        assert '*' in args[0], 'Please specify the unit for the grid radius parameter, e.g. um , mm '
+        self.general_grid_radius = eval(args[0])
+
+    def _set_min_distance(self,*args):
+        assert '*' in args[0], 'Please specify the unit for the minimum distance parameter, e.g. um , mm '
+        self.min_distance= eval(args[0])
+
 
     def neuron_group(self, *args):
         '''
@@ -244,7 +256,7 @@ class cortical_system(object):
         current_idx = len(self.customized_neurons_list)
         if neuron_type == 'PC':  # extract the layer index of PC neurons separately (since it is in form of a list like [4,1]
             exec 'layer_idx = array(' + layer_idx.replace('->',',') + ')'
-        self.customized_neurons_list.append(customized_neuron(idx,number_of_neurons,neuron_type, layer_idx,
+        self.customized_neurons_list.append(customized_neuron(idx,number_of_neurons,neuron_type, layer_idx,self.general_grid_radius,self.min_distance,
                                                               network_center=net_center).output_neuron)  # creating a customized_neuron() object and passing the positional arguments to it. The main member of the class called output_neuron is then appended to customized_neurons_list.
       # in case of threshold/reset/refractory overwrite
         if threshold != 'N/A':
@@ -253,7 +265,7 @@ class cortical_system(object):
             self.customized_neurons_list[-1]['reset'] = reset
         if refractory != 'N/A':
             self.customized_neurons_list[-1]['refractory'] =refractory
-        NG_name = self._NeuronGroup_prefix + str(current_idx) + '_' + neuron_type  # Generated vriable name for the NeuonGroup().
+        NG_name = self._NeuronGroup_prefix + str(current_idx) + '_' + neuron_type + '_L' + str(layer_idx).replace(' ','toL').replace('[','').replace(']','')# Generated vriable name for the NeuonGroup().
         self.neurongroups_list.append(NG_name)
         NN_name = self._NeuronNumber_prefix + str(current_idx)  # Generated vriable name for corresponding Neuron Number.
         NE_name = self._NeuronEquation_prefix + str(current_idx)  # Generated vriable name for the NeuonGroup() equation.
@@ -610,7 +622,17 @@ class cortical_system(object):
             # Connecting the synapses based on either [the defined probability and the distance] or [only the distance] plus considering the number of connections
             try:
                 if '_relay_vpm' in self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]:
-                    syn_con_str += "'exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(2*0.025**2))/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
+                    # uncomment following lines if you want to visualize the positions of input group and its target groups
+                    # figure;
+                    # plt.scatter(eval(self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']]).x,
+                    #             eval(self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']]).y,
+                    #             color='r');
+                    # plt.scatter(eval(self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]).x,
+                    #             eval(self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]).y,
+                    #             color='b')
+                    # plt.axis('equal')
+
+                    syn_con_str += "'exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f/meter)/(2*0.025**2))/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
                                    % (self.customized_synapses_list[-1]['ilam'])
 
                 elif self.sys_mode== 'local':
@@ -768,6 +790,11 @@ class cortical_system(object):
         the user cannot use multiple "run()" methods in the whole scirpt. To address this issue, the genn device should be \
         set after using the first run(), hence the unusual placement of "set_device('genn')" command in current method.
 
+        Note2: The radius of the VPM input is determined based on the Markram et al. 2015: The radius of the system is 210 um \
+        and the number of VPM input is 60 (page 19 of supplaments). As for the radius of the VPM input, it is mentioned in the \
+         paper (page 462) that "neurons were arranged in 310 minicolumns at horizontal positions". considering the area of the \
+         circle with radius of 210um and 60/310 minicolumns, the radius will be equal to 92um.
+
         :param args: This method will have at least 4 main positional argumenst directly passed from __init__ method: path to the input .mat file, and the frequency. Description of other possible arguments can be found in Configuration file tutorial.
 
         Main internal variables:
@@ -866,10 +893,11 @@ class cortical_system(object):
             exec 'spike_times_ = spike_times_list * %s' %(spike_times_unit) in globals(), locals()
             try:
                 net_center = self.current_values_list[_all_columns.index('net_center')].strip()
+                net_center = complex(net_center)
             except:
                 net_center = 0 + 0j
-            net_center = complex (net_center)
             number_of_neurons = self.current_values_list[_all_columns.index('number_of_neurons')].strip()
+            radius = self.current_values_list[_all_columns.index('radius')].strip()
             print "creating an input based on the central %s neurons."%number_of_neurons
             Spikes_Name = 'GEN_SP'
             Time_Name = 'GEN_TI'
@@ -892,7 +920,7 @@ class cortical_system(object):
             try: setattr(self.CX_module, SG_Name, eval(SG_Name))
             except: pass
 
-            vpm_customized_neuron = customized_neuron(current_idx, int(number_of_neurons),'L1i','0',net_center)
+            vpm_customized_neuron = customized_neuron(current_idx, int(number_of_neurons),'VPM','0',eval(radius), self.min_distance, network_center= net_center)
             self.customized_neurons_list[current_idx]['z_positions'] = vpm_customized_neuron.output_neuron['z_positions']
             self.customized_neurons_list[current_idx]['w_positions'] = vpm_customized_neuron.output_neuron['w_positions']
 
@@ -942,7 +970,7 @@ class cortical_system(object):
         assert 'type' in self.current_parameters_list, 'The type of the input is not defined in the configuration file.'
         _input_params = {
             'video': [['idx', 'type', 'path', 'freq', 'monitors'], [0, 1, 2],video],
-            'VPM': [['idx', 'type','number_of_neurons','spike_times','net_center','monitors' ], [0, 1,2,3],VPM]
+            'VPM': [['idx', 'type','number_of_neurons','radius','spike_times','net_center','monitors' ], [0, 1,2,3,4],VPM]
         }
         assert self.current_values_list[self.current_parameters_list.index('type')] in _input_params.keys(), 'The input type %s of the configuration file is not defined' %self.current_parameters_list[_all_columns.index('type')]
         _all_columns = _input_params[self.current_values_list[self.current_parameters_list.index('type')]][0]
@@ -1006,7 +1034,7 @@ class cortical_system(object):
 
 
 if __name__ == '__main__' :
-    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Test_config_file.csv' , os.getcwd(), result_filename ='Custom_Name.mat',use_genn=0 )
+    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Test_config_file.csv' , os.getcwd(), result_filename ='CX_System_Output.mat',use_genn=0 )
     run(500*ms,report = 'text')
     if CM.use_genn == 1 :
         device.build(directory=os.path.join(CM.save_path,'GeNN_Output'),

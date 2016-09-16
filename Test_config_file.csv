@@ -1,12 +1,12 @@
-row_type,sys_mode,total_synapses,do_optimize
-params,local,7000,0
+row_type,sys_mode,total_synapses,do_optimize,grid_radius, min_distance
+params,local,7000,0,210*um, 1*um
 #row_type,idx,type,path,freq,monitors
 #IN,0, video, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp],,,,
-row_type,idx,type,number_of_neurons,spike_times,net_center,monitors
-IN,0, VPM,65,[0.2 0.3]*second, 5+0j ,[Sp]
+row_type,idx,type,number_of_neurons,radius,spike_times,net_center,monitors
+IN,0, VPM,65,92*um,[0.2 0.3]*second, N/A ,[Sp]
 row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors,,
-G,1,46,SS,4,5+0j,[Sp] [St]ge_soma+gi_soma+vm,,
-G,2,55,PC,[4->2],5+0j,[Sp] [St]ge_soma+gi_soma+vm_basal+vm+vm_a0+vm_a1,,
+G,1,46,SS,4,N/A,[Sp] [St]ge_soma+gi_soma+vm,,
+G,2,55,PC,[4->2],N/A,[Sp] [St]ge_soma+gi_soma+vm_basal+vm+vm_a0+vm_a1,,
 row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p,n,monitors,percentage
 #S,ge,0,1,Fixed,0.043,N/A,[St]wght[rec](0-20),0.60
 S,ge,0,1,Fixed,N/A,7,[St]wght[rec](0-20),0.60
