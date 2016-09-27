@@ -124,6 +124,7 @@ class synapse_namespaces(object):
         'sp_UMi_BC': 0.071 * conn_prob_gain,
         'sp_UMi_MC': 0.071 * conn_prob_gain,
           }
+    # TODO STDP parameters to JSON file
     stdp_Nsweeps = 60  # 60 in papers one does multiple trials to reach +-50% change in synapse strength. A-coefficien will be divided by this number
     stdp_max_strength_coefficient = 15  # to avoid runaway plasticity
     stdp = {# instead of inf 2^32 -1 will be used
