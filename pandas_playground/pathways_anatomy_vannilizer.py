@@ -3,9 +3,12 @@
 # Henri Hokkanen 21 July 2016
 
 import pandas as pd
+import json
 
 file_pathways_anatomy_markram = 'pathways_anatomy_factsheets_simplified.json' # INPUT FILE, from https://bbp.epfl.ch/nmc-portal/downloads
 file_pathways_anatomy_vannilized = 'pathways_anatomy_vannilized.json' # OUTPUT FILE
+
+
 
 
 # Mapping from Markram et al cell groups to own cell groups
@@ -75,5 +78,11 @@ data = data.join(markram_to_vanni)
 data = data.join(pre_layers)
 data = data.join(post_layers)
 
+# This works, but produces unindented/ugly output:
+#data.astype(str).to_json(file_pathways_anatomy_vannilized, orient='index')
 
-data.astype(str).to_json(file_pathways_anatomy_vannilized, orient='index')
+# Unfortunately indented output is not yet implemented in pandas (0.18.1), so we need to use json module
+data_as_dict = data.to_dict(orient='index')
+fi = open(file_pathways_anatomy_vannilized, 'w')
+json.dump(data_as_dict, fi, indent=3)
+fi.close()
