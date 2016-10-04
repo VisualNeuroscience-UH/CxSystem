@@ -1,1 +1,1 @@
-NVCCFLAGS += -arch sm_35
+NVCCFLAGS += -arch sm_52

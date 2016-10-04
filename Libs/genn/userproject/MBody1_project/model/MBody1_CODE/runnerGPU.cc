@@ -503,15 +503,15 @@ gennError("Since GeNN 2.2 the call to stepTimeGPU has changed to not take any ar
 void stepTimeGPU(unsigned int flags= GENN_FLAGS::COPY)
  {
     
-//model.padSumSynapseTrgN[model.synapseGrpN - 1] is 2592
-    dim3 sThreads(96, 1);
-    dim3 sGrid(27, 1);
+//model.padSumSynapseTrgN[model.synapseGrpN - 1] is 2336
+    dim3 sThreads(32, 1);
+    dim3 sGrid(73, 1);
     
     dim3 lThreads(32, 1);
     dim3 lGrid(32, 1);
     
-    dim3 nThreads(64, 1);
-    dim3 nGrid(21, 1);
+    dim3 nThreads(32, 1);
+    dim3 nGrid(41, 1);
     
     if (flags&GENN_FLAGS::COPY == 1) {
         

@@ -2,7 +2,7 @@
 
 #ifndef _MBody1_synapseKrnl_cc
 #define _MBody1_synapseKrnl_cc
-#define BLOCKSZ_SYN 96
+#define BLOCKSZ_SYN 32
 
 //-------------------------------------------------------------------------
 /*! \file synapseKrnl.cc
@@ -26,7 +26,7 @@ extern "C" __global__ void calcSynapses(float t)
     unsigned int lscntEvnt, numSpikeSubsetsEvnt;
     
     // synapse group PNKC
-    if (id < 1056) {
+    if (id < 1024) {
         // only do this for existing neurons
         if (id < 1000) {
             linSyn = dd_inSynPNKC[id];
@@ -64,8 +64,8 @@ extern "C" __global__ void calcSynapses(float t)
         }
     
     // synapse group PNLHI
-    if ((id >= 1056) && (id < 1152)) {
-        unsigned int lid = id - 1056;
+    if ((id >= 1024) && (id < 1056)) {
+        unsigned int lid = id - 1024;
         // only do this for existing neurons
         if (lid < 20) {
             linSyn = dd_inSynPNLHI[lid];
@@ -103,8 +103,8 @@ extern "C" __global__ void calcSynapses(float t)
         }
     
     // synapse group LHIKC
-    if ((id >= 1152) && (id < 2208)) {
-        unsigned int lid = id - 1152;
+    if ((id >= 1056) && (id < 2080)) {
+        unsigned int lid = id - 1056;
         // only do this for existing neurons
         if (lid < 1000) {
             linSyn = dd_inSynLHIKC[lid];
@@ -146,8 +146,8 @@ extern "C" __global__ void calcSynapses(float t)
         }
     
     // synapse group KCDN
-    if ((id >= 2208) && (id < 2400)) {
-        unsigned int lid = id - 2208;
+    if ((id >= 2080) && (id < 2208)) {
+        unsigned int lid = id - 2080;
         // only do this for existing neurons
         if (lid < 100) {
             linSyn = dd_inSynKCDN[lid];
@@ -196,8 +196,8 @@ extern "C" __global__ void calcSynapses(float t)
         }
     
     // synapse group DNDN
-    if ((id >= 2400) && (id < 2592)) {
-        unsigned int lid = id - 2400;
+    if ((id >= 2208) && (id < 2336)) {
+        unsigned int lid = id - 2208;
         // only do this for existing neurons
         if (lid < 100) {
             linSyn = dd_inSynDNDN[lid];

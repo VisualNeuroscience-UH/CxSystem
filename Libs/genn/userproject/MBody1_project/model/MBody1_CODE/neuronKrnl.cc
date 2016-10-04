@@ -15,12 +15,12 @@
 
 extern "C" __global__ void calcNeurons(float t)
  {
-    unsigned int id = 64 * blockIdx.x + threadIdx.x;
+    unsigned int id = 32 * blockIdx.x + threadIdx.x;
     __shared__ volatile unsigned int posSpkEvnt;
-    __shared__ unsigned int shSpkEvnt[64];
+    __shared__ unsigned int shSpkEvnt[32];
     unsigned int spkEvntIdx;
     __shared__ volatile unsigned int spkEvntCount;
-    __shared__ unsigned int shSpk[64];
+    __shared__ unsigned int shSpk[32];
     __shared__ volatile unsigned int posSpk;
     unsigned int spkIdx;
     __shared__ volatile unsigned int spkCount;
@@ -147,7 +147,7 @@ extern "C" __global__ void calcNeurons(float t)
             dd_sTKC[shSpk[threadIdx.x]] = t;
             }
         }
-    if ((id >= 1152) && (id < 1216)) {
+    if ((id >= 1152) && (id < 1184)) {
         unsigned int lid = id - 1152;
         // only do this for existing neurons
         if (lid < 20) {
@@ -224,8 +224,8 @@ extern "C" __global__ void calcNeurons(float t)
             dd_sTLHI[shSpk[threadIdx.x]] = t;
             }
         }
-    if ((id >= 1216) && (id < 1344)) {
-        unsigned int lid = id - 1216;
+    if ((id >= 1184) && (id < 1312)) {
+        unsigned int lid = id - 1184;
         // only do this for existing neurons
         if (lid < 100) {
             // pull neuron variables in a coalesced access
