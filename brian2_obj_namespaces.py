@@ -35,9 +35,13 @@ class synapse_namespaces(object):
     Cp = 0.001  # 1 #0.001 # Synaptic potentiation coefficient according to van Rossum J Neurosci 2000, here relative to initial value
     Cd = 0.003  # 1 #0.003 # Synaptic depression coefficient according to van Rossum J Neurosci 2000
     # The term (3.6 etc) is the mean number of synapses/connection, from Markram Cell 2015
-    gain_parameter_E = 3.6  # 0.17*3.6 # The 0.5 is for release probability/synapse
-    gain_parameter_I = 13.9  # 0.6*13.9
-    gain_parameter_TC = 8.1  # 0.17*8.1
+    # gain_parameter_E = 3.6  # 0.17*3.6 # The 0.5 is for release probability/synapse
+    # gain_parameter_I = 13.9  # 0.6*13.9
+    # gain_parameter_TC = 8.1  # 0.17*8.1
+    #### the gain parameters are set to 1 since the number of synapses per connection are determined based on markram data
+    gain_parameter_E = 1  # 0.17*3.6 # The 0.5 is for release probability/synapse
+    gain_parameter_I = 1  # 0.6*13.9
+    gain_parameter_TC = 1  # 0.17*8.1
     cw = {
         'cw_in_SS' : _weights['we_e']*gain_parameter_TC,
         'cw_in_PC': _weights['we_e'] * gain_parameter_TC,

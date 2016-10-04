@@ -34,7 +34,7 @@ class cortical_system(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self, config_path, save_path, result_filename = 'CX_data.mat', use_genn=0 , runtime=0):
+    def __init__(self, config_path, save_path, result_filename = 'CX_data.mat', use_genn=0 , runtime=500*ms):
         '''
         Initialize the cortical system by parsing the configuration file.
 
@@ -76,6 +76,7 @@ class cortical_system(object):
             'min_distance': self._set_min_distance,
 
         }
+        self.runtime = runtime
         self.current_parameters_list = []
         self.current_values_list = []
         self.NG_indices = []
@@ -91,6 +92,7 @@ class cortical_system(object):
         self.save_data.creat_key('positions_all')
         self.save_data.data['positions_all']['w_coord'] = {}
         self.save_data.data['positions_all']['z_coord'] = {}
+        self.save_data.data['runtime'] = self.runtime / self.runtime._get_best_unit()
         self.total_synapses = 0
         self.sys_mode = ''
         self.config_path = config_path
@@ -166,14 +168,13 @@ class cortical_system(object):
         if self.do_optimize == 1:
             sys.exit("Execution Compeleted. the synapses are optimized based on their percentages and the new connection file is generated. Use the name of the new configuration file to re-run the program.")
         print "Cortical Module initialization Done."
-        if runtime != 0 :
-            run(runtime, report='text')
-            if self.use_genn == 1:
-                device.build(directory=os.path.join(self.save_path, 'GeNN_Output'),
-                             compile=True,
-                             run=True,
-                             use_GPU=True)
-            self.gather_result()
+        run(self.runtime, report='text')
+        if self.use_genn == 1:
+            device.build(directory=os.path.join(self.save_path, 'GeNN_Output'),
+                         compile=True,
+                         run=True,
+                         use_GPU=True)
+        self.gather_result()
 
     def set_runtime_parameters(self):
         for idx,parameter in enumerate(self.current_parameters_list):
@@ -1035,14 +1036,14 @@ class cortical_system(object):
 
 if __name__ == '__main__' :
     CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Test_config_file.csv' , os.getcwd(), result_filename ='CX_System_Output.mat',use_genn=0 )
-    run(500*ms,report = 'text')
-    if CM.use_genn == 1 :
-        device.build(directory=os.path.join(CM.save_path,'GeNN_Output'),
-                    compile=True,
-                     run=True,
-                     use_GPU=True)
+    # run(500*ms,report = 'text')
+    # if CM.use_genn == 1 :
+    #     device.build(directory=os.path.join(CM.save_path,'GeNN_Output'),
+    #                 compile=True,
+    #                  run=True,
+    #                  use_GPU=True)
 
-    CM.gather_result()
+    # CM.gather_result()
     # CM.visualise_connectivity(S0_Fixed)
     for group in CM.monitor_name_bank:
         mon_num = len(CM.monitor_name_bank[group])
