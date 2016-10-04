@@ -8,47 +8,83 @@ from numpy import *
 import pylab as pl
 from matplotlib import colors
 from sympy.ntheory.factor_ import smoothness
+import random as rnd
+import operator
+import ntpath
+import os
+
+def _status_printer(str):
+    cleaner = ' ' * 100
+    print '\r' + cleaner + '\r' + str,
 
 
-def spike_to_fram(groups,spikes,X_axis,Y_axis,z_coord,axis_precision,smoothness=15,d_t = 0.001) :
+def spike_to_fram(groups,spikes,X_axis,Y_axis,z_coord,axis_precision,runtime,smoothness=15,d_t = 0.001) :
     if smoothness%2!=1 :
         smoothness+=1
-    ts = []
+    t_min = 0
+    t_max = 0
     for group in groups:
-        spikes_ts_tmp = spikes[group][0][0][1]
-        ts_temp = [round(t,int(abs(log10(d_t)))) for t in arange(min(spikes_ts_tmp), max(spikes_ts_tmp)+d_t, d_t)]
-        ts = ts_temp if len(ts)<len(ts_temp) else ts
+        try:
+            spikes_ts_tmp = spikes[group][0][0][1]
+        except:
+            continue
+        # min_temp = min(spikes_ts_tmp)
+        # t_min = t_min if t_min < min_temp else min_temp
+        max_temp = max(spikes_ts_tmp)
+        t_max = t_max if t_max > max_temp else max_temp
+    ts = [round(t,int(abs(log10(d_t)))) for t in arange(t_min, t_max+d_t, d_t)]
     number_of_frames = len(ts)
-    all_frames = zeros([number_of_frames*smoothness,size(X_axis),size(Y_axis)])
-    number_of_pixel_colors = smoothness/2+1
-    # step = 1./number_of_pixel_colors
-    colors_ = [1-1./xx for xx in range(1,number_of_pixel_colors+1)]
-    colors_ = list(colors_) + list(colors_[::-1][1:])
-    for idx in range(number_of_frames):
-        for group in groups:
-            spikes_tmp = [round(t,int(abs(log10(d_t)))) for t in spikes[group][0][0][1]]
-            if ts[idx] in spikes_tmp:
-                # print  "%f found" %ts[idx]
-                indices =[ii for ii,xx in enumerate(spikes_tmp) if xx==ts[idx]]
-                action_potentials = [int(action_idx) for action_idx in spikes[group][0][0][0][indices]]
-                for action in action_potentials:
-                    x_target = round(real(z_coord[group][0][0][0][action]),axis_precision)
-                    x_target_index = X_axis.index(x_target)
-                    y_target = round(imag(z_coord[group][0][0][0][action]), axis_precision)
-                    y_target_index = Y_axis.index(y_target)
-                    for smoo in range(smoothness):
-                        color_value =  colors_ [smoo] * (groups.index(group)+1)
-                        print '%f' %(color_value)
-                        all_frames[idx*smoothness+smoo][x_target_index-1:x_target_index+1,y_target_index-1:y_target_index+1] = color_value
-    return all_frames
+    all_frames = zeros([number_of_frames*smoothness,size(X_axis),size(Y_axis),4])
+    number_of_groups = len(groups)
 
+    ############ BUILDING UP THE COLORS
+    colors_ = colors.ColorConverter.colors.values()
+    del colors_[2]
+    colors_.extend([(0.76405586529938008, 1, 0.19037723714226007),(1, 1, 0.76055023945491484),(0.062061436708711004, 1, 0.86121671615825279),(1, 0.60415383899256947, 1),(0.66443704225140021, 0.84641110220126559, 1),(1, 0.20304808267759977, 0.79378947410890432),(1, 0.99511009425285579, 0.082395393182125187),(1, 0.58475221899639263, 0.60847054827215996),(0.7286469280288263, 1, 1),(1.0, 0.7, 0.2)])
+    while len(colors_) < number_of_groups:
+        tmp_color = tuple(map(operator.add, rnd.choice(colors_), random.random(3)))
+        tmp_color = tuple(map(lambda x: 1 if x>1 else x,tmp_color))
+        colors_.append(tmp_color)
+    if smoothness> 1 :
+        alpha_values = list(arange(1./(smoothness),1.00001,1./(smoothness/2))) +[1]+ list(arange(1./(smoothness),1.00001,1./(smoothness/2))[::-1])
+    else:
+        alpha_values = [1]
+        # alpha_values = list([1-1./xx for xx in range(1,smoothness/2+1)]) + [1] +  list([1-1./xx for xx in range(1,smoothness/2+1)][::-1])
+    for group_idx,group in enumerate(groups):
+        try:
+            spikes_tmp = [round(t, int(abs(log10(d_t)))) for t in spikes[group][0][0][1]]
+        except:
+            continue
+        color_value = colors_[group_idx]
+        total_perc = float(group_idx) / number_of_groups * 100
+        unique_times = unique(spikes_tmp)
+        for action_time_idx, action_time in enumerate(unique_times ):
+            current_perc = float(action_time_idx)/len(unique_times) * 100
+            _status_printer('Current group: %f%% , Total: %f%% ' %(current_perc ,total_perc))
+            indices = [i for i, x in enumerate(spikes_tmp) if x == action_time]
+            action_potentials = [int(action_idx) for action_idx in spikes[group][0][0][0][indices]]
+            frame_idx = ts.index(round(action_time, int(abs(log10(d_t)))))
+            for action in action_potentials:
+                x_target = round(real(z_coord[group][0][0][0][action]), axis_precision)
+                x_target_index = X_axis.index(x_target)
+                y_target = round(imag(z_coord[group][0][0][0][action]), axis_precision)
+                y_target_index = Y_axis.index(y_target)
+                for smoo in range(smoothness):
+                    all_frames[frame_idx * smoothness + smoo,x_target_index - 1:x_target_index + 1,y_target_index - 1:y_target_index + 1,0:3] = color_value
+                    all_frames[frame_idx * smoothness + smoo,x_target_index - 1:x_target_index + 1,y_target_index - 1:y_target_index + 1,3] = alpha_values[smoo]
 
-data = scipy.io.loadmat('/home/corriel/Documents/Git_repos/CX_Output/Custom_Name_20160916_165114.mat')
+    return all_frames,colors_,ts
+
+filepath = '/media/CX_Disk/CX_Output/CX_Output_20161004_183830.mat'
+filename = ntpath.basename(os.path.splitext(filepath)[0])
+folderpath = os.path.dirname(filepath)
+
+data = scipy.io.loadmat(filepath)
 positions = data['positions_all'][0]
 spikes = data['spikes_all']
 z_coord = positions['z_coord'][0]
 dtypes = z_coord.dtype
-groups = [l for l in dtypes.fields]
+groups = [l for l in spikes.dtype.fields]
 min_x = 0
 max_x = 0
 min_y = 0
@@ -69,27 +105,26 @@ axis_precision = int(abs(log10(d_x)))
 X_axis = [round(cord, axis_precision) for cord in arange(min_x, max_x+d_x, d_x)]
 Y_axis = [round(cord, axis_precision) for cord in arange(min_y, max_y+d_x, d_x)]
 
-test_zs = z_coord['NG1_SS_L4'][0][0][0]
-
-smoothness = 15
-all_frames = spike_to_fram(groups, spikes, X_axis, Y_axis, z_coord, axis_precision,smoothness=smoothness)
-fig, ax = plt.subplots(1, 1)
-# cmap = colors.ListedColormap(['white', 'red' , 'blue' , 'black'])
-# bounds=[-0.5,0.5,1.5,2.5,3.5]
-# norm = colors.BoundaryNorm(bounds, cmap.N)
-
-
-
-
-# im = ax.imshow(all_frames[0], origin='lower',
-#                extent=(min_x-min_x/3, max_x+max_x/3, min_y-min_y/3, max_y+max_y/3),
-#                vmin=0, vmax=groups.__len__(),  cmap=cmap, norm=norm)
+smoothness = 1
+if not os.path.isfile(os.path.join(folderpath,filename+'_smooth%d'%smoothness+'.npz')):
+    runtime = data['runtime']*1000
+    all_frames,colors_,ts = spike_to_fram(groups, spikes, X_axis, Y_axis, z_coord, axis_precision,runtime,smoothness=smoothness)
+    savez(os.path.join(folderpath,filename+'_smooth%d'%smoothness),all_frames=all_frames,colors_=colors_,ts=ts)
+else:
+    npzfile = load(os.path.join(folderpath,filename+'_smooth%d'%smoothness+'.npz'))
+    all_frames = npzfile ['all_frames']
+    colors_ =  npzfile ['colors_']
+    ts = npzfile['ts']
+fig, ax = plt.subplots(1, 1,figsize=(15,10))
 
 im = ax.imshow(all_frames[0], origin='lower',
-               extent=(min_x-min_x/3, max_x+max_x/3, min_y-min_y/3, max_y+max_y/3),
+               extent=(min_x, max_x, min_y, max_y),
                vmin=0, vmax=groups.__len__(),cmap = "spectral")
-
-
+ax.set_xlim([min_x-abs(min_x)/5, max_x+max_x/5])
+ax.set_ylim([min_y-abs(min_y)/5, max_y+max_y/5])
+for idx,group in enumerate(groups) :
+    ax.plot(100,100, 's',label=group,markersize=10, color=colors_[idx])
+pl.legend(loc='lower left', borderaxespad=0,numpoints=1,bbox_to_anchor=(1.02, 0))
 class animator:
     def __init__(self,fig,data,im):
         self.fig = fig
@@ -98,29 +133,17 @@ class animator:
         self.im = im
     def animator (self,index):
         self.im.set_data(self.data[index])
-        self._status_printer("frame %d"%(index/smoothness))
+        self._status_printer("Time: %d ms"%(ts[index]*1000/smoothness))
     def _status_printer(self,str):
         cleaner = ' ' * 100
         print '\r' + cleaner + '\r' + str,
-# mycmap = pl.cm.jet # for example
-# for entry in pl.unique(all_frames)[1:]:
-#     mycolor = mycmap(entry*255/(max(asarray(all_frames).reshape(-1)) - min(asarray(all_frames).reshape(-1))))
-#     pl.plot(0, 0, "-", c=mycolor, label='hello')
-#
-# pl.imshow(all_frames[0])
-# pl.legend()
 
 
-
+plt.rcParams['animation.ffmpeg_path'] = '/usr/bin/ffmpeg'
 anime = animator (fig,all_frames,im)
 
-anim = FuncAnimation(fig, anime.animator, frames=all_frames.shape[0],interval=400/smoothness)
-
-
+anim = FuncAnimation(fig, anime.animator, frames=all_frames.shape[0],interval=100,repeat_delay=3000)
 plt.show()
-
-
-
-
+anim.save(os.path.join(folderpath,filename+'_smooth%d'%smoothness+'.mp4'),extra_args=['-vcodec', 'libx264'])
 
 
