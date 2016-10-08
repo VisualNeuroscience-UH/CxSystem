@@ -6,10 +6,12 @@ import os
 vanni_data = pd.read_json(os.path.abspath('./pathways_anatomy_vannilized.json'),  orient='index')
 henry_data = pd.read_json(os.path.abspath('./pathways_anatomy_vanni.json'), orient='index')
 with open('./Markram_config_file.csv', 'w') as config_file:
-    config_file.write('row_type,sys_mode,do_optimize\n')
-    config_file.write('params,local,0\n')
-    config_file.write('row_type,idx,type,path,freq,monitors\n')
-    config_file.write('IN,video,0, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]\n')
+    config_file.write('row_type,sys_mode,do_optimize,grid_radius, min_distance, output_path, brian_data_path\n')
+    config_file.write('params,local,0,210*um, 1*um,../CX_Output/output_data.mat,../CX_Output/brian_data.h5\n')
+    # config_file.write('row_type,idx,type,path,freq,monitors\n')
+    # config_file.write('IN,video,0, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]\n')
+    config_file.write('row_type,idx,type,number_of_neurons,radius,spike_times,net_center,monitors\n')
+    config_file.write('IN,0, VPM,10,92*um,[0.1 0.12 0.15 0.17 0.20 0.22 0.25 0.5]*second, N/A ,[Sp]\n')
     config_file.write('row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors\n')
     group_index=1
     NG_options = {
@@ -35,8 +37,8 @@ with open('./Markram_config_file.csv', 'w') as config_file:
         '61': '4',
         '62' : '1',
     }
-    default_center = '5+0j'
-    default_NG_monitor = ',N/A'
+    default_center = 'N/A'
+    default_NG_monitor = ',[Sp][rec](***fill here***)'
     group_items = []
     UMi_dict = {}
     for item in vanni_data['vanni_pre'].unique():
@@ -83,7 +85,8 @@ with open('./Markram_config_file.csv', 'w') as config_file:
             config_file.write(line)
             group_index += 1
             group_items.append(item)
-    config_file.write('row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p,n,monitors,percentage\n')
+    config_file.write('row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p,n,monitors,percentage,load_connection,save_connection\n')
+    config_file.write('###########\n###########\n#*** input connections here***\n###########\n###########\n')
     syn_num = len(henry_data[:])
     receptor_options={
         '_I' : 'gi',
@@ -156,13 +159,16 @@ with open('./Markram_config_file.csv', 'w') as config_file:
             targ_comp_num = len(line[line.index('[C]0')+4:len(line[0:line.index('[C]0')])+line[line.index('[C]0'):].index(',')])
             line += '%s' % str(list(np.repeat(henry_data.ix[syn_index]['connection_probability']/targ_comp_num,targ_comp_num))).replace(', ','+').replace('[','').replace(']','') + ','
             line += '%s' % str(list(
-                np.repeat(int(henry_data.ix[syn_index]['mean_number_of_synapses_per_connection']), targ_comp_num))).replace(
+                np.repeat(int(round(henry_data.ix[syn_index]['mean_number_of_synapses_per_connection'])), targ_comp_num))).replace(
                 ', ', '+').replace('[', '').replace(']', '') + ','
         else:
             line+= '%f'%henry_data.ix[syn_index]['connection_probability']+ ','
-            line += '%d' % henry_data.ix[syn_index]['mean_number_of_synapses_per_connection'] + ','
+            line += '%d' % int(round(henry_data.ix[syn_index]['mean_number_of_synapses_per_connection'])) + ','
         line += default_syn_monitor + ','
-        line += default_percentage + '\n'
+        line += default_percentage + ','
+        line += '1' + ',' #load connection
+        line += '1' + '\n'
+
         if not 'skip this line since there is no layer 1 compartment in the group' in line:
             config_file.write(line)
 

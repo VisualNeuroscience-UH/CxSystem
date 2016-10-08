@@ -253,7 +253,7 @@ int chooseDevice(ostream &mos,   //!< output stream for messages
 	      regAllocGran = 256;
 	      maxBlocksPerSM = 16;
 	  }
-  	  else if (deviceProp[device].major == 5) {
+  	  else if (deviceProp[theDevice].major == 5) {
 		smemAllocGran = 256;
 		warpAllocGran = 4;
 		regAllocGran = 256;

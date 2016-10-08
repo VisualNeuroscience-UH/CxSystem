@@ -10,6 +10,11 @@ from stimuli import *
 import ast
 import copy # for copying Equation object
 import __builtin__
+import ntpath
+import hickle as hkl
+import scipy
+
+
 
 class cortical_system(object):
     '''
@@ -34,12 +39,12 @@ class cortical_system(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self, config_path, save_path, result_filename = 'CX_data.mat', use_genn=0 , runtime=0):
+    def __init__(self, config_path, use_genn=0 , runtime=500*ms):
         '''
         Initialize the cortical system by parsing the configuration file.
 
         :param config_path: The path to the configuration file.
-        :param save_path: The path to save the final data.
+        :param output_path: The path to save the final data.
         :param use_genn: switch the GeNN mode on/off (1/0), by default genn is off
 
         Main internal variables:
@@ -57,12 +62,7 @@ class cortical_system(object):
         self.main_module = sys.modules['__main__']
         try : self.CX_module = sys.modules['cortical_system']
         except: pass
-        self.save_path = save_path
-        if os.getcwd() in self.save_path :
-            print "Warning: the output of the system is saved in ../CX_Output"
-            self.save_path = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
-            self.save_path = os.path.join(self.save_path,'CX_Output')
-        self.result_filename  = result_filename
+
         self.use_genn = use_genn
         self._options = {
             'G': self.neuron_group,
@@ -74,8 +74,11 @@ class cortical_system(object):
             'do_optimize' : self._set_do_optimize,
             'grid_radius': self._set_grid_radius,
             'min_distance': self._set_min_distance,
+            'output_path' : self._set_output_path,
+            'brian_data_path': self._set_brian_data_path,
 
         }
+        self.runtime = runtime
         self.current_parameters_list = []
         self.current_values_list = []
         self.NG_indices = []
@@ -86,18 +89,18 @@ class cortical_system(object):
         self.synapses_perc_list = [] # This list contains percentages of the Synapses() instances that are placed in the Globals().
         self.monitor_name_bank = {}  # The dictionary containing the name of the monitors that are defined for any NeuronGroup() or Synapses().
         self.default_monitors = []  # In case --> and <-- symbols are used in the configuration file, this default monitor will be applied on all the target lines in between those marks.
+        self.default_save_flag = -1
+        self.default_load_flag = -1
         self.monitor_idx = 0
-        self.save_data = save_data(self.save_path,self.result_filename )  # The save_data() object for saving the final data.
-        self.save_data.creat_key('positions_all')
-        self.save_data.data['positions_all']['w_coord'] = {}
-        self.save_data.data['positions_all']['z_coord'] = {}
         self.total_synapses = 0
         self.sys_mode = ''
         self.config_path = config_path
         self.optimized_probabilities = []
         self.total_number_of_synapses = 0
+        self.total_number_of_connections = 0
         self.general_grid_radius = 0
         self.min_distance = 0
+
 
         with open(self.config_path, 'r') as f:
             for self.line in f:
@@ -166,14 +169,13 @@ class cortical_system(object):
         if self.do_optimize == 1:
             sys.exit("Execution Compeleted. the synapses are optimized based on their percentages and the new connection file is generated. Use the name of the new configuration file to re-run the program.")
         print "Cortical Module initialization Done."
-        if runtime != 0 :
-            run(runtime, report='text')
-            if self.use_genn == 1:
-                device.build(directory=os.path.join(self.save_path, 'GeNN_Output'),
-                             compile=True,
-                             run=True,
-                             use_GPU=True)
-            self.gather_result()
+        run(self.runtime, report='text')
+        if self.use_genn == 1:
+            device.build(directory=os.path.join(self.output_path, 'GeNN_Output'),
+                         compile=True,
+                         run=True,
+                         use_GPU=True)
+        self.gather_result()
 
     def set_runtime_parameters(self):
         for idx,parameter in enumerate(self.current_parameters_list):
@@ -207,6 +209,33 @@ class cortical_system(object):
     def _set_min_distance(self,*args):
         assert '*' in args[0], 'Please specify the unit for the minimum distance parameter, e.g. um , mm '
         self.min_distance= eval(args[0])
+    def _set_output_path(self,*args):
+        self.output_path = args[0]
+        self.save_output_data = save_data(self.output_path)  # The save_data() object for saving the final data.
+        self.save_output_data.creat_key('positions_all')
+        self.save_output_data.data['positions_all']['w_coord'] = {}
+        self.save_output_data.data['positions_all']['z_coord'] = {}
+        self.save_output_data.data['runtime'] = self.runtime / self.runtime._get_best_unit()
+
+
+
+
+
+    def _set_brian_data_path(self,*args):
+        self.brian_data_path = args[0]
+        self.brian_data_filename = ntpath.basename(self.brian_data_path)
+        self.brian_data_folder = ntpath.dirname(self.brian_data_path)
+        self.brian_data_extension = os.path.splitext(self.brian_data_path)[1]
+        assert 'h5' in self.brian_data_extension, 'Error: the extension of the brian_data input/output should be h5, but it is %s'%self.brian_data_extension
+        self.save_brian_data = save_data(self.brian_data_path)
+        if os.path.isfile(os.path.abspath(self.brian_data_path)):
+            # print 'brian data file loaded from %s'%os.path.abspath(self.brian_data_path)
+            self.save_brian_data.data = hkl.load(self.brian_data_path)
+
+
+
+
+
 
 
     def neuron_group(self, *args):
@@ -289,8 +318,8 @@ class cortical_system(object):
             NG_name, current_idx, NG_name, current_idx)
 
         # Saving the neurons' positions both in visual field and cortical coordinates in save_data() object.
-        self.save_data.data['positions_all']['z_coord'][NG_name] = self.customized_neurons_list[current_idx]['z_positions']
-        self.save_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx]['w_positions']
+        self.save_output_data.data['positions_all']['z_coord'][NG_name] = self.customized_neurons_list[current_idx]['z_positions']
+        self.save_output_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx]['w_positions']
 
         # NeuronGroups() should be initialized with a random vm, ge and gi values. To address this, a 6-line code is generated and put in NG_init variable, the running of which will lead to initialization of current NeuronGroup().
         NG_init = 'Vr_offset = rand(len(%s))\n' % NG_name
@@ -363,10 +392,10 @@ class cortical_system(object):
             mon_arg = mon_arg.replace(mon_tag, '')
             if mon_tag == '[Sp]':  # This is for SpikeMonitor()s
                 # If there is a spike monitor, a spikes_all field is added to the save_data() object.
-                self.save_data.creat_key('spikes_all')
+                self.save_output_data.creat_key('spikes_all')
                 Mon_name = monitor_options['[Sp]'][0] + str(
                     self.monitor_idx) + '_' + object_name  # Generated variable name for a specific monitor.
-                self.save_data.syntax_bank.append("self.save_data.data['spikes_all']['%s'] = %s.it" % (object_name,
+                self.save_output_data.syntax_bank.append("self.save_output_data.data['spikes_all']['%s'] = %s.it" % (object_name,
                                                                                                        Mon_name))  # After simulation, this syntax will be used to save this specific monitor's result.
                 self.monitor_name_bank[object_name].append(Mon_name)
                 # build the monitor object based on the generated name:
@@ -406,11 +435,11 @@ class cortical_system(object):
                         else:
                             sub_mon_arg[sub_mon_tags.index('[rec]')+1] = 'arange'+ sub_mon_arg[sub_mon_tags.index('[rec]')+1].replace('-',',')
                         assert len(sub_mon_arg) == len(sub_mon_tags) + 1, 'Error in monitor tag definition.'
-                    self.save_data.creat_key('%s_all' % sub_mon_arg[
+                    self.save_output_data.creat_key('%s_all' % sub_mon_arg[
                         0])  # Create a key in save_data() object for that specific StateMonitor variable.
                     Mon_name = monitor_options['[St]'][0] + str(self.monitor_idx) + '_' + object_name + '__' + \
                                sub_mon_arg[0]
-                    self.save_data.syntax_bank.append("self.save_data.data['%s_all']['%s'] = asarray(%s.%s)" % (
+                    self.save_output_data.syntax_bank.append("self.save_output_data.data['%s_all']['%s'] = asarray(%s.%s)" % (
                     sub_mon_arg[0], object_name, Mon_name, sub_mon_arg[
                         0]))  # After simulation, this syntax will be used to save this specific monitor's result.
 
@@ -454,7 +483,7 @@ class cortical_system(object):
         * SNS_name: Generated vriable name for the Synapses() namespace.
         * syn_con_str: The string containing the sytanct for connect() method of a current Synapses() object. This string changes depending on using the [p] and [n] tags in the configuration file.
         '''
-        _all_columns = ['receptor','pre_syn_idx','post_syn_idx','syn_type','p','n','monitors','percentage']
+        _all_columns = ['receptor','pre_syn_idx','post_syn_idx','syn_type','p','n','monitors','percentage','load_connection','save_connection']
         _obligatory_params = [0, 1, 2, 3]
         assert len(self.current_values_list) <= len(_all_columns), 'One or more of of the columns for input definition \
             is missing. Following obligatory columns should be defined:\n%s\n ' \
@@ -466,8 +495,7 @@ class cortical_system(object):
         _options = {
             '[C]': self.neuron_group,
         }
-
-
+        conn_prob_gain = synapse_namespaces.conn_prob_gain
         if len(self.current_values_list[self.current_parameters_list.index('post_syn_idx')]) > 1 and '[' in self.current_values_list[self.current_parameters_list.index('post_syn_idx')]:  # This if is for when the post-synaptic neuron is a \
             # multicompartmental PC neuon, the rules are described in the configuration file description.
             try :
@@ -568,7 +596,7 @@ class cortical_system(object):
             post_syn_idx = syn[self.current_parameters_list.index('post_syn_idx')]
             syn_type = syn[self.current_parameters_list.index('syn_type')]
             try:
-                p_arg = syn[self.current_parameters_list.index('p')]
+                p_arg = float(syn[self.current_parameters_list.index('p')])*conn_prob_gain
             except:
                 p_arg = 'N/A'
             try:
@@ -618,44 +646,85 @@ class cortical_system(object):
                      % (S_name, self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
                         self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SPre_name,
                         SNS_name)
-            syn_con_str = "%s.connect('i!=j', p= " % S_name
-            # Connecting the synapses based on either [the defined probability and the distance] or [only the distance] plus considering the number of connections
-            try:
-                if '_relay_vpm' in self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]:
-                    # uncomment following lines if you want to visualize the positions of input group and its target groups
-                    # figure;
-                    # plt.scatter(eval(self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']]).x,
-                    #             eval(self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']]).y,
-                    #             color='r');
-                    # plt.scatter(eval(self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]).x,
-                    #             eval(self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]).y,
-                    #             color='b')
-                    # plt.axis('equal')
 
-                    syn_con_str += "'exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f/meter)/(2*0.025**2))/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
-                                   % (self.customized_synapses_list[-1]['ilam'])
+            ###############
+            ############### Connecting synapses
+            ###############
+            #### save/load flag
+            _syn_ref_name = self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']][self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']].index('_')+1:] + "__to__" + \
+                            self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']][
+                            self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']].index('_') + 1:] + self.customized_synapses_list[-1]['post_comp_name']
+            if 'load_connection' in self.current_parameters_list:
+                if '-->' in syn[self.current_parameters_list.index('load_connection')]:
+                    self.default_load_flag = int(syn[self.current_parameters_list.index('load_connection')].replace('-->',''))
+                elif '<--' in syn[self.current_parameters_list.index('load_connection')]:
+                    self.default_load_flag = -1
+                    _do_load = int(syn[self.current_parameters_list.index('load_connection')].replace('<--', ''))
+                else:
+                    _do_load = int(syn[self.current_parameters_list.index('load_connection')])
+            if 'save_connection' in self.current_parameters_list:
+                if '-->' in syn[self.current_parameters_list.index('save_connection')]:
+                    self.default_save_flag = int(syn[self.current_parameters_list.index('save_connection')].replace('-->',''))
+                elif '<--' in syn[self.current_parameters_list.index('save_connection')]:
+                    self.default_save_flag = -1
+                    _do_save = int(syn[self.current_parameters_list.index('save_connection')].replace('<--', ''))
+                else:
+                    _do_save = int(syn[self.current_parameters_list.index('save_connection')])
 
-                elif self.sys_mode== 'local':
-                    syn_con_str += "'%f'" %(float(p_arg))
-                    # if (p_arg != 'N/A' and n_arg!='N/A') and  percentage == 'N/A':
-                    #     print "Info: Target percentage is not defined in local mode and some synapses are working based on p and n (see brian2 syanpses())."
-                elif self.sys_mode == 'expanded':
-                    syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
-                                   % (float(p_arg), self.customized_synapses_list[-1]['ilam'])
+
+            if self.default_load_flag==1 or (self.default_load_flag==-1 and _do_load == 1 ) :
+                assert _syn_ref_name in self.save_brian_data.data.keys(), "The data for the following connection was not found in the loaded brian data: %s" % _syn_ref_name
+                eval(S_name).connect(self.save_brian_data.data[_syn_ref_name]['i'],self.save_brian_data.data[_syn_ref_name]['j'])
+                eval(S_name).wght = self.save_brian_data.data[_syn_ref_name]['wght'] * siemens
+
+            else:
+                syn_con_str = "%s.connect('i!=j', p= " % S_name
+                # Connecting the synapses based on either [the defined probability and the distance] or [only the distance] plus considering the number of connections
+                try:
+                    if '_relay_vpm' in self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]:
+                        # uncomment following lines if you want to visualize the positions of input group and its target groups
+                        # figure;
+                        # plt.scatter(eval(self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']]).x,
+                        #             eval(self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']]).y,
+                        #             color='r');
+                        # plt.scatter(eval(self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]).x,
+                        #             eval(self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]).y,
+                        #             color='b')
+                        # plt.axis('equal')
+
+                        syn_con_str += "'exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f/meter)/(2*0.025**2))/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
+                                       % (self.customized_synapses_list[-1]['ilam'])
+
+                    elif self.sys_mode== 'local':
+                        syn_con_str += "'%f'" %(float(p_arg))
+                        # if (p_arg != 'N/A' and n_arg!='N/A') and  percentage == 'N/A':
+                        #     print "Info: Target percentage is not defined in local mode and some synapses are working based on p and n (see brian2 syanpses())."
+                    elif self.sys_mode == 'expanded':
+                        syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
+                                       % (float(p_arg), self.customized_synapses_list[-1]['ilam'])
 
 
-            except:
-                p_arg = self.customized_synapses_list[-1]['sparseness']
-                if self.sys_mode== 'local':
-                    syn_con_str += "'%f'" %(p_arg)
-                elif self.sys_mode == 'expanded' :
-                    syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
-                                   % (p_arg, self.customized_synapses_list[-1]['ilam'])
-            try:
-                syn_con_str += ',n=%d)' % int(n_arg)
-            except:
-                syn_con_str += ')'
-            exec syn_con_str
+                except:
+                    p_arg = self.customized_synapses_list[-1]['sparseness']
+                    if self.sys_mode== 'local':
+                        syn_con_str += "'%f'" %(p_arg)
+                    elif self.sys_mode == 'expanded' :
+                        syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'   " \
+                                       % (p_arg, self.customized_synapses_list[-1]['ilam'])
+                try:
+                    syn_con_str += ',n=%d)' % int(n_arg)
+                except:
+                    syn_con_str += ')'
+                exec syn_con_str
+
+            if self.default_save_flag==1 or (self.default_save_flag==-1 and _do_save ) :
+                self.save_brian_data.creat_key(_syn_ref_name)
+                self.save_brian_data.syntax_bank.append('self.save_brian_data.data["%s"]["i"]=%s.variables._variables["_presynaptic_idx"].get_value()' %(_syn_ref_name,S_name))
+                self.save_brian_data.syntax_bank.append('self.save_brian_data.data["%s"]["j"]=%s.variables._variables["_postsynaptic_idx"].get_value()' % (_syn_ref_name, S_name))
+                self.save_brian_data.syntax_bank.append('self.save_brian_data.data["%s"]["wght"]=%s.variables._variables["wght"].get_value()' % (_syn_ref_name, S_name))
+            ################
+            ################
+
             if self.use_genn == 0 :
                 exec "_number_of_synapse = len(%s.i)" % S_name #at this stage, _number_of_synapse contains the inital number of synapses.
 
@@ -674,7 +743,7 @@ class cortical_system(object):
                 # setattr(self.main_module, SNS_name, eval(SNS_name))
 
             if self.sys_mode == 'local' and self.do_optimize:
-                assert (p_arg == 'N/A' or p_arg == self.customized_synapses_list[-1]['sparseness']) and percentage!='N/A','Error: The system is in local mode and set to optimize the probabilities based on the percentages. In this case the probability should set to "N/A" which is not. Check the following line:\n%s'%self.line
+                assert (p_arg == 'N/A' or p_arg == self.customized_synapses_list[-1]['sparseness']*conn_prob_gain) and percentage!='N/A','Error: The system is in local mode and set to optimize the probabilities based on the percentages. In this case the probability should set to "N/A" which is not. Check the following line:\n%s'%self.line
                 exec "del %s" % S_name
                 try :
                     self._Synapses_Optimizer(syn,_number_of_synapse,S_name,SE_name,SPre_name,SPost_name,SNS_name,p_arg,float(percentage),n_arg)
@@ -693,7 +762,14 @@ class cortical_system(object):
                 num_tmp = 0
                 exec "num_tmp = len(%s.i)"%S_name
                 self.total_number_of_synapses += num_tmp
-                print "Number of synapses from %s to %s: %d \t Total number of synapses: %d" %(self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']],num_tmp, self.total_number_of_synapses)
+                try:
+                    _current_connections = int(num_tmp/float(syn[self.current_parameters_list.index('n')]))
+                except:
+                    print "warning: number of synapses for last connection was equal to number of connections"
+                    _current_connections = num_tmp
+                self.total_number_of_connections += _current_connections
+
+                print "%s to %s: Number of synapses %d \t Number of connections: %d \t Total synapses: %d \t Total connections: %d" %(self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']],num_tmp, _current_connections,self.total_number_of_synapses, self.total_number_of_connections)
 
         try:
             if 'percentage' in self.current_parameters_list:
@@ -762,7 +838,7 @@ class cortical_system(object):
             try:
                 syn_con_str += "%s" % (p_arg)
             except:
-                p_arg = self.customized_synapses_list[-1]['sparseness']
+                p_arg = self.customized_synapses_list[-1]['sparseness']*synapse_namespaces.conn_prob_gain
                 syn_con_str += "%f" % (p_arg)
             try:
                 syn_con_str += "',n=%s)" % n_arg
@@ -862,9 +938,9 @@ class cortical_system(object):
             # setting the position of the neurons based on the positions in the .mat input file:
             exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % (
                 NG_name, current_idx, NG_name, current_idx) in globals(), locals()
-            self.save_data.data['positions_all']['z_coord'][NG_name] = self.customized_neurons_list[current_idx][
+            self.save_output_data.data['positions_all']['z_coord'][NG_name] = self.customized_neurons_list[current_idx][
                 'z_positions']
-            self.save_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx][
+            self.save_output_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx][
                 'w_positions']
             SGsyn_name = 'SGEN_Syn' # variable name for the Synapses() objecct that connects SpikeGeneratorGroup() and relay neurons.
             exec "%s = Synapses(GEN, %s, pre='emit_spike+=1', connect='i==j')" % (SGsyn_name, NG_name) in globals(), locals()# connecting the SpikeGeneratorGroup() and relay group.
@@ -942,9 +1018,9 @@ class cortical_system(object):
             # setting the position of the neurons based on the positions in the .mat input file:
             exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % (
                 NG_name, current_idx, NG_name, current_idx) in globals(), locals()
-            self.save_data.data['positions_all']['z_coord'][NG_name] = self.customized_neurons_list[current_idx][
+            self.save_output_data.data['positions_all']['z_coord'][NG_name] = self.customized_neurons_list[current_idx][
                 'z_positions']
-            self.save_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx][
+            self.save_output_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx][
                 'w_positions']
             SGsyn_name = 'SGEN_Syn'  # variable name for the Synapses() objecct that connects SpikeGeneratorGroup() and relay neurons.
             exec "%s = Synapses(GEN, %s, pre='emit_spike+=1', connect= 'i!=j')" % (
@@ -1006,9 +1082,12 @@ class cortical_system(object):
         After the simulation and using the syntaxes that are previously prepared in the synatx_bank of save_data() object, this method saves the collected data to a file.
 
         '''
-        for syntax in self.save_data.syntax_bank:
+        for syntax in self.save_output_data.syntax_bank:
             exec syntax
-        self.save_data.save_to_file()
+        for syntax in self.save_brian_data.syntax_bank:
+            exec syntax
+        self.save_output_data.save_to_file()
+        self.save_brian_data.save_to_file()
 
     def visualise_connectivity(self,S):
         Ns = len(S.source)
@@ -1034,15 +1113,15 @@ class cortical_system(object):
 
 
 if __name__ == '__main__' :
-    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Test_config_file.csv' , os.getcwd(), result_filename ='CX_System_Output.mat',use_genn=0 )
-    run(500*ms,report = 'text')
-    if CM.use_genn == 1 :
-        device.build(directory=os.path.join(CM.save_path,'GeNN_Output'),
-                    compile=True,
-                     run=True,
-                     use_GPU=True)
+    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Test_config_file.csv' ,use_genn=0 )
+    # run(500*ms,report = 'text')
+    # if CM.use_genn == 1 :
+    #     device.build(directory=os.path.join(CM.output_path,'GeNN_Output'),
+    #                 compile=True,
+    #                  run=True,
+    #                  use_GPU=True)
 
-    CM.gather_result()
+    # CM.gather_result()
     # CM.visualise_connectivity(S0_Fixed)
     for group in CM.monitor_name_bank:
         mon_num = len(CM.monitor_name_bank[group])
