@@ -381,8 +381,10 @@ class neuron_namespaces (object):
 
         # Connection parameters between compartments
         self.output_namespace['Ra']= [100,80,150,150,200] * Mohm
-        self.output_namespace['tau_e'] = 1.7 * ms
-        self.output_namespace['tau_eX'] = 1.7 * ms
+
+        # Synaptic time constants
+        self.output_namespace['tau_e'] = 3 * ms  # 1.7 ms from Markram Cell 2015. This however misses NMDA contribution (12% according to Markram Cell 2015). Given this proportion and AMPA tau 3 ms and NMDA tau 200 ms(NMDA fast decay; both from Spruston JPhysiol 1995), we get double exponential decay
+        self.output_namespace['tau_eX'] = 3 * ms
         self.output_namespace['tau_i'] = 8.3 * ms
         # return self.final_namespace
 
@@ -400,8 +402,8 @@ class neuron_namespaces (object):
         self.output_namespace['Vcut'] = self.output_namespace['VT'] + 5 * self.output_namespace['DeltaT']
         self.output_namespace['Ee'] = 0 * mV
         self.output_namespace['Ei'] = -75 * mV
-        self.output_namespace['tau_e'] = 1.7 * ms  # Markram Cell 2015
-        self.output_namespace['tau_i'] = 8.3 * ms  # Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5)
+        self.output_namespace['tau_e'] = 3 * ms  # 1.7 ms from Markram Cell 2015. This however misses NMDA contribution (12% according to Markram Cell 2015). Given this proportion and AMPA tau 3 ms and NMDA tau 200 ms(NMDA fast decay; both from Spruston JPhysiol 1995), we get double exponential decay
+        self.output_namespace['tau_i'] = 8.3 * ms  # Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5), also Salin 1996 JNeurophysiol gives 8.6 ms
 
     def _L1i(self,output_neuron):
         self.output_namespace['gL'] = 3.2 * nS  # 3.2 nsiemens mean of cell types in L1, Muralidhar 2014 Front Neuroanat, Table 3, mean of 1/"input resistance for steady state"
@@ -435,7 +437,7 @@ class neuron_namespaces (object):
         self.output_namespace['Vcut'] = self.output_namespace['VT'] + 5 * self.output_namespace['DeltaT']
         self.output_namespace['Ee'] = 0 * mV
         self.output_namespace['Ei'] = -75 * mV
-        self.output_namespace['tau_e'] = 1.7 * ms  # Markram Cell 2015
+        self.output_namespace['tau_e'] = 3 * ms  # Markram Cell 2015
         self.output_namespace['tau_i'] = 8.3 * ms  # Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5)
 
 
@@ -454,7 +456,7 @@ class neuron_namespaces (object):
         self.output_namespace['Vcut'] = self.output_namespace['VT'] + 5 * self.output_namespace['DeltaT']  # inherited from FS
         self.output_namespace['Ee'] = 0 * mV  # inherited from FS
         self.output_namespace['Ei'] = -75 * mV
-        self.output_namespace['tau_e'] = 1.7 * ms  # Markram Cell 2015
+        self.output_namespace['tau_e'] = 3 * ms  # Markram Cell 2015
         self.output_namespace['tau_i'] = 8.3 * ms  # Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5)
 
 
@@ -482,8 +484,8 @@ class neuron_namespaces (object):
 
         # Connection parameters between compartments
         self.output_namespace['Ra'] = 80 * Mohm
-        self.output_namespace['tau_e'] = 1.7 * ms
-        self.output_namespace['tau_eX'] = 1.7 * ms
+        self.output_namespace['tau_e'] = 3 * ms
+        self.output_namespace['tau_eX'] = 3 * ms
         self.output_namespace['tau_i'] = 8.3 * ms
         # return self.final_namespace
 
