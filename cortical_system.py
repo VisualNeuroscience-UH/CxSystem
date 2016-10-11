@@ -59,6 +59,8 @@ class cortical_system(object):
         * save_data: The save_data() object for saving the final data.
 
         '''
+        if use_genn==1:
+            print "Info: system is going to be run using Brian2Genn, Errors may rise if Brian2/Brian2GeNN/GeNN are not installed correctly."
         self.main_module = sys.modules['__main__']
         try : self.CX_module = sys.modules['cortical_system']
         except: pass
@@ -676,6 +678,7 @@ class cortical_system(object):
                 assert _syn_ref_name in self.save_brian_data.data.keys(), "The data for the following connection was not found in the loaded brian data: %s" % _syn_ref_name
                 eval(S_name).connect(self.save_brian_data.data[_syn_ref_name]['i'],self.save_brian_data.data[_syn_ref_name]['j'])
                 eval(S_name).wght = self.save_brian_data.data[_syn_ref_name]['wght'] * siemens
+                _load_str = 'Connection loaded from '
 
             else:
                 syn_con_str = "%s.connect('i!=j', p= " % S_name
@@ -768,8 +771,13 @@ class cortical_system(object):
                     print "warning: number of synapses for last connection was equal to number of connections"
                     _current_connections = num_tmp
                 self.total_number_of_connections += _current_connections
-
-                print "%s to %s: Number of synapses %d \t Number of connections: %d \t Total synapses: %d \t Total connections: %d" %(self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']],num_tmp, _current_connections,self.total_number_of_synapses, self.total_number_of_connections)
+                try:
+                    print "%s%s to %s: Number of synapses %d \t Number of connections: %d \t Total synapses: %d \t Total connections: %d" %(_load_str ,self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']],num_tmp, _current_connections,self.total_number_of_synapses, self.total_number_of_connections)
+                except:
+                    print "Connection created from %s to %s: Number of synapses %d \t Number of connections: %d \t Total synapses: %d \t Total connections: %d" % (
+                    self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']],
+                    self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], num_tmp,
+                    _current_connections, self.total_number_of_synapses, self.total_number_of_connections)
 
         try:
             if 'percentage' in self.current_parameters_list:

@@ -1,7 +1,7 @@
 row_type,sys_mode,do_optimize,grid_radius, min_distance, output_path, brian_data_path
 params,local,0,210*um, 1*um,../CX_Output/output_data.mat,../CX_Output/brian_data.h5
 row_type,idx,type,number_of_neurons,radius,spike_times,net_center,monitors
-IN,0, VPM,60,92*um,[0.1 0.12 0.15 0.17 0.20 0.22 0.25 0.5]*second, N/A ,[Sp]
+IN,0, VPM,60,92*um,[0.05]*second, N/A ,[Sp]
 row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors
 G,1,338,L1i,1,N/A,[Sp][rec](0-330-10)
 G,2,1198,BC,2,N/A,[Sp][rec](0-1190-30)
