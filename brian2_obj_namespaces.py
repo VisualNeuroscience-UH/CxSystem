@@ -21,16 +21,18 @@ class synapse_namespaces(object):
     '''
 
     # From Markram et al Cell 2015, Table S6. Prescribed Parameters for Synaptic Transmission, Related to Figures 9 and 10.
+    EE_weights_gain = 2
+    EI_weights_gain = 1.7
     _weights = {
         'w_L23PC-L23PC': 0.68 * nS, # Not used in the current model
         'w_L4Exc-L4Exc': 0.68 * nS, # Not used in the current model
         'w_L4SS-L23PC': 0.19 * nS, # Not used in the current model
         'w_L5TTPC-L5TTPC': 1.5 * nS, # Not used in the current model
         'w_L5STPC-L5STPC': 0.8 * nS, # Not used in the current model
-        'w_All_other_E-E_connections': 0.72 * nS,
+        'w_All_other_E-E_connections': (0.72*EE_weights_gain) * nS  ,
         'w_L5TTPC-L5MC': 0.11 * nS, # Not used in the current model
         'w_L5PC-L5BC/L5ChC': 0.72 * nS, # Not used in the current model
-        'w_All_other_E-I_connections': 0.43 * nS,
+        'w_All_other_E-I_connections': (0.43*EI_weights_gain) * nS ,
         'w_L5MC-L5TTPC': 0.75 * nS, # Not used in the current model
         'w_L23(NBC,LBC)/L23ChC-23PC': 0.91 * nS, # Not used in the current model
         'w_All_other_I-E_connections': 0.83 * nS,
@@ -39,7 +41,7 @@ class synapse_namespaces(object):
 
     Cp = 0.001  # 1 #0.001 # Synaptic potentiation coefficient according to van Rossum J Neurosci 2000, here relative to initial value
     Cd = 0.003  # 1 #0.003 # Synaptic depression coefficient according to van Rossum J Neurosci 2000
-    conn_prob_gain = 2  # This is used for compensation of small number of neurons and thus incoming synapses
+    conn_prob_gain = 1  # This is used for compensation of small number of neurons and thus incoming synapses
     cw = {
         'cw_in_SS': _weights['w_All_other_E-E_connections'],
         'cw_in_PC': _weights['w_All_other_E-E_connections'],
@@ -93,41 +95,41 @@ class synapse_namespaces(object):
         'sp_in_L1i': 0.38 ,
         'sp_in_UMi': 0.38 ,
         ###########
-        ########### since the probabilities are being fetched from markram data, following lines could be commented for simplicity, don't delete them.
+        ########### since the probabilities are being fetched from markram data, following lines are gonna be overwritten by them
         ###########
-        # 'sp_SS_SS': 0.081 ,
-        # 'sp_SS_PC':  0.081 ,
-        # 'sp_SS_BC': 0.053 ,
-        # 'sp_SS_MC': 0.058 ,
-        # 'sp_SS_L1i': 0.053 ,
-        # 'sp_SS_UMi': 0.053 ,
-        # 'sp_PC_SS':0.081 ,
-        # 'sp_PC_PC':0.081 ,
-        # 'sp_PC_BC':0.053 ,
-        # 'sp_PC_MC':0.058 ,
-        # 'sp_PC_L1i':0.053 ,
-        # 'sp_PC_UMi': 0.053 ,
-        # 'sp_BC_SS':0.071 ,
-        # 'sp_BC_PC': 0.05 ,
-        # 'sp_BC_L1i':0.005 , #todo: check this value
-        # 'sp_BC_BC': 0.071 ,
-        # 'sp_BC_MC':0.071 ,
-        # 'sp_MC_SS':0.081 ,
-        # 'sp_MC_PC':0.081 ,
-        # 'sp_MC_BC':0.081 ,
-        # 'sp_MC_MC': 0.08 ,
-        # 'sp_MC_L1i':0.081 ,
-        # 'sp_MC_UMi': 0.081 ,
-        # 'sp_L1i_SS': 0.071 ,
-        # 'sp_L1i_PC': 0.071 ,
-        # 'sp_L1i_L1i':0.05 ,
-        # 'sp_L1i_BC':0.015 ,
-        # 'sp_L1i_MC':0.03 ,
-        # 'sp_UMi_SS': 0.071 ,
-        # 'sp_UMi_PC': 0.071 ,
-        # 'sp_UMi_L1i': 0.05 ,
-        # 'sp_UMi_BC': 0.071 ,
-        # 'sp_UMi_MC': 0.071 ,
+        'sp_SS_SS': 0.081 ,
+        'sp_SS_PC':  0.081 ,
+        'sp_SS_BC': 0.053 ,
+        'sp_SS_MC': 0.058 ,
+        'sp_SS_L1i': 0.053 ,
+        'sp_SS_UMi': 0.053 ,
+        'sp_PC_SS':0.081 ,
+        'sp_PC_PC':0.081 ,
+        'sp_PC_BC':0.053 ,
+        'sp_PC_MC':0.058 ,
+        'sp_PC_L1i':0.053 ,
+        'sp_PC_UMi': 0.053 ,
+        'sp_BC_SS':0.071 ,
+        'sp_BC_PC': 0.05 ,
+        'sp_BC_L1i':0.005 , #todo: check this value
+        'sp_BC_BC': 0.071 ,
+        'sp_BC_MC':0.071 ,
+        'sp_MC_SS':0.081 ,
+        'sp_MC_PC':0.081 ,
+        'sp_MC_BC':0.081 ,
+        'sp_MC_MC': 0.08 ,
+        'sp_MC_L1i':0.081 ,
+        'sp_MC_UMi': 0.081 ,
+        'sp_L1i_SS': 0.071 ,
+        'sp_L1i_PC': 0.071 ,
+        'sp_L1i_L1i':0.05 ,
+        'sp_L1i_BC':0.015 ,
+        'sp_L1i_MC':0.03 ,
+        'sp_UMi_SS': 0.071 ,
+        'sp_UMi_PC': 0.071 ,
+        'sp_UMi_L1i': 0.05 ,
+        'sp_UMi_BC': 0.071 ,
+        'sp_UMi_MC': 0.071 ,
           }
 
     stdp = {# instead of inf 2^32 -1 will be used
