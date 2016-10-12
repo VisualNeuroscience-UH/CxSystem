@@ -103,6 +103,9 @@ class cortical_system(object):
         self.general_grid_radius = 0
         self.min_distance = 0
 
+        ### warning flags:
+        self.load_warning_parinted = 0
+        self.save_warning_parinted = 0
 
         with open(self.config_path, 'r') as f:
             for self.line in f:
@@ -181,7 +184,9 @@ class cortical_system(object):
 
     def set_runtime_parameters(self):
         for idx,parameter in enumerate(self.current_parameters_list):
-            assert parameter in self._options.keys(), 'The tag %s is not defined.' % parameter
+            if parameter[0] == '#' :
+                continue
+            assert (parameter in self._options.keys()), 'The tag %s is not defined.' % parameter
             self._options[parameter](self.current_values_list[idx])
         if self.sys_mode == '':
             print "Warning: system mode is not defined. "
@@ -674,11 +679,14 @@ class cortical_system(object):
                     _do_save = int(syn[self.current_parameters_list.index('save_connection')])
 
 
-            if self.default_load_flag==1 or (self.default_load_flag==-1 and _do_load == 1 ) :
+            if (self.default_load_flag==1 or (self.default_load_flag==-1 and _do_load == 1 )) and hasattr(self,'save_brian_data') :
                 assert _syn_ref_name in self.save_brian_data.data.keys(), "The data for the following connection was not found in the loaded brian data: %s" % _syn_ref_name
                 eval(S_name).connect(self.save_brian_data.data[_syn_ref_name]['i'],self.save_brian_data.data[_syn_ref_name]['j'])
                 eval(S_name).wght = self.save_brian_data.data[_syn_ref_name]['wght'] * siemens
                 _load_str = 'Connection loaded from '
+            elif (self.default_load_flag==1 or (self.default_load_flag==-1 and _do_load == 1 )) and not hasattr(self,'save_brian_data') :
+                print "Warning: synapstic connection is set to be loaded, however the brian_data_path is not defined in the parameters."
+
 
             else:
                 syn_con_str = "%s.connect('i!=j', p= " % S_name
@@ -720,11 +728,14 @@ class cortical_system(object):
                     syn_con_str += ')'
                 exec syn_con_str
 
-            if self.default_save_flag==1 or (self.default_save_flag==-1 and _do_save ) :
+            if (self.default_save_flag==1 or (self.default_save_flag==-1 and _do_save )) and hasattr(self,'brian_data_path') :
                 self.save_brian_data.creat_key(_syn_ref_name)
                 self.save_brian_data.syntax_bank.append('self.save_brian_data.data["%s"]["i"]=%s.variables._variables["_presynaptic_idx"].get_value()' %(_syn_ref_name,S_name))
                 self.save_brian_data.syntax_bank.append('self.save_brian_data.data["%s"]["j"]=%s.variables._variables["_postsynaptic_idx"].get_value()' % (_syn_ref_name, S_name))
                 self.save_brian_data.syntax_bank.append('self.save_brian_data.data["%s"]["wght"]=%s.variables._variables["wght"].get_value()' % (_syn_ref_name, S_name))
+            elif (self.default_save_flag==1 or (self.default_save_flag==-1 and _do_save )) and not hasattr(self,'brian_data_path') :
+                print "Warning: Synaptic connection is set to be saved, however the brian_data_path is not defined in the parameters."
+
             ################
             ################
 
@@ -1092,10 +1103,13 @@ class cortical_system(object):
         '''
         for syntax in self.save_output_data.syntax_bank:
             exec syntax
-        for syntax in self.save_brian_data.syntax_bank:
-            exec syntax
         self.save_output_data.save_to_file()
-        self.save_brian_data.save_to_file()
+        if hasattr(self,'save_brian_data'):
+            for syntax in self.save_brian_data.syntax_bank:
+                exec syntax
+            self.save_brian_data.save_to_file()
+
+
 
     def visualise_connectivity(self,S):
         Ns = len(S.source)

@@ -18,7 +18,7 @@ def _status_printer(str):
     print '\r' + cleaner + '\r' + str,
 
 
-def spike_to_fram(groups,spikes,X_axis,Y_axis,z_coord,axis_precision,runtime,smoothness=15,d_t = 0.001) :
+def spike_to_fram(groups,spikes,X_axis,Y_axis,w_coord,axis_precision,runtime,smoothness=15,d_t = 0.001) :
     if smoothness%2!=1 :
         smoothness+=1
     t_min = 0
@@ -65,9 +65,9 @@ def spike_to_fram(groups,spikes,X_axis,Y_axis,z_coord,axis_precision,runtime,smo
             action_potentials = [int(action_idx) for action_idx in spikes[group][0][0][0][indices]]
             frame_idx = ts.index(round(action_time, int(abs(log10(d_t)))))
             for action in action_potentials:
-                x_target = round(real(z_coord[group][0][0][0][action]), axis_precision)
+                x_target = round(real(w_coord[group][0][0][0][action]), axis_precision)
                 x_target_index = X_axis.index(x_target)
-                y_target = round(imag(z_coord[group][0][0][0][action]), axis_precision)
+                y_target = round(imag(w_coord[group][0][0][0][action]), axis_precision)
                 y_target_index = Y_axis.index(y_target)
                 for smoo in range(smoothness):
                     all_frames[frame_idx * smoothness + smoo,x_target_index - 1:x_target_index + 1,y_target_index - 1:y_target_index + 1,0:3] = color_value
@@ -75,26 +75,27 @@ def spike_to_fram(groups,spikes,X_axis,Y_axis,z_coord,axis_precision,runtime,smo
 
     return all_frames,colors_,ts
 
-filepath = '/media/CX_Disk/CX_Output/CX_Output_20161004_183830.mat'
+filepath = '/media/CX_Disk/CX_Output/Gain-EE1EI1.mat'
 filename = ntpath.basename(os.path.splitext(filepath)[0])
 folderpath = os.path.dirname(filepath)
 
 data = scipy.io.loadmat(filepath)
 positions = data['positions_all'][0]
 spikes = data['spikes_all']
-z_coord = positions['z_coord'][0]
-dtypes = z_coord.dtype
+w_coord = positions['w_coord'][0]
+dtypes = w_coord.dtype
 groups = [l for l in spikes.dtype.fields]
 min_x = 0
 max_x = 0
 min_y = 0
 max_y = 0
 for group in groups:
-    min_x = min_x if min_x<min(real(z_coord[group][0][0][0])) else min(real(z_coord[group][0][0][0]))
-    max_x = max_x if max_x>max(real(z_coord[group][0][0][0])) else max(real(z_coord[group][0][0][0]))
-    min_y = min_y if min_y < min(imag(z_coord[group][0][0][0])) else min(imag(z_coord[group][0][0][0]))
-    max_y = max_y if max_y > max(imag(z_coord[group][0][0][0])) else max(imag(z_coord[group][0][0][0]))
-d_x = 1e-4 # equal to 100um
+    min_x = min_x if min_x<min(real(w_coord[group][0][0][0])) else min(real(w_coord[group][0][0][0]))
+    max_x = max_x if max_x>max(real(w_coord[group][0][0][0])) else max(real(w_coord[group][0][0][0]))
+    min_y = min_y if min_y < min(imag(w_coord[group][0][0][0])) else min(imag(w_coord[group][0][0][0]))
+    max_y = max_y if max_y > max(imag(w_coord[group][0][0][0])) else max(imag(w_coord[group][0][0][0]))
+# d_x = 1e-4 # equal to 100um
+d_x = 1e-3 # equal to 100um
 min_x = round(min_x, int(abs(log10(d_x))))
 max_x = round(max_x, int(abs(log10(d_x))))
 min_y = round(min_y, int(abs(log10(d_x))))
@@ -108,7 +109,7 @@ Y_axis = [round(cord, axis_precision) for cord in arange(min_y, max_y+d_x, d_x)]
 smoothness = 1
 if not os.path.isfile(os.path.join(folderpath,filename+'_smooth%d'%smoothness+'.npz')):
     runtime = data['runtime']*1000
-    all_frames,colors_,ts = spike_to_fram(groups, spikes, X_axis, Y_axis, z_coord, axis_precision,runtime,smoothness=smoothness)
+    all_frames,colors_,ts = spike_to_fram(groups, spikes, X_axis, Y_axis, w_coord, axis_precision,runtime,smoothness=smoothness)
     savez(os.path.join(folderpath,filename+'_smooth%d'%smoothness),all_frames=all_frames,colors_=colors_,ts=ts)
 else:
     npzfile = load(os.path.join(folderpath,filename+'_smooth%d'%smoothness+'.npz'))

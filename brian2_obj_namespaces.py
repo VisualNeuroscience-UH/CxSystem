@@ -21,8 +21,8 @@ class synapse_namespaces(object):
     '''
 
     # From Markram et al Cell 2015, Table S6. Prescribed Parameters for Synaptic Transmission, Related to Figures 9 and 10.
-    EE_weights_gain = 2
-    EI_weights_gain = 1.7
+    EE_weights_gain = 1
+    EI_weights_gain = 1
     _weights = {
         'w_L23PC-L23PC': 0.68 * nS, # Not used in the current model
         'w_L4Exc-L4Exc': 0.68 * nS, # Not used in the current model
