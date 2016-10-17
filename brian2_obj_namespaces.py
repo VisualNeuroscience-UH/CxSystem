@@ -19,114 +19,119 @@ class synapse_namespaces(object):
     * conn_prob_gain: This is used for compensation of small number of neurons and thus incoming synapses
 
     '''
+
+    # From Markram et al Cell 2015, Table S6. Prescribed Parameters for Synaptic Transmission, Related to Figures 9 and 10.
+    EE_weights_gain = 1
+    EI_weights_gain = 1
     _weights = {
-        'we_e': 0.72 * nS,
-        'we_e2': 0.4 * nS,
-        'we_e_FS': 0.72 * nS,  # Markram et al Cell 2015
-        'we_e_LTS': 0.11 * nS,  # Markram et al Cell 2015
-        'we_elocal': 0.72 * nS,
-        'we_eX': 0.72 * nS,
-        'we_NMDA': 0.72 * nS,
-        # Not real NMDA, identical to the basic AMPA.
-        # Allows implementation, though :)
-        'we_i': 0.83 * nS
-        #                        'we_development' : 0.01 * nS,
+        'w_L23PC-L23PC': 0.68 * nS, # Not used in the current model
+        'w_L4Exc-L4Exc': 0.68 * nS, # Not used in the current model
+        'w_L4SS-L23PC': 0.19 * nS, # Not used in the current model
+        'w_L5TTPC-L5TTPC': 1.5 * nS, # Not used in the current model
+        'w_L5STPC-L5STPC': 0.8 * nS, # Not used in the current model
+        'w_All_other_E-E_connections': (0.72*EE_weights_gain) * nS  ,
+        'w_L5TTPC-L5MC': 0.11 * nS, # Not used in the current model
+        'w_L5PC-L5BC/L5ChC': 0.72 * nS, # Not used in the current model
+        'w_All_other_E-I_connections': (0.43*EI_weights_gain) * nS ,
+        'w_L5MC-L5TTPC': 0.75 * nS, # Not used in the current model
+        'w_L23(NBC,LBC)/L23ChC-23PC': 0.91 * nS, # Not used in the current model
+        'w_All_other_I-E_connections': 0.83 * nS,
+        'w_All_I-I_connections': 0.83 * nS
     }
+
     Cp = 0.001  # 1 #0.001 # Synaptic potentiation coefficient according to van Rossum J Neurosci 2000, here relative to initial value
     Cd = 0.003  # 1 #0.003 # Synaptic depression coefficient according to van Rossum J Neurosci 2000
-    # The term (3.6 etc) is the mean number of synapses/connection, from Markram Cell 2015
-    gain_parameter_E = 3.6  # 0.17*3.6 # The 0.5 is for release probability/synapse
-    gain_parameter_I = 13.9  # 0.6*13.9
-    gain_parameter_TC = 8.1  # 0.17*8.1
+    conn_prob_gain = 1  # This is used for compensation of small number of neurons and thus incoming synapses
     cw = {
-        'cw_in_SS' : _weights['we_e']*gain_parameter_TC,
-        'cw_in_PC': _weights['we_e'] * gain_parameter_TC,
-        'cw_in_BC': _weights['we_e_FS']*gain_parameter_TC,
-        'cw_in_L1i': _weights['we_e_FS']*gain_parameter_TC,
-        'cw_in_UMi': _weights['we_e_FS'] * gain_parameter_TC,
-        'cw_SS_SS': _weights['we_e']*gain_parameter_E,
-        'cw_SS_PC': _weights['we_e']*gain_parameter_E,
-        'cw_SS_BC':_weights['we_eX']*gain_parameter_E,
-        'cw_SS_MC': _weights['we_eX']*gain_parameter_E,
-        'cw_SS_L1i': _weights['we_eX']*gain_parameter_E,
-        'cw_SS_UMi': _weights['we_eX'] * gain_parameter_E,
-        'cw_PC_SS': _weights['we_e']*gain_parameter_E,
-        'cw_PC_PC':_weights['we_e']*gain_parameter_E,
-        'cw_PC_BC':_weights['we_e_FS']*gain_parameter_E,
-        'cw_PC_MC':_weights['we_e_LTS']*gain_parameter_E,
-        'cw_PC_L1i':_weights['we_e_FS']*gain_parameter_E,
-        'cw_PC_UMi': _weights['we_e_FS'] * gain_parameter_E,
-        'cw_BC_L1i': _weights['we_i'] * gain_parameter_I, #todo check this value
-        'cw_BC_SS':_weights['we_i']*gain_parameter_I,
-        'cw_BC_PC':_weights['we_i']*gain_parameter_I,
-        'cw_BC_BC':_weights['we_i']*gain_parameter_I,
-        'cw_BC_MC':_weights['we_i']*gain_parameter_I,
-        'cw_MC_SS':_weights['we_i']*gain_parameter_I,
-        'cw_MC_PC':_weights['we_i']*gain_parameter_I,
-        'cw_MC_BC':_weights['we_i']*gain_parameter_I,
-        'cw_MC_MC':_weights['we_i']*gain_parameter_I,
-        'cw_MC_L1i':_weights['we_i']*gain_parameter_I,
-        'cw_MC_UMi': _weights['we_i'] * gain_parameter_I,
-        'cw_L1i_SS':_weights['we_i']*gain_parameter_I,
-        'cw_L1i_BC': _weights['we_i'] * gain_parameter_I, #todo: check this value
-        'cw_L1i_MC': _weights['we_i'] * gain_parameter_I, #todo: check this value
-        'cw_L1i_PC':_weights['we_i']*gain_parameter_I,
-        'cw_L1i_L1i':_weights['we_i']*gain_parameter_I,
-        'cw_UMi_SS': _weights['we_i'] * gain_parameter_I,
-        'cw_UMi_PC': _weights['we_i'] * gain_parameter_I,
-        'cw_UMi_L1i': _weights['we_i'] * gain_parameter_I,
-        'cw_UMi_BC': _weights['we_i'] * gain_parameter_I,
-        'cw_UMi_MC': _weights['we_i'] * gain_parameter_I,
+        'cw_in_SS': _weights['w_All_other_E-E_connections'],
+        'cw_in_PC': _weights['w_All_other_E-E_connections'],
+        'cw_in_BC': _weights['w_All_other_E-I_connections'],
+        'cw_in_L1i': _weights['w_All_other_E-I_connections'],
+        'cw_in_UMi': _weights['w_All_other_E-I_connections'],
+        'cw_SS_SS': _weights['w_All_other_E-E_connections'],
+        'cw_SS_PC': _weights['w_All_other_E-E_connections'],
+        'cw_SS_BC': _weights['w_All_other_E-I_connections'],
+        'cw_SS_MC': _weights['w_All_other_E-I_connections'],
+        'cw_SS_L1i': _weights['w_All_other_E-I_connections'],
+        'cw_SS_UMi': _weights['w_All_other_E-I_connections'],
+        'cw_PC_SS': _weights['w_All_other_E-E_connections'],
+        'cw_PC_PC': _weights['w_All_other_E-E_connections'],
+        'cw_PC_BC': _weights['w_All_other_E-I_connections'],
+        'cw_PC_MC': _weights['w_All_other_E-I_connections'],
+        'cw_PC_L1i': _weights['w_All_other_E-I_connections'],
+        'cw_PC_UMi': _weights['w_All_other_E-I_connections'],
+        'cw_BC_L1i': _weights['w_All_I-I_connections'],
+        'cw_BC_SS': _weights['w_All_other_I-E_connections'],
+        'cw_BC_PC': _weights['w_All_other_I-E_connections'],
+        'cw_BC_BC': _weights['w_All_I-I_connections'],
+        'cw_BC_MC': _weights['w_All_I-I_connections'],
+        'cw_MC_SS': _weights['w_All_other_I-E_connections'],
+        'cw_MC_PC': _weights['w_All_other_I-E_connections'],
+        'cw_MC_BC': _weights['w_All_I-I_connections'],
+        'cw_MC_MC': _weights['w_All_I-I_connections'],
+        'cw_MC_L1i': _weights['w_All_I-I_connections'],
+        'cw_MC_UMi': _weights['w_All_I-I_connections'],
+        'cw_L1i_SS': _weights['w_All_other_I-E_connections'],
+        'cw_L1i_BC': _weights['w_All_I-I_connections'],
+        'cw_L1i_MC': _weights['w_All_I-I_connections'],
+        'cw_L1i_PC': _weights['w_All_other_I-E_connections'],
+        'cw_L1i_L1i': _weights['w_All_I-I_connections'],
+        'cw_UMi_SS': _weights['w_All_other_I-E_connections'],
+        'cw_UMi_PC': _weights['w_All_other_I-E_connections'],
+        'cw_UMi_L1i': _weights['w_All_I-I_connections'],
+        'cw_UMi_BC': _weights['w_All_I-I_connections'],
+        'cw_UMi_MC': _weights['w_All_I-I_connections']
+    }
 
-        }
 
-    stdp_Nsweeps = 60  # 60 in papers one does multiple trials to reach +-50% change in synapse strength. A-coefficien will be divided by this number
+    stdp_Nsweeps = 1  # Redundant with Cp and Cd params above. The 60 in papers one does multiple trials to reach +-50% change in synapse strength. A-coefficien will be divided by this number
     stdp_max_strength_coefficient = 15  # to avoid runaway plasticity
 
-    conn_prob_gain = 10  # This is used for compensation of small number of neurons and thus incoming synapses
+
     sp = {
-        'sp_in_SS': 0.0038 * conn_prob_gain, #TODO : 0.38 sparsness in input layer cause high probabilities with ilam of 0.1. Find a good combination of ilam and sp for input layer.
-        'sp_in_PC': 0.38 * conn_prob_gain,
-        'sp_in_BC': 0.38 * conn_prob_gain,
-        'sp_in_L1i': 0.38 * conn_prob_gain,
-        'sp_in_UMi': 0.38 * conn_prob_gain,
-        'sp_SS_SS': 0.081 * conn_prob_gain,
-        'sp_SS_PC':  0.081 * conn_prob_gain,
-        'sp_SS_BC': 0.053 * conn_prob_gain,
-        'sp_SS_MC': 0.058 * conn_prob_gain,
-        'sp_SS_L1i': 0.053 * conn_prob_gain,
-        'sp_SS_UMi': 0.053 * conn_prob_gain,
-        'sp_PC_SS':0.081 * conn_prob_gain,
-        'sp_PC_PC':0.081 * conn_prob_gain,
-        'sp_PC_BC':0.053 * conn_prob_gain,
-        'sp_PC_MC':0.058 * conn_prob_gain,
-        'sp_PC_L1i':0.053 * conn_prob_gain,
-        'sp_PC_UMi': 0.053 * conn_prob_gain,
-        'sp_BC_SS':0.071 * conn_prob_gain,
-        'sp_BC_PC': 0.05 * conn_prob_gain,
-        'sp_BC_L1i':0.005 * conn_prob_gain, #todo: check this value
-        'sp_BC_BC': 0.071 * conn_prob_gain,
-        'sp_BC_MC':0.071 * conn_prob_gain,
-        'sp_MC_SS':0.081 * conn_prob_gain,
-        'sp_MC_PC':0.081 * conn_prob_gain,
-        'sp_MC_BC':0.081 * conn_prob_gain,
-        'sp_MC_MC': 0.08 * conn_prob_gain,
-        'sp_MC_L1i':0.081 * conn_prob_gain,
-        'sp_MC_UMi': 0.081 * conn_prob_gain,
-        'sp_L1i_SS': 0.071 * conn_prob_gain,
-        'sp_L1i_PC': 0.071 * conn_prob_gain,
-        'sp_L1i_L1i':0.05 * conn_prob_gain,
-        'sp_L1i_BC':0.015 * conn_prob_gain,
-        'sp_L1i_MC':0.03 * conn_prob_gain,
-        'sp_UMi_SS': 0.071 * conn_prob_gain,
-        'sp_UMi_PC': 0.071 * conn_prob_gain,
-        'sp_UMi_L1i': 0.05 * conn_prob_gain,
-        'sp_UMi_BC': 0.071 * conn_prob_gain,
-        'sp_UMi_MC': 0.071 * conn_prob_gain,
+        'sp_in_SS': 0.38 , #TODO : 0.38 sparsness in input layer cause high probabilities with ilam of 0.1. Find a good combination of ilam and sp for input layer.
+        'sp_in_PC': 0.38 ,
+        'sp_in_BC': 0.38 ,
+        'sp_in_L1i': 0.38 ,
+        'sp_in_UMi': 0.38 ,
+        ###########
+        ########### since the probabilities are being fetched from markram data, following lines are gonna be overwritten by them
+        ###########
+        'sp_SS_SS': 0.081 ,
+        'sp_SS_PC':  0.081 ,
+        'sp_SS_BC': 0.053 ,
+        'sp_SS_MC': 0.058 ,
+        'sp_SS_L1i': 0.053 ,
+        'sp_SS_UMi': 0.053 ,
+        'sp_PC_SS':0.081 ,
+        'sp_PC_PC':0.081 ,
+        'sp_PC_BC':0.053 ,
+        'sp_PC_MC':0.058 ,
+        'sp_PC_L1i':0.053 ,
+        'sp_PC_UMi': 0.053 ,
+        'sp_BC_SS':0.071 ,
+        'sp_BC_PC': 0.05 ,
+        'sp_BC_L1i':0.005 , #todo: check this value
+        'sp_BC_BC': 0.071 ,
+        'sp_BC_MC':0.071 ,
+        'sp_MC_SS':0.081 ,
+        'sp_MC_PC':0.081 ,
+        'sp_MC_BC':0.081 ,
+        'sp_MC_MC': 0.08 ,
+        'sp_MC_L1i':0.081 ,
+        'sp_MC_UMi': 0.081 ,
+        'sp_L1i_SS': 0.071 ,
+        'sp_L1i_PC': 0.071 ,
+        'sp_L1i_L1i':0.05 ,
+        'sp_L1i_BC':0.015 ,
+        'sp_L1i_MC':0.03 ,
+        'sp_UMi_SS': 0.071 ,
+        'sp_UMi_PC': 0.071 ,
+        'sp_UMi_L1i': 0.05 ,
+        'sp_UMi_BC': 0.071 ,
+        'sp_UMi_MC': 0.071 ,
           }
-    # TODO STDP parameters to JSON file
-    stdp_Nsweeps = 60  # 60 in papers one does multiple trials to reach +-50% change in synapse strength. A-coefficien will be divided by this number
-    stdp_max_strength_coefficient = 15  # to avoid runaway plasticity
+
     stdp = {# instead of inf 2^32 -1 will be used
         'stdp_in_SS_soma': [20, -21.5, 5.4 * ms, 124.7 * ms],
         'stdp_in_PC_a4':[0,0,2147483647 * ms,2147483647 * ms],
@@ -378,8 +383,10 @@ class neuron_namespaces (object):
 
         # Connection parameters between compartments
         self.output_namespace['Ra']= [100,80,150,150,200] * Mohm
-        self.output_namespace['tau_e'] = 1.7 * ms
-        self.output_namespace['tau_eX'] = 1.7 * ms
+
+        # Synaptic time constants
+        self.output_namespace['tau_e'] = 3 * ms  # 1.7 ms from Markram Cell 2015. This however misses NMDA contribution (12% according to Markram Cell 2015). Given this proportion and AMPA tau 3 ms and NMDA tau 200 ms(NMDA fast decay; both from Spruston JPhysiol 1995), we get double exponential decay
+        self.output_namespace['tau_eX'] = 3 * ms
         self.output_namespace['tau_i'] = 8.3 * ms
         # return self.final_namespace
 
@@ -397,8 +404,8 @@ class neuron_namespaces (object):
         self.output_namespace['Vcut'] = self.output_namespace['VT'] + 5 * self.output_namespace['DeltaT']
         self.output_namespace['Ee'] = 0 * mV
         self.output_namespace['Ei'] = -75 * mV
-        self.output_namespace['tau_e'] = 1.7 * ms  # Markram Cell 2015
-        self.output_namespace['tau_i'] = 8.3 * ms  # Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5)
+        self.output_namespace['tau_e'] = 3 * ms  # 1.7 ms from Markram Cell 2015. This however misses NMDA contribution (12% according to Markram Cell 2015). Given this proportion and AMPA tau 3 ms and NMDA tau 200 ms(NMDA fast decay; both from Spruston JPhysiol 1995), we get double exponential decay
+        self.output_namespace['tau_i'] = 8.3 * ms  # Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5), also Salin 1996 JNeurophysiol gives 8.6 ms
 
     def _L1i(self,output_neuron):
         self.output_namespace['gL'] = 3.2 * nS  # 3.2 nsiemens mean of cell types in L1, Muralidhar 2014 Front Neuroanat, Table 3, mean of 1/"input resistance for steady state"
@@ -432,7 +439,7 @@ class neuron_namespaces (object):
         self.output_namespace['Vcut'] = self.output_namespace['VT'] + 5 * self.output_namespace['DeltaT']
         self.output_namespace['Ee'] = 0 * mV
         self.output_namespace['Ei'] = -75 * mV
-        self.output_namespace['tau_e'] = 1.7 * ms  # Markram Cell 2015
+        self.output_namespace['tau_e'] = 3 * ms  # Markram Cell 2015
         self.output_namespace['tau_i'] = 8.3 * ms  # Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5)
 
 
@@ -451,7 +458,7 @@ class neuron_namespaces (object):
         self.output_namespace['Vcut'] = self.output_namespace['VT'] + 5 * self.output_namespace['DeltaT']  # inherited from FS
         self.output_namespace['Ee'] = 0 * mV  # inherited from FS
         self.output_namespace['Ei'] = -75 * mV
-        self.output_namespace['tau_e'] = 1.7 * ms  # Markram Cell 2015
+        self.output_namespace['tau_e'] = 3 * ms  # Markram Cell 2015
         self.output_namespace['tau_i'] = 8.3 * ms  # Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5)
 
 
@@ -479,8 +486,8 @@ class neuron_namespaces (object):
 
         # Connection parameters between compartments
         self.output_namespace['Ra'] = 80 * Mohm
-        self.output_namespace['tau_e'] = 1.7 * ms
-        self.output_namespace['tau_eX'] = 1.7 * ms
+        self.output_namespace['tau_e'] = 3 * ms
+        self.output_namespace['tau_eX'] = 3 * ms
         self.output_namespace['tau_i'] = 8.3 * ms
         # return self.final_namespace
 
