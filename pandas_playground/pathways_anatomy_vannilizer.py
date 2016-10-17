@@ -3,7 +3,7 @@
 # Creates a json file similar to the original pathways_anatomy_factsheets_simplified.json from (*)
 #
 # Author Henri Hokkanen <henri.hokkanen@helsinki.fi>
-# Created 21 July 2016, last updated 4 October 2016
+# Created 21 July 2016, last updated 16 October 2016
 #
 # Refs:
 # (*) https://bbp.epfl.ch/nmc-portal/downloads, for explanations see Markram et al. (Cell 2015)
@@ -490,6 +490,3 @@ def create_csv_config_file(filename=default_csv_output_file, update_json=False):
 
     fi.close()
 
-
-
-create_csv_config_file()
