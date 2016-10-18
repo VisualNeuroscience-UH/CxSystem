@@ -429,10 +429,14 @@ def create_csv_config_file(filename=default_csv_output_file, update_json=False):
     fi = open(filename, 'w')
 
     # Write header
-    fi.write('row_type,sys_mode,do_optimize\n')
-    fi.write('params,local,0\n') # TODO Shouldn't be hard-coded
-    fi.write('row_type,idx,type,path,freq,monitors\n')
-    fi.write('IN,video,0, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]\n') # TODO Shouldn't be hard-coded
+    #fi.write('row_type,sys_mode,do_optimize\n')
+    #fi.write('params,local,0\n') # TODO Shouldn't be hard-coded
+    fi.write('row_type,sys_mode,do_optimize,grid_radius, min_distance, output_path, brian_data_path\n')
+    fi.write('params,local,0,210*um, 1*um,../CX_Output/output_data.mat,../CX_Output/brian_data.h5\n')
+    # config_file.write('row_type,idx,type,path,freq,monitors\n') TODO Shouldn't be hard-coded
+    # config_file.write('IN,video,0, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]\n')
+    fi.write('row_type,idx,type,number_of_neurons,radius,spike_times,net_center,monitors\n')
+    fi.write('IN,0, VPM,10,92*um,[0.1 0.12 0.15 0.17 0.20 0.22 0.25 0.5]*second, N/A ,[Sp]\n')
 
     # Go through NEURON GROUPS
     fi.write('row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors\n')
