@@ -1,6 +1,9 @@
 __author__ = 'V_AD'
 from brian_genn_version  import *
 import sys
+
+calcium_concentration = 2.0  # Change calcium concentration here or with _change_calcium()
+
 class synapse_namespaces(object):
     '''
     This class contains all the variables that are required for the Synapses() object namespaces. There are several reference dictionaries in this class for:
@@ -273,6 +276,13 @@ class synapse_namespaces(object):
 
     }
 
+    _excitatory_groups = ['PC', 'SS']
+    _steep_post_inhibitory_groups = ['MC']
+    _shallow_post_inhibitory_groups = ['BC']
+    _steep_post = _excitatory_groups + _steep_post_inhibitory_groups
+    _shallow_post = _shallow_post_inhibitory_groups
+
+    _K12 = 0
 
 
     def __init__(self,output_synapse):
@@ -292,6 +302,26 @@ class synapse_namespaces(object):
             'ilam_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])]
         getattr(synapse_namespaces,output_synapse['type'])(self,output_synapse)
 
+        # For change_calcium
+        if output_synapse['pre_group_type'] in self._excitatory_groups and output_synapse['post_group_type'] in self._steep_post:
+            self._K12 = 2.79
+        elif output_synapse['pre_group_type'] in self._excitatory_groups and output_synapse['post_group_type'] in self._shallow_post:
+            self._K12 = 1.09
+        else:
+            self._K12 = np.average([2.79, 1.09])
+
+
+    def _change_calcium(self, ca=2.0):
+
+        original_synapse_strength = self.output_namespace['wght0']
+
+        ca0 = 2.0
+        calcium_factor = (pow(ca,4)/(pow(self._K12,4) + pow(ca,4))) / (pow(ca0,4)/(pow(self._K12,4) + pow(ca0,4)))
+
+        final_synapse_strength = original_synapse_strength * calcium_factor
+        self.output_namespace['wght0'] = final_synapse_strength
+
+        return final_synapse_strength
 
     def STDP(self,output_synapse):
         '''
@@ -318,6 +348,12 @@ class synapse_namespaces(object):
                                                                                     'post_group_type'])] * synapse_namespaces.stdp_max_strength_coefficient
         self.output_namespace['wght0'] = synapse_namespaces.cw[
             'cw_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])]
+
+        if calcium_concentration > 0:
+            self._change_calcium(calcium_concentration)
+
+
+
 
 
 

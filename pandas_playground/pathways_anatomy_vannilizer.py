@@ -10,10 +10,12 @@
 # (**) ?? TODO Write a description of the simplified system
 
 
+from __future__ import division
 import pandas as pd
 import re
 import json
 from math import floor
+
 
 
 file_pathways_anatomy_markram = 'pathways_anatomy_factsheets_simplified.json'
@@ -361,10 +363,12 @@ def _compute_own_cell_N_dict(with_UM_I = False):
         rows_to_remove = pd.DataFrame(own_cell_N[own_cell_N.index.str.contains('UM_I')])
         for row in rows_to_remove.iterrows():
             UM_I_count = row[1]['N']
-            half_of_UM_I = round(UM_I_count / 2, ndigits=0)
             layer = row[0].split('_')[0]
-            own_cell_N[layer + '_MC'] += half_of_UM_I
-            own_cell_N[layer + '_BC'] += half_of_UM_I
+
+            # TODO Slight discrepancy with Vafa's numbers! But I think mine is correct ;)
+            BC_to_BC_plus_MC = own_cell_N[layer + '_BC'] / (own_cell_N[layer + '_BC'] + own_cell_N[layer + '_MC'])
+            own_cell_N[layer + '_BC'] += round( BC_to_BC_plus_MC * UM_I_count, ndigits=0 )
+            own_cell_N[layer + '_MC'] += round( (1-BC_to_BC_plus_MC) * UM_I_count, ndigits=0 )
 
         own_cell_N = own_cell_N[own_cell_N.index.str.contains('UM_I') == False]
 
@@ -490,3 +494,5 @@ def create_csv_config_file(filename=default_csv_output_file, update_json=False):
 
     fi.close()
 
+
+create_csv_config_file()
