@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 import os
 
-vanni_data = pd.read_json(os.path.abspath('./pathways_anatomy_vannilized.json'),  orient='index')
-henry_data = pd.read_json(os.path.abspath('./pathways_anatomy_vanni.json'), orient='index')
+simo_data = pd.read_json(os.path.abspath('./pathways_anatomy_vannilized.json'),  orient='index')
+henri_data = pd.read_json(os.path.abspath('./pathways_anatomy_vanni.json'), orient='index')
 with open('./Markram_config_file.csv', 'w') as config_file:
     config_file.write('row_type,sys_mode,do_optimize,grid_radius, min_distance, output_path, brian_data_path\n')
     config_file.write('params,local,0,210*um, 1*um,../CX_Output/output_data.mat,../CX_Output/brian_data.h5\n')
@@ -41,11 +41,11 @@ with open('./Markram_config_file.csv', 'w') as config_file:
     default_NG_monitor = ',[Sp][rec](***fill here***)'
     group_items = []
     UMi_dict = {}
-    for item in vanni_data['vanni_pre'].unique():
+    for item in simo_data['vanni_pre'].unique():
         layer_str = item[0:item.index('_')]
         layer_idx = [layer_options[lay] for lay in layer_options.keys() if lay in layer_str][0]
         N_type = [NG_options[opt] for opt in NG_options.keys() if opt in item][0]
-        NN = sum(np.unique(vanni_data.ix[np.where(vanni_data['vanni_pre'] == item)[0]]['neuron_number_pre']))
+        NN = sum(np.unique(simo_data.ix[np.where(simo_data['vanni_pre'] == item)[0]]['neuron_number_pre']))
         if N_type == 'UMi' or N_type == 'BC' or N_type == 'MC':
             try:
                 if type(UMi_dict[layer_idx]) != dict:
@@ -63,11 +63,35 @@ with open('./Markram_config_file.csv', 'w') as config_file:
             UMi_dict[item]['BC']+UMi_dict[item]['MC']))*UMi_dict[item]['UMi'])
         UMi_dict[item]['MC'] = int(UMi_dict[item]['MC'] + (float(UMi_dict[item]['MC']) / (
             UMi_dict[item]['BC'] + UMi_dict[item]['MC'])) * UMi_dict[item]['UMi'])
-    for item in vanni_data['vanni_pre'].unique():
+    all_groups = simo_data['vanni_pre'].unique()
+    sorted_groups = []
+    layers= np.unique([group[group.index('L')+1] for group in all_groups])
+    for layer in layers:
+        tmp_groups = [group for group in all_groups if group[group.index('L')+1] == layer]
+        if len(tmp_groups)>1:
+            SSs = [sub_group for sub_group in tmp_groups if 'SS' in sub_group]
+            PCs = sorted([sub_group for sub_group in tmp_groups if 'PC' in sub_group],key=lambda x:sub_group[-1])
+            BCs = [sub_group for sub_group in tmp_groups if 'BC' in sub_group]
+            MCs = [sub_group for sub_group in tmp_groups if 'MC' in sub_group]
+
+            if PCs:
+                sorted_groups.extend(PCs)
+            if SSs:
+                sorted_groups.extend(SSs)
+            if BCs:
+                sorted_groups.extend(BCs)
+            if MCs:
+                sorted_groups.extend(MCs)
+        else:
+            sorted_groups.extend(tmp_groups)
+
+
+    for item in sorted_groups:
         layer_str = item[0:item.index('_')]
         layer_idx = [layer_options[lay] for lay in layer_options.keys() if lay in layer_str][0]
         N_type = [NG_options[opt] for opt in NG_options.keys() if opt in item][0]
         if N_type == 'PC':
+            # print item
             if len(item[item.index('_')+1:])>2:
                 layer_idx = '[' + layer_idx + '->' + PC_layer_options[layer_idx+item[item.index('_')+1:][2]] + ']'
             else:
@@ -77,7 +101,7 @@ with open('./Markram_config_file.csv', 'w') as config_file:
         elif N_type == 'MC':
             NN = UMi_dict[layer_idx]['MC']
         else:
-            NN = sum(np.unique(vanni_data.ix[np.where(vanni_data['vanni_pre'] == item)[0]]['neuron_number_pre']))
+            NN = sum(np.unique(simo_data.ix[np.where(simo_data['vanni_pre'] == item)[0]]['neuron_number_pre']))
         line = 'G,%d,%d,%s,%s,%s%s\n' %(group_index,NN,N_type,layer_idx,default_center, default_NG_monitor )
         if N_type == 'UMi':
             line+= 'Skipped because UMi group found'
@@ -87,7 +111,7 @@ with open('./Markram_config_file.csv', 'w') as config_file:
             group_items.append(item)
     config_file.write('row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p,n,monitors,percentage,load_connection,save_connection\n')
     config_file.write('###########\n###########\n#*** input connections here***\n###########\n###########\n')
-    syn_num = len(henry_data[:])
+    syn_num = len(henri_data[:])
     receptor_options={
         '_I' : 'gi',
         '_BC' : 'gi',
@@ -101,7 +125,7 @@ with open('./Markram_config_file.csv', 'w') as config_file:
     for syn_index in range(0,syn_num):
         line = 'S,ge,0,1,Fixed,0.043,N/A,[St]wght[rec](0-20),0.60'
         line = 'S,'
-        syn_name = henry_data.ix[syn_index].name
+        syn_name = henri_data.ix[syn_index].name
         syn_name_pre = syn_name[0:syn_name.index(':')]
         syn_name_post = syn_name[syn_name.index(':')+1:]
         if 'UM' in syn_name_pre or 'UM' in syn_name_post :
@@ -131,12 +155,11 @@ with open('./Markram_config_file.csv', 'w') as config_file:
 
                 if pre_layer_idx == '1' and '_I' in pre_group_item: # for layer 1 inhibitory
                     # assert 1 in post_group_layers_list, 'presynaptic group is L1i but and is targetting a group which deos not have any compartment in layer1, is this normal?'
-                    if not 1 in post_group_layers_list:
-                        line+= 'skip this line since there is no layer 1 compartment in the group'
+                    # if not 1 in post_group_layers_list:
+                    #     line+= 'skip this line since there is no layer 1 compartment in the group'
                     line += '[C]%d,'%(len(post_group_layers_list)-1)
                 elif '_MC' in pre_group_item:
-                    farthest_comp = max(post_group_layers_list[1:], key=lambda x:abs(x-int(pre_layer_idx))) # farthest distal dendrite (soma layer not acceptable hence the [1:])
-                    line += '[C]%d,' %post_group_layers_list.index(farthest_comp)
+                    line += '[C]%d,' %post_group_layers_list.index(post_group_layers_list[-1])
                 elif '_BC' in pre_group_item:
                     line += '[C]0s,'
                 else:
@@ -157,13 +180,13 @@ with open('./Markram_config_file.csv', 'w') as config_file:
         line+= default_syn_type+ ','
         if '[C]0' in line:
             targ_comp_num = len(line[line.index('[C]0')+4:len(line[0:line.index('[C]0')])+line[line.index('[C]0'):].index(',')])
-            line += '%s' % str(list(np.repeat(henry_data.ix[syn_index]['connection_probability']/targ_comp_num,targ_comp_num))).replace(', ','+').replace('[','').replace(']','') + ','
+            line += '%s' % str(list(np.repeat(henri_data.ix[syn_index]['connection_probability']/targ_comp_num,targ_comp_num))).replace(', ','+').replace('[','').replace(']','') + ','
             line += '%s' % str(list(
-                np.repeat(int(round(henry_data.ix[syn_index]['mean_number_of_synapses_per_connection'])), targ_comp_num))).replace(
+                np.repeat(int(round(henri_data.ix[syn_index]['mean_number_of_synapses_per_connection'])), targ_comp_num))).replace(
                 ', ', '+').replace('[', '').replace(']', '') + ','
         else:
-            line+= '%f'%henry_data.ix[syn_index]['connection_probability']+ ','
-            line += '%d' % int(round(henry_data.ix[syn_index]['mean_number_of_synapses_per_connection'])) + ','
+            line+= '%f'%henri_data.ix[syn_index]['connection_probability']+ ','
+            line += '%d' % int(round(henri_data.ix[syn_index]['mean_number_of_synapses_per_connection'])) + ','
         line += default_syn_monitor + ','
         line += default_percentage + ','
         line += '1' + ',' #load connection

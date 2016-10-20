@@ -12,8 +12,8 @@ import copy # for copying Equation object
 import __builtin__
 import ntpath
 import hickle as hkl
-import scipy
-
+from scipy import io
+from scipy.sparse import csr_matrix
 
 
 class cortical_system(object):
@@ -77,7 +77,9 @@ class cortical_system(object):
             'grid_radius': self._set_grid_radius,
             'min_distance': self._set_min_distance,
             'output_path' : self._set_output_path,
-            'brian_data_path': self._set_brian_data_path,
+            'load_brian_data_path': self._set_load_brian_data_path,
+            'save_brian_data_path': self._set_save_brian_data_path,
+            'do_init_vms': self.do_init_vms,
 
         }
         self.runtime = runtime
@@ -102,16 +104,13 @@ class cortical_system(object):
         self.total_number_of_connections = 0
         self.general_grid_radius = 0
         self.min_distance = 0
-
-        ### warning flags:
-        self.load_warning_parinted = 0
-        self.save_warning_parinted = 0
+        self.do_init_vms = 0
 
         with open(self.config_path, 'r') as f:
             for self.line in f:
                 self.line = self.line.replace('\n', '')
                 self.line = self.line.lstrip()
-                if 'do_optimize' in self.line or self.line[0:6] == 'params':
+                if 'do_optimize' in self.line or self.line.split(',')[0] == 'params':
                     _splitted_line = [non_empty.strip() for non_empty in self.line.split(',') if non_empty != '']
                     if 'row_type' in self.line:
                         self.current_parameters_list = _splitted_line[1:]
@@ -163,7 +162,7 @@ class cortical_system(object):
                     _splitted_line = [non_empty.strip() for non_empty in self.line.split(',') if non_empty != '']
                     if 'row_type' in self.line:
                         self.current_parameters_list = _splitted_line[1:]
-                    elif _splitted_line[0] in self._options:
+                    elif _splitted_line[0] in self._options and _splitted_line[0] != 'params':
                         self.current_values_list = _splitted_line[1:]
                         self._options[_splitted_line[0]]()
 
@@ -174,6 +173,9 @@ class cortical_system(object):
         if self.do_optimize == 1:
             sys.exit("Execution Compeleted. the synapses are optimized based on their percentages and the new connection file is generated. Use the name of the new configuration file to re-run the program.")
         print "Cortical Module initialization Done."
+
+
+    def run(self):
         run(self.runtime, report='text')
         if self.use_genn == 1:
             device.build(directory=os.path.join(self.output_path, 'GeNN_Output'),
@@ -216,35 +218,41 @@ class cortical_system(object):
     def _set_min_distance(self,*args):
         assert '*' in args[0], 'Please specify the unit for the minimum distance parameter, e.g. um , mm '
         self.min_distance= eval(args[0])
+
     def _set_output_path(self,*args):
         self.output_path = args[0]
         self.save_output_data = save_data(self.output_path)  # The save_data() object for saving the final data.
         self.save_output_data.creat_key('positions_all')
         self.save_output_data.data['positions_all']['w_coord'] = {}
         self.save_output_data.data['positions_all']['z_coord'] = {}
+        self.save_output_data.data['number_of_neurons'] = {}
         self.save_output_data.data['runtime'] = self.runtime / self.runtime._get_best_unit()
 
+    def _set_load_brian_data_path(self,*args):
+        self.load_brian_data_path = args[0]
+        self.load_brian_data_filename = ntpath.basename(self.load_brian_data_path)
+        self.load_brian_data_folder = ntpath.dirname(self.load_brian_data_path)
+        self.load_brian_data_extension = os.path.splitext(self.load_brian_data_path)[1]
+        assert ('mat' in self.load_brian_data_extension), 'Error: the extension of the brian_data input/output should be h5, but it is %s'%self.load_brian_data_extension
+        assert os.path.isfile(os.path.abspath(self.load_brian_data_path)), 'Error: the brian_data file canno be found for loading'
+        self.load_brian_data = io.loadmat(self.load_brian_data_path)
+        print 'Info: brian data file loaded from %s'%os.path.abspath(self.load_brian_data_path)
 
+    def _set_save_brian_data_path(self,*args):
+        self.save_brian_data_path = args[0]
+        self.save_brian_data_filename = ntpath.basename(self.save_brian_data_path)
+        self.save_brian_data_folder = ntpath.dirname(self.save_brian_data_path)
+        self.save_brian_data_extension = os.path.splitext(self.save_brian_data_path)[1]
+        assert ('mat' in self.save_brian_data_extension), 'Error: the extension of the brian_data input/output should be h5, but it is %s'%self.save_brian_data_extension
+        self.save_brian_data = save_data(self.save_brian_data_path)
 
-
-
-    def _set_brian_data_path(self,*args):
-        self.brian_data_path = args[0]
-        self.brian_data_filename = ntpath.basename(self.brian_data_path)
-        self.brian_data_folder = ntpath.dirname(self.brian_data_path)
-        self.brian_data_extension = os.path.splitext(self.brian_data_path)[1]
-        assert 'h5' in self.brian_data_extension, 'Error: the extension of the brian_data input/output should be h5, but it is %s'%self.brian_data_extension
-        self.save_brian_data = save_data(self.brian_data_path)
-        if os.path.isfile(os.path.abspath(self.brian_data_path)):
-            # print 'brian data file loaded from %s'%os.path.abspath(self.brian_data_path)
-            self.save_brian_data.data = hkl.load(self.brian_data_path)
-
-
-
-
-
-
-
+    def do_init_vms(self,*args):
+        assert int(args[0]) == 0 or int(args[0]) == 1 , 'Error: the do_init_vm flag should be either 0 or 1 but it is %s .'%args[0]
+        self.do_init_vms = int(args[0])
+        if self.do_init_vms:
+            print 'Info: Membrane voltages are being randomly initialized.'
+        if not self.do_init_vms:
+            print 'Info: no initialization for membrane voltages.'
     def neuron_group(self, *args):
         '''
         The method that creates the NeuronGroups() based on the parameters that are extracted from the configuraiton file in the __init__ method of the class.
@@ -327,15 +335,24 @@ class cortical_system(object):
         # Saving the neurons' positions both in visual field and cortical coordinates in save_data() object.
         self.save_output_data.data['positions_all']['z_coord'][NG_name] = self.customized_neurons_list[current_idx]['z_positions']
         self.save_output_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx]['w_positions']
-
+        self.save_output_data.data['number_of_neurons'][NG_name] = eval(NN_name)
         # NeuronGroups() should be initialized with a random vm, ge and gi values. To address this, a 6-line code is generated and put in NG_init variable, the running of which will lead to initialization of current NeuronGroup().
-        NG_init = 'Vr_offset = rand(len(%s))\n' % NG_name
-        NG_init += "for _key in %s.variables.keys():\n" % NG_name
-        NG_init += "\tif _key.find('vm')>=0:\n"
-        NG_init += "\t\tsetattr(%s,_key,%s['Vr']+Vr_offset * (%s['VT']-%s['Vr']))\n" % (NG_name, NNS_name, NNS_name, NNS_name)
-        NG_init += "\telif ((_key.find('ge')>=0) or (_key.find('gi')>=0)):\n"
-        NG_init += "\t\tsetattr(%s,_key,0)" % NG_name
-        exec NG_init
+        if self.do_init_vms:
+            NG_init = 'Vr_offset = rand(len(%s))\n' % NG_name
+            NG_init += "for _key in %s.variables.keys():\n" % NG_name
+            NG_init += "\tif _key.find('vm')>=0:\n"
+            NG_init += "\t\tsetattr(%s,_key,%s['Vr']+Vr_offset * (%s['VT']-%s['Vr']))\n" % (NG_name, NNS_name, NNS_name, NNS_name)
+            NG_init += "\telif ((_key.find('ge')>=0) or (_key.find('gi')>=0)):\n"
+            NG_init += "\t\tsetattr(%s,_key,0)" % NG_name
+            exec NG_init
+        else:
+            NG_init = "for _key in %s.variables.keys():\n" % NG_name
+            NG_init += "\tif _key.find('vm')>=0:\n"
+            NG_init += "\t\tsetattr(%s,_key,%s['Vr'])\n" % (
+            NG_name, NNS_name)
+            NG_init += "\telif ((_key.find('ge')>=0) or (_key.find('gi')>=0)):\n"
+            NG_init += "\t\tsetattr(%s,_key,0)" % NG_name
+            exec NG_init
 
 
         # DO NOT DELETE NEXT 6 LINES
@@ -396,82 +413,90 @@ class cortical_system(object):
             # Extracting the monitor tag
             mon_tag = mon_arg[mon_arg.index('['):mon_arg.index(']') + 1]
             assert mon_tag in monitor_options.keys(),'Error: %s is not recognized as a type of monitor ' %mon_tag
-            mon_arg = mon_arg.replace(mon_tag, '')
-            if mon_tag == '[Sp]':  # This is for SpikeMonitor()s
-                # If there is a spike monitor, a spikes_all field is added to the save_data() object.
-                self.save_output_data.creat_key('spikes_all')
-                Mon_name = monitor_options['[Sp]'][0] + str(
-                    self.monitor_idx) + '_' + object_name  # Generated variable name for a specific monitor.
-                self.save_output_data.syntax_bank.append("self.save_output_data.data['spikes_all']['%s'] = %s.it" % (object_name,
-                                                                                                       Mon_name))  # After simulation, this syntax will be used to save this specific monitor's result.
+            mon_arg = mon_arg.replace(mon_tag, '').split('+')
+            # if mon_tag == '[Sp]':  # This is for SpikeMonitor()s
+            #     # If there is a spike monitor, a spikes_all field is added to the save_data() object.
+            #
+            #     self.save_output_data.creat_key('spikes_all')
+            #     Mon_name = monitor_options['[Sp]'][0] + str(
+            #         self.monitor_idx) + '_' + object_name  # Generated variable name for a specific monitor.
+            #     self.save_output_data.syntax_bank.append("self.save_output_data.data['spikes_all']['%s'] = %s.it" % (object_name,
+            #                                                                                            Mon_name))  # After simulation, this syntax will be used to save this specific monitor's result.
+            #     self.monitor_name_bank[object_name].append(Mon_name)
+            #     # build the monitor object based on the generated name:
+            #     exec "%s=%s(%s)" % (Mon_name, monitor_options['[Sp]'][1], object_name)
+            #
+            #     setattr(self.main_module, Mon_name, eval(Mon_name))
+            #     try: setattr(self.CX_module, Mon_name, eval(Mon_name))
+            #     except: pass
+            #
+            #     # update monitor index:
+            #     self.monitor_idx += 1
+            # else:  # Work on StateMonitors() :
+                # Split the StateMonitors if there are multiple of them separated by a "+" :
+            for sub_mon_arg in mon_arg:  # going through each state variable:
+                Mon_str = "=%s(%s" % (str(monitor_options[mon_tag][1]),
+                                       object_name) # The syntax used for building a specific StateMonitor.
+                sub_mon_tags = []  # The tags in configuration file that are specified for a StateMonitor(), e.g. in record=True which is specified by [rec]True in configuration file, [rec] is saved in sub_mon_tags
+                if not ('[' in sub_mon_arg) and sub_mon_arg != '':  # if there is no tag, it means that the only tag that should be there is record = true
+                    sub_mon_arg = sub_mon_arg.split()
+                    sub_mon_arg.append('True')
+                    sub_mon_tags.append('[rec]')
+                else:
+                    tag_open_indices = [idx for idx, ltr in enumerate(sub_mon_arg) if
+                                        ltr == '[']  # find the start index of all tags
+                    tag_close_indices = [idx for idx, ltr in enumerate(sub_mon_arg) if
+                                         ltr == ']']  # find the end index of all tags
+                    assert len(tag_open_indices) == len(
+                        tag_close_indices), 'Error: wrong sets of tagging paranteses in monitor definitoins. '
+                    for tag_idx in range(len(tag_open_indices)):  # go through each StateMonitor tag:
+                        sub_mon_tags.append(sub_mon_arg[sub_mon_arg.index('['):sub_mon_arg.index(']') + 1])
+                        sub_mon_arg = sub_mon_arg.replace(sub_mon_tags[tag_idx], ' ')
+                    sub_mon_arg = sub_mon_arg.split(' ')
+                    if not '[rec]' in sub_mon_tags and sub_mon_arg != ['']:  # if some tags exist and [rec] is not present, it means record=True
+                        sub_mon_tags.append('[rec]')
+                        sub_mon_arg.append('True')
+                    elif '[rec]' in sub_mon_tags:
+                        sub_mon_arg[sub_mon_tags.index('[rec]')+1] = 'arange'+ sub_mon_arg[sub_mon_tags.index('[rec]')+1].replace('-',',')
+                    assert len(sub_mon_arg) == len(sub_mon_tags) + 1, 'Error in monitor tag definition.'
+                if sub_mon_arg[0] == '':
+                    assert mon_tag == '[Sp]', 'The monitor state variable is not defined properly'
+                    self.save_output_data.creat_key('spikes_all')  # Create a key in save_data() object for that specific StateMonitor variable.
+                    Mon_name = monitor_options[mon_tag][0] + str(self.monitor_idx) + '_' + object_name
+                    self.save_output_data.syntax_bank.append(
+                        "self.save_output_data.data['spikes_all']['%s'] = asarray(%s.it)" % (object_name, Mon_name))
+                    Mon_str = Mon_name + Mon_str
+                else:
+                    self.save_output_data.creat_key('%s_all' % sub_mon_arg[0])  # Create a key in save_data() object for that specific StateMonitor variable.
+                    Mon_name = monitor_options[mon_tag][0] + str(self.monitor_idx) + '_' + object_name + '__' + \
+                               sub_mon_arg[0]
+                    self.save_output_data.syntax_bank.append("self.save_output_data.data['%s_all']['%s'] = asarray(%s.%s)" % (
+                    sub_mon_arg[0], object_name, Mon_name, sub_mon_arg[
+                        0]))  # After simulation, this syntax will be used to save this specific monitor's result.
+                    Mon_str = Mon_name + Mon_str + ",'" + sub_mon_arg[0] + "'"
+                    del (sub_mon_arg[0])
+                    # add each of the tag and their argument, e.g. "record" as tag and "True" as argument, to the Mon_str syntax string.
+                    for idx, tag in enumerate(sub_mon_tags):
+                        Mon_str += monitor_options[tag][0] + sub_mon_arg[idx]
+
                 self.monitor_name_bank[object_name].append(Mon_name)
-                # build the monitor object based on the generated name:
-                exec "%s=%s(%s)" % (Mon_name, monitor_options['[Sp]'][1], object_name)
+                # check if the variable exist in the equation:
+                # if ('d' + sub_mon_arg[0]) in str(equation):
+                #     assert (sub_mon_arg[0] + '/') in str(equation), \
+                #         'The monitor varibale %s is not defined in the equation.' % sub_mon_arg[0]
+                # else:
+                #     assert (sub_mon_arg[0]) in str(equation), \
+                #         'The monitor varibale %s is not defined in the equation.' % sub_mon_arg[0]
+
+                Mon_str += ')'
+                # create the Monitor() object
+                exec Mon_str
 
                 setattr(self.main_module, Mon_name, eval(Mon_name))
                 try: setattr(self.CX_module, Mon_name, eval(Mon_name))
                 except: pass
 
-                # update monitor index:
                 self.monitor_idx += 1
-            else:  # Work on StateMonitors() :
-                # Split the StateMonitors if there are multiple of them separated by a "+" :
-                mon_arg = mon_arg.split('+')
-                for sub_mon_arg in mon_arg:  # going through each state variable:
-                    Mon_str = "=%s(%s," % (str(monitor_options[mon_tag][1]),
-                                           object_name)  # The syntax used for building a specific StateMonitor.
-                    sub_mon_tags = []  # The tags in configuration file that are specified for a StateMonitor(), e.g. in record=True which is specified by [rec]True in configuration file, [rec] is saved in sub_mon_tags
-                    if not ('[' in sub_mon_arg):  # if there is no tag, it means that the only tag that should be there is record = true
-                        sub_mon_arg = sub_mon_arg.split()
-                        sub_mon_arg.append('True')
-                        sub_mon_tags.append('[rec]')
-                    else:
-                        tag_open_indices = [idx for idx, ltr in enumerate(sub_mon_arg) if
-                                            ltr == '[']  # find the start index of all tags
-                        tag_close_indices = [idx for idx, ltr in enumerate(sub_mon_arg) if
-                                             ltr == ']']  # find the end index of all tags
-                        assert len(tag_open_indices) == len(
-                            tag_close_indices), 'Error: wrong sets of tagging paranteses in monitor definitoins. '
-                        for tag_idx in range(len(tag_open_indices)):  # go through each StateMonitor tag:
-                            sub_mon_tags.append(sub_mon_arg[sub_mon_arg.index('['):sub_mon_arg.index(']') + 1])
-                            sub_mon_arg = sub_mon_arg.replace(sub_mon_tags[tag_idx], ' ')
-                        sub_mon_arg = sub_mon_arg.split(' ')
-                        if not '[rec]' in sub_mon_tags:  # if some tags exist and [rec] is not present, it means record=True
-                            sub_mon_tags.append('[rec]')
-                            sub_mon_arg.append('True')
-                        else:
-                            sub_mon_arg[sub_mon_tags.index('[rec]')+1] = 'arange'+ sub_mon_arg[sub_mon_tags.index('[rec]')+1].replace('-',',')
-                        assert len(sub_mon_arg) == len(sub_mon_tags) + 1, 'Error in monitor tag definition.'
-                    self.save_output_data.creat_key('%s_all' % sub_mon_arg[
-                        0])  # Create a key in save_data() object for that specific StateMonitor variable.
-                    Mon_name = monitor_options['[St]'][0] + str(self.monitor_idx) + '_' + object_name + '__' + \
-                               sub_mon_arg[0]
-                    self.save_output_data.syntax_bank.append("self.save_output_data.data['%s_all']['%s'] = asarray(%s.%s)" % (
-                    sub_mon_arg[0], object_name, Mon_name, sub_mon_arg[
-                        0]))  # After simulation, this syntax will be used to save this specific monitor's result.
-
-                    self.monitor_name_bank[object_name].append(Mon_name)
-                    Mon_str = Mon_name + Mon_str + "'" + sub_mon_arg[0] + "'"
-                    # check if the variable exist in the equation:
-                    if ('d' + sub_mon_arg[0]) in str(equation):
-                        assert (sub_mon_arg[0] + '/') in str(equation), \
-                            'The monitor varibale %s is not defined in the equation.' % sub_mon_arg[0]
-                    else:
-                        assert (sub_mon_arg[0]) in str(equation), \
-                            'The monitor varibale %s is not defined in the equation.' % sub_mon_arg[0]
-                    del (sub_mon_arg[0])
-                    # add each of the tag and their argument, e.g. "record" as tag and "True" as argument, to the Mon_str syntax string.
-                    for idx, tag in enumerate(sub_mon_tags):
-                        Mon_str += monitor_options[tag][0] + sub_mon_arg[idx]
-                    Mon_str += ')'
-                    # create the Monitor() object
-                    exec Mon_str
-
-                    setattr(self.main_module, Mon_name, eval(Mon_name))
-                    try: setattr(self.CX_module, Mon_name, eval(Mon_name))
-                    except: pass
-
-                    self.monitor_idx += 1
 
     def synapse(self, *args):
         '''
@@ -679,13 +704,15 @@ class cortical_system(object):
                     _do_save = int(syn[self.current_parameters_list.index('save_connection')])
 
 
-            if (self.default_load_flag==1 or (self.default_load_flag==-1 and _do_load == 1 )) and hasattr(self,'save_brian_data') :
-                assert _syn_ref_name in self.save_brian_data.data.keys(), "The data for the following connection was not found in the loaded brian data: %s" % _syn_ref_name
-                eval(S_name).connect(self.save_brian_data.data[_syn_ref_name]['i'],self.save_brian_data.data[_syn_ref_name]['j'])
-                eval(S_name).wght = self.save_brian_data.data[_syn_ref_name]['wght'] * siemens
+            if (self.default_load_flag==1 or (self.default_load_flag==-1 and _do_load == 1 )) and hasattr(self,'load_brian_data') :
+                assert _syn_ref_name in self.load_brian_data.keys(), "The data for the following connection was not found in the loaded brian data: %s" % _syn_ref_name
+                eval(S_name).connect(self.load_brian_data[_syn_ref_name]['data'][0][0].tocoo().row, \
+                                     self.load_brian_data[_syn_ref_name]['data'][0][0].tocoo().col,\
+                                     n = int(self.load_brian_data[_syn_ref_name]['n']))
+                eval(S_name).wght = repeat(self.load_brian_data[_syn_ref_name]['data'][0][0].data/int(self.load_brian_data[_syn_ref_name]['n']),int(self.load_brian_data[_syn_ref_name]['n'])) * siemens
                 _load_str = 'Connection loaded from '
-            elif (self.default_load_flag==1 or (self.default_load_flag==-1 and _do_load == 1 )) and not hasattr(self,'save_brian_data') :
-                print "Warning: synapstic connection is set to be loaded, however the brian_data_path is not defined in the parameters."
+            elif (self.default_load_flag==1 or (self.default_load_flag==-1 and _do_load == 1 )) and not hasattr(self,'load_brian_data') :
+                print "Warning: synapstic connection is set to be loaded, however the load_brian_data_path is not defined in the parameters."
 
 
             else:
@@ -728,13 +755,7 @@ class cortical_system(object):
                     syn_con_str += ')'
                 exec syn_con_str
 
-            if (self.default_save_flag==1 or (self.default_save_flag==-1 and _do_save )) and hasattr(self,'brian_data_path') :
-                self.save_brian_data.creat_key(_syn_ref_name)
-                self.save_brian_data.syntax_bank.append('self.save_brian_data.data["%s"]["i"]=%s.variables._variables["_presynaptic_idx"].get_value()' %(_syn_ref_name,S_name))
-                self.save_brian_data.syntax_bank.append('self.save_brian_data.data["%s"]["j"]=%s.variables._variables["_postsynaptic_idx"].get_value()' % (_syn_ref_name, S_name))
-                self.save_brian_data.syntax_bank.append('self.save_brian_data.data["%s"]["wght"]=%s.variables._variables["wght"].get_value()' % (_syn_ref_name, S_name))
-            elif (self.default_save_flag==1 or (self.default_save_flag==-1 and _do_save )) and not hasattr(self,'brian_data_path') :
-                print "Warning: Synaptic connection is set to be saved, however the brian_data_path is not defined in the parameters."
+
 
             ################
             ################
@@ -789,7 +810,13 @@ class cortical_system(object):
                     self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']],
                     self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], num_tmp,
                     _current_connections, self.total_number_of_synapses, self.total_number_of_connections)
-
+            if (self.default_save_flag==1 or (self.default_save_flag==-1 and _do_save )) and hasattr(self,'save_brian_data_path') :
+                self.save_brian_data.creat_key(_syn_ref_name)
+                self.save_brian_data.syntax_bank.append('self.save_brian_data.data["%s"]["data"] = csr_matrix((%s.wght[:],\
+                (%s.i[:],%s.j[:])),shape=(len(%s.source),len(%s.target)))' %(_syn_ref_name,S_name,S_name,S_name,S_name,S_name))
+                self.save_brian_data.syntax_bank.append('self.save_brian_data.data["%s"]["n"] = %d'%(_syn_ref_name,int(n_arg)))
+            elif (self.default_save_flag==1 or (self.default_save_flag==-1 and _do_save )) and not hasattr(self,'save_brian_data_path') :
+                print "Warning: Synaptic connection is set to be saved, however the brian_data_path is not defined in the parameters."
         try:
             if 'percentage' in self.current_parameters_list:
                 tmp_idx = self.current_parameters_list.index('p')
@@ -799,6 +826,7 @@ class cortical_system(object):
                 self.optimized_probabilities = []
         except:
             pass
+
     def _Synapses_Optimizer(self,syn,_number_of_synapse,S_name,SE_name,SPre_name,SPost_name,SNS_name,p_arg,percentage,n_arg='no_n_arg' ):
         assert self.total_synapses != 0 , "System is in [local] mode and the synapses are to be optimized, but the total number of synapses are not defined."
         if n_arg == 'no_n_arg' or n_arg == 'N/A':
@@ -961,6 +989,7 @@ class cortical_system(object):
                 'z_positions']
             self.save_output_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx][
                 'w_positions']
+            self.save_output_data.data['number_of_neurons'][NG_name] = eval(NN_name)
             SGsyn_name = 'SGEN_Syn' # variable name for the Synapses() objecct that connects SpikeGeneratorGroup() and relay neurons.
             exec "%s = Synapses(GEN, %s, pre='emit_spike+=1', connect='i==j')" % (SGsyn_name, NG_name) in globals(), locals()# connecting the SpikeGeneratorGroup() and relay group.
 
@@ -1041,6 +1070,7 @@ class cortical_system(object):
                 'z_positions']
             self.save_output_data.data['positions_all']['w_coord'][NG_name] = self.customized_neurons_list[current_idx][
                 'w_positions']
+            self.save_output_data.data['number_of_neurons'][NG_name] = eval(NN_name)
             SGsyn_name = 'SGEN_Syn'  # variable name for the Synapses() objecct that connects SpikeGeneratorGroup() and relay neurons.
             exec "%s = Synapses(GEN, %s, pre='emit_spike+=1', connect= 'i!=j')" % (
             SGsyn_name, NG_name) in globals(), locals()  # connecting the SpikeGeneratorGroup() and relay group.
@@ -1094,21 +1124,25 @@ class cortical_system(object):
         self.customized_neurons_list.append(relay_group)
         _input_params[self.current_values_list[self.current_parameters_list.index('type')]][2](self)
 
-
-
     def gather_result(self):
         '''
         After the simulation and using the syntaxes that are previously prepared in the synatx_bank of save_data() object, this method saves the collected data to a file.
 
         '''
+        print "Generating the syntaxes for saving CX output."
         for syntax in self.save_output_data.syntax_bank:
             exec syntax
+        if hasattr(self,'load_brian_data'):
+            self.save_output_data.data['positions_all']['w_coord'] = self.load_brian_data['positions_all']['w_coord']
+            self.save_output_data.data['positions_all']['z_coord'] = self.load_brian_data['positions_all']['z_coord']
         self.save_output_data.save_to_file()
         if hasattr(self,'save_brian_data'):
+            print "Generating the syntaxes for saving connectoin data."
             for syntax in self.save_brian_data.syntax_bank:
                 exec syntax
+            self.save_brian_data.data['positions_all']['w_coord'] = self.save_output_data.data['positions_all']['w_coord']
+            self.save_brian_data.data['positions_all']['z_coord'] = self.save_output_data.data['positions_all']['z_coord']
             self.save_brian_data.save_to_file()
-
 
 
     def visualise_connectivity(self,S):
@@ -1135,34 +1169,28 @@ class cortical_system(object):
 
 
 if __name__ == '__main__' :
-    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Test_config_file.csv' ,use_genn=0 )
-    # run(500*ms,report = 'text')
-    # if CM.use_genn == 1 :
-    #     device.build(directory=os.path.join(CM.output_path,'GeNN_Output'),
-    #                 compile=True,
-    #                  run=True,
-    #                  use_GPU=True)
+    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv' ,use_genn=0,runtime=1000*ms )
+    CM.run()
 
     # CM.gather_result()
     # CM.visualise_connectivity(S0_Fixed)
-    for group in CM.monitor_name_bank:
-        mon_num = len(CM.monitor_name_bank[group])
-        exec "f, axarr = plt.subplots(%d, sharex=True)"%mon_num
-        for item_idx,item in enumerate(CM.monitor_name_bank[group]):
-            if 'SpMon' in item :
-                if len (CM.monitor_name_bank[group]) ==1  :
-                    exec "axarr.plot(%s.t/ms,%s.i,'.k')" % ( item, item);
-                    exec "axarr.set_title('%s')" % ( item);
-                else:
-                    exec "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item)
-                    exec "axarr[%d].set_title('%s')"% (item_idx, item)
-            elif 'StMon' in item:
-                underscore= item.index('__')
-                variable = item[underscore+2:]
-                exec 'y_num=len(%s.%s)'%(item,variable)
-                try :
-                    exec "CM.multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item)
-                except:
-                    exec "CM.multi_y_plotter(axarr , y_num , '%s',%s , '%s')" % ( variable, item, item)
-    show()
-
+    # for group in CM.monitor_name_bank:
+    #     mon_num = len(CM.monitor_name_bank[group])
+    #     exec "f, axarr = plt.subplots(%d, sharex=True)"%mon_num
+    #     for item_idx,item in enumerate(CM.monitor_name_bank[group]):
+    #         if 'SpMon' in item :
+    #             if len (CM.monitor_name_bank[group]) ==1  :
+    #                 exec "axarr.plot(%s.t/ms,%s.i,'.k')" % ( item, item);
+    #                 exec "axarr.set_title('%s')" % ( item);
+    #             else:
+    #                 exec "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item)
+    #                 exec "axarr[%d].set_title('%s')"% (item_idx, item)
+    #         elif 'StMon' in item:
+    #             underscore= item.index('__')
+    #             variable = item[underscore+2:]
+    #             exec 'y_num=len(%s.%s)'%(item,variable)
+    #             try :
+    #                 exec "CM.multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item)
+    #             except:
+    #                 exec "CM.multi_y_plotter(axarr , y_num , '%s',%s , '%s')" % ( variable, item, item)
+    # show()
