@@ -1140,6 +1140,7 @@ class cortical_system(object):
             print "Generating the syntaxes for saving connectoin data."
             for syntax in self.save_brian_data.syntax_bank:
                 exec syntax
+            self.save_brian_data.creat_key('positions_all')
             self.save_brian_data.data['positions_all']['w_coord'] = self.save_output_data.data['positions_all']['w_coord']
             self.save_brian_data.data['positions_all']['z_coord'] = self.save_output_data.data['positions_all']['z_coord']
             self.save_brian_data.save_to_file()
