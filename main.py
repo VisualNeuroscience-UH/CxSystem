@@ -3,26 +3,28 @@ import os
 from brian_genn_version  import *
 import multiprocessing
 
-# CM = CX.cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', use_genn=0,
-#                         runtime=1000 * ms)
-# CM.run()
 
 
-def multi_run(i):
-    print "CX instance %d started"%i
-    CM = CX.cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv' ,use_genn=0,runtime=1000*ms )
+def multi_run(_):
+    CM = CX.cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv' ,use_genn=0,runtime=1000*ms)
     CM.run()
 
 
+# Multiprocessing using the Process()
+# if __name__ == '__main__':
+    # CX_jobs = []
+    # for i in range(10):
+    #     p = multiprocessing.Process(target=multi_run,args=(i,))
+    #     CX_jobs.append(p)
+    #     p.start()
+
+
+# Multiprocessing using the Pool()
 if __name__ == '__main__':
-    CX_jobs = []
-    for i in range(10):
-        p = multiprocessing.Process(target=multi_run,args=(i,))
-        CX_jobs.append(p)
-        p.start()
-    # for pros in CX_jobs:
-    #     pros.join()
-    #     print 'Process %s joined' %pros.name
+    trials = 200
+    pool = multiprocessing.Pool(processes=30)
+    pool_output = pool.map(multi_run,list(range(trials)))
+
 
 
 ################ Draw Everything
