@@ -1,8 +1,11 @@
-__author__ = 'V_AD'
-from brian_genn_version  import *
-import sys
 
-calcium_concentration = 2.0  # Change calcium concentration here or with _change_calcium()
+from brian_genn_version  import *
+import numpy as np
+from matplotlib import pyplot
+import sys
+__author__ = 'V_AD'
+
+calcium_concentration = 1.3  # Change calcium concentration here or with _change_calcium()
 
 class synapse_namespaces(object):
     '''
@@ -282,8 +285,6 @@ class synapse_namespaces(object):
     _steep_post = _excitatory_groups + _steep_post_inhibitory_groups
     _shallow_post = _shallow_post_inhibitory_groups
 
-    _K12 = 0
-
 
     def __init__(self,output_synapse):
         '''
@@ -300,9 +301,9 @@ class synapse_namespaces(object):
             'sp_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])]
         self.ilam = synapse_namespaces.dist[
             'ilam_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])]
-        getattr(synapse_namespaces,output_synapse['type'])(self,output_synapse)
 
-        # For change_calcium
+
+        # Set dissociation constant for Hill equation (see change_calcium)
         if output_synapse['pre_group_type'] in self._excitatory_groups and output_synapse['post_group_type'] in self._steep_post:
             self._K12 = 2.79
         elif output_synapse['pre_group_type'] in self._excitatory_groups and output_synapse['post_group_type'] in self._shallow_post:
@@ -310,18 +311,19 @@ class synapse_namespaces(object):
         else:
             self._K12 = np.average([2.79, 1.09])
 
+        # Set (initial) weights for chosen synapse type
+        getattr(synapse_namespaces, output_synapse['type'])(self, output_synapse)
 
-    def _change_calcium(self, ca=2.0):
+    def _change_calcium(self, ca):
 
-        original_synapse_strength = self.output_namespace['wght0']
+        original_synapse_strength = self.cw_init
+        ca0 = 2.0  # The Ca concentration in which cw_init is given
 
-        ca0 = 2.0
         calcium_factor = (pow(ca,4)/(pow(self._K12,4) + pow(ca,4))) / (pow(ca0,4)/(pow(self._K12,4) + pow(ca0,4)))
-
         final_synapse_strength = original_synapse_strength * calcium_factor
         self.output_namespace['wght0'] = final_synapse_strength
 
-        return final_synapse_strength
+        return calcium_factor
 
     def STDP(self,output_synapse):
         '''
@@ -343,11 +345,13 @@ class synapse_namespaces(object):
         :param output_synapse: This is the dictioanry created in customized_neuron() in brian2_obj_namespaces module. This contains all the informatino about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP valus are set in this method: wght_max, wght0.
         '''
 
+        self.cw_init = synapse_namespaces.cw[
+            'cw_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])]
+
         self.output_namespace['wght_max'] = synapse_namespaces.cw['cw_%s_%s' % (output_synapse['pre_group_type'],
                                                                                 output_synapse[
                                                                                     'post_group_type'])] * synapse_namespaces.stdp_max_strength_coefficient
-        self.output_namespace['wght0'] = synapse_namespaces.cw[
-            'cw_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])]
+        self.output_namespace['wght0'] = self.cw_init
 
         if calcium_concentration > 0:
             self._change_calcium(calcium_concentration)
@@ -527,3 +531,18 @@ class neuron_namespaces (object):
         self.output_namespace['tau_i'] = 8.3 * ms
         # return self.final_namespace
 
+
+if __name__ == '__main__':
+    output_synapse = {'type':'Fixed', 'pre_group_type': 'PC', 'post_group_type': 'BC'}
+    syns = synapse_namespaces(output_synapse)
+
+    ca = np.arange(0.7, 5, 0.1)
+    rfss = syns._change_calcium(ca)
+
+    # Testing
+    pyplot.plot(ca,rfss, color='blue', lw=2)
+    pyplot.xscale('log')
+    pyplot.yscale('log')
+    pyplot.xlim([0.7, 5])
+    pyplot.ylim([0.03, 10])
+    pyplot.show()
