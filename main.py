@@ -1,30 +1,28 @@
 import cortical_system as CX
 import os
 from brian_genn_version  import *
-import multiprocessing
+import datetime
 
+default_runtime = 500*ms
 
+#CM = CX.cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/pandas_playground/generated_config_file_henri.csv',
+#                         use_genn=0,runtime=500*ms )
+time_start = datetime.datetime.now()
+CM = CX.cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv',
+                         use_genn=0,runtime=default_runtime )
 
-def multi_run(_):
-    CM = CX.cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv' ,use_genn=0,runtime=1000*ms)
-    CM.run()
+time_before_run = datetime.datetime.now()
+CM.run()
+time_end = datetime.datetime.now()
 
+duration_generation = int((time_before_run - time_start).total_seconds())
+duration_simulation = int((time_end - time_before_run).total_seconds())
+duration_total = int((time_end - time_start).total_seconds())
 
-# Multiprocessing using the Process()
-# if __name__ == '__main__':
-    # CX_jobs = []
-    # for i in range(10):
-    #     p = multiprocessing.Process(target=multi_run,args=(i,))
-    #     CX_jobs.append(p)
-    #     p.start()
-
-
-# Multiprocessing using the Pool()
-if __name__ == '__main__':
-    trials = 200
-    pool = multiprocessing.Pool(processes=30)
-    pool_output = pool.map(multi_run,list(range(trials)))
-
+print 'Duration of network generation: %d min %d s' % (duration_generation//60, duration_generation%60)
+print 'Duration of actual simulation: %d min %d s' % (duration_simulation//60, duration_simulation%60)
+print 'TOTAL %d min %d s' % (duration_total//60, duration_total%60)
+print '=> %d times realtime' % (duration_total*second / default_runtime)
 
 
 ################ Draw Everything

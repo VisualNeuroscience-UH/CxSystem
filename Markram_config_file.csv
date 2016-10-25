@@ -1,5 +1,5 @@
 row_type,sys_mode,do_optimize,grid_radius, min_distance, do_init_vms,output_path, save_brian_data_path
-params,local,0,210*um, 1*um,1,/opt3/CX_Output/Gain-EE1EI1.mat,/opt3/CX_Output/brian_data.mat
+params,local,0,210*um, 1*um,1,../CX_Output/calcium24.mat,../CX_Output/brian_data.mat
 row_type,idx,type,number_of_neurons,radius,spike_times,net_center,monitors
 IN,0, VPM,60,92*um,[0.0001]*second, N/A ,[Sp]
 row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors
@@ -21,7 +21,7 @@ G,15,813,BC,6,N/A,[St]vm[rec](0-371-20) [Sp]
 G,16,372,MC,6,N/A,[St]vm[rec](0-1636-20) [Sp]
 row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p,n,monitors,percentage,load_connection,save_connection
 #### input to PC4 and SS4:
-S,ge,0,5[C]0ba,Fixed,N/A,7+7,N/A,N/A,0-->,1-->
+S,ge,0,5[C]0ba,Fixed,N/A,7+7,N/A,N/A,0-->,0-->
 S,ge,0,6[C]0ba,Fixed,N/A,7+7,N/A,N/A,1,1
 S,ge,0,7,Fixed,N/A,7,N/A,N/A,1,1
 #### input to PC5:
@@ -265,4 +265,4 @@ S,ge,14,7,Fixed,0.004969,2,N/A,N/A,1,1
 S,ge,14,10[C]0ab,Fixed,0.0092826967590999999+0.0092826967590999999,3+3,N/A,N/A,1,1
 S,ge,14,16,Fixed,0.009898,8,N/A,N/A,1,1
 S,ge,14,13[C]0ab,Fixed,0.010763771408900001+0.010763771408900001,3+3,N/A,N/A,1,1
-S,ge,14,14[C]0ab,Fixed,0.0074012706513999996+0.0074012706513999996,5+5,N/A,N/A,0<--,1<--
+S,ge,14,14[C]0ab,Fixed,0.0074012706513999996+0.0074012706513999996,5+5,N/A,N/A,0<--,0<--

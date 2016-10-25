@@ -16,10 +16,16 @@ import matplotlib.gridspec as gridspec
 from scipy.sparse import csr_matrix
 import numpy as np
 import copy
+import sys
+
+default_mat_file_path = '/home/shohokka/PycharmProjects/CX_Output/calcium24.mat'
+save_flag = 1
+
 
 def _status_printer(str):
-    cleaner = ' ' * 100
-    print '\r' + cleaner + '\r' + str,
+    #cleaner = ' ' * 100
+    #print '\r' + cleaner + '\r' + str,
+    print str
 
 def loadmat(filename):
     '''
@@ -74,7 +80,10 @@ def spike_to_fram(groups,spikes,X_axis,Y_axis,w_coord,axis_precision,smoothness=
             continue
         # min_temp = min(spikes_ts_tmp)
         # t_min = t_min if t_min < min_temp else min_temp
-        max_temp = max(spikes_ts_tmp)
+        try:
+            max_temp = max(spikes_ts_tmp)
+        except TypeError:
+            max_temp = spikes_ts_tmp
         t_max = t_max if t_max > max_temp else max_temp
     ts = [round(t,int(abs(log10(d_t)))) for t in arange(t_min, t_max+d_t, d_t)]
     number_of_frames = len(ts)
@@ -142,7 +151,8 @@ def sparse_to_rgba (sparse_matrix):
     arr[arr==0]= 1
     return rollaxis(arr,0,3)
 
-filepath = '../CX_Output/Gain-EE1EI1_20161020_143409.mat'
+filepath = default_mat_file_path
+# filepath = '/home/shohokka/PycharmProjects/CX_Output/calcium20.mat'
 filename = ntpath.basename(os.path.splitext(filepath)[0])
 folderpath = os.path.dirname(filepath)
 
@@ -242,8 +252,9 @@ class animator:
 
         self._status_printer("Time: %d ms"%(ts[index]*1000))
     def _status_printer(self,str):
-        cleaner = ' ' * 100
-        print '\r' + cleaner + '\r' + str,
+        #cleaner = ' ' * 100
+        #print '\r' + cleaner + '\r' + str,
+        print str
 
 
 # plt.rcParams['animation.ffmpeg_path'] = '/usr/bin/ffmpeg'
@@ -251,7 +262,9 @@ anime = animator (fig,all_frames,im)
 
 anim = FuncAnimation(fig, anime.animator, frames=shape(all_frames)[1],interval=100,repeat_delay=3000)
 
-# plt.show()
-anim.save(os.path.abspath(os.path.join(folderpath,filename+'.mp4')),extra_args=['-vcodec', 'libx264'])
+if save_flag == 1:
+    anim.save(os.path.abspath(os.path.join(folderpath,filename+'.mp4')),extra_args=['-vcodec', 'libx264'])
+else:
+    plt.show()
 
 

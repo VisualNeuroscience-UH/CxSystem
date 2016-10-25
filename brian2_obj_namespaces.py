@@ -5,7 +5,7 @@ from matplotlib import pyplot
 import sys
 __author__ = 'V_AD'
 
-calcium_concentration = 1.3  # Change calcium concentration here or with _change_calcium()
+calcium_concentration = 2.4  # Change calcium concentration here or with _change_calcium()
 
 class synapse_namespaces(object):
     '''
