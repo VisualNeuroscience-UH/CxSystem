@@ -6,8 +6,8 @@ import os
 simo_data = pd.read_json(os.path.abspath('./pathways_anatomy_vannilized.json'),  orient='index')
 henri_data = pd.read_json(os.path.abspath('./pathways_anatomy_vanni.json'), orient='index')
 with open('./Markram_config_file.csv', 'w') as config_file:
-    config_file.write('row_type,sys_mode,do_optimize,grid_radius, min_distance, output_path, brian_data_path\n')
-    config_file.write('params,local,0,210*um, 1*um,../CX_Output/output_data.mat,../CX_Output/brian_data.h5\n')
+    config_file.write('row_type,sys_mode,grid_radius, min_distance, do_init_vms,output_path, save_brian_data_path , #load_brian_data_path, #load_positions_only\n')
+    config_file.write('params,local,210*um, 1*um,1,/opt3/CX_Output/CX_Output.gz,/opt3/CX_Output/brian_data.gz, /opt3/CX_Output/brian_data_20161028_142108.gz, 0\n')
     # config_file.write('row_type,idx,type,path,freq,monitors\n')
     # config_file.write('IN,video,0, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]\n')
     config_file.write('row_type,idx,type,number_of_neurons,radius,spike_times,net_center,monitors\n')
@@ -38,7 +38,7 @@ with open('./Markram_config_file.csv', 'w') as config_file:
         '62' : '1',
     }
     default_center = 'N/A'
-    default_NG_monitor = ',[Sp][rec](***fill here***)'
+    default_NG_monitor = ',[Sp]'
     group_items = []
     UMi_dict = {}
     for item in simo_data['vanni_pre'].unique():
@@ -109,7 +109,7 @@ with open('./Markram_config_file.csv', 'w') as config_file:
             config_file.write(line)
             group_index += 1
             group_items.append(item)
-    config_file.write('row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p,n,monitors,percentage,load_connection,save_connection\n')
+    config_file.write('row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p,n,monitors,load_connection,save_connection\n')
     config_file.write('###########\n###########\n#*** input connections here***\n###########\n###########\n')
     syn_num = len(henri_data[:])
     receptor_options={
@@ -121,7 +121,6 @@ with open('./Markram_config_file.csv', 'w') as config_file:
     }
     default_syn_type = 'Fixed'
     default_syn_monitor = 'N/A'
-    default_percentage = 'N/A'
     for syn_index in range(0,syn_num):
         line = 'S,ge,0,1,Fixed,0.043,N/A,[St]wght[rec](0-20),0.60'
         line = 'S,'
@@ -188,7 +187,6 @@ with open('./Markram_config_file.csv', 'w') as config_file:
             line+= '%f'%henri_data.ix[syn_index]['connection_probability']+ ','
             line += '%d' % int(round(henri_data.ix[syn_index]['mean_number_of_synapses_per_connection'])) + ','
         line += default_syn_monitor + ','
-        line += default_percentage + ','
         line += '1' + ',' #load connection
         line += '1' + '\n'
 

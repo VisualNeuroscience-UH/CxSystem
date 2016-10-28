@@ -1,7 +1,8 @@
 __author__ = 'V_AD'
 from numpy import *
 from brian_genn_version  import *
-import scipy.io as sio
+# import scipy.io as sio
+from scipy import io
 import os
 
 
@@ -30,7 +31,7 @@ class stimuli(object):
 
     def load_input_seq(self, input_path):
         _input_file = os.path.join(input_path[0:[idx for idx, ltr in enumerate(input_path) if ltr == '/'][-1]], 'input.mat')
-        tmp_dict = sio.loadmat(_input_file, variable_names='spikes_0')
+        tmp_dict = io.loadmat(_input_file, variable_names='spikes_0')
         new_spikes = tmp_dict['spikes_0']
         spikes_str = 'GEN_SP = array(%s)' %str(list(new_spikes[0]))
         times_str = 'GEN_TI = array(%s)*second' %str(list(new_spikes[1]))
@@ -44,7 +45,7 @@ class stimuli(object):
         :param path: Path to the .mat file.
         '''
         _V1_mats = {}
-        sio.loadmat(path, _V1_mats)
+        io.loadmat(path, _V1_mats)
         return _V1_mats['z_coord']
 
     def _initialize_inputs(self,  path, freq):
@@ -55,7 +56,7 @@ class stimuli(object):
         #type : video
         _V1_mats = {}
 
-        sio.loadmat(os.path.abspath(path), _V1_mats)
+        io.loadmat(os.path.abspath(path), _V1_mats)
         try:
             frameduration = double(_V1_mats['frameduration'])  # _V1_mats['frameduration'] is numpy nd array
         except:
@@ -100,7 +101,7 @@ class stimuli(object):
         data = {}
         for ii in range(len(spike_mons)):
             data['spikes_' + str(ii)] = spike_mons[ii].it  # .spikes in Brian 1.X
-        sio.savemat(filename, data)
+        io.savemat(filename, data)
 
             # _V1_mats = {}
         # sio.loadmat(path, _V1_mats)

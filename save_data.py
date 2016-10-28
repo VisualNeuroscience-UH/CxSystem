@@ -1,18 +1,18 @@
 __author__ = 'V_AD'
-import scipy.io
+import cPickle as pickle
+import zlib
 from brian_genn_version  import *
 from numpy import *
 import os
 import re
 from datetime import datetime
-# import hickle as hkl
 import ntpath
 
 class save_data(object):
     '''
     As the name implies, this module is used for gathering the data and saving the result.
     '''
-    def __init__(self,save_path):
+    def __init__(self,save_path,datetime_str):
         '''
         The initialization method for save_data object.
 
@@ -24,6 +24,7 @@ class save_data(object):
         * syntax_bank: Since the monitors are explicitly defined in the Globals(), extracting the data from them requires addressing their name explicitely. To automatize this process, the syntaxes for extracting the data from the target monitors are generated and saved in this variable, so that they can be run at the end of the simulation.
         '''
         self.save_path = save_path
+        self.datetime_str = datetime_str
         self.save_filename = ntpath.basename(self.save_path)
         self.save_pure_filename = os.path.basename(os.path.splitext(self.save_path)[0])
 
@@ -57,17 +58,18 @@ class save_data(object):
         print "Saving data to file."
         if not os.path.exists(self.save_folder):
             os.makedirs(self.save_folder)
-        if os.path.isfile(self.save_path):
-            datetime_str = '_' + str(datetime.now()).replace('-','').replace(' ','_').replace(':','')[0:str(datetime.now()).replace('-','').replace(' ','_').replace(':','').index('.')]
-            self.save_path = os.path.join(self.save_folder, self.save_pure_filename + datetime_str + self.save_extension)
-            while os.path.isfile(self.save_path):
-                idx = 1
-                self.save_path = os.path.join(self.save_folder,
-                                              self.save_pure_filename + datetime_str  + '_%d'%idx + self.save_extension)
-                idx +=1
+        self.save_path = os.path.join(self.save_folder, self.save_pure_filename + self.datetime_str + self.save_extension)
+        while os.path.isfile(self.save_path):
+            idx = 1
+            self.save_path = os.path.join(self.save_folder,
+                                          self.save_pure_filename + self.datetime_str  + '_%d'%idx + self.save_extension)
+            idx +=1
 
-        if 'mat' in self.save_extension:
-            scipy.io.savemat(self.save_path, self.data )
+        if 'gz' in self.save_extension:
+            with open(self.save_path, 'wb') as fp:
+                fp.write(zlib.compress(pickle.dumps(self.data , pickle.HIGHEST_PROTOCOL), 9))
+        # if 'mat' in self.save_extension:
+        #     scipy.io.savemat(self.save_path, self.data )
         # elif 'h5' in self.save_extension:
         #     hkl.dump(self.data,self.save_path)
         # scipy.io.savemat(pars_save_path, self.pars) # this is in case you want to keep track of parameter changes

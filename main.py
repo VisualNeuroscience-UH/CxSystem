@@ -2,28 +2,35 @@ import cortical_system as CX
 import os
 from brian_genn_version  import *
 import multiprocessing
+import time
+import numpy as np
 
 
-
-def multi_run(_):
-    CM = CX.cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv' ,use_genn=0,runtime=1000*ms)
-    CM.run()
-
+def multi_run (idx, working):
+    working.value += 1
+    np.random.seed(idx)
+    print "################### process %d started ##########################" % idx
+    cm = CX.cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', use_genn = 0, runtime = 1000*ms)
+    cm.run()
+    working.value -= 1
 
 # Multiprocessing using the Process()
-# if __name__ == '__main__':
-    # CX_jobs = []
-    # for i in range(10):
-    #     p = multiprocessing.Process(target=multi_run,args=(i,))
-    #     CX_jobs.append(p)
-    #     p.start()
-
-
-# Multiprocessing using the Pool()
 if __name__ == '__main__':
+    manager = multiprocessing.Manager()
+    jobs = []
+    working = manager.Value('i',0)
     trials = 200
-    pool = multiprocessing.Pool(processes=30)
-    pool_output = pool.map(multi_run,list(range(trials)))
+    ProcessLimit = 32
+    NotDone = 1
+    while len(jobs)<trials:
+        time.sleep(1)
+        if working.value < ProcessLimit:
+            p = multiprocessing.Process(target=multi_run,args=(len(jobs),working,))
+            jobs.append(p)
+            p.start()
+    for j in jobs:
+        j.join()
+
 
 
 
