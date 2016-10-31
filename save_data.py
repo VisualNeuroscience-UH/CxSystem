@@ -4,8 +4,6 @@ import zlib
 from brian_genn_version  import *
 from numpy import *
 import os
-import re
-from datetime import datetime
 import ntpath
 
 class save_data(object):

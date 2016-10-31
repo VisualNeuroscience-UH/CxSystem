@@ -11,7 +11,6 @@ import zlib
 
 
 class illustrator:
-
     def __init__(self, mode,CXOutputPath,FilePattern,IllustratorOutputFile,InputTime,latency_threshold):
         self.mode = mode
         assert mode in ['saving','loading'], 'Error: mode should be set as either saving or loading.'
@@ -19,6 +18,7 @@ class illustrator:
         self.FilePattern = FilePattern
         # self.PlotType = PlotType
         self.IllustratorOutputFile = IllustratorOutputFile
+        self.IllustratorOutputFolder = os.path.dirname(self.IllustratorOutputFile)
         if mode == 'saving':
             self.final_data = {}
             self.final_data['LatencyThreshold'] = latency_threshold
@@ -63,7 +63,7 @@ class illustrator:
                 TmpTrial = pickle.loads(z_data)
             self.final_data['CellIndex'] = {}
             for Group in self.final_data['SortedGroupsList'] :
-                self.final_data['CellIndex'][Group] = int(np.where(abs(np.array(TmpTrial['positions_all']['w_coord'][Group])) == min(abs(np.array(TmpTrial['positions_all']['w_coord'][Group]))))[0])
+                self.final_data['CellIndex'][Group] = int(np.where(abs(np.array(TmpTrial['positions_all']['w_coord'][Group])) == min(abs(np.array(TmpTrial['positions_all']['w_coord'][Group]))))[0][0])
             self.final_data['GroupDelays'] = {}
             for Group in self.final_data['SortedGroupsList']:
                 self.final_data['GroupDelays'][Group] = {}
@@ -118,11 +118,15 @@ class illustrator:
                     self.final_data['box_labels'].append(group[group.index('_') + 1:])
                     self.final_data['box_data'].append(np.array([self.final_data['GroupDelays'][group][key] for key in
                                                 self.final_data['GroupDelays'][group].keys()]))
-            with open (self.IllustratorOutputFile, 'wb') as output_file:
-                pickle.dump(self.final_data,output_file)
+            if not os.path.isdir(self.IllustratorOutputFolder):
+                os.mkdir(self.IllustratorOutputFolder)
+            with open (self.IllustratorOutputFile, 'wb') as fp:
+                fp.write(zlib.compress(pickle.dumps(self.final_data,pickle.HIGHEST_PROTOCOL),9))
+
         elif mode == 'loading':
             with open (IllustratorOutputFile, 'rb') as input_file :
-                self.final_data = pickle.load(input_file)
+                _decompressed = zlib.decompress(input_file.read())
+                self.final_data = pickle.loads(_decompressed)
 
     def Responses(self,PlotStartTime,PlotEndTime,DoSkip=[]):
         NotSkippedGroups = [G for G in self.final_data['SortedGroupsList'] if not any(ext in G for ext in DoSkip)]
@@ -160,7 +164,7 @@ class illustrator:
             axarr[plt_y_idx, plt_x_idx].set_title(CurrentTitle)
             axarr[plt_y_idx, plt_x_idx].set_xlim(PlotStartTime, PlotEndTime)
             axarr_twins[plt_y_idx, plt_x_idx].set_xlim(PlotStartTime, PlotEndTime)
-            if max(Step_Ys) == 0:
+            if max(Step_Ys[int(np.where(np.array(Step_Xs)>=PlotStartTime)[0][0]):int(np.where(np.array(Step_Xs)<=PlotEndTime)[0][-1])]) == 0:
                 axarr_twins[plt_y_idx, plt_x_idx].set_ylim(0, 1)
             else:
                 axarr_twins[plt_y_idx, plt_x_idx].set_ylim(0, max(Step_Ys[int(np.where(np.array(Step_Xs)>=PlotStartTime)[0][0]):int(np.where(np.array(Step_Xs)<=PlotEndTime)[0][-1])]) )
@@ -178,8 +182,8 @@ class illustrator:
         plt.locator_params(axis='x', nbins=5)
         plt.tight_layout()
         plt.show()
-        f.savefig(os.path.join(os.path.dirname(self.IllustratorOutputFile),'cell_type_response.eps'))
-        with open (os.path.join(os.path.dirname(self.IllustratorOutputFile),'table.txt'),'w') as table_file:
+        f.savefig(os.path.join(self.IllustratorOutputFolder,'cell_type_response.eps'))
+        with open (os.path.join(self.IllustratorOutputFolder,'table.txt'),'w') as table_file:
             table_file.write(tabulate(statistics,headers=['Group Name','Chi-Square','p-Value']))
 
     def ResponseLatency(self):
@@ -194,6 +198,7 @@ class illustrator:
             if any([it in str(label) for it in exci]):
                 boxes['boxes'][_idx].set_color('red')
                 boxes['fliers'][_idx].set_color('red')
+                boxes['fliers'][_idx].set_markeredgecolor('red')
                 boxes['medians'][_idx].set_color('red')
                 boxes['whiskers'][_idx*2].set_color('red')
                 boxes['whiskers'][_idx * 2 + 1].set_color('red')
@@ -202,6 +207,7 @@ class illustrator:
             elif any([it in str(label) for it in inhib]):
                 boxes['boxes'][_idx].set_color('blue')
                 boxes['fliers'][_idx].set_color('blue')
+                boxes['fliers'][_idx].set_markeredgecolor('blue')
                 boxes['medians'][_idx].set_color('blue')
                 boxes['whiskers'][_idx * 2].set_color('blue')
                 boxes['whiskers'][_idx * 2 + 1].set_color('blue')
@@ -209,10 +215,11 @@ class illustrator:
                 boxes['caps'][_idx * 2 + 1].set_color('blue')
         plt.show()
         axes.set_title('Default', fontsize=10)
+        fig.savefig(os.path.join(self.IllustratorOutputFolder, 'cell_type_response_delay.eps'))
 
 if __name__ == '__main__':
     illus = illustrator(mode='saving',CXOutputPath='/opt3/CX_Output/Outputs',FilePattern='CX_Output_',
-                        IllustratorOutputFile='/opt3/CX_Output/Outputs/output',InputTime=0.5,latency_threshold=0.03)
+                        IllustratorOutputFile='/opt3/CX_Output/Outputs/Illustrator_Output/Illus_out.gz',InputTime=0.5,latency_threshold=0.03)
     illus.Responses(PlotStartTime=0.46,PlotEndTime=0.56,DoSkip=['PC_L6toL1','PC_L6toL4'])
     illus.ResponseLatency()
     # rossert_fig9C = illustrator('/opt3/CX_Output/Ouputs', 'Gain-EE1EI1', 'cell_type_response_latency',InputTime=0.5)

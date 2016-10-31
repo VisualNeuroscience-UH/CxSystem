@@ -20,7 +20,7 @@ if __name__ == '__main__':
     jobs = []
     working = manager.Value('i',0)
     trials = 200
-    ProcessLimit = 32
+    ProcessLimit = 30
     NotDone = 1
     while len(jobs)<trials:
         time.sleep(1)

@@ -1,5 +1,5 @@
 __author__ = 'V_AD'
-from brian_genn_version  import *
+from brian_genn_version import *
 import brian2genn
 import os
 import sys
@@ -8,13 +8,10 @@ from matplotlib.pyplot import  *
 from save_data import *
 from stimuli import *
 import ast
-import copy # for copying Equation object
-import __builtin__
 import ntpath
-import scipy.io as spio
 from scipy.sparse import csr_matrix
 from datetime import datetime
-
+import cPickle as pickle
 
 class cortical_system(object):
     '''
@@ -103,7 +100,6 @@ class cortical_system(object):
         self.total_synapses = 0
         self.sys_mode = ''
         self.config_path = config_path
-        self.optimized_probabilities = []
         self.total_number_of_synapses = 0
         self.total_number_of_connections = 0
         self.general_grid_radius = 0
@@ -130,22 +126,6 @@ class cortical_system(object):
             elif _splitted_line[0] in self._options :
                 self.current_values_list = _splitted_line[1:]
                 self._options[_splitted_line[0]]()
-
-        # with open(self.config_path, 'r') as f:  # Here is the configuration file parser.
-        #     for self.line in f:
-        #         self.line = self.line.replace('\n', '')
-        #         self.line = self.line.lstrip()
-        #         try:
-        #             if self.line[0] == '#' or not self.line.split(','):  # comments
-        #                 continue
-        #         except:
-        #             continue
-        #         _splitted_line = [non_empty.strip() for non_empty in self.line.split(',') if non_empty != '']
-        #         if 'row_type' in self.line:
-        #             self.current_parameters_list = _splitted_line[1:]
-        #         elif _splitted_line[0] in self._options and _splitted_line[0] != 'params':
-        #             self.current_values_list = _splitted_line[1:]
-        #             self._options[_splitted_line[0]]()
 
         print "Cortical Module initialization Done."
 
@@ -602,13 +582,14 @@ class cortical_system(object):
             pre_type = syn[self.current_parameters_list.index('pre_type')]
             post_type = syn[self.current_parameters_list.index('post_type')]
             post_comp_name= syn[self.current_parameters_list.index('post_comp_name')]
-
             # check monitors in line:
             current_idx = len(self.customized_synapses_list)
             # creating a customized_synapse object and passing the positional arguments to it. The main member of
             # the class called output_synapse is then appended to customized_synapses_list:
             self.customized_synapses_list.append(customized_synapse(receptor, pre_syn_idx, post_syn_idx, syn_type,
                                                                  pre_type, post_type, post_comp_name).output_synapse)
+            _pre_group_idx = self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]
+            _post_group_idx = self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']]
             # Generated vriable name for the Synapses(), equation, pre_synaptic and post_synaptic equation and Namespace
             S_name = self._Synapses_prefix + str(current_idx) + '_' + syn_type
             self.synapses_name_list.append(S_name)
@@ -626,18 +607,12 @@ class cortical_system(object):
             exec "%s=self.customized_synapses_list[%d]['namespace']" % (SNS_name, current_idx)
 
             ### creating the initial synaptic connection :
-            exec "eq_tmp = copy.deepcopy(%s)" % SE_name  # after passing a model equation to a Syanpses(), a new line
-            #  will automatically be added to equation, e.i. lastupdate: seconds. This is to remove that specific line
             try:
-                exec "%s = Synapses(%s,%s,model = eq_tmp, pre = %s, post = %s, namespace= %s)" \
-                     % (S_name, self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
-                        self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SPre_name,
-                        SPost_name, SNS_name)
+                exec "%s = Synapses(%s,%s,model = %s, pre = %s, post = %s, namespace= %s)" \
+                     % (S_name, _pre_group_idx, _post_group_idx, SE_name,SPre_name, SPost_name, SNS_name)
             except NameError:  # for when there is no "post =...", i.e. fixed connection
-                exec "%s = Synapses(%s,%s,model = eq_tmp, pre = %s, namespace= %s)" \
-                     % (S_name, self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
-                        self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], SPre_name,
-                        SNS_name)
+                exec "%s = Synapses(%s,%s,model = %s, pre = %s, namespace= %s)" \
+                     % (S_name, _pre_group_idx, _post_group_idx,SE_name, SPre_name, SNS_name)
 
             ###############
             ############### Connecting synapses
@@ -690,12 +665,8 @@ class cortical_system(object):
                     if '_relay_vpm' in self.neurongroups_list[int(current_pre_syn_idx)]:
                         # uncomment following lines for visualizing the positions of input group and its targets
                         # figure;
-                        # plt.scatter(eval(self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']]).x,
-                        #             eval(self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']]).y,
-                        #             color='r');
-                        # plt.scatter(eval(self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]).x,
-                        #             eval(self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]).y,
-                        #             color='b')
+                        # plt.scatter(eval(_post_group_idx).x, eval(_post_group_idx).y,color='r');
+                        # plt.scatter(eval(_pre_group_idx).x,eval(_pre_group_idx).y,color='b')
                         # plt.axis('equal')
 
                         syn_con_str += "'exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f/meter)/(2*0.025**2))/\
@@ -754,14 +725,12 @@ class cortical_system(object):
                 self.total_number_of_connections += _current_connections
                 try:
                     print "%s%s to %s: Number of synapses %d \t Number of connections: %d \t Total synapses: %d \t " "Total connections: %d" \
-                          %(_load_str ,self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], \
-                            self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']],num_tmp,\
-                            _current_connections, self.total_number_of_synapses, self.total_number_of_connections)
+                          %(_load_str ,_pre_group_idx, _post_group_idx,num_tmp,_current_connections, \
+                            self.total_number_of_synapses, self.total_number_of_connections)
                 except (ValueError, UnboundLocalError):
                     print "Connection created from %s to %s: Number of synapses %d \t Number of connections: %d \t Total synapses: %d \t Total connections: %d" \
-                      % (self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']], self.\
-                         neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']], num_tmp, \
-                         _current_connections, self.total_number_of_synapses, self.total_number_of_connections)
+                      % (_pre_group_idx, _post_group_idx, num_tmp, _current_connections, \
+                         self.total_number_of_synapses, self.total_number_of_connections)
             if (self.default_save_flag == 1 or (self.default_save_flag == -1 and _do_save )) and \
                     hasattr(self, 'save_brian_data_path') :
                 self.save_brian_data.creat_key(_syn_ref_name)
