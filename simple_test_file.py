@@ -15,7 +15,7 @@
 # plot(tmp_mon.t,tmp_mon.i,'b.');show()
 
 
-from brian_genn_version  import *
+from brian2  import *
 import time
 
 # BrianLogger.log_level_debug()

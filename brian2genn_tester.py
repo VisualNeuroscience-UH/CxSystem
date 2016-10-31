@@ -123,7 +123,7 @@
 # # show()
 
 import os
-from brian_genn_version import *
+from brian2 import *
 import brian2genn
 
 

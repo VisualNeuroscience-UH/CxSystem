@@ -1,6 +1,6 @@
 __author__ = 'V_AD'
 from numpy import *
-from brian_genn_version  import *
+from brian2  import *
 # import scipy.io as sio
 from scipy import io
 import os

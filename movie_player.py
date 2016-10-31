@@ -80,7 +80,7 @@ def sparse_to_rgba (sparse_matrix):
     arr[arr==0]= 1
     return rollaxis(arr,0,3)
 
-filepath = '/opt3/CX_Output/Outputs/CX_Output_20161030_202947.gz'
+filepath = '/opt3/CX_Output/CX_Output_20161031_143641.gz'
 filename = ntpath.basename(os.path.splitext(filepath)[0])
 folderpath = os.path.dirname(filepath)
 with open (filepath, 'rb') as fb :

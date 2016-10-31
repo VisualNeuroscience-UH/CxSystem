@@ -1,6 +1,6 @@
 import cortical_system as CX
 import os
-from brian_genn_version  import *
+from brian2  import *
 import multiprocessing
 import time
 import numpy as np
@@ -10,7 +10,7 @@ def multi_run (idx, working):
     working.value += 1
     np.random.seed(idx)
     print "################### process %d started ##########################" % idx
-    cm = CX.cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', use_genn = 0, runtime = 1000*ms)
+    cm = CX.cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device = 'GeNN', runtime = 1000*ms)
     cm.run()
     working.value -= 1
 
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     ProcessLimit = 30
     NotDone = 1
     while len(jobs)<trials:
-        time.sleep(1)
+        time.sleep(0.3)
         if working.value < ProcessLimit:
             p = multiprocessing.Process(target=multi_run,args=(len(jobs),working,))
             jobs.append(p)

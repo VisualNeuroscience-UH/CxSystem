@@ -1,5 +1,5 @@
 __author__ = 'V_AD'
-from brian_genn_version import *
+from brian2 import *
 import brian2genn
 import os
 import sys
@@ -36,7 +36,7 @@ class cortical_system(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self, config_path, use_genn=0, runtime=500*ms):
+    def __init__(self, config_path, device = '', runtime=500*ms):
         '''
         Initialize the cortical system by parsing the configuration file.
 
@@ -56,7 +56,7 @@ class cortical_system(object):
         * save_data: The save_data() object for saving the final data.
 
         '''
-        if use_genn == 1:
+        if device != '':
             print "Info: system is going to be run using Brian2Genn, " \
                   "Errors may rise if Brian2/Brian2GeNN/GeNN are not installed correctly."
         self.main_module = sys.modules['__main__']
@@ -65,7 +65,7 @@ class cortical_system(object):
         except KeyError:
             pass
 
-        self.use_genn = use_genn
+        self.device = device
         self._options = {
             'G': self.neuron_group,
             'S': self.synapse,
@@ -82,7 +82,8 @@ class cortical_system(object):
             'load_positions_only': self.load_positions_only,
 
         }
-        self.StartTime_str = '_' + str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '')[0:str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '').index('.')]
+        self.StartTime_str = '_' + str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '')\
+            [0:str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '').index('.')+3].replace('.','')
         self.runtime = runtime
         self.conn_prob_gain = synapse_namespaces.conn_prob_gain
         self.current_parameters_list = []
@@ -131,11 +132,6 @@ class cortical_system(object):
 
     def run(self):
         run(self.runtime, report='text')
-        if self.use_genn == 1:
-            device.build(directory=os.path.join(self.output_path, 'GeNN_Output'),
-                         compile=True,
-                         run=True,
-                         use_GPU=True)
         self.gather_result()
 
     def set_runtime_parameters(self):
@@ -163,6 +159,7 @@ class cortical_system(object):
 
     def _set_output_path(self, *args):
         self.output_path = args[0]
+        self.output_folder = os.path.dirname(self.output_path)
         self.save_output_data = save_data(self.output_path,self.StartTime_str)  # This is for saving the output
         self.save_output_data.creat_key('positions_all')
         self.save_output_data.data['positions_all']['w_coord'] = {}
@@ -289,7 +286,7 @@ class cortical_system(object):
         exec "%s=self.customized_neurons_list[%d]['refractory']" % (NRef_name, current_idx)
         exec "%s=self.customized_neurons_list[%d]['namespace']" % (NNS_name, current_idx)
         # Creating the actual NeuronGroup() using the variables in the previous 6 lines
-        exec "%s= NeuronGroup(%s, model=%s, threshold=%s, reset=%s,refractory = %s, namespace = %s)" \
+        exec "%s= NeuronGroup(%s, model=%s, method='euler', threshold=%s, reset=%s,refractory = %s, namespace = %s)" \
              % (NG_name, NN_name, NE_name, NT_name, NRes_name, NRef_name, NNS_name)
         # trying to load the positions in the groups
         if hasattr(self,'loaded_brian_data'):
@@ -456,8 +453,8 @@ class cortical_system(object):
         * args: normally args contains a set of arguments for a single Synapses() object. However, this changes when the post-synaptic neuron is the first (with index of 0) compartment of a multi-compartmental neuron. In this case, one might intend to target all three subcompartments, i.e. Basal dendrites, Soma and proximal apical dendrites. So the single set of arguments will be changed to 3 sets of arguments and a for loop will take care of every one of them.
         * S_name: Generated vriable name for the Synapses() object in brian2.
         * SE_name: Generated vriable name for the Synapses() equation.
-        * SPre_name: Generated variable name for pre_synaptic equations, i.e. "pre=..."
-        * SPost_name: Generated variable name for post_synaptic equations, i.e. "post= ..."
+        * SPre_name: Generated variable name for pre_synaptic equations, i.e. "on_pre=..."
+        * SPost_name: Generated variable name for post_synaptic equations, i.e. "on_post= ..."
         * SNS_name: Generated vriable name for the Synapses() namespace.
         * syn_con_str: The string containing the sytanct for connect() method of a current Synapses() object. This string changes depending on using the [p] and [n] tags in the configuration file.
         '''
@@ -608,10 +605,10 @@ class cortical_system(object):
 
             ### creating the initial synaptic connection :
             try:
-                exec "%s = Synapses(%s,%s,model = %s, pre = %s, post = %s, namespace= %s)" \
+                exec "%s = Synapses(%s,%s,model = %s, on_pre = %s, post = %s, namespace= %s)" \
                      % (S_name, _pre_group_idx, _post_group_idx, SE_name,SPre_name, SPost_name, SNS_name)
             except NameError:  # for when there is no "post =...", i.e. fixed connection
-                exec "%s = Synapses(%s,%s,model = %s, pre = %s, namespace= %s)" \
+                exec "%s = Synapses(%s,%s,model = %s, on_pre = %s, namespace= %s)" \
                      % (S_name, _pre_group_idx, _post_group_idx,SE_name, SPre_name, SNS_name)
 
             ###############
@@ -713,7 +710,7 @@ class cortical_system(object):
             exec "%s._name = 'synapses_%d'" % (S_name, current_idx + 1)
             self.monitors(monitors.split(' '), S_name, self.customized_synapses_list[-1]['equation'])
 
-            if self.use_genn == 0 :
+            if self.device == '' :
                 num_tmp = 0
                 exec "num_tmp = len(%s.i)" % S_name
                 self.total_number_of_synapses += num_tmp
@@ -731,6 +728,11 @@ class cortical_system(object):
                     print "Connection created from %s to %s: Number of synapses %d \t Number of connections: %d \t Total synapses: %d \t Total connections: %d" \
                       % (_pre_group_idx, _post_group_idx, num_tmp, _current_connections, \
                          self.total_number_of_synapses, self.total_number_of_connections)
+            else:
+                try:
+                    print "%s%s to %s" %(_load_str ,_pre_group_idx, _post_group_idx)
+                except UnboundLocalError:
+                    print "Connection created from %s to %s" % ( _pre_group_idx, _post_group_idx)
             if (self.default_save_flag == 1 or (self.default_save_flag == -1 and _do_save )) and \
                     hasattr(self, 'save_brian_data_path') :
                 self.save_brian_data.creat_key(_syn_ref_name)
@@ -796,8 +798,10 @@ class cortical_system(object):
             SG_Name = SG_str.split('=')[0].rstrip()
 
             # Internal switch for brian2GeNN:
-            if self.use_genn == 1:
-                set_device('genn')
+            if self.device == 'GeNN':
+                set_device('genn',directory=os.path.join(self.output_folder, 'GeNN_Output',self.StartTime_str[1:]))
+            elif self.device == 'C++':
+                set_device('cpp_standalone',directory=os.path.join(self.output_folder, 'Cpp_Output',self.StartTime_str[1:]))
 
             exec spikes_str in globals(), locals() # runnig the string containing the syntax for Spike indices in the input neuron group.
             exec times_str in globals(), locals()# running the string containing the syntax for time indices in the input neuron group.
@@ -822,7 +826,7 @@ class cortical_system(object):
             exec "%s=%s" % (NE_name, Eq) in globals(), locals()
             exec "%s=%s" % (NT_name, "'emit_spike>=1'") in globals(), locals()
             exec "%s=%s" % (NRes_name, "'emit_spike=0'") in globals(), locals()
-            exec "%s= NeuronGroup(%s, model=%s, threshold=%s, reset=%s)" \
+            exec "%s= NeuronGroup(%s, model=%s,method='euler', threshold=%s, reset=%s)" \
                  % (NG_name, NN_name, NE_name, NT_name, NRes_name) in globals(), locals()
             if hasattr(self, 'loaded_brian_data'):
                 # in case the NG index are different. for example a MC_L2 neuron might have had
@@ -850,7 +854,7 @@ class cortical_system(object):
             self.save_output_data.data['number_of_neurons'][NG_name] = eval(NN_name)
             SGsyn_name = 'SGEN_Syn' # variable name for the Synapses() object
             # that connects SpikeGeneratorGroup() and relay neurons.
-            exec "%s = Synapses(GEN, %s, pre='emit_spike+=1', connect='i==j')" % \
+            exec "%s = Synapses(GEN, %s, on_pre='emit_spike+=1', connect='i==j')" % \
                  (SGsyn_name, NG_name) in globals(), locals()# connecting the SpikeGeneratorGroup() and relay group.
 
             setattr(self.main_module, NG_name, eval(NG_name))
@@ -884,8 +888,10 @@ class cortical_system(object):
             times_str = 'GEN_TI = repeat(%s,%s)*%s'%(spike_times[0:spike_times.index('*')],number_of_neurons,spike_times_unit)
             SG_str = 'GEN = SpikeGeneratorGroup(%s, GEN_SP, GEN_TI)'%number_of_neurons
             # Internal switch for brian2GeNN:
-            if self.use_genn == 1:
-                set_device('genn')
+            if self.device == 'GeNN':
+                set_device('genn',directory=os.path.join(self.output_folder, 'GeNN_Output',self.StartTime_str[1:]))
+            elif self.device == 'C++':
+                set_device('cpp_standalone',directory=os.path.join(self.output_folder, 'Cpp_Output',self.StartTime_str[1:]))
 
             exec spikes_str in globals(), locals()  # runnig the string containing the syntax for Spike indices in the input neuron group.
             exec times_str in globals(), locals()  # running the string containing the syntax for time indices in the input neuron group.
@@ -910,7 +916,7 @@ class cortical_system(object):
             exec "%s=%s" % (NE_name, Eq) in globals(), locals()
             exec "%s=%s" % (NT_name, "'emit_spike>=1'") in globals(), locals()
             exec "%s=%s" % (NRes_name, "'emit_spike=0'") in globals(), locals()
-            exec "%s= NeuronGroup(%s, model=%s, threshold=%s, reset=%s)" \
+            exec "%s= NeuronGroup(%s, model=%s, method='euler',threshold=%s, reset=%s)" \
                  % (NG_name, NN_name, NE_name, NT_name, NRes_name) in globals(), locals()
             if hasattr(self, 'loaded_brian_data'): # load the positions if available
                 # in case the NG index are different. for example a MC_L2 neuron might have had
@@ -940,9 +946,9 @@ class cortical_system(object):
             self.save_output_data.data['number_of_neurons'][NG_name] = eval(NN_name)
             SGsyn_name = 'SGEN_Syn'  # variable name for the Synapses() object
             # that connects SpikeGeneratorGroup() and relay neurons.
-            exec "%s = Synapses(GEN, %s, pre='emit_spike+=1', connect= 'i!=j')" \
+            exec "%s = Synapses(GEN, %s, on_pre='emit_spike+=1')" \
                  % (SGsyn_name, NG_name) in globals(), locals()  # connecting the SpikeGeneratorGroup() and relay group.
-
+            eval(SGsyn_name).connect('i!=j')
             setattr(self.main_module, NG_name, eval(NG_name))
             setattr(self.main_module, SGsyn_name, eval(SGsyn_name))
             try:
@@ -1028,10 +1034,9 @@ class cortical_system(object):
 
 
 if __name__ == '__main__' :
-    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', use_genn = 0, runtime = 1000*ms )
+    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = 'GeNN', runtime = 1000*ms )
     CM.run()
 
-    # CM.gather_result()
     # CM.visualise_connectivity(S0_Fixed)
     # for group in CM.monitor_name_bank:
     #     mon_num = len(CM.monitor_name_bank[group])

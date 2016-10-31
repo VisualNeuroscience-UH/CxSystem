@@ -1,7 +1,7 @@
 __author__ = 'V_AD'
 import cPickle as pickle
 import zlib
-from brian_genn_version  import *
+from brian2  import *
 from numpy import *
 import os
 import ntpath
