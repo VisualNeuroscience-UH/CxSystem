@@ -1,7 +1,7 @@
 from networkx.drawing import layout
 
 __author__ = 'V_AD'
-from brian_genn_version  import *
+from brian2  import *
 from brian2_obj_namespaces import *
 import random as rnd
 import operator
