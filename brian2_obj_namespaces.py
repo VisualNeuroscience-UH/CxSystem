@@ -1,11 +1,11 @@
 
-from brian_genn_version  import *
+from brian2  import *
 import numpy as np
 from matplotlib import pyplot
 import sys
 __author__ = 'V_AD'
 
-calcium_concentration = 2.4  # Change calcium concentration here or with _change_calcium()
+calcium_concentration = 2.1  # Change calcium concentration here or with _change_calcium()
 
 class synapse_namespaces(object):
     '''

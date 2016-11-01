@@ -1,15 +1,15 @@
 import cortical_system as CX
 import os
-from brian_genn_version  import *
+from brian2  import *
 import datetime
 
-default_runtime = 500*ms
+default_runtime = 2000*ms
 
 #CM = CX.cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/pandas_playground/generated_config_file_henri.csv',
 #                         use_genn=0,runtime=500*ms )
 time_start = datetime.datetime.now()
 CM = CX.cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv',
-                         use_genn=0,runtime=default_runtime )
+                         device='', runtime=default_runtime )
 
 time_before_run = datetime.datetime.now()
 CM.run()
