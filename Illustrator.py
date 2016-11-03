@@ -218,7 +218,7 @@ class illustrator:
         fig.savefig(os.path.join(self.IllustratorOutputFolder, 'cell_type_response_delay.eps'))
 
 if __name__ == '__main__':
-    illus = illustrator(mode='saving',CXOutputPath='/opt3/CX_Output/Outputs',FilePattern='CX_Output_',
+    illus = illustrator(mode='saving',CXOutputPath='/opt3/CX_Output/',FilePattern='CX_Output_',
                         IllustratorOutputFile='/opt3/CX_Output/Outputs/Illustrator_Output/Illus_out.gz',InputTime=0.5,latency_threshold=0.03)
     illus.Responses(PlotStartTime=0.46,PlotEndTime=0.56,DoSkip=['PC_L6toL1','PC_L6toL4'])
     illus.ResponseLatency()

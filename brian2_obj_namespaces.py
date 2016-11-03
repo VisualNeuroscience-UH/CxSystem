@@ -47,19 +47,16 @@ class synapse_namespaces(object):
         'cw_in_PC': _weights['w_All_other_E-E_connections'],
         'cw_in_BC': _weights['w_All_other_E-I_connections'],
         'cw_in_L1i': _weights['w_All_other_E-I_connections'],
-        'cw_in_UMi': _weights['w_All_other_E-I_connections'],
         'cw_SS_SS': _weights['w_All_other_E-E_connections'],
         'cw_SS_PC': _weights['w_All_other_E-E_connections'],
         'cw_SS_BC': _weights['w_All_other_E-I_connections'],
         'cw_SS_MC': _weights['w_All_other_E-I_connections'],
         'cw_SS_L1i': _weights['w_All_other_E-I_connections'],
-        'cw_SS_UMi': _weights['w_All_other_E-I_connections'],
         'cw_PC_SS': _weights['w_All_other_E-E_connections'],
         'cw_PC_PC': _weights['w_All_other_E-E_connections'],
         'cw_PC_BC': _weights['w_All_other_E-I_connections'],
         'cw_PC_MC': _weights['w_All_other_E-I_connections'],
         'cw_PC_L1i': _weights['w_All_other_E-I_connections'],
-        'cw_PC_UMi': _weights['w_All_other_E-I_connections'],
         'cw_BC_L1i': _weights['w_All_I-I_connections'],
         'cw_BC_SS': _weights['w_All_other_I-E_connections'],
         'cw_BC_PC': _weights['w_All_other_I-E_connections'],
@@ -70,17 +67,11 @@ class synapse_namespaces(object):
         'cw_MC_BC': _weights['w_All_I-I_connections'],
         'cw_MC_MC': _weights['w_All_I-I_connections'],
         'cw_MC_L1i': _weights['w_All_I-I_connections'],
-        'cw_MC_UMi': _weights['w_All_I-I_connections'],
         'cw_L1i_SS': _weights['w_All_other_I-E_connections'],
         'cw_L1i_BC': _weights['w_All_I-I_connections'],
         'cw_L1i_MC': _weights['w_All_I-I_connections'],
         'cw_L1i_PC': _weights['w_All_other_I-E_connections'],
         'cw_L1i_L1i': _weights['w_All_I-I_connections'],
-        'cw_UMi_SS': _weights['w_All_other_I-E_connections'],
-        'cw_UMi_PC': _weights['w_All_other_I-E_connections'],
-        'cw_UMi_L1i': _weights['w_All_I-I_connections'],
-        'cw_UMi_BC': _weights['w_All_I-I_connections'],
-        'cw_UMi_MC': _weights['w_All_I-I_connections']
     }
 
 
@@ -93,7 +84,6 @@ class synapse_namespaces(object):
         'sp_in_PC': 0.38 ,
         'sp_in_BC': 0.38 ,
         'sp_in_L1i': 0.38 ,
-        'sp_in_UMi': 0.38 ,
         ###########
         ########### since the probabilities are being fetched from markram data, following lines are gonna be overwritten by them
         ###########
@@ -102,13 +92,11 @@ class synapse_namespaces(object):
         'sp_SS_BC': 0.053 ,
         'sp_SS_MC': 0.058 ,
         'sp_SS_L1i': 0.053 ,
-        'sp_SS_UMi': 0.053 ,
         'sp_PC_SS':0.081 ,
         'sp_PC_PC':0.081 ,
         'sp_PC_BC':0.053 ,
         'sp_PC_MC':0.058 ,
         'sp_PC_L1i':0.053 ,
-        'sp_PC_UMi': 0.053 ,
         'sp_BC_SS':0.071 ,
         'sp_BC_PC': 0.05 ,
         'sp_BC_L1i':0.005 , #todo: check this value
@@ -119,17 +107,11 @@ class synapse_namespaces(object):
         'sp_MC_BC':0.081 ,
         'sp_MC_MC': 0.08 ,
         'sp_MC_L1i':0.081 ,
-        'sp_MC_UMi': 0.081 ,
         'sp_L1i_SS': 0.071 ,
         'sp_L1i_PC': 0.071 ,
         'sp_L1i_L1i':0.05 ,
         'sp_L1i_BC':0.015 ,
         'sp_L1i_MC':0.03 ,
-        'sp_UMi_SS': 0.071 ,
-        'sp_UMi_PC': 0.071 ,
-        'sp_UMi_L1i': 0.05 ,
-        'sp_UMi_BC': 0.071 ,
-        'sp_UMi_MC': 0.071 ,
           }
 
     stdp = {# instead of inf 2^32 -1 will be used
@@ -143,7 +125,6 @@ class synapse_namespaces(object):
         'stdp_in_PC_basal': [20, -21.5, 5.4 * ms, 124.7 * ms],
         'stdp_in_BC_soma': [-46, -56, 39.9 * ms, 39.1 * ms],
         'stdp_in_L1i_soma': [-46, -56, 39.9 * ms, 39.1 * ms],
-        'stdp_in_UMi_soma': [-46, -56, 39.9 * ms, 39.1 * ms],
 
         'stdp_SS_SS_soma':  [76, -48, 15.9 * ms, 19.3 * ms],
         'stdp_SS_PC_a4':  [-21, 42, 15 * ms, 103.4 * ms],
@@ -156,7 +137,6 @@ class synapse_namespaces(object):
         'stdp_SS_BC_soma': [-46,-56,39.9 * ms,39.1 * ms],
         'stdp_SS_MC_soma': [240,-50, 7.1 * ms,39.1 * ms],
         'stdp_SS_L1i_soma': [-46,-56,39.9 * ms,39.1 * ms],
-        'stdp_SS_UMi_soma': [-46, -56, 39.9 * ms, 39.1 * ms],
 
         'stdp_PC_SS_soma': [76, -48, 15.9 * ms, 19.3 * ms],
         'stdp_PC_PC_a4': [-21, 42, 15 * ms, 103.4 * ms],
@@ -169,7 +149,6 @@ class synapse_namespaces(object):
         'stdp_PC_BC_soma':[-46,-56,39.9 * ms,39.1 * ms],
         'stdp_PC_MC_soma': [240,-50, 7.1 * ms,39.1 * ms],
         'stdp_PC_L1i_soma': [-46, -56, 39.9 * ms, 39.1 * ms],
-        'stdp_PC_UMi_soma': [-46, -56, 39.9 * ms, 39.1 * ms],
 
         'stdp_BC_SS_soma':  [0,0,2147483647 * ms,2147483647 * ms], # instead of inf 2^32 -1 will be used
         'stdp_BC_PC_a4': [0,0,2147483647 * ms,2147483647 * ms],
@@ -182,7 +161,6 @@ class synapse_namespaces(object):
         'stdp_BC_BC_soma': [0,0,2147483647 * ms,2147483647 * ms],
         'stdp_BC_MC_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
         'stdp_MC_L1i_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
-        'stdp_MC_UMi_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
 
         'stdp_MC_SS_soma':  [0,0,2147483647 * ms,2147483647 * ms],
         'stdp_MC_PC_a4': [0,0,2147483647 * ms,2147483647 * ms],
@@ -195,7 +173,6 @@ class synapse_namespaces(object):
         'stdp_MC_BC_soma': [0,0,2147483647 * ms,2147483647 * ms],
         'stdp_MC_MC_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
         'stdp_MC_L1i_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
-        'stdp_MC_UMi_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
 
         'stdp_L1i_SS_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
         'stdp_L1i_PC_a4': [0, 0, 2147483647 * ms, 2147483647 * ms],
@@ -205,19 +182,7 @@ class synapse_namespaces(object):
         'stdp_L1i_PC_a0': [0, 0, 2147483647 * ms, 2147483647 * ms],
         'stdp_L1i_PC_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
         'stdp_L1i_PC_basal': [0, 0, 2147483647 * ms, 2147483647 * ms],
-        'stdp_L1i_UMi_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
         'stdp_L1i_L1i_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
-
-        'stdp_UMi_SS_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
-        'stdp_UMi_PC_a4': [0, 0, 2147483647 * ms, 2147483647 * ms],
-        'stdp_UMi_PC_a3': [0, 0, 2147483647 * ms, 2147483647 * ms],
-        'stdp_UMi_PC_a2': [0, 0, 2147483647 * ms, 2147483647 * ms],
-        'stdp_UMi_PC_a1': [0, 0, 2147483647 * ms, 2147483647 * ms],
-        'stdp_UMi_PC_a0': [0, 0, 2147483647 * ms, 2147483647 * ms],
-        'stdp_UMi_PC_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
-        'stdp_UMi_PC_basal': [0, 0, 2147483647 * ms, 2147483647 * ms],
-        'stdp_UMi_UMi_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
-        'stdp_UMi_L1i_soma': [0, 0, 2147483647 * ms, 2147483647 * ms],
 
     }
 
@@ -228,27 +193,23 @@ class synapse_namespaces(object):
         'ilam_in_PC': 0.1/mm, #TODO : These parameters are still to be checked, 0.01 cause high probability eventhough the shape is similar to gaussian. It would be better if we change them to some value near 1.
         'ilam_in_BC': 0.1/mm,
         'ilam_in_L1i':0.1/mm,
-        'ilam_in_UMi': 0.1 / mm,
 
         'ilam_SS_SS':2.3 / _M_V1 / mm,
         'ilam_SS_PC': 2.3 / _M_V1 / mm,
         'ilam_SS_BC': 0.7 / _M_V1 / mm,
         'ilam_SS_MC': 0.7 / _M_V1 / mm,
         'ilam_SS_L1i': 0.7 / _M_V1 / mm,
-        'ilam_SS_UMi': 0.7 / _M_V1 / mm,
 
         'ilam_PC_SS': 2.3 / _M_V1 / mm,
         'ilam_PC_PC': 2.3 / _M_V1 / mm,
         'ilam_PC_BC':  2.3 / _M_V1 / mm,
         'ilam_PC_MC': 2.3 / _M_V1 / mm,
         'ilam_PC_L1i':  2.3 / _M_V1 / mm,
-        'ilam_PC_UMi': 2.3 / _M_V1 / mm,
 
         'ilam_BC_SS':2.3 / _M_V1 / mm,
         'ilam_BC_PC':2.3 / _M_V1 / mm,
         'ilam_BC_BC': 2.3 / _M_V1 / mm,
         'ilam_BC_MC': 2.3 / _M_V1 / mm,
-        'ilam_BC_UMi': 2.3 / _M_V1 / mm,
         'ilam_BC_L1i': 2.3 / _M_V1 / mm,
 
         'ilam_MC_SS': 0.01/mm,
@@ -256,24 +217,53 @@ class synapse_namespaces(object):
         'ilam_MC_BC': 0.01/mm,
         'ilam_MC_MC': 0.01/mm,
         'ilam_MC_L1i': 0.01/mm,
-        'ilam_MC_UMi': 0.01 / mm,
 
         'ilam_L1i_SS':2.3 / _M_V1 / mm,
         'ilam_L1i_PC': 2.3 / _M_V1 / mm,
         'ilam_L1i_BC': 2.3 / _M_V1 / mm,#todo: check this value
         'ilam_L1i_MC': 2.3 / _M_V1 / mm,#todo: check this value
         'ilam_L1i_L1i': 2.3 / _M_V1 / mm,
-        'ilam_L1i_UMi': 2.3 / _M_V1 / mm,
-
-        'ilam_UMi_SS': 2.3 / _M_V1 / mm,
-        'ilam_UMi_PC': 2.3 / _M_V1 / mm,
-        'ilam_UMi_UMi': 2.3 / _M_V1 / mm,
-        'ilam_UMi_BC': 2.3 / _M_V1 / mm,
-        'ilam_UMi_MC': 2.3 / _M_V1 / mm,
 
     }
 
 
+    delay = { # this values are all set to 3*ms since in VCX all values are set to 3*ms
+        'delay_in_SS':3.0*ms,
+        'delay_in_PC': 3.0*ms,
+        'delay_in_BC': 3.0*ms,
+        'delay_in_L1i':3.0*ms,
+
+        'delay_SS_SS': 3.0*ms,
+        'delay_SS_PC': 3.0*ms,
+        'delay_SS_BC': 3.0*ms,
+        'delay_SS_MC': 3.0*ms,
+        'delay_SS_L1i': 3.0*ms,
+
+        'delay_PC_SS': 3.0*ms,
+        'delay_PC_PC': 3.0*ms,
+        'delay_PC_BC': 3.0*ms,
+        'delay_PC_MC': 3.0*ms,
+        'delay_PC_L1i': 3.0*ms,
+
+        'delay_BC_SS': 3.0*ms,
+        'delay_BC_PC': 3.0*ms,
+        'delay_BC_BC': 3.0*ms,
+        'delay_BC_MC': 3.0*ms,
+        'delay_BC_L1i': 3.0*ms,
+
+        'delay_MC_SS': 3.0*ms,
+        'delay_MC_PC': 3.0*ms,
+        'delay_MC_BC': 3.0*ms,
+        'delay_MC_MC': 3.0*ms,
+        'delay_MC_L1i': 3.0*ms,
+
+        'delay_L1i_SS': 3.0*ms,
+        'delay_L1i_PC': 3.0*ms,
+        'delay_L1i_BC': 3.0*ms,
+        'delay_L1i_MC': 3.0*ms,
+        'delay_L1i_L1i': 3.0*ms,
+
+        }
 
     def __init__(self,output_synapse):
         '''
@@ -303,7 +293,12 @@ class synapse_namespaces(object):
         self.output_namespace['taupost'] = synapse_namespaces.stdp['stdp_%s_%s' % (output_synapse['pre_group_type'], \
             output_synapse['post_group_type'] + output_synapse['post_comp_name'])]
         self.output_namespace['wght_max'] = synapse_namespaces.cw['cw_%s_%s'% (output_synapse['pre_group_type'],output_synapse['post_group_type'])] * synapse_namespaces.stdp_max_strength_coefficient
-        self.output_namespace['wght0'] = synapse_namespaces.cw['cw_%s_%s'% (output_synapse['pre_group_type'],output_synapse['post_group_type'])]
+        std_wght = synapse_namespaces.cw['cw_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])] / nS
+        mu_wght = std_wght / 2.
+        self.output_namespace['wght0'] = '(%f * rand() + %f) * nS' % (std_wght , mu_wght)
+        std_delay = synapse_namespaces.delay['delay_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])] / ms
+        mu_delay = std_delay / 2.
+        self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, mu_delay)
 
 
     def Fixed(self,output_synapse):
@@ -316,9 +311,12 @@ class synapse_namespaces(object):
         self.output_namespace['wght_max'] = synapse_namespaces.cw['cw_%s_%s' % (output_synapse['pre_group_type'],
                                                                                 output_synapse[
                                                                                     'post_group_type'])] * synapse_namespaces.stdp_max_strength_coefficient
-        self.output_namespace['wght0'] = synapse_namespaces.cw[
-            'cw_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])]
-
+        std_wght = synapse_namespaces.cw['cw_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])] / nS
+        mu_wght = std_wght / 2.
+        self.output_namespace['wght0'] = '(%f * rand() + %f) * nS' % (std_wght , mu_wght)
+        std_delay = synapse_namespaces.delay['delay_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])] / ms
+        mu_delay = std_delay / 2.
+        self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, mu_delay)
 
 
 #############################################
@@ -424,24 +422,6 @@ class neuron_namespaces (object):
 
     def _VPM(self,output_neuron):
         pass
-
-    def _UMi(self,output_neuron):
-        self.output_namespace['C'] = 100 * pF  # Somatosensory cortex,
-        # Beierlein 2000 - Badel et al., 2008: 90 pF
-
-        self.output_namespace['gL'] = 10 * nS  # Beierlein 2000 -  Badel et al -> 10 nS (calculated from tau_m)
-        self.output_namespace['taum'] = self.output_namespace['C'] / self.output_namespace['gL']  # Badel et al. 2008: 9 ms
-        self.output_namespace['Vr'] =-67.66 * mV
-        self.output_namespace['EL'] = -67.66 * mV  # mean of neuro-electro portal#-64 * mV # Badel et al. 2008
-        self.output_namespace['VT'] = -38.8 * mV  # mean of neuro-electro portal#self.output_namespace['EL'] + 15  * mV # Badel et al. 2008  #15
-        self.output_namespace['V_res'] = self.output_namespace['VT'] - 4 * mV  # -55 * mV #self.output_namespace['VT']-4*mV
-        self.output_namespace['DeltaT'] = 2 * mV
-        self.output_namespace['Vcut'] = self.output_namespace['VT'] + 5 * self.output_namespace['DeltaT']
-        self.output_namespace['Ee'] = 0 * mV
-        self.output_namespace['Ei'] = -75 * mV
-        self.output_namespace['tau_e'] = 3 * ms  # Markram Cell 2015
-        self.output_namespace['tau_i'] = 8.3 * ms  # Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5)
-
 
 
     def _MC(self,output_neuron):

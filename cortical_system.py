@@ -12,6 +12,9 @@ import ntpath
 from scipy.sparse import csr_matrix
 from datetime import datetime
 import cPickle as pickle
+import time
+import __builtin__
+import csv
 
 class cortical_system(object):
     '''
@@ -56,9 +59,11 @@ class cortical_system(object):
         * save_data: The save_data() object for saving the final data.
 
         '''
+        self.start_time = time.time()
         if device != '':
-            print "Info: system is going to be run using Brian2Genn, " \
-                  "Errors may rise if Brian2/Brian2GeNN/GeNN are not installed correctly."
+            print "Info: system is going to be run using stand-alone devices, " \
+                  "Errors may rise if Brian2/Brian2GeNN/GeNN is not installed correctly or the limitations are not " \
+                  "taken in to acount."
         self.main_module = sys.modules['__main__']
         try:  # try to find the CX_module in the sys.modules, to find if the __main__ is cortical_system.py or not
             self.CX_module = sys.modules['cortical_system']
@@ -72,6 +77,7 @@ class cortical_system(object):
             'IN': self.relay,
             'total_synapses': self._set_total_synapses,
             'sys_mode': self._set_sys_mode, # either "local" or "expanded"
+            'scale' : self._set_scale,
             'params': self.set_runtime_parameters,
             'grid_radius': self._set_grid_radius,
             'min_distance': self._set_min_distance,
@@ -80,10 +86,16 @@ class cortical_system(object):
             'save_brian_data_path': self._set_save_brian_data_path,
             'do_init_vms': self.do_init_vms,
             'load_positions_only': self.load_positions_only,
+            'do_benchmark': self.do_benchmark,
 
         }
         self.StartTime_str = '_' + str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '')\
             [0:str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '').index('.')+3].replace('.','')
+        print "Info: current run filename suffix is: %s"%self.StartTime_str[1:]
+        # self.scale = 1
+        self.do_benchmark = 0
+        self.numerical_integration_method = 'euler'
+        print "Info : the system is running with %s integration method"%self.numerical_integration_method
         self.runtime = runtime
         self.conn_prob_gain = synapse_namespaces.conn_prob_gain
         self.current_parameters_list = []
@@ -132,7 +144,36 @@ class cortical_system(object):
 
     def run(self):
         run(self.runtime, report='text')
+        if self.do_benchmark:
+            self.benchmarking_data = {}
+            titles= ['Computer Name','Device','Simulation Time','Python Compilation','Brian Code generation',\
+                     'Device-Specific Compilation','Run','Extract and Save Result','Total Time']
+            self.benchmarking_data['Simulation Time'] = str(self.runtime)
+            self.benchmarking_data['Device'] = self.device if self.device != '' else "Python"
+            if self.device != '':
+                self.benchmarking_data['Python Compilation'] = __builtin__.code_generation_start - self.start_time
+                self.benchmarking_data['Brian Code generation'] = __builtin__.compile_start - __builtin__.code_generation_start
+                self.benchmarking_data['Device-Specific Compilation'] = __builtin__.run_start - __builtin__.compile_start
+            else:
+                self.benchmarking_data['Python Compilation'] = __builtin__.run_start - self.start_time
+                self.benchmarking_data['Brian Code generation'] = '-'
+                self.benchmarking_data['Device-Specific Compilation'] = '-'
+            self.saving_start_time = time.time()
+            self.benchmarking_data['Run'] = self.saving_start_time -  __builtin__.run_start
         self.gather_result()
+        if self.do_benchmark:
+            self.end_time = time.time()
+            self.benchmarking_data['Extract and Save Result'] = self.end_time - self.saving_start_time
+            self.benchmarking_data['Total Time'] = self.end_time - self.start_time
+            import platform
+            self.benchmarking_data['Computer Name'] = platform.node()
+            write_titles = 1 if not os.path.isfile(os.path.join(self.output_folder,'benchmark.csv')) else 0
+            with open(os.path.join(self.output_folder,'benchmark.csv'), 'ab') as f:
+                w = csv.DictWriter(f, titles)
+                if write_titles:
+                    w.writeheader()
+                w.writerow(self.benchmarking_data)
+                print "Benchmarking data saved"
 
     def set_runtime_parameters(self):
         for ParamIdx,parameter in enumerate(self.current_parameters_list):
@@ -142,16 +183,29 @@ class cortical_system(object):
             self._options[parameter](self.current_values_list[ParamIdx])
         if self.sys_mode == '':
             print "Warning: system mode is not defined. "
+        else:
+            print "Info: CX system is running in %s mode" %self.sys_mode
 
     def _set_total_synapses(self, *args):
         self.total_synapses = int(args[0])
 
     def _set_sys_mode(self, *args):
+        assert args[0] in ['local','expanded'], "Error: System mode should be either local or expanded. "
         self.sys_mode = args[0]
+
 
     def _set_grid_radius(self, *args):
         assert '*' in args[0], 'Please specify the unit for the grid radius parameter, e.g. um , mm '
         self.general_grid_radius = eval(args[0])
+        try:
+            print "Info: Radius of the system scaled to %s from %s" % (str(sqrt(self.scale)*self.general_grid_radius), str(self.general_grid_radius))
+            self.general_grid_radius = sqrt(self.scale)*self.general_grid_radius
+            if self.sys_mode != 'expanded':
+                print '###############\n###############\n' \
+              'WARNING: system is scaled by factor of %f but the system mode is local instead of expanded\n' \
+                      '###############\n###############'%(self.scale)
+        except AttributeError:
+            pass
 
     def _set_min_distance(self, *args):
         assert '*' in args[0], 'Please specify the unit for the minimum distance parameter, e.g. um , mm '
@@ -166,6 +220,11 @@ class cortical_system(object):
         self.save_output_data.data['positions_all']['z_coord'] = {}
         self.save_output_data.data['number_of_neurons'] = {}
         self.save_output_data.data['runtime'] = self.runtime / self.runtime._get_best_unit()
+        self.save_output_data.data['sys_mode'] = self.sys_mode
+        try:
+            self.save_output_data.data['scale'] = self.scale
+        except AttributeError:
+            pass
 
     def _set_load_brian_data_path(self, *args):
         self.load_brian_data_path = args[0]
@@ -180,6 +239,9 @@ class cortical_system(object):
             data = zlib.decompress(fp.read())
             self.loaded_brian_data = pickle.loads(data)
         print 'Info: brian data file loaded from %s'%os.path.abspath(self.load_brian_data_path)
+        if 'scale' in self.loaded_brian_data.keys():
+            self.scale = self.loaded_brian_data['scale']
+            print "Info: scale of the system loaded from brian file"
 
     def _set_save_brian_data_path(self, *args):
         self.save_brian_data_path = args[0]
@@ -199,12 +261,22 @@ class cortical_system(object):
         if not self.do_init_vms:
             print 'Info: no initialization for membrane voltages.'
 
+    def _set_scale(self,*args):
+        # if float(args[0])!=1.0:
+        self.scale = float(args[0])
+        print "Info: CX System is being build on the scale of %s" %args[0]
+
     def load_positions_only(self,*args):
         assert int(args[0]) == 0 or int(args[0]) == 1, \
             'Error: the load_positions_only flag should be either 0 or 1 but it is %s .' % args[0]
         self.load_positions_only = int(args[0])
         if self.load_positions_only:
             print "Info: only positions are being loaded from the brian_data_file"
+
+    def do_benchmark(self,*args):
+        assert int(args[0]) in [0,1] , "Error: Do benchmark should be 0 or 1"
+        self.do_benchmark = int(args[0])
+
 
     def neuron_group(self, *args):
         '''
@@ -227,7 +299,7 @@ class cortical_system(object):
         '''
         assert self.sys_mode != '', "Error: System mode not defined."
         _all_columns = ['idx', 'number_of_neurons', 'neuron_type', 'layer_idx', 'threshold',
-                        'reset', 'refractory', 'net_center', 'monitors']
+                        'reset', 'refractory', 'net_center', 'noise_frequency' ,'monitors']
         _obligatory_params = [0, 1, 2, 3]
         assert len(self.current_values_list) <= len(_all_columns), 'One or more of of the columns for input definition \
         is missing. Following obligatory columns should be defined:\n%s\n ' \
@@ -237,6 +309,7 @@ class cortical_system(object):
         idx = -1
         net_center = 0 + 0j
         number_of_neurons = 0
+        noise_frequency = ''
         neuron_type = ''
         layer_idx = 0
         threshold = ''
@@ -255,6 +328,10 @@ class cortical_system(object):
         current_idx = len(self.customized_neurons_list)
         if neuron_type == 'PC':  # extract the layer index of PC neurons separately
             exec 'layer_idx = array(' + layer_idx.replace('->', ',') + ')'
+        try:
+            number_of_neurons = str(int(int(number_of_neurons) * self.scale))
+        except AttributeError:
+            pass
         self.customized_neurons_list.append(customized_neuron(idx, number_of_neurons, neuron_type,
                                                               layer_idx, self.general_grid_radius, self.min_distance,
                                                               network_center=net_center).output_neuron)  # creating a
@@ -286,8 +363,40 @@ class cortical_system(object):
         exec "%s=self.customized_neurons_list[%d]['refractory']" % (NRef_name, current_idx)
         exec "%s=self.customized_neurons_list[%d]['namespace']" % (NNS_name, current_idx)
         # Creating the actual NeuronGroup() using the variables in the previous 6 lines
-        exec "%s= NeuronGroup(%s, model=%s, method='euler', threshold=%s, reset=%s,refractory = %s, namespace = %s)" \
-             % (NG_name, NN_name, NE_name, NT_name, NRes_name, NRef_name, NNS_name)
+        exec "%s= NeuronGroup(%s, model=%s, method='%s', threshold=%s, reset=%s,refractory = %s, namespace = %s)" \
+             % (NG_name, NN_name, NE_name,self.numerical_integration_method ,NT_name, NRes_name, NRef_name, NNS_name)
+        # Creating the noise group :
+        if noise_frequency!= 'N/A':
+            total_N_noise_spikes = np.int(eval(NN_name) * self.runtime * eval(noise_frequency))
+            total_N_simulation_time_slots = np.int(eval(NN_name) * (self.runtime / defaultclock.dt))
+            all_simulation_time_slots = np.zeros(total_N_simulation_time_slots)
+            indices_to_be_1 = np.random.choice(total_N_simulation_time_slots, total_N_noise_spikes)
+            all_simulation_time_slots[indices_to_be_1] = 1
+            cellwise_simulation_time_slots = np.reshape(all_simulation_time_slots, (eval(NN_name),np.int(self.runtime / defaultclock.dt)))
+            indices, time_slots = np.where(cellwise_simulation_time_slots)
+            times = time_slots * defaultclock.dt
+            Noise_Group_Name = NG_name + '_Noise'
+            Noise_Syn_Name = 'Syn_' + NG_name + '_Noise'
+            exec "%s = SpikeGeneratorGroup(%s, indices, times)" %(Noise_Group_Name, NN_name)
+            # 0.4mV in the next line comes from Sjiostrom et al. 2006 calculated as follows:
+            # w_L23PC_L23PC': 0.68 * nS      # -> this is from Markram et al Cell 2015, Table S6. Prescribed Parameters for Synaptic Transmission, Related to Figures 9 and 10.
+            # Area_tot_pyram = 25000 *.75* um**2
+            # Cm = (1 * ufarad * cm ** -2)
+            # C = 0.03 * Cm * Area_tot_pyram * 2
+            # Ee = 0*mV
+            # dt = 0.1 * ms
+            # Vr =-70.11 * mV
+            # (dt * w_L23PC_L23PC * (Ee - Vr)) / C =~ 0.4 *mV
+            exec "%s = Synapses(%s, %s, on_pre = 'vm+=0.4*mV')" % (Noise_Syn_Name, Noise_Group_Name,NG_name)
+            eval(Noise_Syn_Name).connect('i==j')
+            setattr(self.main_module, Noise_Group_Name, eval(Noise_Group_Name))
+            setattr(self.main_module, Noise_Syn_Name, eval(Noise_Syn_Name))
+            try:
+                setattr(self.CX_module, Noise_Group_Name, eval(Noise_Group_Name))
+                setattr(self.CX_module, Noise_Syn_Name, eval(Noise_Syn_Name))
+            except AttributeError:
+                pass
+            print "Noise added to the group"
         # trying to load the positions in the groups
         if hasattr(self,'loaded_brian_data'):
             # in case the NG index are different.
@@ -330,6 +439,8 @@ class cortical_system(object):
             setattr(self.CX_module, NG_name, eval(NG_name))
         except AttributeError:
             pass
+
+
         # passing remainder of the arguments to monitors() method to take care of the arguments.
         self.monitors(monitors.split(' '), NG_name, self.customized_neurons_list[-1]['equation'])
 
@@ -666,22 +777,26 @@ class cortical_system(object):
                         # plt.scatter(eval(_pre_group_idx).x,eval(_pre_group_idx).y,color='b')
                         # plt.axis('equal')
 
-                        syn_con_str += "'exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f/meter)/(2*0.025**2))/\
+                        syn_con_str += "'exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(2*0.025**2))/\
                         (sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'" % (self.customized_synapses_list[-1]['ilam'])
 
                     elif self.sys_mode == 'local':
                         syn_con_str += "'%f'" % float(p_arg)
                     elif self.sys_mode == 'expanded':
-                        syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)" \
-                           "\**2+(y_pre-y_post)**2)/mm)'   " % (float(p_arg), self.customized_synapses_list[-1]['ilam'])
+                        # syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))/(sqrt((x_pre-x_post) \
+                        #    **2+(y_pre-y_post)**2)/mm)'   " % (float(p_arg), self.customized_synapses_list[-1]['ilam'])
+                        syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))'" % (
+                        float(p_arg), self.customized_synapses_list[-1]['ilam'])
 
                 except ValueError:
                     p_arg = self.customized_synapses_list[-1]['sparseness']
                     if self.sys_mode == 'local':
                         syn_con_str += "'%f'" % p_arg
                     elif self.sys_mode == 'expanded':
-                        syn_con_str += "'%f*exp(-(sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(sqrt((x_pre-x_post)\
-                        **2+(y_pre-y_post)**2)/mm)'   " % (p_arg, self.customized_synapses_list[-1]['ilam'])
+                        # syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))/(sqrt((x_pre-x_post)\
+                        # **2+(y_pre-y_post)**2)/mm)'   " % (p_arg, self.customized_synapses_list[-1]['ilam'])
+                        syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))'" % (
+                        p_arg, self.customized_synapses_list[-1]['ilam'])
                 try:
                     syn_con_str += ',n=%d)' % int(n_arg)
                 except ValueError:
@@ -689,7 +804,7 @@ class cortical_system(object):
                 exec syn_con_str
 
             exec "%s.wght=%s['wght0']" % (S_name, SNS_name)  # set the weights
-
+            exec "%s.delay=%s['delay']" % (S_name, SNS_name)  # set the delays
             # DO NOT DELETE NEXT TRY EXCEPT
             # try:
                 # setattr(self.main_module, SE_name, eval(SE_name))
@@ -707,7 +822,6 @@ class cortical_system(object):
             except AttributeError:
                 pass
 
-            exec "%s._name = 'synapses_%d'" % (S_name, current_idx + 1)
             self.monitors(monitors.split(' '), S_name, self.customized_synapses_list[-1]['equation'])
 
             if self.device == '' :
@@ -800,8 +914,10 @@ class cortical_system(object):
             # Internal switch for brian2GeNN:
             if self.device == 'GeNN':
                 set_device('genn',directory=os.path.join(self.output_folder, 'GeNN_Output',self.StartTime_str[1:]))
+                prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
             elif self.device == 'C++':
                 set_device('cpp_standalone',directory=os.path.join(self.output_folder, 'Cpp_Output',self.StartTime_str[1:]))
+                prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
 
             exec spikes_str in globals(), locals() # runnig the string containing the syntax for Spike indices in the input neuron group.
             exec times_str in globals(), locals()# running the string containing the syntax for time indices in the input neuron group.
@@ -890,8 +1006,10 @@ class cortical_system(object):
             # Internal switch for brian2GeNN:
             if self.device == 'GeNN':
                 set_device('genn',directory=os.path.join(self.output_folder, 'GeNN_Output',self.StartTime_str[1:]))
+                prefs.codegen.cpp.extra_compile_args_gcc = ['-O3','-pipe']
             elif self.device == 'C++':
                 set_device('cpp_standalone',directory=os.path.join(self.output_folder, 'Cpp_Output',self.StartTime_str[1:]))
+                prefs.codegen.cpp.extra_compile_args_gcc = ['-O3','-pipe']
 
             exec spikes_str in globals(), locals()  # runnig the string containing the syntax for Spike indices in the input neuron group.
             exec times_str in globals(), locals()  # running the string containing the syntax for time indices in the input neuron group.
@@ -1014,6 +1132,7 @@ class cortical_system(object):
             self.save_brian_data.data['positions_all']['z_coord'] = self.save_output_data.data['positions_all']['z_coord']
             self.save_brian_data.save_to_file()
 
+
     def visualise_connectivity(self,S):
         Ns = len(S.source)
         Nt = len(S.target)
@@ -1034,7 +1153,7 @@ class cortical_system(object):
 
 
 if __name__ == '__main__' :
-    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = 'GeNN', runtime = 1000*ms )
+    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device = 'GeNN', runtime = 1000*ms )
     CM.run()
 
     # CM.visualise_connectivity(S0_Fixed)

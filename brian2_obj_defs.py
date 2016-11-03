@@ -72,7 +72,8 @@ class customized_neuron(object):
                                                                 'fixed_grid', general_grid_radius,min_distance)
         # self.output_neuron['w_positions'] = 17 * log(self.output_neuron['z_positions'] + 1)
         self.output_neuron['z_positions'] =  map(lambda x: e ** (x/17) - 1,self.output_neuron['w_positions'] )
-        print "Customized " + str(cell_type) + " neuron in layer " + str(layers_idx) + " initialized"
+        print "Customized " + str(cell_type) + " neuron in layer " + str(layers_idx) + " initialized with " + \
+              str(self.output_neuron['number_of_neurons']) + " neurons."
 
 
 
@@ -242,29 +243,6 @@ class customized_neuron(object):
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
 
-
-    def UMi(self):
-        '''
-        This method build up the equation for Unassigned Markram inhibitory (UMi) neurons. The final equation is then saved in output_neuron['equation'].
-
-        * The equation of the neuron is as follows:
-
-            ::
-
-                dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge_soma * (Ee-vm) + gi_soma * (Ei-vm)) / C : volt (unless refractory)
-                dge_soma/dt = -ge_soma/tau_e : siemens
-                dgi_soma/dt = -gi_soma/tau_i : siemens
-                x : meter
-                y : meter
-        '''
-        self.output_neuron['equation'] = Equations('''
-            dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C : volt (unless refractory)
-            dge/dt = -ge/tau_e : siemens
-            dgi/dt = -gi/tau_i : siemens
-            ''', ge='ge_soma', gi='gi_soma')
-
-        self.output_neuron['equation'] += Equations('''x : meter
-            y : meter''')
 
     def MC(self):
         '''
