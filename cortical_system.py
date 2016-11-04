@@ -39,7 +39,7 @@ class cortical_system(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self, config_path, device = '', runtime=500*ms):
+    def __init__(self, config_path, device = 'Python', runtime=500*ms):
         '''
         Initialize the cortical system by parsing the configuration file.
 
@@ -60,7 +60,7 @@ class cortical_system(object):
 
         '''
         self.start_time = time.time()
-        if device != '':
+        if device != 'Python':
             print "Info: system is going to be run using stand-alone devices, " \
                   "Errors may rise if Brian2/Brian2GeNN/GeNN is not installed correctly or the limitations are not " \
                   "taken in to acount."
@@ -92,6 +92,7 @@ class cortical_system(object):
         self.StartTime_str = '_' + str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '')\
             [0:str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '').index('.')+3].replace('.','')
         print "Info: current run filename suffix is: %s"%self.StartTime_str[1:]
+        self.StartTime_str += '_'+self.device+'_'+str(int((runtime/second)*1000)) + 'ms'
         # self.scale = 1
         self.do_benchmark = 0
         self.numerical_integration_method = 'euler'
@@ -149,8 +150,8 @@ class cortical_system(object):
             titles= ['Computer Name','Device','Simulation Time','Python Compilation','Brian Code generation',\
                      'Device-Specific Compilation','Run','Extract and Save Result','Total Time']
             self.benchmarking_data['Simulation Time'] = str(self.runtime)
-            self.benchmarking_data['Device'] = self.device if self.device != '' else "Python"
-            if self.device != '':
+            self.benchmarking_data['Device'] = self.device
+            if self.device != 'Python':
                 self.benchmarking_data['Python Compilation'] = __builtin__.code_generation_start - self.start_time
                 self.benchmarking_data['Brian Code generation'] = __builtin__.compile_start - __builtin__.code_generation_start
                 self.benchmarking_data['Device-Specific Compilation'] = __builtin__.run_start - __builtin__.compile_start
@@ -185,6 +186,8 @@ class cortical_system(object):
             print "Warning: system mode is not defined. "
         else:
             print "Info: CX system is running in %s mode" %self.sys_mode
+        if self.do_benchmark:
+            print "####### Warning: CX_system is performing benchmarking. The Brian2 should be configured to use benchmarking."
 
     def _set_total_synapses(self, *args):
         self.total_synapses = int(args[0])
@@ -786,7 +789,7 @@ class cortical_system(object):
                         # syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))/(sqrt((x_pre-x_post) \
                         #    **2+(y_pre-y_post)**2)/mm)'   " % (float(p_arg), self.customized_synapses_list[-1]['ilam'])
                         syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))'" % (
-                        float(p_arg), self.customized_synapses_list[-1]['ilam'])
+                        float(p_arg), self.customized_synapses_list[-1]['ilam']) # todo the divisoin by the distance is temporarily removed to avoid division by zeros, try to understand what is going on using Hanna's email and if it's needed, add a fixed version
 
                 except ValueError:
                     p_arg = self.customized_synapses_list[-1]['sparseness']
@@ -796,7 +799,7 @@ class cortical_system(object):
                         # syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))/(sqrt((x_pre-x_post)\
                         # **2+(y_pre-y_post)**2)/mm)'   " % (p_arg, self.customized_synapses_list[-1]['ilam'])
                         syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))'" % (
-                        p_arg, self.customized_synapses_list[-1]['ilam'])
+                        p_arg, self.customized_synapses_list[-1]['ilam']) # todo the divisoin by the distance is temporarily removed to avoid division by zeros, try to understand what is going on using Hanna's email and if it's needed, add a fixed version
                 try:
                     syn_con_str += ',n=%d)' % int(n_arg)
                 except ValueError:
@@ -824,7 +827,7 @@ class cortical_system(object):
 
             self.monitors(monitors.split(' '), S_name, self.customized_synapses_list[-1]['equation'])
 
-            if self.device == '' :
+            if self.device == 'Python' :
                 num_tmp = 0
                 exec "num_tmp = len(%s.i)" % S_name
                 self.total_number_of_synapses += num_tmp
@@ -915,7 +918,7 @@ class cortical_system(object):
             if self.device == 'GeNN':
                 set_device('genn',directory=os.path.join(self.output_folder, 'GeNN_Output',self.StartTime_str[1:]))
                 prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
-            elif self.device == 'C++':
+            elif self.device == 'Cpp':
                 set_device('cpp_standalone',directory=os.path.join(self.output_folder, 'Cpp_Output',self.StartTime_str[1:]))
                 prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
 
@@ -1007,7 +1010,7 @@ class cortical_system(object):
             if self.device == 'GeNN':
                 set_device('genn',directory=os.path.join(self.output_folder, 'GeNN_Output',self.StartTime_str[1:]))
                 prefs.codegen.cpp.extra_compile_args_gcc = ['-O3','-pipe']
-            elif self.device == 'C++':
+            elif self.device == 'Cpp':
                 set_device('cpp_standalone',directory=os.path.join(self.output_folder, 'Cpp_Output',self.StartTime_str[1:]))
                 prefs.codegen.cpp.extra_compile_args_gcc = ['-O3','-pipe']
 
@@ -1153,8 +1156,21 @@ class cortical_system(object):
 
 
 if __name__ == '__main__' :
-    CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device = 'GeNN', runtime = 1000*ms )
+    # for dvc in ['Python','Cpp','GeNN']:
+    #     for r_time in range(4000, 22001, 3000):
+    #         for r in range(5):
+    #             dev = 'Python' if dvc=='' else dvc
+    #             print "###################\n###################\n###################\nDevice: %s\nDuration: %d ms\nTrial: %d/5\n###################\n###################\n###################\n"%(dev,r_time,r+1)
+    #             CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = dvc, runtime = r_time*ms )
+    #             CM.run()
+
+    # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = 'Python' , runtime=100* ms)
+    # CM.run()
+    # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device='Cpp',runtime=100 * ms)
+    # CM.run()
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device='GeNN',runtime=100 * ms)
     CM.run()
+
 
     # CM.visualise_connectivity(S0_Fixed)
     # for group in CM.monitor_name_bank:

@@ -1,5 +1,5 @@
-row_type,sys_mode,#scale,grid_radius, min_distance, do_init_vms,output_path, #save_brian_data_path , #load_brian_data_path, load_positions_only, do_benchmark
-params,local,1,210*um, 1*um,1,/opt3/CX_Output/CX_Output.gz,/opt3/CX_Output/brian_data.gz, /opt3/CX_Output/brian_data_for_positions.gz, 0, 1
+row_type,sys_mode,#scale,grid_radius, min_distance, do_init_vms,output_path, save_brian_data_path , load_brian_data_path, load_positions_only, do_benchmark
+params,local,1,210*um, 1*um,1,/opt2/vafa/CX_Output/CX_Output.gz,/opt2/vafa/CX_Output/brian_data.gz, /opt2/vafa/CX_Output/brian_data_for_positions.gz, 1, 1
 row_type,idx,type,number_of_neurons,radius,spike_times,net_center,monitors
 IN,0, VPM,60,92*um,[0.5]*second, N/A ,[Sp]
 row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,noise_frequency,monitors
@@ -21,7 +21,7 @@ G,15,813,BC,6,N/A,600*Hz,[St]vm[rec](0-812-20) [Sp]
 G,16,372,MC,6,N/A,600*Hz,[St]vm[rec](0-371-20) [Sp]
 row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p,n,monitors,load_connection,save_connection
 #### input to PC4 and SS4:
-S,ge,0,5[C]0ba,Fixed,N/A,7+7,N/A,0-->,0-->
+S,ge,0,5[C]0ba,Fixed,N/A,7+7,N/A,1-->,1-->
 S,ge,0,6[C]0ba,Fixed,N/A,7+7,N/A,1,1
 S,ge,0,7,Fixed,N/A,7,N/A,1,1
 #### input to PC5:
@@ -265,4 +265,4 @@ S,ge,14,7,Fixed,0.004969,2,N/A,1,1
 S,ge,14,10[C]0ab,Fixed,0.0092826967590999999+0.0092826967590999999,3+3,N/A,1,1
 S,ge,14,16,Fixed,0.009898,8,N/A,1,1
 S,ge,14,13[C]0ab,Fixed,0.010763771408900001+0.010763771408900001,3+3,N/A,1,1
-S,ge,14,14[C]0ab,Fixed,0.0074012706513999996+0.0074012706513999996,5+5,N/A,0<--,0<--
+S,ge,14,14[C]0ab,Fixed,0.0074012706513999996+0.0074012706513999996,5+5,N/A,1<--,1<--

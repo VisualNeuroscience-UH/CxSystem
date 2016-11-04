@@ -1,2 +1,2 @@
 # CXModule_Git
-Cortical module using biran2GeNN
+Cortical module using brian2GeNN
