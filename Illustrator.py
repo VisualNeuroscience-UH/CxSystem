@@ -58,6 +58,8 @@ class illustrator:
                 self.final_data['GroupsSpikes'][Group] = []
                 # if not os.path.isfile(os.path.join(self.CXOutputPath,'SpikesToPlot.mat')):
             # TmpTrial = self.loadmat(os.path.join(self.CXOutputPath, self.final_data['FileList'][0]))
+
+            # Open gz files
             with open(os.path.join(self.CXOutputPath, self.final_data['FileList'][0]), 'rb') as fp:
                 z_data = zlib.decompress(fp.read())
                 TmpTrial = pickle.loads(z_data)
