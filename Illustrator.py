@@ -13,7 +13,7 @@ import zlib
 class illustrator:
     def __init__(self, mode,CXOutputPath,FilePattern,IllustratorOutputFile,InputTime,latency_threshold):
         self.mode = mode
-        assert mode in ['saving','loading'], 'Error: mode should be set as either saving or loading.'
+        assert mode in ['saving','loading'], 'Mode should be set as either saving or loading.'
         self.CXOutputPath = CXOutputPath
         self.FilePattern = FilePattern
         # self.PlotType = PlotType
