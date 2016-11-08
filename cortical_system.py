@@ -1,6 +1,6 @@
 __author__ = 'V_AD'
 from brian2 import *
-import brian2genn
+# import brian2genn
 import os
 import sys
 from brian2_obj_defs import *
@@ -1164,7 +1164,8 @@ if __name__ == '__main__' :
     #             CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = dvc, runtime = r_time*ms )
     #             CM.run()
 
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = 'Python' , runtime=100* ms)
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '\Burbank_config.csv', device = 'Python' ,
+                         runtime=1000* ms)
     CM.run()
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Cpp',runtime=100 * ms)
     # CM.run()
