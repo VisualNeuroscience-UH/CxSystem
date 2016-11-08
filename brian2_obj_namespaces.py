@@ -188,41 +188,83 @@ class synapse_namespaces(object):
 
     _M_V1 = 2.3
 
+    # dist = {
+    #     'ilam_in_SS': 0.1/mm, #TODO : check this value, it was 0.01, but it was not resulting any synaptic connection
+    #     'ilam_in_PC': 0.1/mm, #TODO : These parameters are still to be checked, 0.01 cause high probability eventhough the shape is similar to gaussian. It would be better if we change them to some value near 1.
+    #     'ilam_in_BC': 0.1/mm,
+    #     'ilam_in_L1i':0.1/mm,
+    #
+    #     'ilam_SS_SS':2.3 / _M_V1 / mm,
+    #     'ilam_SS_PC': 2.3 / _M_V1 / mm,
+    #     'ilam_SS_BC': 0.7 / _M_V1 / mm,
+    #     'ilam_SS_MC': 0.7 / _M_V1 / mm,
+    #     'ilam_SS_L1i': 0.7 / _M_V1 / mm,
+    #
+    #     'ilam_PC_SS': 2.3 / _M_V1 / mm,
+    #     'ilam_PC_PC': 2.3 / _M_V1 / mm,
+    #     'ilam_PC_BC':  2.3 / _M_V1 / mm,
+    #     'ilam_PC_MC': 2.3 / _M_V1 / mm,
+    #     'ilam_PC_L1i':  2.3 / _M_V1 / mm,
+    #
+    #     'ilam_BC_SS':2.3 / _M_V1 / mm,
+    #     'ilam_BC_PC':2.3 / _M_V1 / mm,
+    #     'ilam_BC_BC': 2.3 / _M_V1 / mm,
+    #     'ilam_BC_MC': 2.3 / _M_V1 / mm,
+    #     'ilam_BC_L1i': 2.3 / _M_V1 / mm,
+    #
+    #     'ilam_MC_SS': 0.01/mm,
+    #     'ilam_MC_PC': 0.01/mm,
+    #     'ilam_MC_BC': 0.01/mm,
+    #     'ilam_MC_MC': 0.01/mm,
+    #     'ilam_MC_L1i': 0.01/mm,
+    #
+    #     'ilam_L1i_SS':2.3 / _M_V1 / mm,
+    #     'ilam_L1i_PC': 2.3 / _M_V1 / mm,
+    #     'ilam_L1i_BC': 2.3 / _M_V1 / mm,#todo: check this value
+    #     'ilam_L1i_MC': 2.3 / _M_V1 / mm,#todo: check this value
+    #     'ilam_L1i_L1i': 2.3 / _M_V1 / mm,
+    #
+    # }
+    lambda_LGNtoV1 = 0.28/mm  # from Schwabe 2006 JNeurosci model, was 0.1 deg, but this was turned to mm at 5 deg ecc
+    lambda_V1local = 0.81/mm  # was 2.3 deg-1 => 1/(17*np.log(1+5+((1/2.3)/2))-17*np.log(1+5-((1/2.3)/2))),
+    lambda_V1toX = 0.10/mm  # 1 / (17 * np.log(1 + 5 + ((1 / 0.3) / 2)) - 17 * np.log(1 + 5 - ((1 / 0.3) / 2)))
+    lambda_MCtoV1 = 0.10/mm
+
     dist = {
-        'ilam_in_SS': 0.1/mm, #TODO : check this value, it was 0.01, but it was not resulting any synaptic connection
-        'ilam_in_PC': 0.1/mm, #TODO : These parameters are still to be checked, 0.01 cause high probability eventhough the shape is similar to gaussian. It would be better if we change them to some value near 1.
-        'ilam_in_BC': 0.1/mm,
-        'ilam_in_L1i':0.1/mm,
+        'ilam_in_SS':  lambda_LGNtoV1,
+        'ilam_in_PC':  lambda_LGNtoV1,
+        'ilam_in_BC':  lambda_LGNtoV1,
+        'ilam_in_L1i': lambda_LGNtoV1,
 
-        'ilam_SS_SS':2.3 / _M_V1 / mm,
-        'ilam_SS_PC': 2.3 / _M_V1 / mm,
-        'ilam_SS_BC': 0.7 / _M_V1 / mm,
-        'ilam_SS_MC': 0.7 / _M_V1 / mm,
-        'ilam_SS_L1i': 0.7 / _M_V1 / mm,
+        'ilam_SS_SS':  lambda_V1local,
+        'ilam_SS_PC':  lambda_V1local,
+        'ilam_SS_BC':  lambda_V1local,
+        'ilam_SS_MC':  lambda_V1local,
+        'ilam_SS_L1i': lambda_V1local,
 
-        'ilam_PC_SS': 2.3 / _M_V1 / mm,
-        'ilam_PC_PC': 2.3 / _M_V1 / mm,
-        'ilam_PC_BC':  2.3 / _M_V1 / mm,
-        'ilam_PC_MC': 2.3 / _M_V1 / mm,
-        'ilam_PC_L1i':  2.3 / _M_V1 / mm,
+        'ilam_PC_SS':  lambda_V1local,
+        'ilam_PC_PC':  lambda_V1local,
+        'ilam_PC_BC':  lambda_V1local,
+        'ilam_PC_MC':  lambda_V1local,
+        'ilam_PC_L1i': lambda_V1local,
 
-        'ilam_BC_SS':2.3 / _M_V1 / mm,
-        'ilam_BC_PC':2.3 / _M_V1 / mm,
-        'ilam_BC_BC': 2.3 / _M_V1 / mm,
-        'ilam_BC_MC': 2.3 / _M_V1 / mm,
-        'ilam_BC_L1i': 2.3 / _M_V1 / mm,
+        'ilam_BC_SS':  lambda_V1local,
+        'ilam_BC_PC':  lambda_V1local,
+        'ilam_BC_BC':  lambda_V1local,
+        'ilam_BC_MC':  lambda_V1local,
+        'ilam_BC_L1i': lambda_V1local,
 
-        'ilam_MC_SS': 0.01/mm,
-        'ilam_MC_PC': 0.01/mm,
-        'ilam_MC_BC': 0.01/mm,
-        'ilam_MC_MC': 0.01/mm,
-        'ilam_MC_L1i': 0.01/mm,
+        'ilam_MC_SS':  lambda_MCtoV1,
+        'ilam_MC_PC':  lambda_MCtoV1,
+        'ilam_MC_BC':  lambda_MCtoV1,
+        'ilam_MC_MC':  lambda_MCtoV1,
+        'ilam_MC_L1i': lambda_MCtoV1,
 
-        'ilam_L1i_SS':2.3 / _M_V1 / mm,
-        'ilam_L1i_PC': 2.3 / _M_V1 / mm,
-        'ilam_L1i_BC': 2.3 / _M_V1 / mm,#todo: check this value
-        'ilam_L1i_MC': 2.3 / _M_V1 / mm,#todo: check this value
-        'ilam_L1i_L1i': 2.3 / _M_V1 / mm,
+        'ilam_L1i_SS':  lambda_V1local,
+        'ilam_L1i_PC':  lambda_V1local,
+        'ilam_L1i_BC':  lambda_V1local,
+        'ilam_L1i_MC':  lambda_V1local,
+        'ilam_L1i_L1i': lambda_V1local
 
     }
 

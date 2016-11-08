@@ -1168,13 +1168,14 @@ if __name__ == '__main__' :
     #             CM.run()
 
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device = 'Python' ,
-    #                      runtime=1000* ms)
+    #                      runtime=100* ms)
     # CM.run()
     CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='Cpp',runtime=100 * ms)
     CM.run()
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='GeNN',runtime=100 * ms)
     # CM.run()
 
+    import tmp_data_visualization
 
     # CM.visualise_connectivity(S0_Fixed)
     # for group in CM.monitor_name_bank:
