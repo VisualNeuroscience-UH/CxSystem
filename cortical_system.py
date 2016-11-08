@@ -1150,9 +1150,8 @@ if __name__ == '__main__' :
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device = 'Python' ,
     #                      runtime=100* ms)
 
-    # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='Cpp',runtime=100 * ms)
-    # CM.run()
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Python',runtime=1000 * ms)
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='Cpp',runtime=100 * ms)
+    # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='Python',runtime=100 * ms)
     CM.run()
 
     import tmp_data_visualization
