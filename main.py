@@ -3,7 +3,7 @@ import os
 from brian2  import *
 import datetime
 
-default_runtime = 2000*ms
+default_runtime = 500*ms
 
 #CM = CX.cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/pandas_playground/generated_config_file_henri.csv',
 #                         use_genn=0,runtime=500*ms )

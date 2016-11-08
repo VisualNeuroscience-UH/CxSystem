@@ -13,7 +13,8 @@ import cPickle as pickle
 
 class SimulationData(object):
 
-    default_data_file = '/opt3/CX_Output/calcium/calcium21_2s.gz'
+    default_data_file = '/home/henri/PycharmProjects/CX_Output/calcium20.gz'
+    #default_data_file = '/opt3/CX_Output/calcium/calcium21_2s.gz'
     default_data_file_path = '/opt3/CX_Output/calcium/'
     default_sampling_frequency = 1000
 
@@ -89,7 +90,7 @@ class SimulationData(object):
         else:
             return group
 
-    def rasterplot(self, runtime=0):
+    def rasterplot(self):
 
         runtime = self.runtime
         fig = plt.figure()
@@ -115,8 +116,8 @@ class SimulationData(object):
         sampling_frequency = SimulationData.default_sampling_frequency
         delta_t = float(1/sampling_frequency)
 
-        bins = np.arange(0.0, self.runtime, delta_t)
-        counts_n = len(bins)
+        bins = np.arange(0.0, self.runtime+delta_t, delta_t)
+        counts_n = len(bins)-1
         spikes = self.spikedata[neuron_group]
         freqs = np.fft.rfftfreq(counts_n, delta_t)
 
@@ -170,8 +171,9 @@ class SimulationData(object):
         sampling_frequency = 1000000
         delta_t = float(1 / sampling_frequency)
         bins = np.arange(0.0, self.runtime, delta_t)
-        counts_n = len(bins)
+        # counts_n = len(bins)
         freqs = np.fft.rfftfreq(counts_n, delta_t)
+        counts_n = len(freqs)
 
         voltage = pd.DataFrame(data=self.data['vm_all'][neuron_group])
         voltage_aggregate = voltage.mean()
@@ -186,11 +188,10 @@ class SimulationData(object):
 if __name__ == '__main__':
     calcium_sim = SimulationData()
     #calcium_sim.plot_spikes_spectra()
-    #calcium_sim.voltage_spectrum_group(4)
     #calcium_sim.plot_voltage(7)
     #calcium_sim.rasterplot()
     #pass
-    #freqs, spectrum = calcium_sim.voltage_spectrum_group(4)
-    #plt.plot(freqs, spectrum)
-    pass
+    freqs, spectrum = calcium_sim.voltage_spectrum_group(7)
+    plt.plot(freqs, spectrum)
+
 
