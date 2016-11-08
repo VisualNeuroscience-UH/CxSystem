@@ -1,6 +1,6 @@
 __author__ = 'V_AD'
 from brian2 import *
-# import brian2genn
+import brian2genn
 import os
 import sys
 from brian2_obj_defs import *
@@ -87,6 +87,7 @@ class cortical_system(object):
             'do_init_vms': self.do_init_vms,
             'load_positions_only': self.load_positions_only,
             'do_benchmark': self.do_benchmark,
+            'noise_sigma' : self.set_noise_sigma,
 
         }
         self.StartTime_str = '_' + str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '')\
@@ -95,11 +96,13 @@ class cortical_system(object):
         self.StartTime_str += '_'+self.device+'_'+str(int((runtime/second)*1000)) + 'ms'
         # self.scale = 1
         self.do_benchmark = 0
+        self.noise_sigma = 0 * mV
         self.numerical_integration_method = 'euler'
         print "Info : the system is running with %s integration method"%self.numerical_integration_method
         self.runtime = runtime
         self.conn_prob_gain = synapse_namespaces.conn_prob_gain
         self.current_parameters_list = []
+        self.current_parameters_list_orig_len = 0 # current_parameters_list is changing at some point in the code, so the original length of it is needed
         self.current_values_list = []
         self.NG_indices = []
         self.customized_neurons_list = []  # This list contains the customized_neuron instances. So for each neuron group target line, there would be an element in this list which contains all the information for that particular neuron group.
@@ -119,8 +122,10 @@ class cortical_system(object):
         self.general_grid_radius = 0
         self.min_distance = 0
         self.do_init_vms = 0
+        self.do_save_connections = 0 # if there is at least one connection to save, this flag will be set to 1
         self.load_positions_only = 0
         self.configuration_file = []
+
 
         with open(self.config_path,'r') as conf_file:
             for conf_line in conf_file:
@@ -128,15 +133,16 @@ class cortical_system(object):
                 conf_line = conf_line.lstrip()
                 self.configuration_file.append(conf_line)
 
-        for conf_line in self.configuration_file:
+        for self.conf_line in self.configuration_file:
             try:
-                if conf_line[0] == '#' or not conf_line.split(','):  # comments
+                if self.conf_line[0] == '#' or not self.conf_line.split(','):  # comments
                     continue
             except IndexError:
                 continue
-            _splitted_line = [non_empty.strip() for non_empty in conf_line.split(',') if non_empty != '']
-            if 'row_type' in conf_line:
+            _splitted_line = [non_empty.strip() for non_empty in self.conf_line.split(',') if non_empty != '']
+            if 'row_type' in self.conf_line:
                 self.current_parameters_list = _splitted_line[1:]
+                self.current_parameters_list_orig_len = len(self.current_parameters_list)
             elif _splitted_line[0] in self._options :
                 self.current_values_list = _splitted_line[1:]
                 self._options[_splitted_line[0]]()
@@ -193,7 +199,7 @@ class cortical_system(object):
         self.total_synapses = int(args[0])
 
     def _set_sys_mode(self, *args):
-        assert args[0] in ['local','expanded'], "Error: System mode should be either local or expanded. "
+        assert args[0] in ['local','expanded'], "System mode should be either local or expanded. "
         self.sys_mode = args[0]
 
 
@@ -234,10 +240,10 @@ class cortical_system(object):
         self.load_brian_data_filename = ntpath.basename(self.load_brian_data_path)
         self.load_brian_data_folder = ntpath.dirname(self.load_brian_data_path)
         self.load_brian_data_extension = os.path.splitext(self.load_brian_data_path)[1]
-        assert ('gz' in self.load_brian_data_extension), 'Error: the extension of the brian_data input/output ' \
+        assert ('gz' in self.load_brian_data_extension), 'The extension of the brian_data input/output ' \
                                                          'should be gz, but it is %s'%self.load_brian_data_extension
         assert os.path.isfile(os.path.abspath(self.load_brian_data_path)),\
-            'Error: the brian_data file cannot be found for loading'
+            'The brian_data file cannot be found for loading'
         with open(self.load_brian_data_path, 'rb') as fp:
             data = zlib.decompress(fp.read())
             self.loaded_brian_data = pickle.loads(data)
@@ -251,13 +257,13 @@ class cortical_system(object):
         self.save_brian_data_filename = ntpath.basename(self.save_brian_data_path)
         self.save_brian_data_folder = ntpath.dirname(self.save_brian_data_path)
         self.save_brian_data_extension = os.path.splitext(self.save_brian_data_path)[1]
-        assert ('gz' in self.save_brian_data_extension), 'Error: the extension of the brian_data input/output ' \
+        assert ('gz' in self.save_brian_data_extension), 'The extension of the brian_data input/output ' \
                                                          'should be gz, but it is %s'%self.save_brian_data_extension
         self.save_brian_data = save_data(self.save_brian_data_path,self.StartTime_str)
 
     def do_init_vms(self,*args):
         assert int(args[0]) == 0 or int(args[0]) == 1, \
-            'Error: the do_init_vm flag should be either 0 or 1 but it is %s .'%args[0]
+            'The do_init_vm flag should be either 0 or 1 but it is %s .'%args[0]
         self.do_init_vms = int(args[0])
         if self.do_init_vms:
             print 'Info: Membrane voltages are being randomly initialized.'
@@ -271,15 +277,18 @@ class cortical_system(object):
 
     def load_positions_only(self,*args):
         assert int(args[0]) == 0 or int(args[0]) == 1, \
-            'Error: the load_positions_only flag should be either 0 or 1 but it is %s .' % args[0]
+            'The load_positions_only flag should be either 0 or 1 but it is %s .' % args[0]
         self.load_positions_only = int(args[0])
         if self.load_positions_only:
             print "Info: only positions are being loaded from the brian_data_file"
 
     def do_benchmark(self,*args):
-        assert int(args[0]) in [0,1] , "Error: Do benchmark should be 0 or 1"
+        assert int(args[0]) in [0,1] , "Do benchmark flag should be either 0 or 1"
         self.do_benchmark = int(args[0])
 
+    def set_noise_sigma(self,*args):
+        self.noise_sigma = eval(args[0])
+        assert 'V' in str(self.noise_sigma._get_best_unit()), 'The unit of noise_sigma should be volt'
 
     def neuron_group(self, *args):
         '''
@@ -300,19 +309,20 @@ class cortical_system(object):
         * NNS_name: Generated vriable name for the NeuonGroup() namespace.
         * NG_init: NeuronGroups() should be initialized with a random vm, ge and gi values. To address this, a 6-line code is generated and put in this variable, the running of which will lead to initialization of current NeuronGroup().
         '''
-        assert self.sys_mode != '', "Error: System mode not defined."
+        assert self.sys_mode != '', "System mode is not defined."
         _all_columns = ['idx', 'number_of_neurons', 'neuron_type', 'layer_idx', 'threshold',
-                        'reset', 'refractory', 'net_center', 'noise_frequency' ,'monitors']
+                        'reset', 'refractory', 'net_center','monitors']
         _obligatory_params = [0, 1, 2, 3]
-        assert len(self.current_values_list) <= len(_all_columns), 'One or more of of the columns for input definition \
+        assert len(self.current_values_list) <= len(_all_columns), 'One or more of of the columns for NeuronGroups definition \
         is missing. Following obligatory columns should be defined:\n%s\n ' \
                                                                 % str([_all_columns[ii] for ii in _obligatory_params])
         assert 'N/A' not in [self.current_values_list[ii] for ii in _obligatory_params], \
             'Following obligatory values cannot be "N/A":\n%s'% str([_all_columns[ii] for ii in _obligatory_params])
+        assert len(self.current_values_list) == self.current_parameters_list_orig_len,\
+            "One or more of of the columns for NeuronGroup definition is missing in the following line:\n %s " % self.conf_line
         idx = -1
         net_center = 0 + 0j
         number_of_neurons = 0
-        noise_frequency = ''
         neuron_type = ''
         layer_idx = 0
         threshold = ''
@@ -365,41 +375,11 @@ class cortical_system(object):
         exec "%s=self.customized_neurons_list[%d]['reset']" % (NRes_name, current_idx)
         exec "%s=self.customized_neurons_list[%d]['refractory']" % (NRef_name, current_idx)
         exec "%s=self.customized_neurons_list[%d]['namespace']" % (NNS_name, current_idx)
+        # Adding the noise sigma to the namespace
+        self.customized_neurons_list[current_idx]['namespace']['noise_sigma'] = self.noise_sigma
         # Creating the actual NeuronGroup() using the variables in the previous 6 lines
         exec "%s= NeuronGroup(%s, model=%s, method='%s', threshold=%s, reset=%s,refractory = %s, namespace = %s)" \
              % (NG_name, NN_name, NE_name,self.numerical_integration_method ,NT_name, NRes_name, NRef_name, NNS_name)
-        # Creating the noise group :
-        if noise_frequency!= 'N/A':
-            total_N_noise_spikes = np.int(eval(NN_name) * self.runtime * eval(noise_frequency))
-            total_N_simulation_time_slots = np.int(eval(NN_name) * (self.runtime / defaultclock.dt))
-            all_simulation_time_slots = np.zeros(total_N_simulation_time_slots)
-            indices_to_be_1 = np.random.choice(total_N_simulation_time_slots, total_N_noise_spikes)
-            all_simulation_time_slots[indices_to_be_1] = 1
-            cellwise_simulation_time_slots = np.reshape(all_simulation_time_slots, (eval(NN_name),np.int(self.runtime / defaultclock.dt)))
-            indices, time_slots = np.where(cellwise_simulation_time_slots)
-            times = time_slots * defaultclock.dt
-            Noise_Group_Name = NG_name + '_Noise'
-            Noise_Syn_Name = 'Syn_' + NG_name + '_Noise'
-            exec "%s = SpikeGeneratorGroup(%s, indices, times)" %(Noise_Group_Name, NN_name)
-            # 0.4mV in the next line comes from Sjiostrom et al. 2006 calculated as follows:
-            # w_L23PC_L23PC': 0.68 * nS      # -> this is from Markram et al Cell 2015, Table S6. Prescribed Parameters for Synaptic Transmission, Related to Figures 9 and 10.
-            # Area_tot_pyram = 25000 *.75* um**2
-            # Cm = (1 * ufarad * cm ** -2)
-            # C = 0.03 * Cm * Area_tot_pyram * 2
-            # Ee = 0*mV
-            # dt = 0.1 * ms
-            # Vr =-70.11 * mV
-            # (dt * w_L23PC_L23PC * (Ee - Vr)) / C =~ 0.4 *mV
-            exec "%s = Synapses(%s, %s, on_pre = 'vm+=0.4*mV')" % (Noise_Syn_Name, Noise_Group_Name,NG_name)
-            eval(Noise_Syn_Name).connect('i==j')
-            setattr(self.main_module, Noise_Group_Name, eval(Noise_Group_Name))
-            setattr(self.main_module, Noise_Syn_Name, eval(Noise_Syn_Name))
-            try:
-                setattr(self.CX_module, Noise_Group_Name, eval(Noise_Group_Name))
-                setattr(self.CX_module, Noise_Syn_Name, eval(Noise_Syn_Name))
-            except AttributeError:
-                pass
-            print "Noise added to the group"
         # trying to load the positions in the groups
         if hasattr(self,'loaded_brian_data'):
             # in case the NG index are different.
@@ -489,7 +469,7 @@ class cortical_system(object):
         for mon_arg in mon_args:
             # Extracting the monitor tag
             mon_tag = mon_arg[mon_arg.index('['):mon_arg.index(']') + 1]
-            assert mon_tag in monitor_options.keys(),'Error: %s is not recognized as a type of monitor ' %mon_tag
+            assert mon_tag in monitor_options.keys(),'%s is not recognized as a type of monitor ' %mon_tag
             mon_arg = mon_arg.replace(mon_tag, '').split('+')
             for sub_mon_arg in mon_arg:  # going through each state variable:
                 Mon_str = "=%s(%s" % (str(monitor_options[mon_tag][1]),
@@ -507,7 +487,7 @@ class cortical_system(object):
                     tag_close_indices = [idx for idx, ltr in enumerate(sub_mon_arg) if
                                          ltr == ']']  # find the end index of all tags
                     assert len(tag_open_indices) == len(
-                        tag_close_indices), 'Error: wrong sets of tagging paranteses in monitor definitoins. '
+                        tag_close_indices), 'Wrong sets of tagging paranteses in monitor definitoins. '
                     for tag_idx in range(len(tag_open_indices)):  # go through each StateMonitor tag:
                         sub_mon_tags.append(sub_mon_arg[sub_mon_arg.index('['):sub_mon_arg.index(']') + 1])
                         sub_mon_arg = sub_mon_arg.replace(sub_mon_tags[tag_idx], ' ')
@@ -575,12 +555,13 @@ class cortical_system(object):
         _all_columns = ['receptor', 'pre_syn_idx', 'post_syn_idx', 'syn_type', 'p', 'n', 'monitors','load_connection',\
                         'save_connection']
         _obligatory_params = [0, 1, 2, 3]
-        assert len(self.current_values_list) <= len(_all_columns), 'One or more of of the columns for input definition \
-            is missing. Following obligatory columns should be defined:\n%s\n ' \
+        assert len(self.current_values_list) <= len(_all_columns), \
+            'One or more of the obligatory columns for input definition is missing. Obligatory columns are:\n%s\n ' \
                                                                 % str([_all_columns[ii] for ii in _obligatory_params])
         assert 'N/A' not in [self.current_values_list[ii] for ii in _obligatory_params], \
             'Following obligatory values cannot be "N/A":\n%s' % str([_all_columns[ii] for ii in _obligatory_params])
-
+        assert len(self.current_values_list) == self.current_parameters_list_orig_len, \
+        "One or more of of the columns for synapse definition is missing in the following line:\n %s " %self.conf_line
         _options = {
             '[C]': self.neuron_group,
         }
@@ -602,37 +583,44 @@ class cortical_system(object):
             except NameError:
                 pass
             except ValueError:
-                assert _current_probs == 'N/A', "Error: When targetting multiple comparments near soma, " \
-                     "their probabilitiy should be defined separately. Unless it's marked as 'N/A'"
+                assert _current_probs == 'N/A', \
+                    "When targetting multiple comparments near soma, their probabilitiy should be defined separately. Unless it's marked as 'N/A'"
             try:
                 _current_ns = map(float,_current_ns.split('+'))
             except NameError:
                 pass
             except ValueError:
-                assert _current_ns == 'N/A', "Error: When targetting multiple comparments near soma, " \
-                     "their number of connections 'n' should be defined separately. Unless it's marked as 'N/A'"
+                assert _current_ns == 'N/A', \
+                    "When targetting multiple comparments near soma, their number of connections, i.e. 'n', should be defined separately. Unless it's marked as 'N/A'"
 
             current_post_syn_tags = current_post_syn_idx[current_post_syn_idx.index('['):current_post_syn_idx.index(']') + 1]
             assert current_post_syn_tags in _options.keys(), \
                 'The synaptic tag %s is not defined.'% current_post_syn_tags
             if current_post_syn_tags == '[C]':  # [C] means the target is a compartment
                 _post_group_idx, _post_com_idx = current_post_syn_idx.split('[' + 'C' + ']')
+                assert int(_post_group_idx) < len(self.neurongroups_list),\
+                'The synapse in the following line is targetting a group index that is not defined:\n%s'%self.conf_line
                 self.current_values_list[self.current_parameters_list.index('post_syn_idx')] = _post_group_idx
                 pre_group_ref_idx = [self.customized_neurons_list.index(tmp_group) for tmp_group in
                                      self.customized_neurons_list if tmp_group['idx'] == int(current_pre_syn_idx)][0]
                 post_group_ref_idx = [self.customized_neurons_list.index(tmp_group) for tmp_group in
                                       self.customized_neurons_list if tmp_group['idx'] == int(_post_group_idx)][0]
-                assert self.customized_neurons_list[post_group_ref_idx]['type'] == 'PC', 'A compartment is targetted' \
-                                         'but the neuron geroup is not PC. Check Synapses in the configuration file.'
+                assert self.customized_neurons_list[post_group_ref_idx]['type'] == 'PC', \
+                    'A compartment is targetted but the neuron geroup is not PC. Check Synapses in the configuration file.'
                 _pre_type = self.customized_neurons_list[pre_group_ref_idx]['type']  # Pre-synaptic neuron type
                 _post_type = self.customized_neurons_list[post_group_ref_idx]['type']  # Post-synaptic neuron type
                 self.current_parameters_list.extend(['pre_type', 'post_type','post_comp_name'])
                 self.current_values_list.extend([_pre_type, _post_type])
                 #  In case the target is from compartment 0 which has 3 compartments itself
                 if str(_post_com_idx)[0] == '0':
-                    assert len(_post_com_idx) > 1, 'Error: a soma of a compartmental neuron is being targeted, but ' \
-                                                   'the exact compartment in the soma is not defined. After 0, use ' \
-                                                   '"b" for basal dendrites, "s" for soma and "a" for apical dendrites.'
+                    assert len(_post_com_idx) > 1, \
+                        'A soma of a compartmental neuron is being targeted, but the exact compartment in the soma is not defined. After 0, use "b" for basal dendrites, "s" for soma and "a" for apical dendrites.'
+                    if _current_probs != 'N/A':
+                        assert len(_post_com_idx[1:]) == len(_current_probs) , \
+                            "When targetting multiple comparments near soma, their probabilitiy, i.e. 'p', should be defined separately. Unless it's marked as 'N/A'"
+                    if _current_ns != 'N/A':
+                        assert len(_post_com_idx[1:]) == len(_current_ns), \
+                            "When targetting multiple comparments near soma, their number of connections, i.e. 'n', should be defined separately. Unless it's marked as 'N/A'"
                     # creating the required synapses for targeting compartment 0, it can be at most 3 synapses (basal,
                     # soma or apical), hence the name triple_args
                     triple_args = []
@@ -660,6 +648,8 @@ class cortical_system(object):
                 # of multiple synaptic targets in soma area
                 self.current_values_list = [self.current_values_list]
         else:
+            assert int(current_post_syn_idx) < len(self.neurongroups_list), \
+                'The synapse in the following line is targetting a group index that is not defined:\n%s' % self.conf_line
             pre_group_ref_idx = [self.customized_neurons_list.index(tmp_group) for tmp_group in \
                                  self.customized_neurons_list if int(tmp_group['idx']) == \
                                  int(current_pre_syn_idx)][0]
@@ -668,8 +658,8 @@ class cortical_system(object):
                                   int(current_post_syn_idx)][0]
             _pre_type = self.customized_neurons_list[pre_group_ref_idx]['type']   # Pre-synaptic neuron type
             _post_type = self.customized_neurons_list[post_group_ref_idx]['type']  # Post-synaptic neuron type
-            assert _post_type!= 'PC', 'Error: The post_synaptc group is a multicompartmental PC but the target \
-                        compartment is not selected. Use [C] tag. '
+            assert _post_type!= 'PC', \
+            'The post_synaptc group is a multicompartmental PC but the target compartment is not selected. Use [C] tag followed by compartment number.'
             self.current_values_list.extend([_pre_type, _post_type,'_soma'])
             self.current_parameters_list.extend(['pre_type', 'post_type','post_comp_name'])
             self.current_values_list = [self.current_values_list]
@@ -711,7 +701,7 @@ class cortical_system(object):
 
             exec "%s=self.customized_synapses_list[%d]['equation']" % (SE_name, current_idx)
             exec "%s=self.customized_synapses_list[%d]['pre_eq']" % (SPre_name, current_idx)
-            try:  # in case of a fixed synapse there is no "post = ...", hence the pass
+            try:  # in case of a fixed synapse there is no "on_post = ...", hence the pass
                 exec "%s=self.customized_synapses_list[%d]['post_eq']" % (SPost_name, current_idx)
             except KeyError:
                 pass
@@ -719,9 +709,9 @@ class cortical_system(object):
 
             ### creating the initial synaptic connection :
             try:
-                exec "%s = Synapses(%s,%s,model = %s, on_pre = %s, post = %s, namespace= %s)" \
+                exec "%s = Synapses(%s,%s,model = %s, on_pre = %s, on_post = %s, namespace= %s)" \
                      % (S_name, _pre_group_idx, _post_group_idx, SE_name,SPre_name, SPost_name, SNS_name)
-            except NameError:  # for when there is no "post =...", i.e. fixed connection
+            except NameError:  # for when there is no "on_post =...", i.e. fixed connection
                 exec "%s = Synapses(%s,%s,model = %s, on_pre = %s, namespace= %s)" \
                      % (S_name, _pre_group_idx, _post_group_idx,SE_name, SPre_name, SNS_name)
 
@@ -754,8 +744,8 @@ class cortical_system(object):
 
             if (self.default_load_flag==1 or (self.default_load_flag==-1 and _do_load == 1 )) and \
                     hasattr(self,'loaded_brian_data') and not self.load_positions_only:
-                assert _syn_ref_name in self.loaded_brian_data.keys(), "The data for the following connection was not \
-                found in the loaded brian data: %s" % _syn_ref_name
+                assert _syn_ref_name in self.loaded_brian_data.keys(), \
+                    "The data for the following connection was not found in the loaded brian data: %s" % _syn_ref_name
                 eval(S_name).connect(self.loaded_brian_data[_syn_ref_name]['data'][0][0].tocoo().row, \
                                      self.loaded_brian_data[_syn_ref_name]['data'][0][0].tocoo().col,\
                                      n = int(self.loaded_brian_data[_syn_ref_name]['n']))
@@ -765,8 +755,7 @@ class cortical_system(object):
 
             elif (self.default_load_flag==1 or (self.default_load_flag==-1 and _do_load == 1 )) and not \
                     hasattr(self,'loaded_brian_data') :
-                print "Warning: synapstic connection is set to be loaded, \
-                however the load_brian_data_path is not defined in the parameters. The connection is being created."
+                print "Warning: synapstic connection is set to be loaded, however the load_brian_data_path is not defined in the parameters. The connection is being created."
 
             else:
                 syn_con_str = "%s.connect('i!=j', p= " % S_name
@@ -852,6 +841,7 @@ class cortical_system(object):
                     print "Connection created from %s to %s" % ( _pre_group_idx, _post_group_idx)
             if (self.default_save_flag == 1 or (self.default_save_flag == -1 and _do_save )) and \
                     hasattr(self, 'save_brian_data_path') :
+                self.do_save_connections = 1
                 self.save_brian_data.creat_key(_syn_ref_name)
                 self.save_brian_data.syntax_bank.append('self.save_brian_data.data["%s"]["data"] = \
                 csr_matrix((%s.wght[:],(%s.i[:],%s.j[:])),shape=(len(%s.source),len(%s.target)))' \
@@ -860,8 +850,7 @@ class cortical_system(object):
                                                         %(_syn_ref_name,int(n_arg)))
             elif (self.default_save_flag==1 or (self.default_save_flag==-1 and _do_save )) and \
                     not hasattr(self,'save_brian_data_path') :
-                print "Warning: Synaptic connection is set to be saved, \
-                however the brian_data_path is not defined in the parameters."
+                raise ValueError("Synaptic connection is set to be saved, however the save_brian_data_path parameter is not defined.")
 
     def relay(self, *args):
         '''
@@ -905,8 +894,8 @@ class cortical_system(object):
         NG_name = ''
         def video(self):
             print "creating an input based on the video input."
-            path = self.current_values_list[self.current_parameters_list.index('path')].strip()
-            freq = self.current_values_list[self.current_parameters_list.index('freq')].strip()
+            path = self.current_values_list[_all_columns.index('path')].strip()
+            freq = self.current_values_list[_all_columns.index('freq')]
             inp = stimuli()
             inp.generate_inputs(path,freq )
             spikes_str, times_str, SG_str, number_of_neurons = inp.load_input_seq(path)
@@ -973,9 +962,9 @@ class cortical_system(object):
             self.save_output_data.data['number_of_neurons'][NG_name] = eval(NN_name)
             SGsyn_name = 'SGEN_Syn' # variable name for the Synapses() object
             # that connects SpikeGeneratorGroup() and relay neurons.
-            exec "%s = Synapses(GEN, %s, on_pre='emit_spike+=1')" % \
+            exec "%s = Synapses(GEN, %s, on_pre='emit_spike+=1', connect='i==j')" % \
                  (SGsyn_name, NG_name) in globals(), locals()# connecting the SpikeGeneratorGroup() and relay group.
-            exec "%s.connect('i==j')" % SGsyn_name in globals(), locals() # SV change
+
             setattr(self.main_module, NG_name, eval(NG_name))
             setattr(self.main_module, SGsyn_name, eval(SGsyn_name))
             try:
@@ -1093,11 +1082,9 @@ class cortical_system(object):
             'not defined' % _input_type
 
         _obligatory_params = _input_params[_input_type][1]
-        assert len(self.current_values_list) >= len(_obligatory_params), 'One or more of of the columns for\
-                     input definition is missing. Following obligatory columns should be defined:\n%s\n' % str(
+        assert len(self.current_values_list) >= len(_obligatory_params), \
+            'One or more of of the columns for input definition is missing. Following obligatory columns should be defined:\n%s\n' % str(
             [_all_columns[ii] for ii in _obligatory_params])
-        assert len (self.current_parameters_list) <= len(_input_params[_input_type][0]), 'Too many parameters for the\
-         current %s input. The parameters should be consist of:\n %s'%(_input_type,_input_params[_input_type][0])
         assert 'N/A' not in [self.current_values_list[ii] for ii in _obligatory_params], \
             'Following obligatory values cannot be "N/A":\n%s' % str([_all_columns[ii] for ii in _obligatory_params])
         assert len(self.current_parameters_list) == len(self.current_values_list), \
@@ -1118,7 +1105,7 @@ class cortical_system(object):
         relay_group['w_positions'] = []
         relay_group['equation'] = ''
         self.customized_neurons_list.append(relay_group)
-        _input_params[_input_type][2](self)
+        _input_params[self.current_values_list[self.current_parameters_list.index('type')]][2](self)
 
     def gather_result(self):
         '''
@@ -1129,7 +1116,7 @@ class cortical_system(object):
         for syntax in self.save_output_data.syntax_bank:
             exec syntax
         self.save_output_data.save_to_file()
-        if hasattr(self,'save_brian_data'):
+        if hasattr(self,'save_brian_data') and self.do_save_connections:
             print "Generating the syntaxes for saving connectoin data."
             for syntax in self.save_brian_data.syntax_bank:
                 exec syntax
@@ -1159,42 +1146,14 @@ class cortical_system(object):
 
 
 if __name__ == '__main__' :
-    # for dvc in ['Python','Cpp','GeNN']:
-    #     for r_time in range(4000, 22001, 3000):
-    #         for r in range(5):
-    #             dev = 'Python' if dvc=='' else dvc
-    #             print "###################\n###################\n###################\nDevice: %s\nDuration: %d ms\nTrial: %d/5\n###################\n###################\n###################\n"%(dev,r_time,r+1)
-    #             CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = dvc, runtime = r_time*ms )
-    #             CM.run()
 
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device = 'Python' ,
     #                      runtime=100* ms)
+
+    # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='Cpp',runtime=100 * ms)
     # CM.run()
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='Cpp',runtime=100 * ms)
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Python',runtime=1000 * ms)
     CM.run()
-    # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='GeNN',runtime=100 * ms)
-    # CM.run()
 
     import tmp_data_visualization
 
-    # CM.visualise_connectivity(S0_Fixed)
-    # for group in CM.monitor_name_bank:
-    #     mon_num = len(CM.monitor_name_bank[group])
-    #     exec "f, axarr = plt.subplots(%d, sharex=True)"%mon_num
-    #     for item_idx,item in enumerate(CM.monitor_name_bank[group]):
-    #         if 'SpMon' in item :
-    #             if len (CM.monitor_name_bank[group]) ==1  :
-    #                 exec "axarr.plot(%s.t/ms,%s.i,'.k')" % ( item, item);
-    #                 exec "axarr.set_title('%s')" % ( item);
-    #             else:
-    #                 exec "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item)
-    #                 exec "axarr[%d].set_title('%s')"% (item_idx, item)
-    #         elif 'StMon' in item:
-    #             underscore= item.index('__')
-    #             variable = item[underscore+2:]
-    #             exec 'y_num=len(%s.%s)'%(item,variable)
-    #             try :
-    #                 exec "CM.multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" %(item_idx,variable,item,item)
-    #             except:
-    #                 exec "CM.multi_y_plotter(axarr , y_num , '%s',%s , '%s')" % ( variable, item, item)
-    # show()
