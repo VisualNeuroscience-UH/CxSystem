@@ -905,8 +905,8 @@ class cortical_system(object):
         NG_name = ''
         def video(self):
             print "creating an input based on the video input."
-            path = self.current_values_list[_all_columns.index('path')].strip()
-            freq = self.current_values_list[_all_columns.index('freq')]
+            path = self.current_values_list[self.current_parameters_list.index('path')].strip()
+            freq = self.current_values_list[self.current_parameters_list.index('freq')].strip()
             inp = stimuli()
             inp.generate_inputs(path,freq )
             spikes_str, times_str, SG_str, number_of_neurons = inp.load_input_seq(path)
@@ -973,9 +973,9 @@ class cortical_system(object):
             self.save_output_data.data['number_of_neurons'][NG_name] = eval(NN_name)
             SGsyn_name = 'SGEN_Syn' # variable name for the Synapses() object
             # that connects SpikeGeneratorGroup() and relay neurons.
-            exec "%s = Synapses(GEN, %s, on_pre='emit_spike+=1', connect='i==j')" % \
+            exec "%s = Synapses(GEN, %s, on_pre='emit_spike+=1')" % \
                  (SGsyn_name, NG_name) in globals(), locals()# connecting the SpikeGeneratorGroup() and relay group.
-
+            exec "%s.connect('i==j')" % SGsyn_name in globals(), locals() # SV change
             setattr(self.main_module, NG_name, eval(NG_name))
             setattr(self.main_module, SGsyn_name, eval(SGsyn_name))
             try:
@@ -1087,14 +1087,17 @@ class cortical_system(object):
             'VPM': [['idx', 'type', 'number_of_neurons', 'radius', 'spike_times', 'net_center', 'monitors'],
                     [0, 1, 2, 3, 4], VPM]
         }
-        _all_columns = _input_params[self.current_values_list[self.current_parameters_list.index('type')]][0]
-        assert self.current_values_list[self.current_parameters_list.index('type')] in _input_params.keys(),\
-            'The input type %s of the configuration file is ' \
-            'not defined' % self.current_parameters_list[_all_columns.index('type')]
-        _obligatory_params = _input_params[self.current_values_list[self.current_parameters_list.index('type')]][1]
+        _input_type = self.current_values_list[self.current_parameters_list.index('type')]
+        _all_columns = _input_params[_input_type][0] # all possible columns of parameters for the current type of input in configuration fil
+        assert _input_type in _input_params.keys(), 'The input type %s of the configuration file is ' \
+            'not defined' % _input_type
+
+        _obligatory_params = _input_params[_input_type][1]
         assert len(self.current_values_list) >= len(_obligatory_params), 'One or more of of the columns for\
                      input definition is missing. Following obligatory columns should be defined:\n%s\n' % str(
             [_all_columns[ii] for ii in _obligatory_params])
+        assert len (self.current_parameters_list) <= len(_input_params[_input_type][0]), 'Too many parameters for the\
+         current %s input. The parameters should be consist of:\n %s'%(_input_type,_input_params[_input_type][0])
         assert 'N/A' not in [self.current_values_list[ii] for ii in _obligatory_params], \
             'Following obligatory values cannot be "N/A":\n%s' % str([_all_columns[ii] for ii in _obligatory_params])
         assert len(self.current_parameters_list) == len(self.current_values_list), \
@@ -1115,7 +1118,7 @@ class cortical_system(object):
         relay_group['w_positions'] = []
         relay_group['equation'] = ''
         self.customized_neurons_list.append(relay_group)
-        _input_params[self.current_values_list[self.current_parameters_list.index('type')]][2](self)
+        _input_params[_input_type][2](self)
 
     def gather_result(self):
         '''
@@ -1164,7 +1167,7 @@ if __name__ == '__main__' :
     #             CM = cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = dvc, runtime = r_time*ms )
     #             CM.run()
 
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '\Burbank_config.csv', device = 'Python' ,
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device = 'Python' ,
                          runtime=1000* ms)
     CM.run()
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Cpp',runtime=100 * ms)

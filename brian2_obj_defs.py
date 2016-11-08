@@ -357,6 +357,7 @@ class customized_synapse(object):
         '''
         self.output_synapse['equation'] = Equations('''
             wght:siemens
+            wght0:siemens
             dapre/dt = -apre/taupre : siemens (event-driven)
             dapost/dt = -apost/taupost : siemens (event-driven)
             ''')
