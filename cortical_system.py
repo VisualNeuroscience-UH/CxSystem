@@ -59,6 +59,7 @@ class cortical_system(object):
         * save_data: The save_data() object for saving the final data.
 
         '''
+        print "$$$$$$$$$\n$$$$$$$$$    SS_Vt=-50mv,Noise back to 40*mV for Exc and 20*mV for Inh, old capacitance for inhibitory groups and SS, factor 1 for layer 6, noise of SS is 60%\n$$$$$$$$$\n"
         self.start_time = time.time()
         if device != 'Python':
             print "Info: system is going to be run using stand-alone devices, " \
@@ -87,7 +88,6 @@ class cortical_system(object):
             'do_init_vms': self.do_init_vms,
             'load_positions_only': self.load_positions_only,
             'do_benchmark': self.do_benchmark,
-            'noise_sigma' : self.set_noise_sigma,
 
         }
         self.StartTime_str = '_' + str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '')\
@@ -96,7 +96,7 @@ class cortical_system(object):
         self.StartTime_str += '_'+self.device+'_'+str(int((runtime/second)*1000)) + 'ms'
         # self.scale = 1
         self.do_benchmark = 0
-        self.noise_sigma = 0 * mV
+        # defaultclock.dt = 0.01 * ms
         self.numerical_integration_method = 'euler'
         print "Info : the system is running with %s integration method"%self.numerical_integration_method
         self.runtime = runtime
@@ -286,9 +286,6 @@ class cortical_system(object):
         assert int(args[0]) in [0,1] , "Do benchmark flag should be either 0 or 1"
         self.do_benchmark = int(args[0])
 
-    def set_noise_sigma(self,*args):
-        self.noise_sigma = eval(args[0])
-        assert 'V' in str(self.noise_sigma._get_best_unit()), 'The unit of noise_sigma should be volt'
 
     def neuron_group(self, *args):
         '''
@@ -311,7 +308,7 @@ class cortical_system(object):
         '''
         assert self.sys_mode != '', "System mode is not defined."
         _all_columns = ['idx', 'number_of_neurons', 'neuron_type', 'layer_idx', 'threshold',
-                        'reset', 'refractory', 'net_center','monitors']
+                        'reset', 'refractory', 'net_center','monitors','noise_sigma']
         _obligatory_params = [0, 1, 2, 3]
         assert len(self.current_values_list) <= len(_all_columns), 'One or more of of the columns for NeuronGroups definition \
         is missing. Following obligatory columns should be defined:\n%s\n ' \
@@ -323,6 +320,7 @@ class cortical_system(object):
         idx = -1
         net_center = 0 + 0j
         number_of_neurons = 0
+        noise_sigma = '0*mV'
         neuron_type = ''
         layer_idx = 0
         threshold = ''
@@ -339,6 +337,8 @@ class cortical_system(object):
             # description can be found in configuration file tutorial.
         net_center = complex(net_center)
         current_idx = len(self.customized_neurons_list)
+        noise_sigma = eval(noise_sigma)
+        assert 'V' in str(noise_sigma._get_best_unit()), 'The unit of noise_sigma should be volt'
         if neuron_type == 'PC':  # extract the layer index of PC neurons separately
             exec 'layer_idx = array(' + layer_idx.replace('->', ',') + ')'
         try:
@@ -376,7 +376,7 @@ class cortical_system(object):
         exec "%s=self.customized_neurons_list[%d]['refractory']" % (NRef_name, current_idx)
         exec "%s=self.customized_neurons_list[%d]['namespace']" % (NNS_name, current_idx)
         # Adding the noise sigma to the namespace
-        self.customized_neurons_list[current_idx]['namespace']['noise_sigma'] = self.noise_sigma
+        self.customized_neurons_list[current_idx]['namespace']['noise_sigma'] = noise_sigma
         # Creating the actual NeuronGroup() using the variables in the previous 6 lines
         exec "%s= NeuronGroup(%s, model=%s, method='%s', threshold=%s, reset=%s,refractory = %s, namespace = %s)" \
              % (NG_name, NN_name, NE_name,self.numerical_integration_method ,NT_name, NRes_name, NRef_name, NNS_name)
@@ -762,17 +762,7 @@ class cortical_system(object):
                 # Connecting the synapses based on either [the defined probability and the distance] or
                 # [only the distance] plus considering the number of connections
                 try:
-                    if '_relay_vpm' in self.neurongroups_list[int(current_pre_syn_idx)]:
-                        # uncomment following lines for visualizing the positions of input group and its targets
-                        # figure;
-                        # plt.scatter(eval(_post_group_idx).x, eval(_post_group_idx).y,color='r');
-                        # plt.scatter(eval(_pre_group_idx).x,eval(_pre_group_idx).y,color='b')
-                        # plt.axis('equal')
-
-                        syn_con_str += "'exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(2*0.025**2))/\
-                        (sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'" % (self.customized_synapses_list[-1]['ilam'])
-
-                    elif self.sys_mode == 'local':
+                    if self.sys_mode == 'local':
                         syn_con_str += "'%f'" % float(p_arg)
                     elif self.sys_mode == 'expanded':
                         # syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))/(sqrt((x_pre-x_post) \
@@ -782,7 +772,10 @@ class cortical_system(object):
 
                 except ValueError:
                     p_arg = self.customized_synapses_list[-1]['sparseness']
-                    if self.sys_mode == 'local':
+                    if '_relay_vpm' in self.neurongroups_list[int(current_pre_syn_idx)]:
+                        syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)))/(2*0.025**2))'" \
+                                       % (float(p_arg))
+                    elif self.sys_mode == 'local':
                         syn_con_str += "'%f'" % p_arg
                     elif self.sys_mode == 'expanded':
                         # syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))/(sqrt((x_pre-x_post)\
@@ -821,7 +814,7 @@ class cortical_system(object):
                 exec "num_tmp = len(%s.i)" % S_name
                 self.total_number_of_synapses += num_tmp
                 try:
-                    _current_connections = int(num_tmp/float(syn[self.current_parameters_list.index('n')]))
+                    _current_connections = int(num_tmp/float(syn[self.current_parameters_list.index('n')])) / len(self.current_values_list)
                 except ValueError:
                     print "warning: number of synapses for last connection was equal to number of connections"
                     _current_connections = num_tmp
@@ -934,8 +927,8 @@ class cortical_system(object):
             exec "%s=%s" % (NE_name, Eq) in globals(), locals()
             exec "%s=%s" % (NT_name, "'emit_spike>=1'") in globals(), locals()
             exec "%s=%s" % (NRes_name, "'emit_spike=0'") in globals(), locals()
-            exec "%s= NeuronGroup(%s, model=%s,method='euler', threshold=%s, reset=%s)" \
-                 % (NG_name, NN_name, NE_name, NT_name, NRes_name) in globals(), locals()
+            exec "%s= NeuronGroup(%s, model=%s,method='%s', threshold=%s, reset=%s)" \
+                 % (NG_name, NN_name, NE_name, self.numerical_integration_method,NT_name, NRes_name) in globals(), locals()
             if hasattr(self, 'loaded_brian_data'):
                 # in case the NG index are different. for example a MC_L2 neuron might have had
                 # index 3 as NG3_MC_L2 and now it's NG10_MC_L2 :
@@ -1026,8 +1019,8 @@ class cortical_system(object):
             exec "%s=%s" % (NE_name, Eq) in globals(), locals()
             exec "%s=%s" % (NT_name, "'emit_spike>=1'") in globals(), locals()
             exec "%s=%s" % (NRes_name, "'emit_spike=0'") in globals(), locals()
-            exec "%s= NeuronGroup(%s, model=%s, method='euler',threshold=%s, reset=%s)" \
-                 % (NG_name, NN_name, NE_name, NT_name, NRes_name) in globals(), locals()
+            exec "%s= NeuronGroup(%s, model=%s, method='%s',threshold=%s, reset=%s)" \
+                 % (NG_name, NN_name, NE_name, self.numerical_integration_method, NT_name, NRes_name) in globals(), locals()
             if hasattr(self, 'loaded_brian_data'): # load the positions if available
                 # in case the NG index are different. for example a MC_L2 neuron might have had
                 # index 3 as NG3_MC_L2 and now it's NG10_MC_L2 :
@@ -1152,5 +1145,5 @@ if __name__ == '__main__' :
     # CM.run()
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Cpp',runtime=1000 * ms)
     # CM.run()
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Python',runtime=1000 * ms)
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device='Cpp',runtime=1000 * ms)
     CM.run()
