@@ -225,7 +225,7 @@ class synapse_namespaces(object):
     #     'ilam_L1i_L1i': 2.3 / _M_V1 / mm,
     #
     # }
-    lambda_LGNtoV1 = 0.28/mm  # from Schwabe 2006 JNeurosci model, was 0.1 deg, but this was turned to mm at 5 deg ecc
+    lambda_LGNtoV1 = 0.28 / mm #2.85/mm  # from Schwabe 2006 JNeurosci model, was 0.1 deg, but this was turned to mm at 5 deg ecc
     lambda_V1local = 0.81/mm  # was 2.3 deg-1 => 1/(17*np.log(1+5+((1/2.3)/2))-17*np.log(1+5-((1/2.3)/2))),
     lambda_V1toX = 0.10/mm  # 1 / (17 * np.log(1 + 5 + ((1 / 0.3) / 2)) - 17 * np.log(1 + 5 - ((1 / 0.3) / 2)))
     lambda_MCtoV1 = 0.10/mm

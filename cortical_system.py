@@ -769,8 +769,7 @@ class cortical_system(object):
                         # plt.scatter(eval(_pre_group_idx).x,eval(_pre_group_idx).y,color='b')
                         # plt.axis('equal')
 
-                        syn_con_str += "'exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(2*0.025**2))/\
-                        (sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)/mm)'" % (self.customized_synapses_list[-1]['ilam'])
+                        syn_con_str += "'exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f)/(2*0.025**2))'" % (self.customized_synapses_list[-1]['ilam'])
 
                     elif self.sys_mode == 'local':
                         syn_con_str += "'%f'" % float(p_arg)
@@ -778,7 +777,7 @@ class cortical_system(object):
                         # syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))/(sqrt((x_pre-x_post) \
                         #    **2+(y_pre-y_post)**2)/mm)'   " % (float(p_arg), self.customized_synapses_list[-1]['ilam'])
                         syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))'" % (
-                        float(p_arg), self.customized_synapses_list[-1]['ilam']) # todo the divisoin by the distance is temporarily removed to avoid division by zeros, try to understand what is going on using Hanna's email and if it's needed, add a fixed version
+                        float(p_arg), self.customized_synapses_list[-1]['ilam'])
 
                 except ValueError:
                     p_arg = self.customized_synapses_list[-1]['sparseness']
@@ -788,7 +787,7 @@ class cortical_system(object):
                         # syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))/(sqrt((x_pre-x_post)\
                         # **2+(y_pre-y_post)**2)/mm)'   " % (p_arg, self.customized_synapses_list[-1]['ilam'])
                         syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))'" % (
-                        p_arg, self.customized_synapses_list[-1]['ilam']) # todo the divisoin by the distance is temporarily removed to avoid division by zeros, try to understand what is going on using Hanna's email and if it's needed, add a fixed version
+                        p_arg, self.customized_synapses_list[-1]['ilam'])
                 try:
                     syn_con_str += ',n=%d)' % int(n_arg)
                 except ValueError:
@@ -964,7 +963,7 @@ class cortical_system(object):
             # that connects SpikeGeneratorGroup() and relay neurons.
             exec "%s = Synapses(GEN, %s, on_pre='emit_spike+=1')" % \
                  (SGsyn_name, NG_name) in globals(), locals()# connecting the SpikeGeneratorGroup() and relay group.
-            exec "%s.connect('i==j')" % SGsyn_name in globals(), locals() # SV change
+            exec "%s.connect(j='i')" % SGsyn_name in globals(), locals() # SV change
             setattr(self.main_module, NG_name, eval(NG_name))
             setattr(self.main_module, SGsyn_name, eval(SGsyn_name))
             try:
@@ -1058,7 +1057,7 @@ class cortical_system(object):
             # that connects SpikeGeneratorGroup() and relay neurons.
             exec "%s = Synapses(GEN, %s, on_pre='emit_spike+=1')" \
                  % (SGsyn_name, NG_name) in globals(), locals()  # connecting the SpikeGeneratorGroup() and relay group.
-            eval(SGsyn_name).connect('i!=j')
+            eval(SGsyn_name).connect(j='i')
             setattr(self.main_module, NG_name, eval(NG_name))
             setattr(self.main_module, SGsyn_name, eval(SGsyn_name))
             try:
@@ -1152,7 +1151,7 @@ if __name__ == '__main__' :
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device = 'Python' ,
     #                      runtime=100* ms)
 
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='Cpp',runtime=100 * ms)
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='Cpp',runtime = 500 * msecond)
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='Python',runtime=100 * ms)
     CM.run()
 

@@ -33,10 +33,13 @@ class stimuli(object):
         _input_file = os.path.join(input_path[0:[idx for idx, ltr in enumerate(input_path) if ltr == '/'][-1]], 'input.mat')
         tmp_dict = io.loadmat(_input_file, variable_names='spikes_0')
         new_spikes = tmp_dict['spikes_0']
+        get_neuron_positions_dict= io.loadmat(input_path, variable_names='w_coord')
+        neuron_positions_in_cortex = get_neuron_positions_dict['w_coord']
+        number_of_neurons = len(neuron_positions_in_cortex)
         spikes_str = 'GEN_SP = array(%s)' %str(list(new_spikes[0]))
         times_str = 'GEN_TI = array(%s)*second' %str(list(new_spikes[1]))
-        SG_str = 'GEN = SpikeGeneratorGroup(%d, GEN_SP, GEN_TI)'%int(max(new_spikes[0])+1)
-        return spikes_str, times_str,  SG_str , int(max(new_spikes[0])+1)
+        SG_str = 'GEN = SpikeGeneratorGroup(%d, GEN_SP, GEN_TI)' % number_of_neurons
+        return spikes_str, times_str,  SG_str , number_of_neurons
 
     def get_input_positions(self, path):
         '''
@@ -52,17 +55,28 @@ class stimuli(object):
 
         print "Initializing stimuli..."
 
-        _new_input_defs = []
         #type : video
         _V1_mats = {}
 
         io.loadmat(os.path.abspath(path), _V1_mats)
+
+        # Fill ISI with N-1 times frameduration of zeros
+        SOA = 90 # in ms
+        stimulus_epoch_duration = 15 # in ms, duration of Burbank whole stimulus
+        assert np.mod(SOA, stimulus_epoch_duration) == 0, 'Stimulus onset asynchrony (SOA) must be an integer times frameduration, aborting...'
+        SOA_in_N_frames = int(SOA / stimulus_epoch_duration)
+        dense_stimulus = _V1_mats['stimulus']
+        sparse_stimulus = np.tile(np.zeros_like(dense_stimulus), (1, SOA_in_N_frames))
+        sparse_stimulus[:, 0::SOA_in_N_frames] = dense_stimulus
+
         try:
-            frameduration = double(_V1_mats['frameduration'])  # _V1_mats['frameduration'] is numpy nd array
+            frameduration = double(_V1_mats['frameduration'])
+            raise NotImplementedError('Frameduration coming from actual video frame rate. This is not implemented yet for CXSystem')
         except:
-            frameduration = 100  # in ms
-        frames = TimedArray(np.transpose(_V1_mats['stimulus']),
+            frameduration = stimulus_epoch_duration
+        frames = TimedArray(np.transpose(sparse_stimulus),
                             dt=frameduration * ms)  # video_data has to be shape (frames, neurons), dt=frame rate
+
         self.frames = frames
         exec 'self.factor = %s' %freq
         self.i_patterns[len(self.i_patterns)] = frames.values * self.factor  # These must be final firing rates
@@ -70,8 +84,6 @@ class stimuli(object):
         if len(_all_stim.shape) == 2:
             slash_indices = [idx for idx, ltr in enumerate(path) if ltr == '/']
             print 'One video stimulus found in file ' + path[slash_indices[-1]+1:]
-
-        # self.input_defs = _new_input_defs
 
 
     def _calculate_input_seqs(self,path):
