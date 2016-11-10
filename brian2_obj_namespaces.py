@@ -363,10 +363,6 @@ class neuron_namespaces (object):
         self.output_namespace['C']= fract_areas[output_neuron['dend_comp_num']] * Cm * Area_tot_pyram *2
         if output_neuron['soma_layer'] in [6]: # neuroelectro portal layer5/6 capacitance
             self.output_namespace['C'] = fract_areas[output_neuron['dend_comp_num']] * Cm * Area_tot_pyram
-            print "layer 6 set to 1"
-        if output_neuron['soma_layer'] in [5]: # neuroelectro portal layer5/6 capacitance
-            self.output_namespace['C'] = fract_areas[output_neuron['dend_comp_num']] * Cm * Area_tot_pyram * 1.7
-            print "layer 5 set to 1.7"
         # total g_leak in compartments
         self.output_namespace['gL']= fract_areas[output_neuron['dend_comp_num']] * gl * Area_tot_pyram
         self.output_namespace['taum_soma'] = self.output_namespace['C'][1] / self.output_namespace['gL'][1]

@@ -59,7 +59,6 @@ class cortical_system(object):
         * save_data: The save_data() object for saving the final data.
 
         '''
-        print "$$$$$$$$$\n$$$$$$$$$    SS_Vt=-50mv,Noise back to 40*mV for Exc and 20*mV for Inh, old capacitance for inhibitory groups and SS, factor 1 for layer 6, noise of SS is 60%\n$$$$$$$$$\n"
         self.start_time = time.time()
         if device != 'Python':
             print "Info: system is going to be run using stand-alone devices, " \
