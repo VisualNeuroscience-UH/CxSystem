@@ -1,31 +1,31 @@
-row_type,sys_mode,#scale,grid_radius, min_distance, do_init_vms,noise_sigma,output_path, save_brian_data_path , load_brian_data_path, load_positions_only, do_benchmark
-params,local,1,210*um, 1*um,1,20*mV,/opt2/Vafa/CX_Output/CX_Output.bz2,/opt2/Vafa/CX_Output/brian_data.bz2, /opt2/Vafa/CX_Output/brian_data_for_positions.bz2, 1, 1
+row_type,sys_mode,#scale,grid_radius, min_distance, do_init_vms,output_path, save_brian_data_path , load_brian_data_path, load_positions_only, #do_benchmark
+params,local,1,210*um, 1*um,1,/opt3/CX_Output/CX_Output.bz2,/opt3/CX_Output/brian_data.bz2, /opt3/CX_Output/brian_data_for_positions.gz, 1, 1
 row_type,idx,type,number_of_neurons,radius,spike_times,net_center,monitors
 IN,0, VPM,60,92*um,[0.5]*second, N/A ,[Sp]
-row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors
-G,1,338,L1i,1,N/A,[St]vm[rec](0-337-20) [Sp]
-G,2,5877,PC,[2->1],N/A,[St]vm[rec](0-5876-20) [Sp]
-G,3,1198,BC,2,N/A,[St]vm[rec](0-1197-20) [Sp]
-G,4,425,MC,2,N/A,[St]vm[rec](0-424-20) [Sp]
-G,5,2674,PC,[4->2],N/A,[St]vm[rec](0-2673-20) [Sp]
-G,6,1098,PC,[4->1],N/A,[St]vm[rec](0-1097-20) [Sp]
-G,7,406,SS,4,N/A,[St]vm[rec](0-405-20) [Sp]
-G,8,329,BC,4,N/A,[St]vm[rec](0-328-20) [Sp]
-G,9,137,MC,4,N/A,[St]vm[rec](0-136-20) [Sp]
-G,10,5050,PC,[5->1],N/A,[St]vm[rec](0-5049-20) [Sp]
-G,11,558,BC,5,N/A,[St]vm[rec](0-557-20) [Sp]
-G,12,491,MC,5,N/A,[St]vm[rec](0-490-20) [Sp]
-G,13,9825,PC,[6->4],N/A,[St]vm[rec](0-9824-20) [Sp]
-G,14,1637,PC,[6->1],N/A,[St]vm[rec](0-1636-20) [Sp]
-G,15,813,BC,6,N/A,[St]vm[rec](0-812-20) [Sp]
-G,16,372,MC,6,N/A,[St]vm[rec](0-371-20) [Sp]
+row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors,noise_sigma
+G,1,338,L1i,1,N/A,[St]vm[rec](0-337-20) [Sp], 20*mV
+G,2,5877,PC,[2->1],N/A,[St]vm[rec](0-5876-20) [Sp], 40*mV
+G,3,1198,BC,2,N/A,[St]vm[rec](0-1197-20) [Sp],20*mV
+G,4,425,MC,2,N/A,[St]vm[rec](0-424-20) [Sp],20*mV
+G,5,2674,PC,[4->2],N/A,[St]vm[rec](0-2673-20) [Sp],40*mV
+G,6,1098,PC,[4->1],N/A,[St]vm[rec](0-1097-20) [Sp],40*mV
+G,7,406,SS,4,N/A,[St]vm[rec](0-405-20) [Sp],60*mV
+G,8,329,BC,4,N/A,[St]vm[rec](0-328-20) [Sp],20*mV
+G,9,137,MC,4,N/A,[St]vm[rec](0-136-20) [Sp],20*mV
+G,10,5050,PC,[5->1],N/A,[St]vm[rec](0-5049-20) [Sp],40*mV
+G,11,558,BC,5,N/A,[St]vm[rec](0-557-20) [Sp],20*mV
+G,12,491,MC,5,N/A,[St]vm[rec](0-490-20) [Sp],20*mV
+G,13,9825,PC,[6->4],N/A,[St]vm[rec](0-9824-20) [Sp],40*mV
+G,14,1637,PC,[6->1],N/A,[St]vm[rec](0-1636-20) [Sp],40*mV
+G,15,813,BC,6,N/A,[St]vm[rec](0-812-20) [Sp],20*mV
+G,16,372,MC,6,N/A,[St]vm[rec](0-371-20) [Sp],20*mV
 row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p,n,monitors,load_connection,save_connection
 #### input to PC4 and SS4:
-S,ge,0,5[C]0ba,Fixed,N/A,7+7,N/A,1-->,1-->
-S,ge,0,6[C]0ba,Fixed,N/A,7+7,N/A,1,1
+S,ge,0,5[C]0ba,Fixed,N/A,3+4,N/A,1-->,1-->
+S,ge,0,6[C]0ba,Fixed,N/A,3+4,N/A,1,1
 S,ge,0,7,Fixed,N/A,7,N/A,1,1
 #### input to PC5:
-S,ge,0,10[C]0ba,Fixed,N/A,12+12,N/A,1,1
+S,ge,0,10[C]0ba,Fixed,N/A,6+6,N/A,1,1
 #### other connections:
 S,gi,1,1,Fixed,0.014016,16,N/A,1,1
 S,gi,1,3,Fixed,0.005965,12,N/A,1,1
