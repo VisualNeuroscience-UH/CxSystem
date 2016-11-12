@@ -34,10 +34,10 @@ class customized_neuron(object):
         '''
         customized_neuron._celltypes = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM'])
         assert general_grid_radius > min_distance , 'The distance between cells should be less than the grid radius'
-        assert cell_type in customized_neuron._celltypes, "Error: cell type '%s' is not defined" % cell_type  # check cell type
-        assert len(layers_idx) < 3, "Error: length of layers_idx array is larger than 2"  # check layer index
+        assert cell_type in customized_neuron._celltypes, "Cell type '%s' is not defined" % cell_type  # check cell type
+        assert len(layers_idx) < 3, "Length of layers_idx array is larger than 2"  # check layer index
         if len(layers_idx) == 2:
-            assert layers_idx[1] < layers_idx[0], "Error: indices of the layer_idx array are not descending"
+            assert layers_idx[1] < layers_idx[0], "Indices of the layer_idx array are not descending"
         elif len(layers_idx) == 1:
             assert cell_type != 'PC', "Cell type is PC but the start and end of the neuron is not defined in layers_idx"
         # final neuron is the output neuron containing equation, parameters
@@ -126,7 +126,7 @@ class customized_neuron(object):
 
         #: The template for the somatic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
         eq_template_soma = '''
-        dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr) / C : volt (unless refractory)
+        dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr) / C) +  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
         dge/dt = -ge/tau_e : siemens
         dgealpha/dt = (ge-gealpha)/tau_e : siemens
         dgeX/dt = -geX/tau_eX : siemens
@@ -155,7 +155,7 @@ class customized_neuron(object):
                                                     ge='ge_soma', geX='geX_soma', gi='gi_soma', gealpha='gealpha_soma',
                                                     gealphaX='gealphaX_soma',
                                                     gialpha='gialpha_soma', C=self.output_neuron['namespace']['C'][1],
-                                                    I_dendr='Idendr_soma')
+                                                    I_dendr='Idendr_soma',taum_soma=self.output_neuron['namespace']['taum_soma'])
         for _ii in range(self.output_neuron[
                              'dend_comp_num'] + 1):  # extra dendritic compartment in the same level of soma
             self.output_neuron['equation'] += Equations(eq_template_dend, vm="vm_a%d" % _ii,
@@ -212,7 +212,7 @@ class customized_neuron(object):
         '''
 
         self.output_neuron['equation'] = Equations('''
-            dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C : volt (unless refractory)
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) +  noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
             dge/dt = -ge/tau_e : siemens
             dgi/dt = -gi/tau_i : siemens
             ''', ge='ge_soma', gi='gi_soma')
@@ -235,7 +235,7 @@ class customized_neuron(object):
                 y : meter
         '''
         self.output_neuron['equation'] = Equations('''
-            dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C : volt (unless refractory)
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) +  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
             dge/dt = -ge/tau_e : siemens
             dgi/dt = -gi/tau_i : siemens
             ''', ge='ge_soma', gi='gi_soma')
@@ -259,7 +259,7 @@ class customized_neuron(object):
                     y : meter
             '''
         self.output_neuron['equation'] = Equations('''
-            dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C : volt (unless refractory)
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C)+  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
             dge/dt = -ge/tau_e : siemens
             dgi/dt = -gi/tau_i : siemens
             ''', ge='ge_soma', gi='gi_soma')
@@ -282,7 +282,7 @@ class customized_neuron(object):
                     y : meter
             '''
         self.output_neuron['equation'] = Equations('''
-            dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C : volt (unless refractory)
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C)+  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
             dge/dt = -ge/tau_e : siemens
             dgi/dt = -gi/tau_i : siemens
             ''', ge='ge_soma', gi='gi_soma')
@@ -331,7 +331,7 @@ class customized_synapse(object):
 
         '''
         customized_synapse.syntypes = array(['STDP', 'Fixed'])
-        assert syn_type in customized_synapse.syntypes, "Error: cell type '%s' is not defined" % syn_type
+        assert syn_type in customized_synapse.syntypes, "Cell type '%s' is not defined" % syn_type
         self.output_synapse = {}
         self.output_synapse['type'] = syn_type
         self.output_synapse['receptor'] = receptor
@@ -357,6 +357,7 @@ class customized_synapse(object):
         '''
         self.output_synapse['equation'] = Equations('''
             wght:siemens
+            wght0:siemens
             dapre/dt = -apre/taupre : siemens (event-driven)
             dapost/dt = -apost/taupost : siemens (event-driven)
             ''')

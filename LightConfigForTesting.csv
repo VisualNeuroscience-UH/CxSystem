@@ -1,13 +1,13 @@
-row_type,sys_mode,#scale,grid_radius, min_distance, do_init_vms,output_path, save_brian_data_path , #load_brian_data_path, #load_positions_only, do_benchmark
-params,local,3,210*um, 1*um,1,/opt3/CX_Output/CX_Output.gz,/opt3/CX_Output/brian_data.gz, /opt3/CX_Output/brian_data_20161028_142108.gz, 0 , 0
+row_type,sys_mode,#scale,grid_radius, min_distance, do_init_vms, noise_sigma,output_path, save_brian_data_path , #load_brian_data_path, #load_positions_only, #do_benchmark
+params,local,3,210*um, 1*um,1,20*mV,/opt2/Vafa/CX_Output/CX_Output.pickle,/opt2/Vafa/CX_Output/brian_data.pickle, /opt2/Vafa/CX_Output/brian_data_20161111_17043331_Python_1000ms.pickle, 0 , 0
 row_type,idx,type,number_of_neurons,radius,spike_times,net_center,monitors
 IN,0, VPM,60,92*um,[0.0001 0.5]*second, N/A ,[Sp]
 row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors
-G,1,2674,PC,[4->2],N/A,[Sp]
+G,1,60,PC,[4->2],N/A,[St]vm [Sp]
 G,2,1098,PC,[4->1],N/A,[Sp]
 G,3,406,SS,4,N/A,[Sp]
 row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p,n,monitors,load_connection,save_connection
 #### input to PC4 and SS4:
-S,ge,0,1[C]0ba,Fixed,N/A,7+7,N/A,0-->,1-->
-S,ge,0,2[C]0ba,Fixed,N/A,7+7,N/A,0,1
-S,ge,0,3,Fixed,N/A,7,N/A,0<--,1<--
+S,ge,0,1[C]0ab,Fixed,1+1,7+7,N/A,0-->,1-->
+S,ge,0,2[C]0ba,Fixed,N/A,7+7,N/A,0,0
+S,ge,0,3,Fixed,N/A,7,N/A,1<--,1

@@ -272,7 +272,7 @@ class synapse_namespaces(object):
         :param output_synapse: This is the dictioanry created in customized_neuron() in brian2_obj_namespaces module. This contains all the informatino about the synaptic connection. In this class, Synaptic namespace parameters are directly added to it. Following valus are set after initialization: Cp, Cd, sparseness, ilan. Other variables are then set based on the type of the synaptic connection (STDP,Fixed).
         '''
         synapse_namespaces.type_ref = array (['STDP','Fixed'])
-        assert output_synapse['type'] in synapse_namespaces.type_ref, "Error: cell type '%s' is not defined." % output_synapse['type']
+        assert output_synapse['type'] in synapse_namespaces.type_ref, "Cell type '%s' is not defined." % output_synapse['type']
         self.output_namespace = {}
         self.output_namespace['Cp'] = synapse_namespaces.Cp
         self.output_namespace['Cd'] = synapse_namespaces.Cd
@@ -297,8 +297,8 @@ class synapse_namespaces(object):
         mu_wght = std_wght / 2.
         self.output_namespace['wght0'] = '(%f * rand() + %f) * nS' % (std_wght , mu_wght)
         std_delay = synapse_namespaces.delay['delay_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])] / ms
-        mu_delay = std_delay / 2.
-        self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, mu_delay)
+        min_delay = std_delay / 2.
+        self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, min_delay)
 
 
     def Fixed(self,output_synapse):
@@ -315,8 +315,8 @@ class synapse_namespaces(object):
         mu_wght = std_wght / 2.
         self.output_namespace['wght0'] = '(%f * rand() + %f) * nS' % (std_wght , mu_wght)
         std_delay = synapse_namespaces.delay['delay_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type'])] / ms
-        mu_delay = std_delay / 2.
-        self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, mu_delay)
+        min_delay = std_delay / 2.
+        self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, min_delay)
 
 
 #############################################
@@ -328,7 +328,7 @@ class neuron_namespaces (object):
     'This class embeds all parameter sets associated to all neuron types and will return it as a namespace in form of dictionary'
     def __init__(self, output_neuron):
         neuron_namespaces.type_ref = array(['PC', 'SS', 'BC', 'MC','L1i','VPM'])
-        assert output_neuron['type'] in neuron_namespaces.type_ref, "Error: cell type '%s' is not defined." % output_neuron['category']
+        assert output_neuron['type'] in neuron_namespaces.type_ref, "Cell type '%s' is not defined." % output_neuron['category']
         self.output_namespace = {}
         getattr(self, '_'+ output_neuron['type'])(output_neuron)
 
@@ -340,10 +340,6 @@ class neuron_namespaces (object):
         :return:
         :rtype:
         '''
-        # following 3 lines are for in case you have more than one namespace for a cell type
-        # namespace_type_ref = array(['generic'])
-        # assert output_neuron['namespace_type'] in namespace_type_ref, "Error: namespace type '%s' is not defined."%output_neuron['namespace_type']
-        # if output_neuron['namespace_type'] == namespace_type_ref[0]:
         # Capacitance, multiplied by the compartmental area to get the final C(compartment)
         Cm=(1*ufarad*cm**-2)
         # leak conductance, -''-  Amatrudo et al, 2005 (ja muut) - tuned down to fix R_in
@@ -363,8 +359,7 @@ class neuron_namespaces (object):
         self.output_namespace['C']= fract_areas[output_neuron['dend_comp_num']] * Cm * Area_tot_pyram * 2
         # total g_leak in compartments
         self.output_namespace['gL']= fract_areas[output_neuron['dend_comp_num']] * gl * Area_tot_pyram
-
-
+        self.output_namespace['taum_soma'] = self.output_namespace['C'][1] / self.output_namespace['gL'][1]
         self.output_namespace['Vr']=-70.11 * mV
         self.output_namespace['EL'] = -70.11 * mV
         self.output_namespace['VT']=-41.61 * mV
@@ -393,7 +388,7 @@ class neuron_namespaces (object):
         # Beierlein 2000 - Badel et al., 2008: 90 pF
 
         self.output_namespace['gL'] = 10 * nS  # Beierlein 2000 -  Badel et al -> 10 nS (calculated from tau_m)
-        self.output_namespace['taum'] = self.output_namespace['C'] / self.output_namespace['gL']  # Badel et al. 2008: 9 ms
+        self.output_namespace['taum_soma'] = self.output_namespace['C'] / self.output_namespace['gL']  # Badel et al. 2008: 9 ms
         self.output_namespace['Vr'] = -67.66 * mV
         self.output_namespace['EL'] = -67.66 * mV  # mean of neuro-electro portal#-64 * mV # Badel et al. 2008
         self.output_namespace['VT'] = -38.8 * mV  # mean of neuro-electro portal#self.output_namespace['EL'] + 15  * mV # Badel et al. 2008  #15
@@ -407,8 +402,8 @@ class neuron_namespaces (object):
 
     def _L1i(self,output_neuron):
         self.output_namespace['gL'] = 3.2 * nS  # 3.2 nsiemens mean of cell types in L1, Muralidhar 2014 Front Neuroanat, Table 3, mean of 1/"input resistance for steady state"
-        self.output_namespace['taum'] =19.8 * ms  #  19.8 ms mean of cell types in L1, Muralidhar 2014 Front Neuroanat, Table 3, mean of "time constant for delta pulse"
-        self.output_namespace['C'] = self.output_namespace['taum'] * self.output_namespace['gL']  #
+        self.output_namespace['taum_soma'] =19.8 * ms  #  19.8 ms mean of cell types in L1, Muralidhar 2014 Front Neuroanat, Table 3, mean of "time constant for delta pulse"
+        self.output_namespace['C'] = self.output_namespace['taum_soma'] * self.output_namespace['gL']  #
         self.output_namespace['Vr'] =-67.66 * mV
         self.output_namespace['EL'] = -67.66 * mV  #
         self.output_namespace['VT'] = -36.8 * mV  # -36.8 mV, mean of cell types in L1, Muralidhar 2014 Front Neuroanat, Table 3, mean of "ap threshold"
@@ -426,9 +421,9 @@ class neuron_namespaces (object):
 
     def _MC(self,output_neuron):
         self.output_namespace['C'] = 92.1 * pF  # 92.1 +- 8.4, Paluszkiewicz 2011 J Neurophysiol
-        self.output_namespace['taum'] = 21.22 * ms  # HIGHLY VARYING 21.22 +- 11.2, N=3; Tau_m = 9.7 +- 1.3 Takesian 2012 J Neurophysiol; 17.57 +- 9.24 Wang 2004 J Physiol; 36.4 +- 3.7 Paluszkiewicz 2011 J Neurophysiol
-        self.output_namespace['gL'] = self.output_namespace['C'] / self.output_namespace['taum']
-        #        self.output_namespace['taum'] = self.output_namespace['C'] / self.output_namespace['gL'] from FS neurons
+        self.output_namespace['taum_soma'] = 21.22 * ms  # HIGHLY VARYING 21.22 +- 11.2, N=3; Tau_m = 9.7 +- 1.3 Takesian 2012 J Neurophysiol; 17.57 +- 9.24 Wang 2004 J Physiol; 36.4 +- 3.7 Paluszkiewicz 2011 J Neurophysiol
+        self.output_namespace['gL'] = self.output_namespace['C'] / self.output_namespace['taum_soma']
+        #        self.output_namespace['taum_soma'] = self.output_namespace['C'] / self.output_namespace['gL'] from FS neurons
 
         self.output_namespace['EL'] = -60.38 * mV  # = Vr
         self.output_namespace['VT'] = -42.29 * mV
@@ -452,6 +447,7 @@ class neuron_namespaces (object):
         # total g_leak in compartments
         self.output_namespace['gL'] = 0.03 * gl * Area_tot_pyram
         # print self.output_namespace['C'] / self.output_namespace['gL']
+        self.output_namespace['taum_soma'] = self.output_namespace['C'] / self.output_namespace['gL']
         self.output_namespace['Vr'] = -70.11 * mV
         self.output_namespace['EL'] = -70.11 * mV
         self.output_namespace['VT'] = -41.61 * mV
