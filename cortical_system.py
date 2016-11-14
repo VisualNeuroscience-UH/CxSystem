@@ -84,9 +84,9 @@ class cortical_system(object):
             'params': self.set_runtime_parameters,
             'grid_radius': self._set_grid_radius,
             'min_distance': self._set_min_distance,
-            'output_path' : self._set_output_path,
-            'load_brian_data_path': self._set_load_brian_data_path,
-            'save_brian_data_path': self._set_save_brian_data_path,
+            'output_path&filename' : self._set_output_path,
+            'brian_data_loading_path&filename': self._set_load_brian_data_path,
+            'brian_data_saving_path&filename': self._set_save_brian_data_path,
             'do_init_vms': self.do_init_vms,
             'load_positions_only': self.load_positions_only,
             'do_benchmark': self.do_benchmark,
@@ -237,6 +237,7 @@ class cortical_system(object):
         self.save_output_data.creat_key('Neuron_Groups_Parameters')
         self.save_output_data.creat_key('Configuration_File')
         self.save_output_data.data['Configuration_File'] = self.configuration_file
+        self.save_output_data.data['time_vector'] = arange(0,self.runtime,defaultclock.dt)
         self.save_output_data.data['positions_all']['w_coord'] = {}
         self.save_output_data.data['positions_all']['z_coord'] = {}
         self.save_output_data.data['number_of_neurons'] = {}
