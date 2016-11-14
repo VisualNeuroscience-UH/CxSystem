@@ -3,12 +3,24 @@ import numpy as np
 import cPickle as pickle
 import zlib
 import os
+import bz2
+
+def data_loader(path):
+    if '.gz' in path:
+        with open(path, 'rb') as fb:
+            data = zlib.decompress(fb.read())
+            loaded_data = pickle.loads(data)
+    elif '.bz2' in path:
+        with bz2.BZ2File(path, 'rb') as fb:
+            loaded_data = pickle.load(fb)
+    elif 'pickle' in path:
+        with open(path, 'rb') as fb:
+            loaded_data = pickle.load(fb)
+    return loaded_data
 
 path = '/opt3/CX_Output'
-FileName = 'CX_Output_20161110_15424286_Cpp_1000ms.gz'
-with open(os.path.join(path, FileName), 'rb') as fp:
-    z_data = zlib.decompress(fp.read())
-    ThisTrial = pickle.loads(z_data)
+FileName = 'CX_Output_20161112_15225571_GeNN_1000ms.bz2'
+ThisTrial = data_loader(os.path.join(path,FileName))
 
 # SS = ThisTrial['spikes_all'][ 'NG7_SS_L4']
 # PC = ThisTrial['spikes_all'][ 'NG5_PC_L4toL2']
@@ -27,8 +39,8 @@ for pltkey in ThisTrial['spikes_all'].keys():
 # plt.figure();plt.scatter(PC64[1],PC64[0],s=0.4);plt.title('PC6-4 Noise 40mV')
 # plt.figure();plt.scatter(PC5[1],PC5[0],s=0.4);plt.title('PC5 Noise 40mV')
 # SSV = ThisTrial['vm_all'][ 'NG7_SS_L4']
-PCV = ThisTrial['vm_all'][ 'NG10_PC_L5toL1']
-BCV = ThisTrial['vm_all'][ 'NG3_BC_L2']
+# PCV = ThisTrial['vm_all'][ 'NG10_PC_L5toL1']
+# BCV = ThisTrial['vm_all'][ 'NG3_BC_L2']
 # plt.figure();[plt.plot(BCV[i]) for i in range(1,50)];plt.title('BC, noise ??')
 # plt.figure();[plt.plot(PCV[i]) for i in range(1,50)];plt.title('PC, noise ??')
 plt.show()

@@ -4,7 +4,7 @@ from brian2  import *
 import multiprocessing
 import time
 import numpy as np
-
+import shutil
 
 # for benchmarking :
 def multi_run (idx, working):
@@ -20,6 +20,7 @@ def multi_run (idx, working):
     cm = CX.cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = 'Python', runtime = 15000*ms)
     cm.run()
     working.value -= 1
+    shutil.rmtree('/home/vafanda/.cache/scipy/')
 
 # Multiprocessing using the Process()
 if __name__ == '__main__':

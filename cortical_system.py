@@ -48,7 +48,7 @@ class cortical_system(object):
 
         :param config_path: The path to the configuration file.
         :param output_path: The path to save the final data.
-        :param use_genn: switch the GeNN mode on/off (1/0), by default genn is off
+        :param use_genn: switch the GeNN mode on/off (1/0), by default GeNN is off
 
         Main internal variables:
 
@@ -66,8 +66,7 @@ class cortical_system(object):
         if device != 'Python':
             print "Info: system is going to be run using stand-alone devices, " \
                   "Errors may rise if Brian2/Brian2GeNN/GeNN is not installed correctly or the limitations are not " \
-                  "taken in to acount."
-        print "Info: simulation time is %s"%str(runtime)
+                  "taken in to account."
         self.main_module = sys.modules['__main__']
         try:  # try to find the CX_module in the sys.modules, to find if the __main__ is cortical_system.py or not
             self.CX_module = sys.modules['cortical_system']
@@ -156,10 +155,11 @@ class cortical_system(object):
         run(self.runtime, report='text')
         if self.do_benchmark:
             self.benchmarking_data = {}
-            titles= ['Computer Name','Device','Simulation Time','Python Compilation','Brian Code generation',\
+            titles= ['Computer Name','Device','File Suffix','Simulation Time','Python Compilation','Brian Code generation',\
                      'Device-Specific Compilation','Run','Extract and Save Result','Total Time']
             self.benchmarking_data['Simulation Time'] = str(self.runtime)
             self.benchmarking_data['Device'] = self.device
+            self.benchmarking_data['File Suffix'] = self.StartTime_str[1:]
             if self.device != 'Python':
                 self.benchmarking_data['Python Compilation'] = __builtin__.code_generation_start - self.start_time
                 self.benchmarking_data['Brian Code generation'] = __builtin__.compile_start - __builtin__.code_generation_start
@@ -173,8 +173,8 @@ class cortical_system(object):
             self.saving_start_time = time.time()
             self.benchmarking_data['Run'] = self.saving_start_time -  __builtin__.run_start
         self.gather_result()
+        self.end_time = time.time()
         if self.do_benchmark:
-            self.end_time = time.time()
             self.benchmarking_data['Extract and Save Result'] = self.end_time - self.saving_start_time
             self.benchmarking_data['Total Time'] = self.end_time - self.start_time
             import platform
@@ -186,11 +186,11 @@ class cortical_system(object):
                     w.writeheader()
                 w.writerow(self.benchmarking_data)
                 print "Benchmarking data saved"
-        print "total simulation time: %d seconds" %(self.end_time-self.start_time)
+        print "Info: simulating %s took in total %d s" % (str(self.runtime),self.end_time-self.start_time)
         if self.device == 'GeNN':
-            shutil.rmtree(os.path.join(self.output_folder, 'GeNN_Output', self.StartTime_str[1:]))
+            shutil.rmtree(os.path.join(self.output_folder, self.StartTime_str[1:]))
         elif self.device == 'Cpp':
-            shutil.rmtree(os.path.join(self.output_folder, 'Cpp_Output', self.StartTime_str[1:]))
+            shutil.rmtree(os.path.join(self.output_folder, self.StartTime_str[1:]))
 
 
     def set_runtime_parameters(self):
@@ -309,21 +309,21 @@ class cortical_system(object):
 
     def neuron_group(self, *args):
         '''
-        The method that creates the NeuronGroups() based on the parameters that are extracted from the configuraiton file in the __init__ method of the class.
+        The method that creates the NeuronGroups() based on the parameters that are extracted from the configuration file in the __init__ method of the class.
 
-        :param args: This method have at least 3 main positional argumenst directly passed from the __init__ method: Number of Neurons in the group, Type of neuron in the group and layer index. Description of the layer index as well as other possible arguments can be found in the configuration file tutorial.
+        :param args: This method have at least 3 main positional arguments directly passed from the __init__ method: Number of Neurons in the group, Type of neuron in the group and layer index. Description of the layer index as well as other possible arguments can be found in the configuration file tutorial.
 
         Main internal variables:
 
         * mon_args: contains the monitor arguments extracted from the target line.
         * net_center: center position of the neuron group in visual field coordinates, description can be found in configuration file tutorial.
-        * NG_name: Generated vriable name for the NeuonGroup() object in brian2.
-        * NN_name: Generated vriable name for corresponding Neuron Number.
-        * NE_name: Generated vriable name for the NeuonGroup() equation.
-        * NT_name: Generated vriable name for the NeuonGroup() threshold.
-        * NRes_name: Generated vriable name for the NeuonGroup() reset value.
-        * NRef_name: Generated vriable name for the NeuonGroup() refractory value.
-        * NNS_name: Generated vriable name for the NeuonGroup() namespace.
+        * NG_name: Generated variable name for the NeuronGroup() object in brian2.
+        * NN_name: Generated variable name for corresponding Neuron Number.
+        * NE_name: Generated variable name for the NeuronGroup() equation.
+        * NT_name: Generated variable name for the NeuronGroup() threshold.
+        * NRes_name: Generated variable name for the NeuronGroup() reset value.
+        * NRef_name: Generated variable name for the NeuronGroup() refractory value.
+        * NNS_name: Generated variable name for the NeuronGroup() namespace.
         * NG_init: NeuronGroups() should be initialized with a random vm, ge and gi values. To address this, a 6-line code is generated and put in this variable, the running of which will lead to initialization of current NeuronGroup().
         '''
         assert self.sys_mode != '', "System mode is not defined."
@@ -410,7 +410,7 @@ class cortical_system(object):
             self.customized_neurons_list[current_idx]['w_positions'] = self.loaded_brian_data['positions_all']['w_coord'][GroupKeyName]
             self.customized_neurons_list[current_idx]['z_positions'] = self.loaded_brian_data['positions_all']['z_coord'][GroupKeyName]
             print "Position for the group %s loaded" %NG_name
-        # Setting the position of the neurons in the current Neurong Group.
+        # Setting the position of the neurons in the current NeuronGroup.
         exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % (
             NG_name, current_idx, NG_name, current_idx)
         # Saving the neurons' positions both in visual field and cortical coordinates in save_data() object.
@@ -450,7 +450,7 @@ class cortical_system(object):
 
     def monitors(self, mon_args, object_name, equation):
         '''
-        This method creates the Monitors() in brian2 based on the parameters that are extracted from a target line in configuraiton file.
+        This method creates the Monitors() in brian2 based on the parameters that are extracted from a target line in configuration file.
 
         :param mon_args: The monitor arguments extracted from the target line.
         :param object_name: The generated name of the current object.
@@ -458,7 +458,7 @@ class cortical_system(object):
 
         Main internal variables:
 
-        * mon_tag: The tag that is extracted from the target line everytime.
+        * mon_tag: The tag that is extracted from the target line every time.
         * Mon_name: Generated variable name for a specific monitor.
         * Mon_str: The syntax used for building a specific StateMonitor.
         * sub_mon_tags: The tags in configuration file that are specified for a StateMonitor(), e.g. in record=True which is specified by [rec]True in configuration file, [rec] is saved in sub_mon_tags
@@ -508,7 +508,7 @@ class cortical_system(object):
                     tag_close_indices = [idx for idx, ltr in enumerate(sub_mon_arg) if
                                          ltr == ']']  # find the end index of all tags
                     assert len(tag_open_indices) == len(
-                        tag_close_indices), 'Wrong sets of tagging paranteses in monitor definitoins. '
+                        tag_close_indices), 'Wrong sets of tagging parentheses in monitor definitions. '
                     for tag_idx in range(len(tag_open_indices)):  # go through each StateMonitor tag:
                         sub_mon_tags.append(sub_mon_arg[sub_mon_arg.index('['):sub_mon_arg.index(']') + 1])
                         sub_mon_arg = sub_mon_arg.replace(sub_mon_tags[tag_idx], ' ')
@@ -558,20 +558,20 @@ class cortical_system(object):
 
     def synapse(self, *args):
         '''
-        The method that creates the Synapses() in brian2, based on the parameters that are extracted from the configuraiton file in the __init__ method of the class.
+        The method that creates the Synapses() in brian2, based on the parameters that are extracted from the configuration file in the __init__ method of the class.
 
-        :param args: This method will have at least 4 main positional argumenst directly passed from __init__ method: The receptor, e.g. ge or gi, presynaptic neurong group index, post synaptic group index, and type of Synaptic connection , i.e. STDP or Fixed. Description of other possible arguments can be found in Configuration file tutorial.
+        :param args: This method will have at least 4 main positional arguments directly passed from __init__ method: The receptor, e.g. ge or gi, pre-synaptic NeuronGroup index, post synaptic group index, and type of Synaptic connection , i.e. STDP or Fixed. Description of other possible arguments can be found in Configuration file tutorial.
 
         Main internal variables:
 
         * mon_args: contains the monitor arguments extracted from the target line.
-        * args: normally args contains a set of arguments for a single Synapses() object. However, this changes when the post-synaptic neuron is the first (with index of 0) compartment of a multi-compartmental neuron. In this case, one might intend to target all three subcompartments, i.e. Basal dendrites, Soma and proximal apical dendrites. So the single set of arguments will be changed to 3 sets of arguments and a for loop will take care of every one of them.
-        * S_name: Generated vriable name for the Synapses() object in brian2.
-        * SE_name: Generated vriable name for the Synapses() equation.
+        * args: normally args contains a set of arguments for a single Synapses() object. However, this changes when the post-synaptic neuron is the first (with index of 0) compartment of a multi-compartmental neuron. In this case, one might intend to target all three sub-compartments, i.e. Basal dendrites, Soma and proximal apical dendrites. So the single set of arguments will be changed to 3 sets of arguments and a for loop will take care of every one of them.
+        * S_name: Generated variable name for the Synapses() object in brian2.
+        * SE_name: Generated variable name for the Synapses() equation.
         * SPre_name: Generated variable name for pre_synaptic equations, i.e. "on_pre=..."
         * SPost_name: Generated variable name for post_synaptic equations, i.e. "on_post= ..."
-        * SNS_name: Generated vriable name for the Synapses() namespace.
-        * syn_con_str: The string containing the sytanct for connect() method of a current Synapses() object. This string changes depending on using the [p] and [n] tags in the configuration file.
+        * SNS_name: Generated variable name for the Synapses() namespace.
+        * syn_con_str: The string containing the syntax for connect() method of a current Synapses() object. This string changes depending on using the [p] and [n] tags in the configuration file.
         '''
         _all_columns = ['receptor', 'pre_syn_idx', 'post_syn_idx', 'syn_type', 'p', 'n', 'monitors','load_connection',\
                         'save_connection']
@@ -597,7 +597,7 @@ class cortical_system(object):
             _current_ns = self.current_values_list[self.current_parameters_list.index('n')]
         except ValueError:
             pass
-        # When the post-synaptic neuron is a multicompartmental PC neuon:
+        # When the post-synaptic neuron is a multi-compartmental PC neuron:
         if len(current_post_syn_idx) > 1 and '[' in current_post_syn_idx:
             try:
                 _current_probs = map(float, _current_probs.split('+'))
@@ -605,14 +605,14 @@ class cortical_system(object):
                 pass
             except ValueError:
                 assert _current_probs == 'N/A', \
-                    "When targetting multiple comparments near soma, their probabilitiy should be defined separately. Unless it's marked as 'N/A'"
+                    "When targeting multiple compartments near soma, their probability should be defined separately. Unless it's marked as 'N/A'"
             try:
                 _current_ns = map(float,_current_ns.split('+'))
             except NameError:
                 pass
             except ValueError:
                 assert _current_ns == 'N/A', \
-                    "When targetting multiple comparments near soma, their number of connections, i.e. 'n', should be defined separately. Unless it's marked as 'N/A'"
+                    "When targeting multiple compartments near soma, their number of connections, i.e. 'n', should be defined separately. Unless it's marked as 'N/A'"
 
             current_post_syn_tags = current_post_syn_idx[current_post_syn_idx.index('['):current_post_syn_idx.index(']') + 1]
             assert current_post_syn_tags in _options.keys(), \
@@ -620,14 +620,14 @@ class cortical_system(object):
             if current_post_syn_tags == '[C]':  # [C] means the target is a compartment
                 _post_group_idx, _post_com_idx = current_post_syn_idx.split('[' + 'C' + ']')
                 assert int(_post_group_idx) < len(self.neurongroups_list),\
-                'The synapse in the following line is targetting a group index that is not defined:\n%s'%self.conf_line
+                'The synapse in the following line is targeting a group index that is not defined:\n%s'%self.conf_line
                 self.current_values_list[self.current_parameters_list.index('post_syn_idx')] = _post_group_idx
                 pre_group_ref_idx = [self.customized_neurons_list.index(tmp_group) for tmp_group in
                                      self.customized_neurons_list if tmp_group['idx'] == int(current_pre_syn_idx)][0]
                 post_group_ref_idx = [self.customized_neurons_list.index(tmp_group) for tmp_group in
                                       self.customized_neurons_list if tmp_group['idx'] == int(_post_group_idx)][0]
                 assert self.customized_neurons_list[post_group_ref_idx]['type'] == 'PC', \
-                    'A compartment is targetted but the neuron geroup is not PC. Check Synapses in the configuration file.'
+                    'A compartment is targeted but the neuron group is not PC. Check Synapses in the configuration file.'
                 _pre_type = self.customized_neurons_list[pre_group_ref_idx]['type']  # Pre-synaptic neuron type
                 _post_type = self.customized_neurons_list[post_group_ref_idx]['type']  # Post-synaptic neuron type
                 self.current_parameters_list.extend(['pre_type', 'post_type','post_comp_name'])
@@ -638,10 +638,10 @@ class cortical_system(object):
                         'A soma of a compartmental neuron is being targeted, but the exact compartment in the soma is not defined. After 0, use "b" for basal dendrites, "s" for soma and "a" for apical dendrites.'
                     if _current_probs != 'N/A':
                         assert len(_post_com_idx[1:]) == len(_current_probs) , \
-                            "When targetting multiple comparments near soma, their probabilitiy, i.e. 'p', should be defined separately. Unless it's marked as 'N/A'"
+                            "When targeting multiple compartments near soma, their probability, i.e. 'p', should be defined separately. Unless it's marked as 'N/A'"
                     if _current_ns != 'N/A':
                         assert len(_post_com_idx[1:]) == len(_current_ns), \
-                            "When targetting multiple comparments near soma, their number of connections, i.e. 'n', should be defined separately. Unless it's marked as 'N/A'"
+                            "When targeting multiple compartments near soma, their number of connections, i.e. 'n', should be defined separately. Unless it's marked as 'N/A'"
                     # creating the required synapses for targeting compartment 0, it can be at most 3 synapses (basal,
                     # soma or apical), hence the name triple_args
                     triple_args = []
@@ -670,7 +670,7 @@ class cortical_system(object):
                 self.current_values_list = [self.current_values_list]
         else:
             assert int(current_post_syn_idx) < len(self.neurongroups_list), \
-                'The synapse in the following line is targetting a group index that is not defined:\n%s' % self.conf_line
+                'The synapse in the following line is targeting a group index that is not defined:\n%s' % self.conf_line
             pre_group_ref_idx = [self.customized_neurons_list.index(tmp_group) for tmp_group in \
                                  self.customized_neurons_list if int(tmp_group['idx']) == \
                                  int(current_pre_syn_idx)][0]
@@ -680,7 +680,7 @@ class cortical_system(object):
             _pre_type = self.customized_neurons_list[pre_group_ref_idx]['type']   # Pre-synaptic neuron type
             _post_type = self.customized_neurons_list[post_group_ref_idx]['type']  # Post-synaptic neuron type
             assert _post_type!= 'PC', \
-            'The post_synaptc group is a multicompartmental PC but the target compartment is not selected. Use [C] tag followed by compartment number.'
+            'The post_synaptic group is a multi-compartmental PC but the target compartment is not selected. Use [C] tag followed by compartment number.'
             self.current_values_list.extend([_pre_type, _post_type,'_soma'])
             self.current_parameters_list.extend(['pre_type', 'post_type','post_comp_name'])
             self.current_values_list = [self.current_values_list]
@@ -712,7 +712,7 @@ class cortical_system(object):
                                                                  pre_type, post_type, post_comp_name).output_synapse)
             _pre_group_idx = self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]
             _post_group_idx = self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']]
-            # Generated vriable name for the Synapses(), equation, pre_synaptic and post_synaptic equation and Namespace
+            # Generated variable name for the Synapses(), equation, pre_synaptic and post_synaptic equation and Namespace
             S_name = self._Synapses_prefix + str(current_idx) + '_' + syn_type
             self.synapses_name_list.append(S_name)
             SE_name = self._SynapsesEquation_prefix + str(current_idx)
@@ -752,7 +752,7 @@ class cortical_system(object):
                     self.default_load_flag = -1
                     _do_load = int(syn[self.current_parameters_list.index('load_connection')].replace('<--', ''))
                     if _do_load ==1:
-                        assert hasattr(self,'loaded_brian_data'), "Synapstic connection in the following line is set to be loaded, however the load_brian_data_path is not defined in the parameters. The connection is being created:\n%s"%self.conf_line
+                        assert hasattr(self,'loaded_brian_data'), "Synaptic connection in the following line is set to be loaded, however the load_brian_data_path is not defined in the parameters. The connection is being created:\n%s"%self.conf_line
                 else:
                     _do_load = int(syn[self.current_parameters_list.index('load_connection')])
 
@@ -778,7 +778,7 @@ class cortical_system(object):
 
             elif (self.default_load_flag==1 or (self.default_load_flag==-1 and _do_load == 1 )) and not \
                     hasattr(self,'loaded_brian_data') :
-                print "Warning: synapstic connection is set to be loaded, however the load_brian_data_path is not defined in the parameters. The connection is being created."
+                print "Warning: synaptic connection is set to be loaded, however the load_brian_data_path is not defined in the parameters. The connection is being created."
 
             else:
                 syn_con_str = "%s.connect('i!=j', p= " % S_name
@@ -870,37 +870,37 @@ class cortical_system(object):
 
     def relay(self, *args):
         '''
-        The method that creates the relay NeuronGroups based on the parameters that are extracted from the configuraiton \
+        The method that creates the relay NeuronGroups based on the parameters that are extracted from the configuration \
         file in the __init__ method of the class. Note that the SpikeGeneratorGroup() does not support the locations and \
-        synaptic connection based on the distance between the input, and the target neuron group. For this reason, a "realy"\
+        synaptic connection based on the distance between the input, and the target neuron group. For this reason, a "relay"\
          neuron group is created which is directly connected to the SpikeGeneratorGroup(). Unlike SpikeGeneratorGroup() this \
         relay group supports the locations. With this workaround, the synaptic connection between the input and the Neuron group can be implemented \
         based on the distance of the neurons then.
 
         Note: extracting the input spikes and time sequences for using in a SpikeGeneratorGroup() is done in this method. \
-        This procedure needs using a "run()" method in brian2. However, one of the limitations of the Brian2Genn is that \
-        the user cannot use multiple "run()" methods in the whole scirpt. To address this issue, the genn device should be \
+        This procedure needs using a "run()" method in brian2. However, one of the limitations of the Brian2GeNN is that \
+        the user cannot use multiple "run()" methods in the whole script. To address this issue, the GeNN device should be \
         set after using the first run(), hence the unusual placement of "set_device('genn')" command in current method.
 
         Note2: The radius of the VPM input is determined based on the Markram et al. 2015: The radius of the system is 210 um \
-        and the number of VPM input is 60 (page 19 of supplaments). As for the radius of the VPM input, it is mentioned in the \
-         paper (page 462) that "neurons were arranged in 310 minicolumns at horizontal positions". considering the area of the \
-         circle with radius of 210um and 60/310 minicolumns, the radius will be equal to 92um.
+        and the number of VPM input is 60 (page 19 of supplements). As for the radius of the VPM input, it is mentioned in the \
+         paper (page 462) that "neurons were arranged in 310 mini-columns at horizontal positions". considering the area of the \
+         circle with radius of 210um and 60/310 mini-columns, the radius will be equal to 92um.
 
-        :param args: This method will have at least 4 main positional argumenst directly passed from __init__ method: path to the input .mat file, and the frequency. Description of other possible arguments can be found in Configuration file tutorial.
+        :param args: This method will have at least 4 main positional arguments directly passed from __init__ method: path to the input .mat file, and the frequency. Description of other possible arguments can be found in Configuration file tutorial.
 
         Main internal variables:
 
         * inp: an instance of stimuli() object from stimuli module.
-        * relay_group: the dictionary containing the data for relay NeuonGroup()
-        * NG_name: Generated vriable name for the NeuonGroup() object in brian2.
-        * NN_name: Generated vriable name for corresponding Neuron Number.
-        * NE_name: Generated vriable name for the NeuonGroup() equation.
-        * NT_name: Generated vriable name for the NeuonGroup() threshold.
-        * NRes_name: Generated vriable name for the NeuonGroup() reset value.
-        * SGsyn_name: variable name for the Synapses() objecct that connects SpikeGeneratorGroup() and relay neurons.
+        * relay_group: the dictionary containing the data for relay NeuronGroup()
+        * NG_name: Generated variable name for the NeuronGroup() object in brian2.
+        * NN_name: Generated variable name for corresponding Neuron Number.
+        * NE_name: Generated variable name for the NeuronGroup() equation.
+        * NT_name: Generated variable name for the NeuronGroup() threshold.
+        * NRes_name: Generated variable name for the NeuronGroup() reset value.
+        * SGsyn_name: variable name for the Synapses() object that connects SpikeGeneratorGroup() and relay neurons.
 
-        following four variables are build using the load_input_seq() method in simuli object:
+        following four variables are build using the load_input_seq() method in stimuli object:
 
         * spikes_str: The string containing the syntax for Spike indices in the input neuron group.
         * times_str: The string containing the syntax for time indices in the input neuron group.
@@ -921,15 +921,15 @@ class cortical_system(object):
 
             # Internal switch for brian2GeNN:
             if self.device == 'GeNN':
-                set_device('genn',directory=os.path.join(self.output_folder, 'GeNN_Output',self.StartTime_str[1:]))
+                set_device('genn',directory=os.path.join(self.output_folder,self.StartTime_str[1:]))
                 prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
             elif self.device == 'Cpp':
-                set_device('cpp_standalone',directory=os.path.join(self.output_folder, 'Cpp_Output',self.StartTime_str[1:]))
+                set_device('cpp_standalone',directory=os.path.join(self.output_folder,self.StartTime_str[1:]))
                 prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
             # In order to use the dynamic compiler in a sub-routine, the scope in which the syntax is going to be run
             # should be defined, hence the globals(), locals(). They indicate that the syntaxes should be run in both
             # global and local scope
-            exec spikes_str in globals(), locals() # runnig the string containing the syntax for Spike indices in the input neuron group.
+            exec spikes_str in globals(), locals() # running the string containing the syntax for Spike indices in the input neuron group.
             exec times_str in globals(), locals()# running the string containing the syntax for time indices in the input neuron group.
             exec SG_str in globals(), locals()# running the string containing the syntax for creating the SpikeGeneratorGroup() based on the input .mat file.
 
@@ -938,7 +938,7 @@ class cortical_system(object):
                 setattr(self.CX_module, SG_Name, eval(SG_Name))
             except AttributeError:
                 pass
-            # Generated variable name for the NeuonGroup, Neuron_number,Equation, Threshold, Reset
+            # Generated variable name for the NeuronGroup, Neuron_number,Equation, Threshold, Reset
             NG_name = self._NeuronGroup_prefix + str(current_idx) + '_relay_video'
             self.neurongroups_list.append(NG_name)
             NN_name = self._NeuronNumber_prefix + str(current_idx)
@@ -1015,13 +1015,13 @@ class cortical_system(object):
             SG_str = 'GEN = SpikeGeneratorGroup(%s, GEN_SP, GEN_TI)'%number_of_neurons
             # Internal switch for brian2GeNN:
             if self.device == 'GeNN':
-                set_device('genn',directory=os.path.join(self.output_folder, 'GeNN_Output',self.StartTime_str[1:]))
+                set_device('genn',directory=os.path.join(self.output_folder,self.StartTime_str[1:]))
                 prefs.codegen.cpp.extra_compile_args_gcc = ['-O3','-pipe']
             elif self.device == 'Cpp':
-                set_device('cpp_standalone',directory=os.path.join(self.output_folder, 'Cpp_Output',self.StartTime_str[1:]))
+                set_device('cpp_standalone',directory=os.path.join(self.output_folder,self.StartTime_str[1:]))
                 prefs.codegen.cpp.extra_compile_args_gcc = ['-O3','-pipe']
 
-            exec spikes_str in globals(), locals()  # runnig the string containing the syntax for Spike indices in the input neuron group.
+            exec spikes_str in globals(), locals()  # running the string containing the syntax for Spike indices in the input neuron group.
             exec times_str in globals(), locals()  # running the string containing the syntax for time indices in the input neuron group.
             exec SG_str in globals(), locals()  # running the string containing the syntax for creating the SpikeGeneratorGroup() based on the input .mat file.
 
@@ -1031,12 +1031,12 @@ class cortical_system(object):
             except AttributeError:
                 pass
 
-            NG_name = self._NeuronGroup_prefix + str(current_idx) + '_relay_vpm'  # Generated variable name for the NeuonGroup() object in brian2.
+            NG_name = self._NeuronGroup_prefix + str(current_idx) + '_relay_vpm'  # Generated variable name for the NeuronGroup() object in brian2.
             self.neurongroups_list.append(NG_name)
-            NN_name = self._NeuronNumber_prefix + str(current_idx)  # Generated vriable name for corresponding Neuron Number.
-            NE_name = self._NeuronEquation_prefix + str(current_idx)  # Generated vriable name for the NeuonGroup() equation.
-            NT_name = self._NeuronThreshold_prefix + str(current_idx)  # Generated vriable name for the NeuonGroup() threshold.
-            NRes_name = self._NeuronReset_prefix + str(current_idx)  # Generated vriable name for the NeuonGroup() reset value.
+            NN_name = self._NeuronNumber_prefix + str(current_idx)  # Generated variable name for corresponding Neuron Number.
+            NE_name = self._NeuronEquation_prefix + str(current_idx)  # Generated variable name for the NeuronGroup() equation.
+            NT_name = self._NeuronThreshold_prefix + str(current_idx)  # Generated variable name for the NeuronGroup() threshold.
+            NRes_name = self._NeuronReset_prefix + str(current_idx)  # Generated variable name for the NeuronGroup() reset value.
             Eq = """'''emit_spike : 1
                             x : meter
                             y : meter'''"""
@@ -1129,7 +1129,7 @@ class cortical_system(object):
 
     def gather_result(self):
         '''
-        After the simulation and using the syntaxes that are previously prepared in the synatx_bank of save_data() object, this method saves the collected data to a file.
+        After the simulation and using the syntaxes that are previously prepared in the syntax_bank of save_data() object, this method saves the collected data to a file.
 
         '''
         print "Generating the syntaxes for saving CX output."
@@ -1137,7 +1137,7 @@ class cortical_system(object):
             exec syntax
         self.save_output_data.save_to_file()
         if hasattr(self,'save_brian_data') and self.do_save_connections:
-            print "Generating the syntaxes for saving connectoin data."
+            print "Generating the syntaxes for saving connection data."
             for syntax in self.save_brian_data.syntax_bank:
                 exec syntax
             self.save_brian_data.creat_key('positions_all')
@@ -1169,5 +1169,6 @@ if __name__ == '__main__' :
     # CM.run()
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Cpp',runtime=1000 * ms)
     # CM.run()
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device='Cpp',runtime=1000 * ms)
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Python',runtime=1000 * ms)
     CM.run()
+    # shutil.rmtree('/home/vafanda/.cache/scipy/') # this should be used for benchmarking otherwise weave will mess up the benchmarking

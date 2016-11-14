@@ -6,7 +6,7 @@ class synapse_namespaces(object):
     This class contains all the variables that are required for the Synapses() object namespaces. There are several reference dictionaries in this class for:
 
     * cw: connection weights for any connection between NeuronGroup()s.
-    * sp: Sparsness values for any connection between NeuronGroup()s.
+    * sp: Sparseness values for any connection between NeuronGroup()s.
     * STDP: values for A_pre, A_post, Tau_pre and Tau_post for any connection between NeuronGroup()s.
     * dist: distribution of the neurons for connection between NeuronGroup()s.
 
@@ -14,7 +14,7 @@ class synapse_namespaces(object):
 
     * Cp: Synaptic potentiation coefficient according to van Rossum J Neurosci 2000
     * Cd: Synaptic depression coefficient according to van Rossum J Neurosci 2000
-    * stdp_Nsweeps: 60 in papers one does multiple trials to reach +-50% change in synapse strength. A-coefficien will be divided by this number
+    * stdp_Nsweeps: 60 in papers one does multiple trials to reach +-50% change in synapse strength. A-coefficient will be divided by this number
     * stdp_max_strength_coefficient: This value is to avoid runaway plasticity.
     * conn_prob_gain: This is used for compensation of small number of neurons and thus incoming synapses
 
@@ -24,7 +24,7 @@ class synapse_namespaces(object):
     EE_weights_gain = 1
     EI_weights_gain = 1
     _weights = {
-        'w_TC_E-E_connections': (0.7 * EE_weights_gain) * nS, #Cruikshank et al 2007, nature neurosceince
+        'w_TC_E-E_connections': (0.7 * EE_weights_gain) * nS, #Cruikshank et al 2007, nature neuroscience
         'w_TC_E-I_connections': (3 * EI_weights_gain) * nS,
         'w_L23PC-L23PC': 0.68 * nS, # Not used in the current model
         'w_L4Exc-L4Exc': 0.68 * nS, # Not used in the current model
@@ -77,12 +77,12 @@ class synapse_namespaces(object):
     }
 
 
-    stdp_Nsweeps = 1  # Redundant with Cp and Cd params above. The 60 in papers one does multiple trials to reach +-50% change in synapse strength. A-coefficien will be divided by this number
+    stdp_Nsweeps = 1  # Redundant with Cp and Cd params above. The 60 in papers one does multiple trials to reach +-50% change in synapse strength. A-coefficient will be divided by this number
     stdp_max_strength_coefficient = 15  # to avoid runaway plasticity
 
 
     sp = {
-        'sp_in_SS': 0.1125 , #TODO : 0.38 sparsness in input layer cause high probabilities with ilam of 0.1. Find a good combination of ilam and sp for input layer.
+        'sp_in_SS': 0.1125 , #TODO : 0.38 sparseness in input layer cause high probabilities with ilam of 0.1. Find a good combination of ilam and sp for input layer.
         'sp_in_PC': 0.1125 ,
         'sp_in_BC': 0.1125 ,
         'sp_in_L1i': 0.1125 ,
@@ -273,7 +273,7 @@ class synapse_namespaces(object):
         '''
         The initialization method for namespaces() object.
 
-        :param output_synapse: This is the dictioanry created in customized_neuron() in brian2_obj_namespaces module. This contains all the informatino about the synaptic connection. In this class, Synaptic namespace parameters are directly added to it. Following valus are set after initialization: Cp, Cd, sparseness, ilan. Other variables are then set based on the type of the synaptic connection (STDP,Fixed).
+        :param output_synapse: This is the dictionary created in customized_neuron() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this class, Synaptic namespace parameters are directly added to it. Following values are set after initialization: Cp, Cd, sparseness, ilam. Other variables are then set based on the type of the synaptic connection (STDP,Fixed).
         '''
         synapse_namespaces.type_ref = array (['STDP','Fixed'])
         assert output_synapse['type'] in synapse_namespaces.type_ref, "Cell type '%s' is not defined." % output_synapse['type']
@@ -291,7 +291,7 @@ class synapse_namespaces(object):
         '''
         The STDP method for assigning the STDP parameters to the customized_synapses() object.
 
-        :param output_synapse:  This is the dictioanry created in customized_neuron() in brian2_obj_namespaces module. This contains all the informatino about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP valus are set in this method: Apre, Apost, Tau_pre, Tau_post, wght_max, wght0.
+        :param output_synapse:  This is the dictionary created in customized_neuron() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: Apre, Apost, Tau_pre, Tau_post, wght_max, wght0.
         '''
         self.output_namespace['Apre'], self.output_namespace['Apost'], self.output_namespace['taupre'], \
         self.output_namespace['taupost'] = synapse_namespaces.stdp['stdp_%s_%s' % (output_synapse['pre_group_type'], \
@@ -309,7 +309,7 @@ class synapse_namespaces(object):
         '''
         The Fixed method for assigning the parameters for Fixed synaptic connection to the customized_synapses() object.
 
-        :param output_synapse: This is the dictioanry created in customized_neuron() in brian2_obj_namespaces module. This contains all the informatino about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP valus are set in this method: wght_max, wght0.
+        :param output_synapse: This is the dictionary created in customized_neuron() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: wght_max, wght0.
         '''
 
         self.output_namespace['wght_max'] = synapse_namespaces.cw['cw_%s_%s' % (output_synapse['pre_group_type'],
@@ -359,7 +359,7 @@ class neuron_namespaces (object):
         }
 
 
-        # total capacitance in compartmens. The *2 comes from Markram et al Cell 2015: corrects for the deindritic spine area
+        # total capacitance in compartments. The *2 comes from Markram et al Cell 2015: corrects for the dendritic spine area
         self.output_namespace['C']= fract_areas[output_neuron['dend_comp_num']] * Cm * Area_tot_pyram *2
         if output_neuron['soma_layer'] in [6]: # neuroelectro portal layer5/6 capacitance
             self.output_namespace['C'] = fract_areas[output_neuron['dend_comp_num']] * Cm * Area_tot_pyram
