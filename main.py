@@ -4,36 +4,36 @@ from brian2  import *
 import multiprocessing
 import time
 import numpy as np
-
+import shutil
 
 # for benchmarking :
 def multi_run (idx, working):
-    runtime_idx = (idx / 5)
     working.value += 1
     np.random.seed(runtime_idx)
-    print "################### Trial %d started running for %d ms ##########################" % (
-        (idx%5)+1, (1000 + (runtime_idx * 3000)))
-    cm = CX.cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = 'GeNN', runtime = (1000+(runtime_idx*3000))*ms)
+    print "################### Trial %d started running for %d ms ##########################" % ((idx%5)+1, (1000+runtime_idx*3000))
+    cm = CX.cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = 'Python', runtime = (1000+runtime_idx*3000)*ms)
     cm.run()
     working.value -= 1
+    shutil.rmtree(os.path.join(os.environ['HOME'], '.cache/scipy'))# this should be used to clear the cache of weave for benchmarking. otherwise weave will mess it up
+
+
 
 # Multiprocessing using the Process()
 if __name__ == '__main__':
     manager = multiprocessing.Manager()
     jobs = []
     working = manager.Value('i',0)
-    trials = 5 * len(range(1000,22100,3000))
+    trials = 40
     ProcessLimit = 1
     NotDone = 1
     while len(jobs)<trials:
-        time.sleep(3)
+        time.sleep(0.3)
         if working.value < ProcessLimit:
             p = multiprocessing.Process(target=multi_run,args=(len(jobs),working,))
             jobs.append(p)
             p.start()
     for j in jobs:
         j.join()
-
 
 
 ####
@@ -63,3 +63,29 @@ if __name__ == '__main__':
 #             p.start()
 #     for j in jobs:
 #         j.join()
+
+
+
+
+################ Draw Everything
+
+# for group in CM.monitor_name_bank:
+#     mon_num = len(CM.monitor_name_bank[group])
+#     exec "f, axarr = plt.subplots(%d, sharex=True)" % mon_num
+#     for item_idx, item in enumerate(CM.monitor_name_bank[group]):
+#         if 'SpMon' in item:
+#             if len(CM.monitor_name_bank[group]) == 1:
+#                 exec "axarr.plot(%s.t/ms,%s.i,'.k')" % (item, item);
+#                 exec "axarr.set_title('%s')" % (item);
+#             else:
+#                 exec "axarr[%d].plot(%s.t/ms,%s.i,'.k')" % (item_idx, item, item)
+#                 exec "axarr[%d].set_title('%s')" % (item_idx, item)
+#         elif 'StMon' in item:
+#             underscore = item.index('__')
+#             variable = item[underscore + 2:]
+#             exec 'y_num=len(%s.%s)' % (item, variable)
+#             try:
+#                 exec "CM.multi_y_plotter(axarr[%d] , y_num , '%s',%s , '%s')" % (item_idx, variable, item, item)
+#             except:
+#                 exec "CM.multi_y_plotter(axarr , y_num , '%s',%s , '%s')" % (variable, item, item)
+# show()

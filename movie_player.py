@@ -10,6 +10,7 @@ import matplotlib.gridspec as gridspec
 from scipy.sparse import csr_matrix
 import copy
 import zlib
+import bz2
 import cPickle as pickle
 
 
@@ -72,20 +73,46 @@ def spike_to_fram(groups,spikes,X_axis,Y_axis,w_coord,axis_precision,d_t = 0.001
                 all_frames[current_layer][frame_idx][0][x_target_index - coverage_range:x_target_index + coverage_range,y_target_index - coverage_range:y_target_index + coverage_range] = float32(color_value[0])
                 all_frames[current_layer][frame_idx][1][x_target_index - coverage_range:x_target_index + coverage_range,y_target_index - coverage_range:y_target_index + coverage_range] = float32(color_value[1])
                 all_frames[current_layer][frame_idx][2][x_target_index - coverage_range:x_target_index + coverage_range,y_target_index - coverage_range:y_target_index + coverage_range] = float32(color_value[2])
-
     return all_frames,colors_,ts
+
+def data_loader(filepath):
+    global extension
+    if '.gz' in filepath:
+        extension = 'gz'
+        with open(filepath, 'rb') as fb:
+            d_pickle = zlib.decompress(fb.read())
+            data = pickle.loads(d_pickle)
+    elif '.bz2' in filepath:
+        extension = 'bz2'
+        with bz2.BZ2File(filepath, 'rb') as fb:
+            data = pickle.load(fb)
+    elif '.pickle' in filepath:
+        extension = 'pickle'
+        with open(filepath, 'rb') as fb:
+            data=pickle.load(fb)
+    return data
+
+def data_saver(save_path,data):
+    if 'gz' in extension:
+        with open(save_path, 'wb') as fb:
+            fb.write(zlib.compress(pickle.dumps(data, pickle.HIGHEST_PROTOCOL), 9))
+    elif 'bz2' in extension:
+        with bz2.BZ2File(save_path, 'wb') as fb:
+            pickle.dump(data, fb, pickle.HIGHEST_PROTOCOL)
+    elif 'pickle' in extension:
+        with open(save_path, 'wb') as fb:
+            pickle.dump(data, fb, pickle.HIGHEST_PROTOCOL)
 
 def sparse_to_rgba (sparse_matrix):
     arr = np.array([channel.toarray() for channel in sparse_matrix])
     arr[arr==0]= 1
     return rollaxis(arr,0,3)
 
-filepath = '/opt3/CX_Output/CX_Output_20161031_143641.gz'
+extension = ''
+filepath = '/opt3/Noise_Test/CX_Output_20161107_15134440_GeNN_2000ms.gz'
 filename = ntpath.basename(os.path.splitext(filepath)[0])
 folderpath = os.path.dirname(filepath)
-with open (filepath, 'rb') as fb :
-    d_pickle = zlib.decompress(fb.read())
-    data = pickle.loads(d_pickle)
+data = data_loader(filepath)
 NNs = data['number_of_neurons']
 layers_NN = zeros([6])
 for group in NNs.keys():
@@ -126,12 +153,9 @@ if not os.path.isfile(os.path.join(movieMaker_dir,filename+'.gz')):
     runtime = data['runtime']*1000
     all_frames,colors_,ts = spike_to_fram(groups, spikes, X_axis, Y_axis, w_coord, axis_precision)
     data_tosave = {'all_frames':all_frames,'colors_':colors_,'ts':ts}
-    with open(os.path.join(movieMaker_dir,filename + '.gz'),'wb') as fp:
-        fp.write(zlib.compress(pickle.dumps(data_tosave, pickle.HIGHEST_PROTOCOL), 9))
+    data_saver(os.path.join(movieMaker_dir,filename,extension),data_tosave)
 else:
-    with open (os.path.join(folderpath,filename+'.gz'),'rb') as fb :
-        gz_file_decompressed = zlib.decompress(fb.read())
-        gzfile = pickle.loads(gz_file_decompressed)
+    gzfile = data_loader(os.path.join(folderpath,filename+'.gz'))
     all_frames = gzfile ['all_frames']
     colors_ =  gzfile ['colors_']
     ts = gzfile['ts']

@@ -6,8 +6,10 @@ import scipy.io as spio
 import scipy.stats as st
 from tabulate import tabulate
 import matplotlib.pyplot as plt
-import pickle
+import cPickle as pickle
 import zlib
+import bz2
+
 
 
 class illustrator:
@@ -24,11 +26,9 @@ class illustrator:
             self.final_data['LatencyThreshold'] = latency_threshold
             self.final_data['FileList'] = [fil for fil in os.listdir(self.CXOutputPath) if self.FilePattern in fil]
             # self.final_data['runtime'] = self.loadmat(os.path.join(self.CXOutputPath, self.final_data['FileList'][0]))['runtime']
-            with open(os.path.join(self.CXOutputPath, self.final_data['FileList'][0]), 'rb') as fp:
-                data = zlib.decompress(fp.read())
-                dict_ = pickle.loads(data)
-                self.final_data['runtime'] = dict_['runtime']
-                self.final_data['NeuronGroupList'] = [GroupName for GroupName in dict_['spikes_all'].keys() if not 'vpm' in GroupName]
+            dict_ = self.data_loader(os.path.join(self.CXOutputPath, self.final_data['FileList'][0]))
+            self.final_data['runtime'] = dict_['runtime']
+            self.final_data['NeuronGroupList'] = [GroupName for GroupName in dict_['spikes_all'].keys() if not 'vpm' in GroupName]
             self.final_data['SortedGroupsList'] = []
             layers = np.unique([group[group.index('L') + 1] for group in self.final_data['NeuronGroupList']])
             for layer in layers:
@@ -60,9 +60,7 @@ class illustrator:
             # TmpTrial = self.loadmat(os.path.join(self.CXOutputPath, self.final_data['FileList'][0]))
 
             # Open gz files
-            with open(os.path.join(self.CXOutputPath, self.final_data['FileList'][0]), 'rb') as fp:
-                z_data = zlib.decompress(fp.read())
-                TmpTrial = pickle.loads(z_data)
+            TmpTrial = self.data_loader(os.path.join(self.CXOutputPath, self.final_data['FileList'][0]))
             self.final_data['CellIndex'] = {}
             for Group in self.final_data['SortedGroupsList'] :
                 self.final_data['CellIndex'][Group] = int(np.where(abs(np.array(TmpTrial['positions_all']['w_coord'][Group])) == min(abs(np.array(TmpTrial['positions_all']['w_coord'][Group]))))[0][0])
@@ -71,9 +69,7 @@ class illustrator:
                 self.final_data['GroupDelays'][Group] = {}
             for idx, FileName in enumerate(self.final_data['FileList']):
                 # ThisTrial = self.loadmat(os.path.join(self.CXOutputPath, FileName))
-                with open(os.path.join(self.CXOutputPath, FileName), 'rb') as fp:
-                    z_data = zlib.decompress(fp.read())
-                    ThisTrial = pickle.loads(z_data)
+                ThisTrial = self.data_loader(os.path.join(self.CXOutputPath, FileName))
                 for Group in self.final_data['SortedGroupsList'] :
                     try:
                         SpikeTimeIndices = np.where(ThisTrial['spikes_all'][Group][0] == self.final_data['CellIndex'][Group])
@@ -122,13 +118,10 @@ class illustrator:
                                                 self.final_data['GroupDelays'][group].keys()]))
             if not os.path.isdir(self.IllustratorOutputFolder):
                 os.mkdir(self.IllustratorOutputFolder)
-            with open (self.IllustratorOutputFile, 'wb') as fp:
-                fp.write(zlib.compress(pickle.dumps(self.final_data,pickle.HIGHEST_PROTOCOL),9))
+            self.data_saver(self.IllustratorOutputFile,self.final_data)
 
         elif mode == 'loading':
-            with open (IllustratorOutputFile, 'rb') as input_file :
-                _decompressed = zlib.decompress(input_file.read())
-                self.final_data = pickle.loads(_decompressed)
+            self.final_data = self.data_loader(IllustratorOutputFile)
 
     def Responses(self,PlotStartTime,PlotEndTime,DoSkip=[]):
         NotSkippedGroups = [G for G in self.final_data['SortedGroupsList'] if not any(ext in G for ext in DoSkip)]
@@ -219,8 +212,32 @@ class illustrator:
         axes.set_title('Default', fontsize=10)
         fig.savefig(os.path.join(self.IllustratorOutputFolder, 'cell_type_response_delay.eps'))
 
+    def data_loader(self,path):
+        if '.gz' in path:
+            with open(path, 'rb') as fb:
+                data = zlib.decompress(fb.read())
+                loaded_data = pickle.loads(data)
+        elif '.bz2' in path:
+            with bz2.BZ2File(path, 'rb') as fb:
+                loaded_data = pickle.load(fb)
+        elif 'pickle' in path:
+            with open(path, 'rb') as fb:
+                loaded_data= pickle.load(fb)
+        return loaded_data
+
+    def data_saver(self,save_path,data):
+        if '.gz' in save_path:
+            with open(save_path, 'wb') as fb:
+                fb.write(zlib.compress(pickle.dumps(data, pickle.HIGHEST_PROTOCOL), 9))
+        elif '.bz2' in save_path:
+            with bz2.BZ2File(save_path, 'wb') as fb:
+                pickle.dump(data, fb, pickle.HIGHEST_PROTOCOL)
+        elif '.pickle' in save_path:
+            with open(save_path, 'wb') as fb:
+                pickle.dump(data, fb, pickle.HIGHEST_PROTOCOL)
+
 if __name__ == '__main__':
-    illus = illustrator(mode='saving',CXOutputPath='/opt3/CX_Output/',FilePattern='CX_Output_',
+    illus = illustrator(mode='saving',CXOutputPath='/opt3/Noise_Test/',FilePattern='CX_Output_',
                         IllustratorOutputFile='/opt3/CX_Output/Outputs/Illustrator_Output/Illus_out.gz',InputTime=0.5,latency_threshold=0.03)
     illus.Responses(PlotStartTime=0.46,PlotEndTime=0.56,DoSkip=['PC_L6toL1','PC_L6toL4'])
     illus.ResponseLatency()

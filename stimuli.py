@@ -30,16 +30,17 @@ class stimuli(object):
         self._calculate_input_seqs(path)
 
     def load_input_seq(self, input_path):
-        _input_file = os.path.join(input_path[0:[idx for idx, ltr in enumerate(input_path) if ltr == '/'][-1]], 'input.mat')
+        _input_file = os.path.join(input_path[0:[idx for idx, ltr in enumerate(input_path) if ltr == '/'][-1]],
+                                   'input.mat')
         tmp_dict = io.loadmat(_input_file, variable_names='spikes_0')
         new_spikes = tmp_dict['spikes_0']
-        get_neuron_positions_dict= io.loadmat(input_path, variable_names='w_coord')
+        get_neuron_positions_dict = io.loadmat(input_path, variable_names='w_coord')
         neuron_positions_in_cortex = get_neuron_positions_dict['w_coord']
         number_of_neurons = len(neuron_positions_in_cortex)
-        spikes_str = 'GEN_SP = array(%s)' %str(list(new_spikes[0]))
-        times_str = 'GEN_TI = array(%s)*second' %str(list(new_spikes[1]))
+        spikes_str = 'GEN_SP = array(%s)' % str(list(new_spikes[0]))
+        times_str = 'GEN_TI = array(%s)*second' % str(list(new_spikes[1]))
         SG_str = 'GEN = SpikeGeneratorGroup(%d, GEN_SP, GEN_TI)' % number_of_neurons
-        return spikes_str, times_str,  SG_str , number_of_neurons
+        return spikes_str, times_str, SG_str, number_of_neurons
 
     def get_input_positions(self, path):
         '''

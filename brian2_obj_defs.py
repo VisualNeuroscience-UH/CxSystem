@@ -21,7 +21,7 @@ class customized_neuron(object):
         :param number_of_neurons: number of neurons in the NeuronGroup() object.
         :param cell_type: type of cell in the NeuronGroup: currently PC, SS, BC, MC and L1i.
         :param layers_idx: indicating the layer in which the cell group is located. In case of SS, BC, MC and L1i it is an integer \
-         but for PC which is a multicompartmental neuron, it is a tuple array. This tuple numpy array defines the first \
+         but for PC which is a multi-compartmental neuron, it is a tuple array. This tuple numpy array defines the first \
          and last layers in which the neuron resides. So array([4,1]) means that the soma resides in layer 4 and the apical \
          dendrites which are (2 compartments) extend to layer 2/3 and 1. To avoid confusion, layer 2 is used as the indicator \
          of layer 2/3. Hence, if the last compartment of a neuron is in layer 2/3, use number 2.
@@ -322,7 +322,7 @@ class customized_synapse(object):
         :param syn_type: Type of the synaptic connection, currently STDP and Fixed are implemented.
         :param pre_type: Type of the pre-synaptic NeuronGroup.
         :param post_type: Type of the post-synaptic NeuronGroup.
-        :param post_comp_name: Name of the target compartment in the cells of the post-synaptic NeuronGroup. The deufaul value is "_soma" as usually soma is being targeted. In case other compartments are targeted in a PC cell, e.g. basal or apical dendrites, _basal or _apical will be used.
+        :param post_comp_name: Name of the target compartment in the cells of the post-synaptic NeuronGroup. The default value is "_soma" as usually soma is being targeted. In case other compartments are targeted in a PC cell, e.g. basal or apical dendrites, _basal or _apical will be used.
 
         Main internal variables:
 
