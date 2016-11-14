@@ -10,14 +10,9 @@ import shutil
 def multi_run (idx, working):
     runtime_idx = (idx / 5)
     working.value += 1
-    filelist = [f for f in os.listdir(".") if f.endswith(".pyc")]
-    for fil in filelist:
-        print "File %s removed"%fil
-        os.remove(fil)
     np.random.seed(runtime_idx)
-    print "################### Trial %d started running for %d ms ##########################" % (
-        (idx%5)+1, (19000))
-    cm = CX.cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = 'Python', runtime = 15000*ms)
+    print "################### Trial %d started running for %d ms ##########################" % ((idx%5)+1, (1000+runtime_idx*3000))
+    cm = CX.cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = 'Python', runtime = (1000+runtime_idx*3000)*ms)
     cm.run()
     working.value -= 1
     shutil.rmtree('/home/vafanda/.cache/scipy/')
@@ -27,7 +22,7 @@ if __name__ == '__main__':
     manager = multiprocessing.Manager()
     jobs = []
     working = manager.Value('i',0)
-    trials = 5
+    trials = 40
     ProcessLimit = 1
     NotDone = 1
     while len(jobs)<trials:

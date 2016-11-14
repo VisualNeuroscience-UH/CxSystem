@@ -165,8 +165,6 @@ class cortical_system(object):
                 self.benchmarking_data['Brian Code generation'] = __builtin__.compile_start - __builtin__.code_generation_start
                 self.benchmarking_data['Device-Specific Compilation'] = __builtin__.run_start - __builtin__.compile_start
             else:
-                print __builtin__.run_start
-                print self.start_time
                 self.benchmarking_data['Python Compilation'] = __builtin__.run_start - self.start_time
                 self.benchmarking_data['Brian Code generation'] = '-'
                 self.benchmarking_data['Device-Specific Compilation'] = '-'
@@ -1171,6 +1169,6 @@ if __name__ == '__main__' :
     # CM.run()
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Cpp',runtime=1000 * ms)
     # CM.run()
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='GeNN',runtime=1000 * ms)
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='GeNN',runtime=1000 * ms)
     CM.run()
     # shutil.rmtree('/home/vafanda/.cache/scipy/') # this should be used for benchmarking otherwise weave will mess up the benchmarking
