@@ -340,7 +340,7 @@ class cortical_system(object):
         idx = -1
         net_center = 0 + 0j
         number_of_neurons = 0
-        noise_sigma = '0*mV'
+        noise_sigma = ''
         neuron_type = ''
         layer_idx = 0
         threshold = ''
@@ -357,6 +357,8 @@ class cortical_system(object):
             # description can be found in configuration file tutorial.
         net_center = complex(net_center)
         current_idx = len(self.customized_neurons_list)
+        if noise_sigma == 'N/A':
+            noise_sigma = '0*mV'
         noise_sigma = eval(noise_sigma)
         assert 'V' in str(noise_sigma._get_best_unit()), 'The unit of noise_sigma should be volt'
         if neuron_type == 'PC':  # extract the layer index of PC neurons separately
@@ -1169,6 +1171,6 @@ if __name__ == '__main__' :
     # CM.run()
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Cpp',runtime=1000 * ms)
     # CM.run()
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Python',runtime=1000 * ms)
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='GeNN',runtime=1000 * ms)
     CM.run()
     # shutil.rmtree('/home/vafanda/.cache/scipy/') # this should be used for benchmarking otherwise weave will mess up the benchmarking
