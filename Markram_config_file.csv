@@ -1,7 +1,11 @@
 row_type,sys_mode,#scale,grid_radius, min_distance, do_init_vms,output_path&filename, brian_data_saving_path&filename , brian_data_loading_path&filename, load_positions_only, do_benchmark
 params,local,1,210*um, 1*um,1,/opt2/Vafa/CX_Output/CX_Output.bz2,/opt2/Vafa/CX_Output/brian_data.bz2, /opt2/Vafa/CX_Output/brian_data_for_positions.bz2, 1, 1
+
+
 row_type,idx,type,number_of_neurons,radius,spike_times,net_center,monitors
 IN,0, VPM,60,92*um,[0.5]*second, N/A ,[Sp]
+
+
 row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors,noise_sigma
 G,1,338,L1i,1,N/A,[St]vm[rec](0-337-20) [Sp], 20*mV
 G,2,5877,PC,[2->1],N/A,[St]vm[rec](0-5876-20) [Sp], 40*mV
@@ -19,6 +23,9 @@ G,13,9825,PC,[6->4],N/A,[St]vm[rec](0-9824-20) [Sp],40*mV
 G,14,1637,PC,[6->1],N/A,[St]vm[rec](0-1636-20) [Sp],40*mV
 G,15,813,BC,6,N/A,[St]vm[rec](0-812-20) [Sp],20*mV
 G,16,372,MC,6,N/A,[St]vm[rec](0-371-20) [Sp],20*mV
+
+
+
 row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p,n,monitors,load_connection,save_connection
 #### input to PC4 and SS4:
 S,ge,0,5[C]0ba,Fixed,N/A,3+4,N/A,1-->,1-->

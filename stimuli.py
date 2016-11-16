@@ -4,21 +4,22 @@ from brian2  import *
 # import scipy.io as sio
 from scipy import io
 import os
-
+import zlib
+import cPickle as pickle
 
 class stimuli(object):
     '''
     [Extracted from VCX_model] This is the stimulation object for applying the input to a particular NeuronGroup(). Currently only video input is supported.
     '''
-    def __init__(self):
+    def __init__(self,duration):
         self.indices = array([])
         self.times = array([])
         self.i_patterns = {}
         self.input_defs = []
         self.BaseLine= 0 * second
-        self.SimulationDuration = 0.4 * second
+        self.SimulationDuration = duration
 
-    def generate_inputs(self, path, freq):
+    def generate_inputs(self, path, freq,output_path):
         '''
         The method for generating input based on the .mat file, using the internal _initialize_inputs() and _calculate_input_seqs() methods.
 
@@ -27,7 +28,7 @@ class stimuli(object):
         :return:
         '''
         self._initialize_inputs(path, freq)
-        self._calculate_input_seqs(path)
+        self._calculate_input_seqs(path,output_path)
 
     def load_input_seq(self, input_path):
         _input_file = os.path.join(input_path[0:[idx for idx, ltr in enumerate(input_path) if ltr == '/'][-1]],
@@ -78,8 +79,9 @@ class stimuli(object):
         # self.input_defs = _new_input_defs
 
 
-    def _calculate_input_seqs(self,path):
+    def _calculate_input_seqs(self,path,output_path):
 
+        set_device('cpp_standalone', directory=output_path)
         inputdt = defaultclock.dt
         spikemons = []
         N0 = len(self.i_patterns[0].T)
@@ -105,7 +107,10 @@ class stimuli(object):
         data = {}
         for ii in range(len(spike_mons)):
             data['spikes_' + str(ii)] = spike_mons[ii].it  # .spikes in Brian 1.X
+        print "Saving the generated video input..."
         io.savemat(filename, data)
+        # with open(filename, 'wb') as fb:
+        #     fb.write(zlib.compress(pickle.dumps(data, pickle.HIGHEST_PROTOCOL), 9))
 
             # _V1_mats = {}
         # sio.loadmat(path, _V1_mats)

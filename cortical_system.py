@@ -127,7 +127,7 @@ class cortical_system(object):
         self.do_save_connections = 0 # if there is at least one connection to save, this flag will be set to 1
         self.load_positions_only = 0
         self.configuration_file = []
-
+        self.awaited_conf_lines = []
 
         with open(self.config_path,'r') as conf_file:
             for conf_line in conf_file:
@@ -135,7 +135,16 @@ class cortical_system(object):
                 conf_line = conf_line.lstrip()
                 self.configuration_file.append(conf_line)
 
-        for self.conf_line in self.configuration_file:
+        self.configuration_executer(self.configuration_file)
+        if self.awaited_conf_lines:
+            print "Waiting for the video input"
+            self.thr.join()
+            self.configuration_executer(self.awaited_conf_lines)
+
+        print "Cortical Module initialization Done."
+
+    def configuration_executer(self,configuration):
+        for self.conf_line in configuration:
             try:
                 if self.conf_line[0] == '#' or not self.conf_line.split(','):  # comments
                     continue
@@ -148,8 +157,6 @@ class cortical_system(object):
             elif _splitted_line[0] in self._options :
                 self.current_values_list = _splitted_line[1:]
                 self._options[_splitted_line[0]]()
-
-        print "Cortical Module initialization Done."
 
     def run(self):
         run(self.runtime, report='text')
@@ -203,6 +210,12 @@ class cortical_system(object):
             print "Info: CX system is running in %s mode" %self.sys_mode
         if self.do_benchmark:
             print "####### Warning: CX_system is performing benchmarking. The Brian2 should be configured to use benchmarking."
+        if self.device == 'GeNN':
+            set_device('genn', directory=os.path.join(self.output_folder, self.StartTime_str[1:]))
+            prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
+        elif self.device == 'Cpp':
+            set_device('cpp_standalone', directory=os.path.join(self.output_folder, self.StartTime_str[1:]))
+            prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
 
     def _set_total_synapses(self, *args):
         self.total_synapses = int(args[0])
@@ -913,87 +926,122 @@ class cortical_system(object):
             print "creating an input based on the video input."
             path = self.current_values_list[self.current_parameters_list.index('path')].strip()
             freq = self.current_values_list[self.current_parameters_list.index('freq')].strip()
-            inp = stimuli()
-            inp.generate_inputs(path,freq )
-            spikes_str, times_str, SG_str, number_of_neurons = inp.load_input_seq(path)
-            Spikes_Name = spikes_str.split('=')[0].rstrip()
-            Time_Name = times_str.split('=')[0].rstrip()
-            SG_Name = SG_str.split('=')[0].rstrip()
+            inp = stimuli(self.runtime)
+            # if __name__ == '__main__':
+            import multiprocessing
+            proc = multiprocessing.Process(target=inp.generate_inputs, args=(path, freq,os.path.join(self.output_folder, self.StartTime_str[1:])))
+            proc.start()
+                # proc.join()
+            # inp.generate_inputs(path,freq)
+            self.video_input_idx =len(self.neurongroups_list)
+            self.neurongroups_list.append('awaiting_video_group')
 
-            # Internal switch for brian2GeNN:
-            if self.device == 'GeNN':
-                set_device('genn',directory=os.path.join(self.output_folder,self.StartTime_str[1:]))
-                prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
-            elif self.device == 'Cpp':
-                set_device('cpp_standalone',directory=os.path.join(self.output_folder,self.StartTime_str[1:]))
-                prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
-            # In order to use the dynamic compiler in a sub-routine, the scope in which the syntax is going to be run
-            # should be defined, hence the globals(), locals(). They indicate that the syntaxes should be run in both
-            # global and local scope
-            exec spikes_str in globals(), locals() # running the string containing the syntax for Spike indices in the input neuron group.
-            exec times_str in globals(), locals()# running the string containing the syntax for time indices in the input neuron group.
-            exec SG_str in globals(), locals()# running the string containing the syntax for creating the SpikeGeneratorGroup() based on the input .mat file.
+            def waitress(self):
+                while proc.is_alive():
+                    time.sleep(2)
+                thread_spikes_str, thread_times_str, thread_SG_str, thread_number_of_neurons = inp.load_input_seq(path)
+                thread_Spikes_Name = thread_spikes_str.split('=')[0].rstrip()
+                thread_Time_Name = thread_times_str.split('=')[0].rstrip()
+                thread_SG_Name = thread_SG_str.split('=')[0].rstrip()
+                # Internal switch for brian2GeNN:
 
-            setattr(self.main_module, SG_Name, eval(SG_Name))
-            try:
-                setattr(self.CX_module, SG_Name, eval(SG_Name))
-            except AttributeError:
-                pass
-            # Generated variable name for the NeuronGroup, Neuron_number,Equation, Threshold, Reset
-            NG_name = self._NeuronGroup_prefix + str(current_idx) + '_relay_video'
-            self.neurongroups_list.append(NG_name)
-            NN_name = self._NeuronNumber_prefix + str(current_idx)
-            NE_name = self._NeuronEquation_prefix + str(current_idx)
-            NT_name = self._NeuronThreshold_prefix + str(current_idx)
-            NRes_name = self._NeuronReset_prefix + str(current_idx)
-            Eq = """'''emit_spike : 1
-                x : meter
-                y : meter'''"""
-            exec "%s=%s" % (NN_name, number_of_neurons) in globals(), locals()
-            exec "%s=%s" % (NE_name, Eq) in globals(), locals()
-            exec "%s=%s" % (NT_name, "'emit_spike>=1'") in globals(), locals()
-            exec "%s=%s" % (NRes_name, "'emit_spike=0'") in globals(), locals()
-            exec "%s= NeuronGroup(%s, model=%s,method='%s', threshold=%s, reset=%s)" \
-                 % (NG_name, NN_name, NE_name, self.numerical_integration_method,NT_name, NRes_name) in globals(), locals()
-            if hasattr(self, 'loaded_brian_data'):
-                # in case the NG index are different. for example a MC_L2 neuron might have had
-                # index 3 as NG3_MC_L2 and now it's NG10_MC_L2 :
-                Group_type = NG_name[NG_name.index('_') + 1:]
-                GroupKeyName = \
-                [kk for kk in self.loaded_brian_data['positions_all']['w_coord'].keys() if Group_type in kk][0]
-                self.customized_neurons_list[current_idx]['w_positions'] = \
-                self.loaded_brian_data['positions_all']['w_coord'][GroupKeyName]
-                self.customized_neurons_list[current_idx]['z_positions'] = \
-                self.loaded_brian_data['positions_all']['z_coord'][GroupKeyName]
-                print "Position for the group %s loaded" % NG_name
-            else: # load the positions:
-                self.customized_neurons_list[current_idx]['z_positions'] = squeeze(inp.get_input_positions(path))
-                self.customized_neurons_list[current_idx]['w_positions'] = 17 * log(relay_group['z_positions'] + 1)
+                # In order to use the dynamic compiler in a sub-routine, the scope in which the syntax is going to be run
+                # should be defined, hence the globals(), locals(). They indicate that the syntaxes should be run in both
+                # global and local scope
+                exec thread_spikes_str in globals(), locals() # running the string containing the syntax for Spike indices in the input neuron group.
+                exec thread_times_str in globals(), locals()# running the string containing the syntax for time indices in the input neuron group.
+                exec thread_SG_str in globals(), locals()# running the string containing the syntax for creating the SpikeGeneratorGroup() based on the input .mat file.
 
-            # setting the position of the neurons based on the positions in the .mat input file:
-            exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n" \
-                 "%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % \
-                 (NG_name, current_idx, NG_name, current_idx) in globals(), locals()
-            self.save_output_data.data['positions_all']['z_coord'][NG_name] = \
-                self.customized_neurons_list[current_idx]['z_positions']
-            self.save_output_data.data['positions_all']['w_coord'][NG_name] = \
-                self.customized_neurons_list[current_idx]['w_positions']
-            self.save_output_data.data['number_of_neurons'][NG_name] = eval(NN_name)
-            SGsyn_name = 'SGEN_Syn' # variable name for the Synapses() object
-            # that connects SpikeGeneratorGroup() and relay neurons.
-            exec "%s = Synapses(GEN, %s, on_pre='emit_spike+=1')" % \
-                 (SGsyn_name, NG_name) in globals(), locals()# connecting the SpikeGeneratorGroup() and relay group.
-            exec "%s.connect(j='i')" % SGsyn_name in globals(), locals() # SV change
-            setattr(self.main_module, NG_name, eval(NG_name))
-            setattr(self.main_module, SGsyn_name, eval(SGsyn_name))
-            try:
-                setattr(self.CX_module, NG_name, eval(NG_name))
-                setattr(self.CX_module, SGsyn_name, eval(SGsyn_name))
-            except AttributeError:
-                pass
-            # taking care of the monitors:
-            self.monitors(mons.split(' '), NG_name, self.customized_neurons_list[-1]['equation'])
+                setattr(self.main_module, thread_SG_Name, eval(thread_SG_Name))
+                try:
+                    setattr(self.CX_module, thread_SG_Name, eval(thread_SG_Name))
+                except AttributeError:
+                    pass
+                # Generated variable name for the NeuronGroup, Neuron_number,Equation, Threshold, Reset
+                thread_NG_name = self._NeuronGroup_prefix + str(self.video_input_idx) + '_relay_video'
+                self.neurongroups_list[self.video_input_idx] = thread_NG_name
+                thread_NN_name = self._NeuronNumber_prefix + str(self.video_input_idx)
+                thread_NE_name = self._NeuronEquation_prefix + str(self.video_input_idx)
+                thread_NT_name = self._NeuronThreshold_prefix + str(self.video_input_idx)
+                thread_NRes_name = self._NeuronReset_prefix + str(self.video_input_idx)
+                Eq = """'''emit_spike : 1
+                    x : meter
+                    y : meter'''"""
+                exec "%s=%s" % (thread_NN_name, thread_number_of_neurons) in globals(), locals()
+                exec "%s=%s" % (thread_NE_name, Eq) in globals(), locals()
+                exec "%s=%s" % (thread_NT_name, "'emit_spike>=1'") in globals(), locals()
+                exec "%s=%s" % (thread_NRes_name, "'emit_spike=0'") in globals(), locals()
+                exec "%s= NeuronGroup(%s, model=%s,method='%s', threshold=%s, reset=%s)" \
+                     % (thread_NG_name, thread_NN_name, thread_NE_name, self.numerical_integration_method,thread_NT_name, thread_NRes_name) in globals(), locals()
+                if hasattr(self, 'loaded_brian_data'):
+                    # in case the NG index are different. for example a MC_L2 neuron might have had
+                    # index 3 as NG3_MC_L2 and now it's NG10_MC_L2 :
+                    thread_Group_type = thread_NG_name[thread_NG_name.index('_') + 1:]
+                    thread_GroupKeyName = \
+                    [kk for kk in self.loaded_brian_data['positions_all']['w_coord'].keys() if thread_Group_type in kk][0]
+                    self.customized_neurons_list[self.video_input_idx]['w_positions'] = \
+                    self.loaded_brian_data['positions_all']['w_coord'][thread_GroupKeyName]
+                    self.customized_neurons_list[self.video_input_idx]['z_positions'] = \
+                    self.loaded_brian_data['positions_all']['z_coord'][thread_GroupKeyName]
+                    print "Position for the group %s loaded" % thread_NG_name
+                else: # load the positions:
+                    self.customized_neurons_list[self.video_input_idx]['z_positions'] = squeeze(inp.get_input_positions(path))
+                    self.customized_neurons_list[self.video_input_idx]['w_positions'] = 17 * log(relay_group['z_positions'] + 1)
 
+                # setting the position of the neurons based on the positions in the .mat input file:
+                exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n" \
+                     "%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % \
+                     (thread_NG_name, self.video_input_idx, thread_NG_name, self.video_input_idx) in globals(), locals()
+                self.save_output_data.data['positions_all']['z_coord'][thread_NG_name] = \
+                    self.customized_neurons_list[self.video_input_idx]['z_positions']
+                self.save_output_data.data['positions_all']['w_coord'][thread_NG_name] = \
+                    self.customized_neurons_list[self.video_input_idx]['w_positions']
+                self.save_output_data.data['number_of_neurons'][thread_NG_name] = eval(thread_NN_name)
+                thread_SGsyn_name = 'SGEN_Syn' # variable name for the Synapses() object
+                # that connects SpikeGeneratorGroup() and relay neurons.
+                exec "%s = Synapses(GEN, %s, on_pre='emit_spike+=1')" % \
+                     (thread_SGsyn_name, thread_NG_name) in globals(), locals()# connecting the SpikeGeneratorGroup() and relay group.
+                exec "%s.connect(j='i')" % thread_SGsyn_name in globals(), locals() # SV change
+                setattr(self.main_module, thread_NG_name, eval(thread_NG_name))
+                setattr(self.main_module, thread_SGsyn_name, eval(thread_SGsyn_name))
+                try:
+                    setattr(self.CX_module, thread_NG_name, eval(thread_NG_name))
+                    setattr(self.CX_module, thread_SGsyn_name, eval(thread_SGsyn_name))
+                except AttributeError:
+                    pass
+                # taking care of the monitors:
+                self.monitors(mons.split(' '), thread_NG_name, self.customized_neurons_list[-1]['equation'])
+
+            # if self.device == 'GeNN':
+            #     set_device('genn',directory=os.path.join(self.output_folder,self.StartTime_str[1:]))
+            #     prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
+            # elif self.device == 'Cpp':
+            #     set_device('cpp_standalone',directory=os.path.join(self.output_folder,self.StartTime_str[1:]))
+            #     prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
+            input_neuron_group_idx = self.current_values_list[self.current_parameters_list.index('idx')]
+            syn_params = [lin for lin in self.configuration_file if 'receptor' in lin][0].split(',')
+            pre_syn_idx = [lin for lin in self.configuration_file if 'receptor' in lin][0].split(',').index('pre_syn_idx')
+            for lin_idx,lin in enumerate(self.configuration_file):
+                try :
+                    if lin.split(',')[0] == 'S' and lin.split(',')[pre_syn_idx] == input_neuron_group_idx:
+                        self.awaited_conf_lines.append(lin)
+                        if '<--' in lin :
+                            closing_arrow_indices = [ii_idx for ii_idx,ii in enumerate(lin.split(',')) if '<--' in ii]
+                            tmp_line = self.configuration_file[lin_idx + 1].split(',')
+                            for arrow_idx in closing_arrow_indices:
+                                tmp_line[arrow_idx] = self.configuration_file[lin_idx + 1].split(',')[arrow_idx] + '<--'
+                        if '-->' in lin:
+                            opening_arrow_indices = [ii_idx for ii_idx, ii in enumerate(lin.split(',')) if '-->' in ii]
+                            tmp_line = self.configuration_file[lin_idx + 1].split(',')
+                            for arrow_idx in opening_arrow_indices:
+                                tmp_line[arrow_idx] = self.configuration_file[lin_idx + 1].split(',')[arrow_idx] + '-->'
+                        self.configuration_file[lin_idx+1] = ','.join(tmp_line)
+                        del self.configuration_file[lin_idx]
+                except IndexError:
+                    pass
+            import threading
+            self.thr = threading.Thread(target = waitress,args=(self,))
+            self.thr.start()
 
         def VPM(self): #ventral posteromedial (VPM) thalamic nucleus
             spike_times = self.current_values_list[_all_columns.index('spike_times')].strip().replace(' ',',')
@@ -1015,12 +1063,12 @@ class cortical_system(object):
             times_str = 'GEN_TI = repeat(%s,%s)*%s'%(spike_times[0:spike_times.index('*')],number_of_neurons,spike_times_unit)
             SG_str = 'GEN = SpikeGeneratorGroup(%s, GEN_SP, GEN_TI)'%number_of_neurons
             # Internal switch for brian2GeNN:
-            if self.device == 'GeNN':
-                set_device('genn',directory=os.path.join(self.output_folder,self.StartTime_str[1:]))
-                prefs.codegen.cpp.extra_compile_args_gcc = ['-O3','-pipe']
-            elif self.device == 'Cpp':
-                set_device('cpp_standalone',directory=os.path.join(self.output_folder,self.StartTime_str[1:]))
-                prefs.codegen.cpp.extra_compile_args_gcc = ['-O3','-pipe']
+            # if self.device == 'GeNN':
+            #     set_device('genn',directory=os.path.join(self.output_folder,self.StartTime_str[1:]))
+            #     prefs.codegen.cpp.extra_compile_args_gcc = ['-O3','-pipe']
+            # elif self.device == 'Cpp':
+            #     set_device('cpp_standalone',directory=os.path.join(self.output_folder,self.StartTime_str[1:]))
+            #     prefs.codegen.cpp.extra_compile_args_gcc = ['-O3','-pipe']
 
             exec spikes_str in globals(), locals()  # running the string containing the syntax for Spike indices in the input neuron group.
             exec times_str in globals(), locals()  # running the string containing the syntax for time indices in the input neuron group.
@@ -1091,7 +1139,7 @@ class cortical_system(object):
         assert self.sys_mode != '', "Error: System mode not defined."
         assert 'type' in self.current_parameters_list, 'The type of the input is not defined in the configuration file.'
         _input_params = {
-            'video': [['idx', 'type', 'path', 'freq', 'monitors'], [0, 1, 2], video],
+            'video': [['idx', 'type', 'path','freq', 'monitors'], [0, 1, 2], video],
             'VPM': [['idx', 'type', 'number_of_neurons', 'radius', 'spike_times', 'net_center', 'monitors'],
                     [0, 1, 2, 3, 4], VPM]
         }
@@ -1115,6 +1163,7 @@ class cortical_system(object):
         except ValueError:
             mons = 'N/A'
         group_idx = self.current_values_list[_all_columns.index('idx')]
+
         assert group_idx not in self.NG_indices, \
             "Error: multiple indices with same values exist in the configuration file."
         self.NG_indices.append(group_idx)
@@ -1170,6 +1219,6 @@ if __name__ == '__main__' :
     # CM.run()
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Cpp',runtime=1000 * ms)
     # CM.run()
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='GeNN',runtime=1000 * ms)
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='GeNN',runtime=1000 * ms)
     CM.run()
     # shutil.rmtree('/home/vafanda/.cache/scipy/') # this should be used for benchmarking otherwise weave will mess up the benchmarking
