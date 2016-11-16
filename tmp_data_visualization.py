@@ -4,6 +4,8 @@ import pickle
 import zlib
 import os
 
+time_for_visualization=np.array([0,1])
+
 # data_file_name = '../CX_OUTPUT/CX_Output_20161108_11000084_Python_1000ms.gz'
 directory = '/opt/Laskenta/Output/CX_Output'
 data_file_name = max([os.path.join(directory,files) for files in os.listdir(directory)], key=os.path.getmtime)
@@ -34,7 +36,7 @@ for plot_index, neuron_group in enumerate(neuron_groups):
     plt.subplot(len(neuron_groups), N_columns, plot_index * N_columns + 2)
     # plt.plot(spikes[1][::100],spikes[0][::100], '.k')
     plt.plot(spikes[1],spikes[0], '.k')
-    plt.xlim([0,0.1])
+    plt.xlim([time_for_visualization[0],time_for_visualization[1]])
     plt.title('%s spikes' % neuron_group)
 
     if neuron_group in vm_all.keys():
