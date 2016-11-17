@@ -98,7 +98,7 @@ class cortical_system(object):
         self.StartTime_str += '_'+self.device+'_'+str(int((runtime/second)*1000)) + 'ms'
         # self.scale = 1
         self.do_benchmark = 0
-        defaultclock.dt = 0.01 * ms
+        # defaultclock.dt = 0.01 * ms
         self.numerical_integration_method = 'euler'
         print "Info : the system is running with %s integration method"%self.numerical_integration_method
         self.runtime = runtime
@@ -1220,7 +1220,7 @@ if __name__ == '__main__' :
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device = 'Python' ,
     #                      runtime=100* ms)
 
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='cpp',runtime = 18000 * msecond)
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='Cpp',runtime = 90 * msecond)
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='Python',runtime=100 * ms)
     CM.run()
 

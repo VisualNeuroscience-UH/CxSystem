@@ -31,7 +31,7 @@ class synapse_namespaces(object):
         'w_L4SS-L23PC': 0.19 * nS, # Not used in the current model
         'w_L5TTPC-L5TTPC': 1.5 * nS, # Not used in the current model
         'w_L5STPC-L5STPC': 0.8 * nS, # Not used in the current model
-        'w_All_other_E-E_connections': (0.72*EE_weights_gain) * nS  ,
+        'w_All_other_E-E_connections': 0.1 * (0.72*EE_weights_gain) * nS  ,
         'w_L5TTPC-L5MC': 0.11 * nS, # Not used in the current model
         'w_L5PC-L5BC/L5ChC': 0.72 * nS, # Not used in the current model
         'w_All_other_E-I_connections': (0.43*EI_weights_gain) * nS ,

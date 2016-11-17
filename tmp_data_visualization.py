@@ -4,7 +4,7 @@ import pickle
 import zlib
 import os
 
-time_for_visualization=np.array([0,1])
+time_for_visualization=np.array([0,0.09])
 
 # data_file_name = '../CX_OUTPUT/CX_Output_20161108_11000084_Python_1000ms.gz'
 directory = '/opt/Laskenta/Output/CX_Output'
