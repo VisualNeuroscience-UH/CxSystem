@@ -5,7 +5,8 @@ import zlib
 import os
 from brian2 import *
 
-time_for_visualization=np.array([0,0.09]) + 17
+time_for_visualization=np.array([0,0.09])
+time_for_visualization = time_for_visualization + 0.0001 # To accept 0 as starting point. Rounding error for the end.
 
 # data_file_name = '../CX_OUTPUT/CX_Output_20161108_11000084_Python_1000ms.gz'
 directory = '/opt/Laskenta/Output/CX_Output'
@@ -14,7 +15,7 @@ data_file_name = max([os.path.join(directory,files) for files in os.listdir(dire
 # neuron_groups = ['NG0_relay_video', 'NG1_PC_L4toL2', 'NG3_BC_L4']
 # neuron_groups = ['NG0_relay_video', 'NG2_PC_L2toL1', 'NG4_BC_L2']
 neuron_groups = ['NG0_relay_video', 'NG1_PC_L4toL2', 'NG3_BC_L4', 'NG2_PC_L2toL1', 'NG4_BC_L2']
-dt = 0.01 * ms
+dt = 0.1 * ms
 plot_dt = 0.1 * ms
 
 
@@ -48,7 +49,7 @@ for plot_index, neuron_group in enumerate(neuron_groups):
         N_time_points = len(membrane_voltages[0])
 
 
-        data_indices_for_plot = np.array([time_for_visualization[0] * (1 * second) / dt, time_for_visualization[1]  * (1 * second) / dt])
+        data_indices_for_plot = np.array([time_for_visualization[0] * (1 * second) / dt, time_for_visualization[1]  * (1 * second) / dt], dtype=int)
         subsample_step = int(plot_dt / dt)
         subsampled_data_epoch_for_plot = membrane_voltages[:,data_indices_for_plot[0]:data_indices_for_plot[1]:subsample_step]
         time_vector = np.arange(time_for_visualization[0],time_for_visualization[1], plot_dt / (1 * second))

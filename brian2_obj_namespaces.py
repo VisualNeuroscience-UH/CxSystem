@@ -41,8 +41,8 @@ class synapse_namespaces(object):
         'w_All_I-I_connections': 0.83 * nS
     }
 
-    Cp = 0.001  # 1 #0.001 # Synaptic potentiation coefficient according to van Rossum J Neurosci 2000, here relative to initial value
-    Cd = 0.003  # 1 #0.003 # Synaptic depression coefficient according to van Rossum J Neurosci 2000
+    Cp = 0.02  # 1 #0.001 # Synaptic potentiation coefficient according to van Rossum J Neurosci 2000, here relative to initial value
+    Cd = 0.03  # 1 #0.003 # Synaptic depression coefficient according to van Rossum J Neurosci 2000
     conn_prob_gain = 1  # This is used for compensation of small number of neurons and thus incoming synapses
     cw = {
         'cw_in_SS': _weights['w_TC_E-E_connections'],
