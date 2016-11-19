@@ -18,6 +18,8 @@ import time
 import __builtin__
 import csv
 import shutil
+import pandas
+import math
 
 class cortical_system(object):
     '''
@@ -42,7 +44,7 @@ class cortical_system(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self, config_path, device = 'Python', runtime=500*ms):
+    def __init__(self, config_path, device = 'Python'):
         '''
         Initialize the cortical system by parsing the configuration file.
 
@@ -74,11 +76,11 @@ class cortical_system(object):
             pass
 
         self.device = device
+        assert self.device in ['GeNN', 'Cpp','Python'], 'Device %s is not defined. Check capital letters in device name.' % self.device
         self._options = {
             'G': self.neuron_group,
             'S': self.synapse,
             'IN': self.relay,
-            'total_synapses': self._set_total_synapses,
             'sys_mode': self._set_sys_mode, # either "local" or "expanded"
             'scale' : self._set_scale,
             'params': self.set_runtime_parameters,
@@ -90,18 +92,17 @@ class cortical_system(object):
             'do_init_vms': self.do_init_vms,
             'load_positions_only': self.load_positions_only,
             'do_benchmark': self.do_benchmark,
-
+            'runtime' : self._set_runtime,
         }
+
         self.StartTime_str = '_' + str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '')\
             [0:str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '').index('.')+3].replace('.','')
         print "Info: current run filename suffix is: %s"%self.StartTime_str[1:]
-        self.StartTime_str += '_'+self.device+'_'+str(int((runtime/second)*1000)) + 'ms'
         # self.scale = 1
         self.do_benchmark = 0
         # defaultclock.dt = 0.01 * ms
         self.numerical_integration_method = 'euler'
         print "Info : the system is running with %s integration method"%self.numerical_integration_method
-        self.runtime = runtime
         self.conn_prob_gain = synapse_namespaces.conn_prob_gain
         self.current_parameters_list = []
         self.current_parameters_list_orig_len = 0 # current_parameters_list is changing at some point in the code, so the original length of it is needed
@@ -135,28 +136,51 @@ class cortical_system(object):
                 conf_line = conf_line.lstrip()
                 self.configuration_file.append(conf_line)
 
-        self.configuration_executer(self.configuration_file)
-        if self.awaited_conf_lines:
+        self.conf_df = pandas.read_csv(self.config_path,header=None)
+        self.conf_df = self.conf_df.applymap(lambda x: x.strip() if type(x) == str else x)
+        self.configuration_executer()
+        if type(self.awaited_conf_lines) != list:
             print "Waiting for the video input"
             self.thr.join()
-            self.configuration_executer(self.awaited_conf_lines)
+            self.conf_df = self.awaited_conf_lines
+            self.configuration_executer()
 
         print "Cortical Module initialization Done."
 
-    def configuration_executer(self,configuration):
-        for self.conf_line in configuration:
-            try:
-                if self.conf_line[0] == '#' or not self.conf_line.split(','):  # comments
-                    continue
-            except IndexError:
-                continue
-            _splitted_line = [non_empty.strip() for non_empty in self.conf_line.split(',') if non_empty != '']
-            if 'row_type' in self.conf_line:
-                self.current_parameters_list = _splitted_line[1:]
-                self.current_parameters_list_orig_len = len(self.current_parameters_list)
-            elif _splitted_line[0] in self._options :
-                self.current_values_list = _splitted_line[1:]
-                self._options[_splitted_line[0]]()
+    def configuration_executer(self):
+        definition_lines_idx = self.conf_df.ix[:,0][self.conf_df.ix[:,0]=='row_type'].index
+        order_of_lines = ['params','IN','G','S']
+        for value_line_title in order_of_lines:
+            for def_idx in definition_lines_idx:
+                if value_line_title in self.conf_df.ix[def_idx+1,0]:
+                    self.current_parameters_list = self.conf_df.ix[def_idx,1:].dropna()
+                    self.current_parameters_list = self.current_parameters_list[~self.current_parameters_list.str.contains('#')]
+                    self.current_parameters_list_orig_len = len(self.current_parameters_list)
+                    try:
+                        next_def_line_idx = definition_lines_idx[definition_lines_idx.tolist().index(def_idx)+1].item()
+                    except IndexError:
+                        next_def_line_idx = self.conf_df[0].__len__()
+                    for self.value_line_idx in range(def_idx+1,next_def_line_idx):
+                        if self.conf_df.ix[self.value_line_idx,0] in self._options and self.conf_df.ix[self.value_line_idx,0][0]!='#':
+                            self.current_parameters_list = self.conf_df.ix[def_idx,1:].dropna()
+                            self.current_parameters_list = self.current_parameters_list[~self.current_parameters_list.str.contains('#')]
+                            self.current_values_list = self.conf_df.ix[self.value_line_idx,self.current_parameters_list.index].dropna()
+                            self._options[self.conf_df.ix[self.value_line_idx,0]]()
+                    break
+
+        # for self.conf_line in configuration:
+        #     try:
+        #         if self.conf_line[0] == '#' or not self.conf_line.split(','):  # comments
+        #             continue
+        #     except IndexError:
+        #         continue
+        #     _splitted_line = [non_empty.strip() for non_empty in self.conf_line.split(',') if non_empty != '']
+        #     if 'row_type' in self.conf_line:
+        #         self.current_parameters_list = _splitted_line[1:]
+        #         self.current_parameters_list_orig_len = len(self.current_parameters_list)
+        #     elif _splitted_line[0] in self._options :
+        #         self.current_values_list = _splitted_line[1:]
+        #         self._options[_splitted_line[0]]()
 
     def run(self):
         run(self.runtime, report='text')
@@ -197,13 +221,20 @@ class cortical_system(object):
         elif self.device == 'Cpp':
             shutil.rmtree(os.path.join(self.output_folder, self.StartTime_str[1:]))
 
-
     def set_runtime_parameters(self):
-        for ParamIdx,parameter in enumerate(self.current_parameters_list):
-            if parameter[0] == '#':
-                continue
-            assert (parameter in self._options.keys()), 'The tag %s is not defined.' % parameter
-            self._options[parameter](self.current_values_list[ParamIdx])
+        order_of_parameters = ['runtime','sys_mode','scale','grid_radius', 'min_distance', 'do_init_vms','output_path&filename',
+                    'brian_data_saving_path&filename' , 'brian_data_saving_path&filename', 'load_positions_only'
+            ,'do_benchmark']
+        if not any(self.current_parameters_list.str.contains('runtime')):
+            print "Warning: runtime duration is not defined in the configuration file. The default runtime duratoin is 500*ms"
+            self.runtime = 500*ms
+        for correct_parameter_to_set in order_of_parameters:
+            for ParamIdx,parameter in self.current_parameters_list.iteritems():
+                if parameter == correct_parameter_to_set:
+                    assert (parameter in self._options.keys()), 'The tag %s is not defined.' % parameter
+                    self._options[parameter](self.current_values_list[ParamIdx])
+                    break
+        self.StartTime_str += '_'+self.device+'_'+str(int((self.runtime/second)*1000)) + 'ms'
         if self.sys_mode == '':
             print "Warning: system mode is not defined. "
         else:
@@ -217,13 +248,13 @@ class cortical_system(object):
             set_device('cpp_standalone', directory=os.path.join(self.output_folder, self.StartTime_str[1:]))
             prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
 
-    def _set_total_synapses(self, *args):
-        self.total_synapses = int(args[0])
+    def _set_runtime(self,*args):
+        assert '*' in args[0], 'Please specify the unit for the runtime parameter, e.g. um , mm '
+        self.runtime = eval(args[0])
 
     def _set_sys_mode(self, *args):
         assert args[0] in ['local','expanded'], "System mode should be either local or expanded. "
         self.sys_mode = args[0]
-
 
     def _set_grid_radius(self, *args):
         assert '*' in args[0], 'Please specify the unit for the grid radius parameter, e.g. um , mm '
@@ -345,10 +376,13 @@ class cortical_system(object):
         assert len(self.current_values_list) <= len(_all_columns), 'One or more of of the columns for NeuronGroups definition \
         is missing. Following obligatory columns should be defined:\n%s\n ' \
                                                                 % str([_all_columns[ii] for ii in _obligatory_params])
-        assert 'N/A' not in [self.current_values_list[ii] for ii in _obligatory_params], \
-            'Following obligatory values cannot be "N/A":\n%s'% str([_all_columns[ii] for ii in _obligatory_params])
+        obligatory_columns = list(array(_all_columns)[_obligatory_params])
+        obligatory_indices = [self.current_parameters_list[self.current_parameters_list == ii].index.item() for ii in
+                              obligatory_columns]
+        assert not any(self.current_values_list.ix[obligatory_indices] == '--'), \
+            'Following obligatory values cannot be "--":\n%s' % str([_all_columns[ii] for ii in _obligatory_params])
         assert len(self.current_values_list) == self.current_parameters_list_orig_len,\
-            "One or more of of the columns for NeuronGroup definition is missing in the following line:\n %s " % self.conf_line
+            "One or more of of the columns for NeuronGroup definition is missing in the following line:\n %s " % str(self.conf_df.ix[self.value_line_idx].to_dict().values())
         idx = -1
         net_center = 0 + 0j
         number_of_neurons = 0
@@ -361,15 +395,19 @@ class cortical_system(object):
         monitors = ''
         for column in _all_columns:
             try:
-                exec "%s=self.current_values_list[self.current_parameters_list.index('%s')]" % (column,column)
+                tmp_value_idx = self.current_parameters_list[self.current_parameters_list==column].index.item()
+                exec "%s=self.current_values_list[tmp_value_idx]" % column
             except ValueError:
-                exec "%s='N/A'" % column
-        if net_center == 'N/A':
+                exec "%s='--'" % column
+        assert idx not in self.NG_indices, \
+            "Error: multiple indices with same values exist in the configuration file."
+        self.NG_indices.append(idx)
+        if net_center == '--':
             net_center = 0 + 0j  # center position of the neuron group in visual field coordinates,
             # description can be found in configuration file tutorial.
         net_center = complex(net_center)
         current_idx = len(self.customized_neurons_list)
-        if noise_sigma == 'N/A':
+        if noise_sigma == '--':
             noise_sigma = '0*mV'
         noise_sigma = eval(noise_sigma)
         assert 'V' in str(noise_sigma._get_best_unit()), 'The unit of noise_sigma should be volt'
@@ -385,11 +423,11 @@ class cortical_system(object):
         # customized_neuron() object and passing the positional arguments to it. The main member of the class called
         # output_neuron is then appended to customized_neurons_list.
         # in case of threshold/reset/refractory overwrite
-        if threshold != 'N/A':
+        if threshold != '--':
             self.customized_neurons_list[-1]['threshold'] = threshold
-        if reset != 'N/A':
+        if reset != '--':
             self.customized_neurons_list[-1]['reset'] = reset
-        if refractory != 'N/A':
+        if refractory != '--':
             self.customized_neurons_list[-1]['refractory'] = refractory
         # Generating variable names for Groups, NeuronNumbers, Equations, Threshold, Reset, Refractory and Namespace
         NG_name = self._NeuronGroup_prefix + str(current_idx) + '_' + neuron_type + '_L' + str(layer_idx).replace\
@@ -460,7 +498,7 @@ class cortical_system(object):
 
 
         # passing remainder of the arguments to monitors() method to take care of the arguments.
-        self.monitors(monitors.split(' '), NG_name, self.customized_neurons_list[-1]['equation'])
+        self.monitors(str(monitors).split(' '), NG_name, self.customized_neurons_list[-1]['equation'])
 
     def monitors(self, mon_args, object_name, equation):
         '''
@@ -478,7 +516,7 @@ class cortical_system(object):
         * sub_mon_tags: The tags in configuration file that are specified for a StateMonitor(), e.g. in record=True which is specified by [rec]True in configuration file, [rec] is saved in sub_mon_tags
         * sub_mon_args: The corresponding arguments of sub_mon_tags for a StateMonitor(), e.g. in record=True which is specified by [rec]True in configuration file, True is saved in sub_mon_args.
         '''
-        if 'N/A' in mon_args:
+        if '--' in mon_args:
             return
         if not mon_args and not self.default_monitors:
             return
@@ -593,22 +631,25 @@ class cortical_system(object):
         assert len(self.current_values_list) <= len(_all_columns), \
             'One or more of the obligatory columns for input definition is missing. Obligatory columns are:\n%s\n ' \
                                                                 % str([_all_columns[ii] for ii in _obligatory_params])
-        assert 'N/A' not in [self.current_values_list[ii] for ii in _obligatory_params], \
-            'Following obligatory values cannot be "N/A":\n%s' % str([_all_columns[ii] for ii in _obligatory_params])
+        obligatory_columns = list(array(_all_columns)[_obligatory_params])
+        obligatory_indices = [self.current_parameters_list[self.current_parameters_list == ii].index.item() for ii in
+                              obligatory_columns]
+        assert not any(self.current_values_list.ix[obligatory_indices].isnull()), \
+            'Following obligatory values cannot be "--":\n%s' % str([_all_columns[ii] for ii in _obligatory_params])
         assert len(self.current_values_list) == self.current_parameters_list_orig_len, \
-        "One or more of of the columns for synapse definition is missing in the following line:\n %s " %self.conf_line
+        "One or more of of the columns for synapse definition is missing in the following line:\n %s " %str(self.conf_df.ix[self.value_line_idx].to_dict().values())
         _options = {
             '[C]': self.neuron_group,
         }
         # getting the connection probability gain from the namespace and apply it on all the connections:
-        current_post_syn_idx = self.current_values_list[self.current_parameters_list.index('post_syn_idx')]
-        current_pre_syn_idx = self.current_values_list[self.current_parameters_list.index('pre_syn_idx')]
+        current_post_syn_idx = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='post_syn_idx'].index.item()]
+        current_pre_syn_idx = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='pre_syn_idx'].index.item()]
         try:
-            _current_probs = self.current_values_list[self.current_parameters_list.index('p')]
+            _current_probs = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='p'].index.item()]
         except ValueError:
             pass
         try:
-            _current_ns = self.current_values_list[self.current_parameters_list.index('n')]
+            _current_ns = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='n'].index.item()]
         except ValueError:
             pass
         # When the post-synaptic neuron is a multi-compartmental PC neuron:
@@ -618,15 +659,15 @@ class cortical_system(object):
             except NameError:
                 pass
             except ValueError:
-                assert _current_probs == 'N/A', \
-                    "When targeting multiple compartments near soma, their probability should be defined separately. Unless it's marked as 'N/A'"
+                assert _current_probs == '--', \
+                    "When targeting multiple compartments near soma, their probability should be defined separately. Unless it's marked as '--'"
             try:
                 _current_ns = map(float,_current_ns.split('+'))
             except NameError:
                 pass
             except ValueError:
-                assert _current_ns == 'N/A', \
-                    "When targeting multiple compartments near soma, their number of connections, i.e. 'n', should be defined separately. Unless it's marked as 'N/A'"
+                assert _current_ns == '--', \
+                    "When targeting multiple compartments near soma, their number of connections, i.e. 'n', should be defined separately. Unless it's marked as '--'"
 
             current_post_syn_tags = current_post_syn_idx[current_post_syn_idx.index('['):current_post_syn_idx.index(']') + 1]
             assert current_post_syn_tags in _options.keys(), \
@@ -634,8 +675,8 @@ class cortical_system(object):
             if current_post_syn_tags == '[C]':  # [C] means the target is a compartment
                 _post_group_idx, _post_com_idx = current_post_syn_idx.split('[' + 'C' + ']')
                 assert int(_post_group_idx) < len(self.neurongroups_list),\
-                'The synapse in the following line is targeting a group index that is not defined:\n%s'%self.conf_line
-                self.current_values_list[self.current_parameters_list.index('post_syn_idx')] = _post_group_idx
+                'The synapse in the following line is targeting a group index that is not defined:\n%s'%str(self.conf_df.ix[self.value_line_idx].to_dict().values())
+                self.current_values_list[self.current_parameters_list[self.current_parameters_list=='post_syn_idx'].index.item()] = _post_group_idx
                 pre_group_ref_idx = [self.customized_neurons_list.index(tmp_group) for tmp_group in
                                      self.customized_neurons_list if tmp_group['idx'] == int(current_pre_syn_idx)][0]
                 post_group_ref_idx = [self.customized_neurons_list.index(tmp_group) for tmp_group in
@@ -644,29 +685,29 @@ class cortical_system(object):
                     'A compartment is targeted but the neuron group is not PC. Check Synapses in the configuration file.'
                 _pre_type = self.customized_neurons_list[pre_group_ref_idx]['type']  # Pre-synaptic neuron type
                 _post_type = self.customized_neurons_list[post_group_ref_idx]['type']  # Post-synaptic neuron type
-                self.current_parameters_list.extend(['pre_type', 'post_type','post_comp_name'])
-                self.current_values_list.extend([_pre_type, _post_type])
+                self.current_parameters_list = self.current_parameters_list.append(pandas.Series(['pre_type', 'post_type','post_comp_name']),ignore_index=True)
+                self.current_values_list = self.current_values_list.append(pandas.Series([_pre_type, _post_type]), ignore_index=True)
                 #  In case the target is from compartment 0 which has 3 compartments itself
                 if str(_post_com_idx)[0] == '0':
                     assert len(_post_com_idx) > 1, \
                         'A soma of a compartmental neuron is being targeted, but the exact compartment in the soma is not defined. After 0, use "b" for basal dendrites, "s" for soma and "a" for apical dendrites.'
-                    if _current_probs != 'N/A':
+                    if _current_probs != '--':
                         assert len(_post_com_idx[1:]) == len(_current_probs) , \
-                            "When targeting multiple compartments near soma, their probability, i.e. 'p', should be defined separately. Unless it's marked as 'N/A'"
-                    if _current_ns != 'N/A':
+                            "When targeting multiple compartments near soma, their probability, i.e. 'p', should be defined separately. Unless it's marked as '--'"
+                    if _current_ns != '--':
                         assert len(_post_com_idx[1:]) == len(_current_ns), \
-                            "When targeting multiple compartments near soma, their number of connections, i.e. 'n', should be defined separately. Unless it's marked as 'N/A'"
+                            "When targeting multiple compartments near soma, their number of connections, i.e. 'n', should be defined separately. Unless it's marked as '--'"
                     # creating the required synapses for targeting compartment 0, it can be at most 3 synapses (basal,
                     # soma or apical), hence the name triple_args
                     triple_args = []
                     for idx, tmp_idx in enumerate(_post_com_idx[1:]):
                         tmp_args = list(self.current_values_list)
-                        if 'p' in self.current_parameters_list:
-                            tmp_args[self.current_parameters_list.index('p')] = _current_probs[idx] if \
-                                tmp_args[self.current_parameters_list.index('p')]!= 'N/A' else 'N/A'
-                        if 'n' in self.current_parameters_list:
-                            tmp_args[self.current_parameters_list.index('n')] = _current_ns[idx] if \
-                                tmp_args[self.current_parameters_list.index('n')]!= 'N/A' else 'N/A'
+                        if any(self.current_parameters_list.str.contains('p')):
+                            tmp_args[self.current_parameters_list[self.current_parameters_list=='p'].index.item()] = _current_probs[idx] if \
+                                str(tmp_args[self.current_parameters_list[self.current_parameters_list=='p'].index.item()])!= '--' else '--'
+                        if any(self.current_parameters_list.str.contains('n')):
+                            tmp_args[self.current_parameters_list[self.current_parameters_list=='n'].index.item()] = _current_ns[idx] if \
+                                str(tmp_args[self.current_parameters_list[self.current_parameters_list=='n'].index.item()])!= '--' else '--'
                         if tmp_idx == 'b':
                             tmp_args.append('_basal')
                             triple_args.append(tmp_args)
@@ -678,13 +719,13 @@ class cortical_system(object):
                             triple_args.append(tmp_args)
                     self.current_values_list = triple_args
                 elif int(_post_com_idx) > 0:
-                    self.current_values_list.append('_a' + str(_post_com_idx))
+                    self.current_values_list = self.current_values_list.append(pandas.Series(['_a' + str(_post_com_idx)]), ignore_index = True)
             if type(self.current_values_list[0]) != list : # type of self.current_values_list[0] would be list in case
                 # of multiple synaptic targets in soma area
                 self.current_values_list = [self.current_values_list]
         else:
             assert int(current_post_syn_idx) < len(self.neurongroups_list), \
-                'The synapse in the following line is targeting a group index that is not defined:\n%s' % self.conf_line
+                'The synapse in the following line is targeting a group index that is not defined:\n%s' % str(self.conf_df.ix[self.value_line_idx].to_dict().values())
             pre_group_ref_idx = [self.customized_neurons_list.index(tmp_group) for tmp_group in \
                                  self.customized_neurons_list if int(tmp_group['idx']) == \
                                  int(current_pre_syn_idx)][0]
@@ -695,29 +736,29 @@ class cortical_system(object):
             _post_type = self.customized_neurons_list[post_group_ref_idx]['type']  # Post-synaptic neuron type
             assert _post_type!= 'PC', \
             'The post_synaptic group is a multi-compartmental PC but the target compartment is not selected. Use [C] tag followed by compartment number.'
-            self.current_values_list.extend([_pre_type, _post_type,'_soma'])
-            self.current_parameters_list.extend(['pre_type', 'post_type','post_comp_name'])
+            self.current_values_list = self.current_values_list.append(pandas.Series([_pre_type, _post_type,'_soma']), ignore_index=True)
+            self.current_parameters_list = self.current_parameters_list.append(pandas.Series(['pre_type', 'post_type','post_comp_name']), ignore_index=True)
             self.current_values_list = [self.current_values_list]
         for syn in self.current_values_list:
-            receptor = syn[self.current_parameters_list.index('receptor')]
-            pre_syn_idx = syn[self.current_parameters_list.index('pre_syn_idx')]
-            post_syn_idx = syn[self.current_parameters_list.index('post_syn_idx')]
-            syn_type = syn[self.current_parameters_list.index('syn_type')]
+            receptor = syn[self.current_parameters_list[self.current_parameters_list=='receptor'].index.item()]
+            pre_syn_idx = syn[self.current_parameters_list[self.current_parameters_list=='pre_syn_idx'].index.item()]
+            post_syn_idx = syn[self.current_parameters_list[self.current_parameters_list=='post_syn_idx'].index.item()]
+            syn_type = syn[self.current_parameters_list[self.current_parameters_list=='syn_type'].index.item()]
             try:
-                p_arg = float(syn[self.current_parameters_list.index('p')])*self.conn_prob_gain
+                p_arg = float(syn[self.current_parameters_list[self.current_parameters_list=='p'].index.item()])*self.conn_prob_gain
             except ValueError:
-                p_arg = 'N/A'
+                p_arg = '--'
             try:
-                n_arg = syn[self.current_parameters_list.index('n')]
+                n_arg = syn[self.current_parameters_list[self.current_parameters_list=='n'].index.item()]
             except ValueError:
-                n_arg = 'N/A'
+                n_arg = '--'
             try:
-                monitors = syn[self.current_parameters_list.index('monitors')]
+                monitors = syn[self.current_parameters_list[self.current_parameters_list=='monitors'].index.item()]
             except ValueError:
-                monitors = 'N/A'
-            pre_type = syn[self.current_parameters_list.index('pre_type')]
-            post_type = syn[self.current_parameters_list.index('post_type')]
-            post_comp_name= syn[self.current_parameters_list.index('post_comp_name')]
+                monitors = '--'
+            pre_type = syn[self.current_parameters_list[self.current_parameters_list=='pre_type'].index.item()]
+            post_type = syn[self.current_parameters_list[self.current_parameters_list=='post_type'].index.item()]
+            post_comp_name= syn[self.current_parameters_list[self.current_parameters_list=='post_comp_name'].index.item()]
             # check monitors in line:
             current_idx = len(self.customized_synapses_list)
             # creating a customized_synapse object and passing the positional arguments to it. The main member of
@@ -759,25 +800,25 @@ class cortical_system(object):
                 customized_synapses_list[-1]['post_group_idx']][self.neurongroups_list[self.\
                 customized_synapses_list[-1]['post_group_idx']].index('_') + 1:] + \
                             self.customized_synapses_list[-1]['post_comp_name']
-            if 'load_connection' in self.current_parameters_list:
-                if '-->' in syn[self.current_parameters_list.index('load_connection')]:
-                    self.default_load_flag = int(syn[self.current_parameters_list.index('load_connection')].replace('-->',''))
-                elif '<--' in syn[self.current_parameters_list.index('load_connection')]:
+            if any(self.current_parameters_list.str.contains('load_connection')):
+                if '-->' in syn[self.current_parameters_list[self.current_parameters_list=='load_connection'].index.item()]:
+                    self.default_load_flag = int(syn[self.current_parameters_list[self.current_parameters_list=='load_connection'].index.item()].replace('-->',''))
+                elif '<--' in syn[self.current_parameters_list[self.current_parameters_list=='load_connection'].index.item()]:
                     self.default_load_flag = -1
-                    _do_load = int(syn[self.current_parameters_list.index('load_connection')].replace('<--', ''))
+                    _do_load = int(syn[self.current_parameters_list[self.current_parameters_list=='load_connection'].index.item()].replace('<--', ''))
                     if _do_load ==1:
-                        assert hasattr(self,'loaded_brian_data'), "Synaptic connection in the following line is set to be loaded, however the load_brian_data_path is not defined in the parameters. The connection is being created:\n%s"%self.conf_line
+                        assert hasattr(self,'loaded_brian_data'), "Synaptic connection in the following line is set to be loaded, however the load_brian_data_path is not defined in the parameters. The connection is being created:\n%s"%str(self.conf_df.ix[self.value_line_idx].to_dict().values())
                 else:
-                    _do_load = int(syn[self.current_parameters_list.index('load_connection')])
+                    _do_load = int(syn[self.current_parameters_list[self.current_parameters_list=='load_connection'].index.item()])
 
-            if 'save_connection' in self.current_parameters_list:
-                if '-->' in syn[self.current_parameters_list.index('save_connection')]:
-                    self.default_save_flag = int(syn[self.current_parameters_list.index('save_connection')].replace('-->',''))
-                elif '<--' in syn[self.current_parameters_list.index('save_connection')]:
+            if any(self.current_parameters_list.str.contains('save_connection')):
+                if '-->' in syn[self.current_parameters_list[self.current_parameters_list=='save_connection'].index.item()]:
+                    self.default_save_flag = int(syn[self.current_parameters_list[self.current_parameters_list=='save_connection'].index.item()].replace('-->',''))
+                elif '<--' in syn[self.current_parameters_list[self.current_parameters_list=='save_connection'].index.item()]:
                     self.default_save_flag = -1
-                    _do_save = int(syn[self.current_parameters_list.index('save_connection')].replace('<--', ''))
+                    _do_save = int(syn[self.current_parameters_list[self.current_parameters_list=='save_connection'].index.item()].replace('<--', ''))
                 else:
-                    _do_save = int(syn[self.current_parameters_list.index('save_connection')])
+                    _do_save = int(syn[self.current_parameters_list[self.current_parameters_list=='save_connection'].index.item()])
 
             if (self.default_load_flag==1 or (self.default_load_flag==-1 and _do_load == 1 )) and \
                     hasattr(self,'loaded_brian_data') and not self.load_positions_only:
@@ -851,7 +892,7 @@ class cortical_system(object):
                 exec "num_tmp = len(%s.i)" % S_name
                 self.total_number_of_synapses += num_tmp
                 try:
-                    _current_connections = int(num_tmp/float(syn[self.current_parameters_list.index('n')])) / len(self.current_values_list)
+                    _current_connections = int(num_tmp/float(syn[self.current_parameters_list[self.current_parameters_list=='n'].index.item()])) / len(self.current_values_list)
                 except ValueError:
                     print "warning: number of synapses for last connection was equal to number of connections"
                     _current_connections = num_tmp
@@ -924,8 +965,8 @@ class cortical_system(object):
         NG_name = ''
         def video(self):
             print "creating an input based on the video input."
-            path = self.current_values_list[self.current_parameters_list.index('path')].strip()
-            freq = self.current_values_list[self.current_parameters_list.index('freq')].strip()
+            path = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='path'].index.item()]
+            freq = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='freq'].index.item()]
             inp = stimuli(self.runtime)
             # if __name__ == '__main__':
             import multiprocessing
@@ -1018,43 +1059,63 @@ class cortical_system(object):
             # elif self.device == 'Cpp':
             #     set_device('cpp_standalone',directory=os.path.join(self.output_folder,self.StartTime_str[1:]))
             #     prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
-            input_neuron_group_idx = self.current_values_list[self.current_parameters_list.index('idx')]
-            syn_params = [lin for lin in self.configuration_file if 'receptor' in lin][0].split(',')
-            pre_syn_idx = [lin for lin in self.configuration_file if 'receptor' in lin][0].split(',').index('pre_syn_idx')
-            for lin_idx,lin in enumerate(self.configuration_file):
-                try :
-                    if lin.split(',')[0] == 'S' and lin.split(',')[pre_syn_idx] == input_neuron_group_idx:
-                        self.awaited_conf_lines.append(lin)
-                        if '<--' in lin :
-                            closing_arrow_indices = [ii_idx for ii_idx,ii in enumerate(lin.split(',')) if '<--' in ii]
-                            tmp_line = self.configuration_file[lin_idx + 1].split(',')
-                            for arrow_idx in closing_arrow_indices:
-                                tmp_line[arrow_idx] = self.configuration_file[lin_idx + 1].split(',')[arrow_idx] + '<--'
-                        if '-->' in lin:
-                            opening_arrow_indices = [ii_idx for ii_idx, ii in enumerate(lin.split(',')) if '-->' in ii]
-                            tmp_line = self.configuration_file[lin_idx + 1].split(',')
-                            for arrow_idx in opening_arrow_indices:
-                                tmp_line[arrow_idx] = self.configuration_file[lin_idx + 1].split(',')[arrow_idx] + '-->'
-                        self.configuration_file[lin_idx+1] = ','.join(tmp_line)
-                        del self.configuration_file[lin_idx]
-                except IndexError:
-                    pass
+            input_neuron_group_idx = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='idx'].index.item()]
+            syn_lines = self.conf_df[self.conf_df[0].str.startswith('S') == True]
+            input_synaptic_lines = syn_lines[syn_lines[2] == '0']
+            row_type_lines = self.conf_df.loc[:input_synaptic_lines.index[0]][0].str.startswith('row_type') == True
+            synapse_def_line = self.conf_df.loc[row_type_lines[row_type_lines == True].index[-1]]
+            load_conn_idx = synapse_def_line[synapse_def_line=='load_connection'].index[0]
+            save_conn_idx = synapse_def_line[synapse_def_line=='save_connection'].index[0]
+            for conn_load_item in input_synaptic_lines[load_conn_idx]:
+                if '<--' in conn_load_item or '-->' in conn_load_item:
+                    for synaptic_row in range(input_synaptic_lines.index[0]+1 , self.conf_df[0].index[-1]):
+                        if self.conf_df.loc[synaptic_row][0][0]!='#':
+                            sign_to_add = '-->' if '-->' in conn_load_item else '<--'
+                            self.conf_df.loc[input_synaptic_lines.index[0]+1,load_conn_idx] += sign_to_add
+                            break
+            for conn_save_item in input_synaptic_lines[save_conn_idx]:
+                if '<--' in conn_save_item or '-->' in conn_save_item:
+                    for synaptic_row in range (input_synaptic_lines.index[0]+1 , self.conf_df[0].index[-1]):
+                        if self.conf_df.loc[synaptic_row][0][0]!='#':
+                            sign_to_add = '-->' if '-->' in conn_save_item else '<--'
+                            self.conf_df.loc[input_synaptic_lines.index[0]+1,save_conn_idx] += sign_to_add
+                            break
+            self.awaited_conf_lines = synapse_def_line.to_frame().transpose().reset_index(drop=True).append(input_synaptic_lines).reset_index(drop=True)
+            self.conf_df = self.conf_df.drop(input_synaptic_lines.index.tolist()).reset_index(drop=True)
+            # for lin_idx,lin in enumerate(self.configuration_file):
+            #     try :
+            #         if lin.split(',')[0] == 'S' and lin.split(',')[pre_syn_idx] == input_neuron_group_idx:
+            #             self.awaited_conf_lines.append(lin)
+            #             if '<--' in lin :
+            #                 closing_arrow_indices = [ii_idx for ii_idx,ii in enumerate(lin.split(',')) if '<--' in ii]
+            #                 tmp_line = self.configuration_file[lin_idx + 1].split(',')
+            #                 for arrow_idx in closing_arrow_indices:
+            #                     tmp_line[arrow_idx] = self.configuration_file[lin_idx + 1].split(',')[arrow_idx] + '<--'
+            #             if '-->' in lin:
+            #                 opening_arrow_indices = [ii_idx for ii_idx, ii in enumerate(lin.split(',')) if '-->' in ii]
+            #                 tmp_line = self.configuration_file[lin_idx + 1].split(',')
+            #                 for arrow_idx in opening_arrow_indices:
+            #                     tmp_line[arrow_idx] = self.configuration_file[lin_idx + 1].split(',')[arrow_idx] + '-->'
+            #             self.configuration_file[lin_idx+1] = ','.join(tmp_line)
+            #             del self.configuration_file[lin_idx]
+            #     except IndexError:
+            #         pass
             import threading
             self.thr = threading.Thread(target = waitress,args=(self,))
             self.thr.start()
 
         def VPM(self): #ventral posteromedial (VPM) thalamic nucleus
-            spike_times = self.current_values_list[_all_columns.index('spike_times')].strip().replace(' ',',')
+            spike_times = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='spike_times'].index.item()].replace(' ',',')
             spike_times_list = ast.literal_eval(spike_times[0:spike_times.index('*')])
             spike_times_unit = spike_times[spike_times.index('*')+1:]
             exec 'spike_times_ = spike_times_list * %s' %(spike_times_unit) in globals(), locals()
             try:
-                net_center = self.current_values_list[_all_columns.index('net_center')].strip()
+                net_center = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='net_center'].index.item()]
                 net_center = complex(net_center)
             except ValueError:
                 net_center = 0 + 0j
-            number_of_neurons = self.current_values_list[_all_columns.index('number_of_neurons')].strip()
-            radius = self.current_values_list[_all_columns.index('radius')].strip()
+            number_of_neurons = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='number_of_neurons'].index.item()]
+            radius = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='radius'].index.item()]
             print "creating an input based on the central %s neurons."%number_of_neurons
             Spikes_Name = 'GEN_SP'
             Time_Name = 'GEN_TI'
@@ -1062,14 +1123,6 @@ class cortical_system(object):
             spikes_str = 'GEN_SP=tile(arange(%s),%d)'%(number_of_neurons,len(spike_times_))
             times_str = 'GEN_TI = repeat(%s,%s)*%s'%(spike_times[0:spike_times.index('*')],number_of_neurons,spike_times_unit)
             SG_str = 'GEN = SpikeGeneratorGroup(%s, GEN_SP, GEN_TI)'%number_of_neurons
-            # Internal switch for brian2GeNN:
-            # if self.device == 'GeNN':
-            #     set_device('genn',directory=os.path.join(self.output_folder,self.StartTime_str[1:]))
-            #     prefs.codegen.cpp.extra_compile_args_gcc = ['-O3','-pipe']
-            # elif self.device == 'Cpp':
-            #     set_device('cpp_standalone',directory=os.path.join(self.output_folder,self.StartTime_str[1:]))
-            #     prefs.codegen.cpp.extra_compile_args_gcc = ['-O3','-pipe']
-
             exec spikes_str in globals(), locals()  # running the string containing the syntax for Spike indices in the input neuron group.
             exec times_str in globals(), locals()  # running the string containing the syntax for time indices in the input neuron group.
             exec SG_str in globals(), locals()  # running the string containing the syntax for creating the SpikeGeneratorGroup() based on the input .mat file.
@@ -1137,13 +1190,13 @@ class cortical_system(object):
             self.monitors(mons.split(' '), NG_name,self.customized_neurons_list[-1]['equation'])
 
         assert self.sys_mode != '', "Error: System mode not defined."
-        assert 'type' in self.current_parameters_list, 'The type of the input is not defined in the configuration file.'
+        assert any(self.current_parameters_list.str.contains('type')), 'The type of the input is not defined in the configuration file.'
         _input_params = {
             'video': [['idx', 'type', 'path','freq', 'monitors'], [0, 1, 2], video],
             'VPM': [['idx', 'type', 'number_of_neurons', 'radius', 'spike_times', 'net_center', 'monitors'],
                     [0, 1, 2, 3, 4], VPM]
         }
-        _input_type = self.current_values_list[self.current_parameters_list.index('type')]
+        _input_type = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='type'].index.item()]
         _all_columns = _input_params[_input_type][0] # all possible columns of parameters for the current type of input in configuration fil
         assert _input_type in _input_params.keys(), 'The input type %s of the configuration file is ' \
             'not defined' % _input_type
@@ -1154,15 +1207,17 @@ class cortical_system(object):
             [_all_columns[ii] for ii in _obligatory_params])
         assert len (self.current_parameters_list) <= len(_input_params[_input_type][0]), 'Too many parameters for the\
          current %s input. The parameters should be consist of:\n %s'%(_input_type,_input_params[_input_type][0])
-        assert 'N/A' not in [self.current_values_list[ii] for ii in _obligatory_params], \
-            'Following obligatory values cannot be "N/A":\n%s' % str([_all_columns[ii] for ii in _obligatory_params])
+        obligatory_columns = list(array(_input_params[_input_type][0])[_input_params[_input_type][1]])
+        obligatory_indices = [self.current_parameters_list[self.current_parameters_list==ii].index.item() for ii in obligatory_columns]
+        assert not any(self.current_values_list.ix[obligatory_indices]=='--'), \
+            'Following obligatory values cannot be "--":\n%s' % str([_all_columns[ii] for ii in _obligatory_params])
         assert len(self.current_parameters_list) == len(self.current_values_list), \
             'The number of columns for the input are not equal to number of values in the configuration file.'
         try:
-            mons = self.current_values_list[_all_columns.index('monitors')]
+            mons = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='monitors'].index.item()]
         except ValueError:
-            mons = 'N/A'
-        group_idx = self.current_values_list[_all_columns.index('idx')]
+            mons = '--'
+        group_idx = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='idx'].index.item()]
 
         assert group_idx not in self.NG_indices, \
             "Error: multiple indices with same values exist in the configuration file."
@@ -1176,6 +1231,7 @@ class cortical_system(object):
         relay_group['equation'] = ''
         self.customized_neurons_list.append(relay_group)
         _input_params[_input_type][2](self)
+
 
     def gather_result(self):
         '''
@@ -1219,6 +1275,6 @@ if __name__ == '__main__' :
     # CM.run()
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Cpp',runtime=1000 * ms)
     # CM.run()
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', device='GeNN',runtime=1000 * ms)
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device='Python')
     CM.run()
     # shutil.rmtree('/home/vafanda/.cache/scipy/') # this should be used for benchmarking otherwise weave will mess up the benchmarking
