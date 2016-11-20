@@ -20,6 +20,8 @@ import csv
 import shutil
 import pandas
 import math
+import threading
+
 
 class cortical_system(object):
     '''
@@ -44,7 +46,7 @@ class cortical_system(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self, config_path, device = 'Python'):
+    def __init__(self, config_path,physio_path, device = 'Python',output_file_suffix = ''):
         '''
         Initialize the cortical system by parsing the configuration file.
 
@@ -74,7 +76,6 @@ class cortical_system(object):
             self.CX_module = sys.modules['cortical_system']
         except KeyError:
             pass
-
         self.device = device
         assert self.device in ['GeNN', 'Cpp','Python'], 'Device %s is not defined. Check capital letters in device name.' % self.device
         self._options = {
@@ -94,16 +95,17 @@ class cortical_system(object):
             'do_benchmark': self.do_benchmark,
             'runtime' : self._set_runtime,
         }
-
+        output_file_suffix = '_' + output_file_suffix if output_file_suffix!='' else output_file_suffix
         self.StartTime_str = '_' + str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '')\
-            [0:str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '').index('.')+3].replace('.','')
+            [0:str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '').index('.')+3].replace('.','') + output_file_suffix
         print "Info: current run filename suffix is: %s"%self.StartTime_str[1:]
         # self.scale = 1
         self.do_benchmark = 0
         # defaultclock.dt = 0.01 * ms
         self.numerical_integration_method = 'euler'
         print "Info : the system is running with %s integration method"%self.numerical_integration_method
-        self.conn_prob_gain = synapse_namespaces.conn_prob_gain
+        # self.conn_prob_gain = synapse_namespaces.conn_prob_gain
+        self.conn_prob_gain =1
         self.current_parameters_list = []
         self.current_parameters_list_orig_len = 0 # current_parameters_list is changing at some point in the code, so the original length of it is needed
         self.current_values_list = []
@@ -127,17 +129,15 @@ class cortical_system(object):
         self.do_init_vms = 0
         self.do_save_connections = 0 # if there is at least one connection to save, this flag will be set to 1
         self.load_positions_only = 0
-        self.configuration_file = []
         self.awaited_conf_lines = []
 
-        with open(self.config_path,'r') as conf_file:
-            for conf_line in conf_file:
-                conf_line = conf_line.replace('\n', '')
-                conf_line = conf_line.lstrip()
-                self.configuration_file.append(conf_line)
+        self.physio_df = pandas.read_csv(physio_path)
+        self.physio_df = self.physio_df.applymap(lambda x: NaN if str(x)[0] == '#' else x)
 
         self.conf_df = pandas.read_csv(self.config_path,header=None)
         self.conf_df = self.conf_df.applymap(lambda x: x.strip() if type(x) == str else x)
+        self.conf_df_to_save = self.conf_df
+        self.physio_df_to_save =  self.physio_df
         self.configuration_executer()
         if type(self.awaited_conf_lines) != list:
             print "Waiting for the video input"
@@ -146,6 +146,9 @@ class cortical_system(object):
             self.configuration_executer()
 
         print "Cortical Module initialization Done."
+
+    # def array_run(self):
+
 
     def configuration_executer(self):
         definition_lines_idx = self.conf_df.ix[:,0][self.conf_df.ix[:,0]=='row_type'].index
@@ -223,7 +226,7 @@ class cortical_system(object):
 
     def set_runtime_parameters(self):
         order_of_parameters = ['runtime','sys_mode','scale','grid_radius', 'min_distance', 'do_init_vms','output_path&filename',
-                    'brian_data_saving_path&filename' , 'brian_data_saving_path&filename', 'load_positions_only'
+                    'brian_data_saving_path&filename' , 'brian_data_loading_path&filename', 'load_positions_only'
             ,'do_benchmark']
         if not any(self.current_parameters_list.str.contains('runtime')):
             print "Warning: runtime duration is not defined in the configuration file. The default runtime duratoin is 500*ms"
@@ -280,7 +283,8 @@ class cortical_system(object):
         self.save_output_data.creat_key('positions_all')
         self.save_output_data.creat_key('Neuron_Groups_Parameters')
         self.save_output_data.creat_key('Configuration_File')
-        self.save_output_data.data['Configuration_File'] = self.configuration_file
+        self.save_output_data.data['Anatomy_configuration'] = self.conf_df_to_save
+        self.save_output_data.data['Physiology_configuration'] = self.physio_df_to_save
         self.save_output_data.data['time_vector'] = arange(0,self.runtime,defaultclock.dt)
         self.save_output_data.data['positions_all']['w_coord'] = {}
         self.save_output_data.data['positions_all']['z_coord'] = {}
@@ -418,7 +422,7 @@ class cortical_system(object):
         except AttributeError:
             pass
         self.customized_neurons_list.append(customized_neuron(idx, number_of_neurons, neuron_type,
-                                                              layer_idx, self.general_grid_radius, self.min_distance,
+                                                  layer_idx, self.general_grid_radius, self.min_distance,self.physio_df,
                                                               network_center=net_center).output_neuron)  # creating a
         # customized_neuron() object and passing the positional arguments to it. The main member of the class called
         # output_neuron is then appended to customized_neurons_list.
@@ -764,7 +768,7 @@ class cortical_system(object):
             # creating a customized_synapse object and passing the positional arguments to it. The main member of
             # the class called output_synapse is then appended to customized_synapses_list:
             self.customized_synapses_list.append(customized_synapse(receptor, pre_syn_idx, post_syn_idx, syn_type,
-                                                                 pre_type, post_type, post_comp_name).output_synapse)
+                                                                 pre_type, post_type,self.physio_df ,post_comp_name).output_synapse)
             _pre_group_idx = self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]
             _post_group_idx = self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']]
             # Generated variable name for the Synapses(), equation, pre_synaptic and post_synaptic equation and Namespace
@@ -1082,25 +1086,6 @@ class cortical_system(object):
                             break
             self.awaited_conf_lines = synapse_def_line.to_frame().transpose().reset_index(drop=True).append(input_synaptic_lines).reset_index(drop=True)
             self.conf_df = self.conf_df.drop(input_synaptic_lines.index.tolist()).reset_index(drop=True)
-            # for lin_idx,lin in enumerate(self.configuration_file):
-            #     try :
-            #         if lin.split(',')[0] == 'S' and lin.split(',')[pre_syn_idx] == input_neuron_group_idx:
-            #             self.awaited_conf_lines.append(lin)
-            #             if '<--' in lin :
-            #                 closing_arrow_indices = [ii_idx for ii_idx,ii in enumerate(lin.split(',')) if '<--' in ii]
-            #                 tmp_line = self.configuration_file[lin_idx + 1].split(',')
-            #                 for arrow_idx in closing_arrow_indices:
-            #                     tmp_line[arrow_idx] = self.configuration_file[lin_idx + 1].split(',')[arrow_idx] + '<--'
-            #             if '-->' in lin:
-            #                 opening_arrow_indices = [ii_idx for ii_idx, ii in enumerate(lin.split(',')) if '-->' in ii]
-            #                 tmp_line = self.configuration_file[lin_idx + 1].split(',')
-            #                 for arrow_idx in opening_arrow_indices:
-            #                     tmp_line[arrow_idx] = self.configuration_file[lin_idx + 1].split(',')[arrow_idx] + '-->'
-            #             self.configuration_file[lin_idx+1] = ','.join(tmp_line)
-            #             del self.configuration_file[lin_idx]
-            #     except IndexError:
-            #         pass
-            import threading
             self.thr = threading.Thread(target = waitress,args=(self,))
             self.thr.start()
 
@@ -1159,7 +1144,7 @@ class cortical_system(object):
                 print "Positions for the group %s loaded" % NG_name
             else: # generating the positions:
                 vpm_customized_neuron = customized_neuron(current_idx, int(number_of_neurons), 'VPM', '0', eval(radius),
-                                                          self.min_distance, network_center=net_center)
+                                                          self.min_distance, self.physio_df ,network_center=net_center)
                 self.customized_neurons_list[current_idx]['z_positions'] = vpm_customized_neuron.output_neuron[
                     'z_positions']
                 self.customized_neurons_list[current_idx]['w_positions'] = vpm_customized_neuron.output_neuron[
@@ -1275,6 +1260,8 @@ if __name__ == '__main__' :
     # CM.run()
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Cpp',runtime=1000 * ms)
     # CM.run()
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device='Python')
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', \
+                         os.path.dirname(os.path.realpath(__file__)) + '/Physiological_Parameters.csv',
+                         device='Python')
     CM.run()
     # shutil.rmtree('/home/vafanda/.cache/scipy/') # this should be used for benchmarking otherwise weave will mess up the benchmarking

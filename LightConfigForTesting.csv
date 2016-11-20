@@ -1,5 +1,5 @@
-row_type,runtime,grid_radius,sys_mode,#scale, min_distance, do_init_vms,output_path&filename, #brian_data_saving_path&filename , #brian_data_saving_path&filename, #load_positions_only, do_benchmark
-params,100*ms,210*um,local,3, 1*um,1,/opt3/CX_Output/CX_Output.bz2,/opt3/CX_Output/brian_data.bz2, /opt3/CX_Output/brian_data_for_positions.gz, 1 , 1
+row_type,runtime,grid_radius,sys_mode,#scale, min_distance, do_init_vms,output_path&filename, #brian_data_saving_path&filename , #brian_data_loading_path&filename, #load_positions_only, do_benchmark
+params,{100|300|100}*ms,210*um,local,3, 1*um,1,/opt3/CX_Output/CX_Output.bz2,/opt3/CX_Output/brian_data.bz2, /opt3/CX_Output/brian_data_for_positions.gz, 1 , 1
 row_type,idx,type,number_of_neurons,radius,spike_times,net_center,monitors
 IN,0, VPM,60,92*um,[0.0001 0.5]*second, -- ,[Sp]
 row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors,noise_sigma

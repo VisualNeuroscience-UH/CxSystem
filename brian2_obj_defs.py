@@ -14,7 +14,7 @@ class customized_neuron(object):
     New types of neurons should be implemented in this class.
     '''
 
-    def __init__(self,idx, number_of_neurons, cell_type, layers_idx, general_grid_radius ,min_distance, network_center=0 + 0j):
+    def __init__(self,idx, number_of_neurons, cell_type, layers_idx, general_grid_radius ,min_distance, physio_df, network_center=0 + 0j):
         '''
         initialize the customized_neuron based on the arguments.
 
@@ -63,7 +63,7 @@ class customized_neuron(object):
             self.output_neuron['total_comp_num'] = array([1])
             # number of compartments if applicable
 
-        self.output_neuron['namespace'] = neuron_namespaces(self.output_neuron).output_namespace
+        self.output_neuron['namespace'] = neuron_namespaces(self.output_neuron,physio_df).output_namespace
         self.output_neuron['equation'] = ''
         getattr(self, self.output_neuron['type'])()
         self.output_neuron['z_center'] = network_center
@@ -312,7 +312,7 @@ class customized_synapse(object):
         building the cortical module. New types of synapses should be implemented in this class.
     '''
 
-    def __init__(self, receptor, pre_group_idx, post_group_idx, syn_type, pre_type, post_type, post_comp_name='_soma'):
+    def __init__(self, receptor, pre_group_idx, post_group_idx, syn_type, pre_type, post_type,physio_df,post_comp_name='_soma'):
         '''
         initializes the customized_synapse based on its arguments.
 
@@ -343,7 +343,7 @@ class customized_synapse(object):
         self.output_synapse['post_group_idx'] = int(post_group_idx)
         self.output_synapse['post_group_type'] = post_type
         self.output_synapse['post_comp_name'] = post_comp_name
-        _name_space = synapse_namespaces(self.output_synapse)
+        _name_space = synapse_namespaces(self.output_synapse,physio_df)
         self.output_synapse['namespace'] = {}
         self.output_synapse['namespace'] = _name_space.output_namespace
         self.output_synapse['sparseness'] = _name_space.sparseness
