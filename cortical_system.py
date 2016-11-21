@@ -98,7 +98,7 @@ class cortical_system(object):
         self.StartTime_str += '_'+self.device+'_'+str(int((runtime/second)*1000)) + 'ms'
         # self.scale = 1
         self.do_benchmark = 0
-        # defaultclock.dt = 0.01 * ms
+        defaultclock.dt = 0.01 * ms
         self.numerical_integration_method = 'euler'
         print "Info : the system is running with %s integration method"%self.numerical_integration_method
         self.runtime = runtime
