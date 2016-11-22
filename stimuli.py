@@ -108,7 +108,7 @@ class stimuli(object):
                 data_to_save['spikes_' + str(ii)].append(spike_mons[ii].it[1].__array__())
             self.data_saver(save_path+self.output_file_extension,data_to_save)
         else:
-            print "Warning: generated video output is NOT saved."
+            print "\n Warning: generated video output is NOT saved.\n"
 
     def load_input_seq(self,input_spike_file_location):
         if os.path.isfile(input_spike_file_location):
