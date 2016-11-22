@@ -4,22 +4,33 @@ from brian2  import *
 # import scipy.io as sio
 from scipy import io
 import os
-import zlib
 import cPickle as pickle
+import zlib
+import bz2
+import shutil
+
 
 class stimuli(object):
     '''
     [Extracted from VCX_model] This is the stimulation object for applying the input to a particular NeuronGroup(). Currently only video input is supported.
     '''
-    def __init__(self,duration):
-        self.indices = array([])
-        self.times = array([])
+    def __init__(self,duration,input_mat_path,output_folder,output_file_extension,save_generated_input_flag):
         self.i_patterns = {}
-        self.input_defs = []
         self.BaseLine= 0 * second
-        self.SimulationDuration = duration
-
-    def generate_inputs(self, path, freq,output_path):
+        self.input_mat_path = input_mat_path
+        self.duration = duration
+        self.output_folder = output_folder
+        self.output_file_extension = output_file_extension
+        self.save_generated_input_flag = save_generated_input_flag
+        if os.path.isfile(os.path.join(self.output_folder, 'input'+self.output_file_extension)):
+            self.file_exist_flag = 1
+            print "\nWarning: Generated video input exist in %s/input.%s " \
+                  "\nThe input will NOT be overwritten for the sake of array running (even though you might not be using it). " \
+                  "\nIf you need the data to be newly generated, please rename or remove the previous input file.\n" % (
+            self.output_file_extension, self.output_folder)
+        else:
+            self.file_exist_flag = 0
+    def generate_inputs(self, freq):
         '''
         The method for generating input based on the .mat file, using the internal _initialize_inputs() and _calculate_input_seqs() methods.
 
@@ -27,34 +38,13 @@ class stimuli(object):
         :param freq: frequency.
         :return:
         '''
-        self._initialize_inputs(path, freq)
-        self._calculate_input_seqs(path,output_path)
+        if not self.file_exist_flag:
+            self.initialize_inputs(freq)
+            self.calculate_input_seqs()
+        else:
+            return
 
-    def load_input_seq(self, input_path):
-        _input_file = os.path.join(input_path[0:[idx for idx, ltr in enumerate(input_path) if ltr == '/'][-1]],
-                                   'input.mat')
-        tmp_dict = io.loadmat(_input_file, variable_names='spikes_0')
-        new_spikes = tmp_dict['spikes_0']
-        get_neuron_positions_dict = io.loadmat(input_path, variable_names='w_coord')
-        neuron_positions_in_cortex = get_neuron_positions_dict['w_coord']
-        number_of_neurons = len(neuron_positions_in_cortex)
-        spikes_str = 'GEN_SP = array(%s)' % str(list(new_spikes[0]))
-        times_str = 'GEN_TI = array(%s)*second' % str(list(new_spikes[1]))
-        SG_str = 'GEN = SpikeGeneratorGroup(%d, GEN_SP, GEN_TI)' % number_of_neurons
-        return spikes_str, times_str, SG_str, number_of_neurons
-
-    def get_input_positions(self, path):
-        '''
-        Extract the positions from the .mat file.
-
-        :param path: Path to the .mat file.
-        '''
-        _V1_mats = {}
-        io.loadmat(path, _V1_mats)
-        return _V1_mats['z_coord']
-
-    def _initialize_inputs(self,  path, freq):
-
+    def initialize_inputs(self,  freq):
         print "Initializing stimuli..."
 
         #type : video
@@ -78,19 +68,16 @@ class stimuli(object):
             frameduration = stimulus_epoch_duration
         frames = TimedArray(np.transpose(sparse_stimulus),
                             dt=frameduration * ms)  # video_data has to be shape (frames, neurons), dt=frame rate
-
         self.frames = frames
         exec 'self.factor = %s' %freq
         self.i_patterns[len(self.i_patterns)] = frames.values * self.factor  # These must be final firing rates
-        _all_stim = squeeze(_V1_mats['stimulus'])
+        _all_stim = squeeze(self._V1_mats['stimulus'])
         if len(_all_stim.shape) == 2:
-            slash_indices = [idx for idx, ltr in enumerate(path) if ltr == '/']
-            print 'One video stimulus found in file ' + path[slash_indices[-1]+1:]
+            slash_indices = [idx for idx, ltr in enumerate(self.input_mat_path) if ltr == '/']
+            print 'One video stimulus found in file ' + self.input_mat_path[slash_indices[-1]+1:]
 
-
-    def _calculate_input_seqs(self,path,output_path):
-
-        set_device('cpp_standalone', directory=output_path)
+    def calculate_input_seqs(self):
+        set_device('cpp_standalone', directory=os.path.join(self.output_folder,'Input_cpp_run'))
         inputdt = defaultclock.dt
         spikemons = []
         N0 = len(self.i_patterns[0].T)
@@ -103,42 +90,68 @@ class stimuli(object):
         tmp_network.add(tmp_mon)
         spikemons.append(tmp_mon)
         if self.BaseLine == 0 * second:
-            tmp_network.run(self.SimulationDuration, report='text')
+            tmp_network.run(self.duration, report='text')
         else:
             tmp_network.run(self.BaseLine)
-            tmp_network.run(self.SimulationDuration - self.BaseLine)
-        save_path = os.path.join(path[0:[idx for idx, ltr in enumerate(path) if ltr == '/'][-1]],'input.mat')
-        self.VCX_save_input_sequence(spikemons,save_path)
+            tmp_network.run(self.duration - self.BaseLine)
+        self.save_input_sequence(spikemons,os.path.join(self.output_folder,'input' ))
+        shutil.rmtree(os.path.join(self.output_folder,'Input_cpp_run'))
+
+    def save_input_sequence(self,spike_mons, save_path):
+        if self.save_generated_input_flag:
+            print "Saving the generated video input..."
+            self.generated_input_folder = save_path + self.output_file_extension
+            data_to_save = {}
+            for ii in range(len(spike_mons)):
+                data_to_save['spikes_' + str(ii)] = []
+                data_to_save['spikes_' + str(ii)].append(spike_mons[ii].it[0].__array__())
+                data_to_save['spikes_' + str(ii)].append(spike_mons[ii].it[1].__array__())
+            self.data_saver(save_path+self.output_file_extension,data_to_save)
+        else:
+            print "Warning: generated video output is NOT saved."
+
+    def load_input_seq(self,input_spike_file_location):
+        if os.path.isfile(input_spike_file_location):
+            input_spike_file_location = input_spike_file_location
+        else:
+            input_spike_file_location = os.path.join(input_spike_file_location, 'input' + self.output_file_extension)
+        self.loaded_data = self.data_loader(input_spike_file_location)
+        new_spikes = self.loaded_data['spikes_0']
+        neuron_positions_in_cortex = io.loadmat(self.input_mat_path, variable_names='w_coord')
+        number_of_neurons = len(neuron_positions_in_cortex['w_coord'])
+        print "Info: Video input loaded"
+        return new_spikes[0], new_spikes[1], number_of_neurons
 
 
+    def get_input_positions(self):
+        '''
+        Extract the positions from the .mat file.
 
-    def VCX_save_input_sequence(self,spike_mons, filename):
-        data = {}
-        for ii in range(len(spike_mons)):
-            data['spikes_' + str(ii)] = spike_mons[ii].it  # .spikes in Brian 1.X
-        print "Saving the generated video input..."
-        io.savemat(filename, data)
-        # with open(filename, 'wb') as fb:
-        #     fb.write(zlib.compress(pickle.dumps(data, pickle.HIGHEST_PROTOCOL), 9))
+        :param path: Path to the .mat file.
+        '''
+        neuron_positions = io.loadmat(self.input_mat_path, variable_names='z_coord')
+        return neuron_positions['z_coord']
 
-            # _V1_mats = {}
-        # sio.loadmat(path, _V1_mats)
-        # _all_stim = squeeze(_V1_mats['stimulus'])
-        # if len(_all_stim.shape) > 1:
-        #     _N_stim = _all_stim.shape[1]
-        # else:
-        #     _N_stim = 1  # there is at least one stimulus
-        #
-        # print str(_N_stim) + ' stimuli found in file '
-        # for _stim_ndx in range(_N_stim):
-        #     if _N_stim > 1:
-        #         _rel_rates = _all_stim.T[_stim_ndx]
-        #     else:
-        #         _rel_rates = _all_stim.T
-        #     self.i_patterns[len(self.i_patterns)] =  _rel_rates * self.factor
+    def data_loader(self,input_path):
+        if '.gz' in input_path:
+            with open(input_path, 'rb') as fb:
+                data = zlib.decompress(fb.read())
+                loaded_data = pickle.loads(data)
+        elif '.bz2' in input_path:
+            with bz2.BZ2File(input_path, 'rb') as fb:
+                loaded_data = pickle.load(fb)
+        elif 'pickle' in input_path:
+            with open(input_path, 'rb') as fb:
+                loaded_data= pickle.load(fb)
+        return loaded_data
 
-
-
-
-# test = input ()
-# test._calculate_input_seqs(os.path.join(os.getcwd(),'V1_input_layer_2015_10_30_11_7_31.mat'), 190 * Hz)
+    def data_saver(self,save_path,data):
+        if '.gz' in save_path:
+            with open(save_path, 'wb') as fb:
+                fb.write(zlib.compress(pickle.dumps(data, pickle.HIGHEST_PROTOCOL), 9))
+        elif '.bz2' in save_path:
+            with bz2.BZ2File(save_path, 'wb') as fb:
+                pickle.dump(data, fb, pickle.HIGHEST_PROTOCOL)
+        elif '.pickle' in save_path:
+            with open(save_path, 'wb') as fb:
+                pickle.dump(data, fb, pickle.HIGHEST_PROTOCOL)

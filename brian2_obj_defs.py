@@ -14,7 +14,7 @@ class customized_neuron(object):
     New types of neurons should be implemented in this class.
     '''
 
-    def __init__(self,idx, number_of_neurons, cell_type, layers_idx, general_grid_radius ,min_distance, network_center=0 + 0j):
+    def __init__(self,idx, number_of_neurons, cell_type, layers_idx, general_grid_radius ,min_distance, physio_config_df, network_center=0 + 0j):
         '''
         initialize the customized_neuron based on the arguments.
 
@@ -32,6 +32,7 @@ class customized_neuron(object):
 
         * output_neuron: the main dictionary containing all the data about current Customized_neuron_group including: number of neurons, threshold, reset, refractory, neuron type, soma position(layer), dendrites layer, total number of compartments, namespace, equation, positions (both in cortical and visual coordinates).
         '''
+        self.physio_config_df = physio_config_df
         customized_neuron._celltypes = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM'])
         assert general_grid_radius > min_distance , 'The distance between cells should be less than the grid radius'
         assert cell_type in customized_neuron._celltypes, "Cell type '%s' is not defined" % cell_type  # check cell type
@@ -63,9 +64,19 @@ class customized_neuron(object):
             self.output_neuron['total_comp_num'] = array([1])
             # number of compartments if applicable
 
-        self.output_neuron['namespace'] = neuron_namespaces(self.output_neuron).output_namespace
+        self.output_neuron['namespace'] = neuron_namespaces(self.output_neuron,physio_config_df).output_namespace
         self.output_neuron['equation'] = ''
+
+        variable_start_idx = self.physio_config_df['Variable'][self.physio_config_df['Variable'] == self.output_neuron['type']].index[0]
+        try:
+            variable_end_idx = self.physio_config_df['Variable'].dropna().index.tolist()[
+                self.physio_config_df['Variable'].dropna().index.tolist().index(variable_start_idx) + 1]
+            self.cropped_df_for_current_type = self.physio_config_df.loc[variable_start_idx:variable_end_idx - 1]
+        except IndexError:
+            self.cropped_df_for_current_type = self.physio_config_df.loc[variable_start_idx:]
         getattr(self, self.output_neuron['type'])()
+
+
         self.output_neuron['z_center'] = network_center
         self.output_neuron['w_center'] = 17 * log(self.output_neuron['z_center']+ 1)
         self.output_neuron['w_positions'] = self._get_w_positions(self.output_neuron['number_of_neurons'],
@@ -125,25 +136,28 @@ class customized_neuron(object):
         '''
 
         #: The template for the somatic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
-        eq_template_soma = '''
-        dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr) / C) +  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
-        dge/dt = -ge/tau_e : siemens
-        dgealpha/dt = (ge-gealpha)/tau_e : siemens
-        dgeX/dt = -geX/tau_eX : siemens
-        dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
-        dgi/dt = -gi/tau_i : siemens
-        dgialpha/dt = (gi-gialpha)/tau_i : siemens
-        '''
+        # eq_template_soma = '''
+        # dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr) / C) +  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
+        # dge/dt = -ge/tau_e : siemens
+        # dgealpha/dt = (ge-gealpha)/tau_e : siemens
+        # dgeX/dt = -geX/tau_eX : siemens
+        # dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
+        # dgi/dt = -gi/tau_i : siemens
+        # dgialpha/dt = (gi-gialpha)/tau_i : siemens
+        # '''
         #: The template for the dendritic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
-        eq_template_dend = '''
-        dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) +I_dendr) / C : volt
-        dge/dt = -ge/tau_e : siemens
-        dgealpha/dt = (ge-gealpha)/tau_e : siemens
-        dgeX/dt = -geX/tau_eX : siemens
-        dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
-        dgi/dt = -gi/tau_i : siemens
-        dgialpha/dt = (gi-gialpha)/tau_i : siemens
-        '''
+        # eq_template_dend = '''
+        # dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) +I_dendr) / C : volt
+        # dge/dt = -ge/tau_e : siemens
+        # dgealpha/dt = (ge-gealpha)/tau_e : siemens
+        # dgeX/dt = -geX/tau_eX : siemens
+        # dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
+        # dgi/dt = -gi/tau_i : siemens
+        # dgialpha/dt = (gi-gialpha)/tau_i : siemens
+        # '''
+
+        eq_template_soma = self.value_extractor(self.cropped_df_for_current_type,'eq_template_soma')
+        eq_template_dend = self.value_extractor(self.cropped_df_for_current_type,'eq_template_dend')
 
         self.output_neuron['equation'] = Equations(eq_template_dend, vm="vm_basal", ge="ge_basal",
                                                    gealpha="gealpha_basal",
@@ -156,8 +170,7 @@ class customized_neuron(object):
                                                     gealphaX='gealphaX_soma',
                                                     gialpha='gialpha_soma', C=self.output_neuron['namespace']['C'][1],
                                                     I_dendr='Idendr_soma',taum_soma=self.output_neuron['namespace']['taum_soma'])
-        for _ii in range(self.output_neuron[
-                             'dend_comp_num'] + 1):  # extra dendritic compartment in the same level of soma
+        for _ii in range(self.output_neuron['dend_comp_num'] + 1):  # extra dendritic compartment in the same level of soma
             self.output_neuron['equation'] += Equations(eq_template_dend, vm="vm_a%d" % _ii,
                                                         C=self.output_neuron['namespace']['C'][_ii],
                                                         gL=self.output_neuron['namespace']['gL'][_ii],
@@ -210,13 +223,15 @@ class customized_neuron(object):
                 x : meter
                 y : meter
         '''
+        eq_template = self.value_extractor(self.cropped_df_for_current_type,'eq_template')
 
-        self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) +  noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
-            dge/dt = -ge/tau_e : siemens
-            dgi/dt = -gi/tau_i : siemens
-            ''', ge='ge_soma', gi='gi_soma')
+        # self.output_neuron['equation'] = Equations('''
+        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) +  noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+        #     dge/dt = -ge/tau_e : siemens
+        #     dgi/dt = -gi/tau_i : siemens
+        #     ''', ge='ge_soma', gi='gi_soma')
 
+        self.output_neuron['equation'] = Equations(eq_template , ge='ge_soma', gi='gi_soma')
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
 
@@ -234,11 +249,15 @@ class customized_neuron(object):
                 x : meter
                 y : meter
         '''
-        self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) +  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
-            dge/dt = -ge/tau_e : siemens
-            dgi/dt = -gi/tau_i : siemens
-            ''', ge='ge_soma', gi='gi_soma')
+        eq_template = self.value_extractor(self.cropped_df_for_current_type, 'eq_template')
+        # self.output_neuron['equation'] = Equations('''
+        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) +  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
+        #     dge/dt = -ge/tau_e : siemens
+        #     dgi/dt = -gi/tau_i : siemens
+        #     ''', ge='ge_soma', gi='gi_soma')
+
+        self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
+
 
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
@@ -258,11 +277,13 @@ class customized_neuron(object):
                     x : meter
                     y : meter
             '''
-        self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C)+  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
-            dge/dt = -ge/tau_e : siemens
-            dgi/dt = -gi/tau_i : siemens
-            ''', ge='ge_soma', gi='gi_soma')
+        # self.output_neuron['equation'] = Equations('''
+        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C)+  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
+        #     dge/dt = -ge/tau_e : siemens
+        #     dgi/dt = -gi/tau_i : siemens
+        #     ''', ge='ge_soma', gi='gi_soma')
+        eq_template = self.value_extractor(self.cropped_df_for_current_type, 'eq_template')
+        self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
 
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
@@ -281,11 +302,8 @@ class customized_neuron(object):
                     x : meter
                     y : meter
             '''
-        self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C)+  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
-            dge/dt = -ge/tau_e : siemens
-            dgi/dt = -gi/tau_i : siemens
-            ''', ge='ge_soma', gi='gi_soma')
+        eq_template = self.value_extractor(self.cropped_df_for_current_type, 'eq_template')
+        self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
 
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
@@ -296,6 +314,41 @@ class customized_neuron(object):
         '''
         self.output_neuron['equation'] = ''
 
+
+    def value_extractor(self, df, key_name):
+        non_dict_indices = df['Variable'].dropna()[df['Key'].isnull()].index.tolist()
+        for non_dict_idx in non_dict_indices:
+            exec "%s=%s" % (df['Variable'][non_dict_idx], df['Value'][non_dict_idx])
+        try:
+            return eval(key_name)
+        except (NameError, TypeError):
+            pass
+        try:
+            if type(key_name) == list:
+                variable_start_idx = df['Variable'][df['Variable'] == key_name[0]].index[0]
+                try:
+                    variable_end_idx = df['Variable'].dropna().index.tolist()[
+                        df['Variable'].dropna().index.tolist().index(variable_start_idx) + 1]
+                    cropped_df = df.loc[variable_start_idx:variable_end_idx-1]
+                except IndexError:
+                    cropped_df = df.loc[variable_start_idx:]
+                return eval(cropped_df['Value'][cropped_df['Key'] == key_name[1]].item())
+            else:
+                try:
+                    return eval(df['Value'][df['Key'] == key_name].item())
+                except NameError:
+                    df_reset_index = df.reset_index(drop=True)
+                    df_reset_index = df_reset_index[0:df_reset_index[df_reset_index['Key'] == key_name].index[0]]
+                    for neural_parameter in df_reset_index['Key'].dropna():
+                        if neural_parameter  in df['Value'][df['Key'] == key_name].item():
+                            exec "%s =self.value_extractor(df,neural_parameter)" % (neural_parameter)
+                    return eval(df['Value'][df['Key'] == key_name].item())
+                else:
+                    raise('The syntax %s is not a valid syntax for physiological configuration file or the elements that comprise this syntax are not defined.'%df['Value'][df['Key'] == key_name].item())
+
+        except NameError:
+            new_key = df['Value'][df['Key'] == key_name].item().replace("']", "").split("['")
+            return self.value_extractor(df,new_key)
 
 #################
 #################
@@ -312,7 +365,7 @@ class customized_synapse(object):
         building the cortical module. New types of synapses should be implemented in this class.
     '''
 
-    def __init__(self, receptor, pre_group_idx, post_group_idx, syn_type, pre_type, post_type, post_comp_name='_soma'):
+    def __init__(self, receptor, pre_group_idx, post_group_idx, syn_type, pre_type, post_type,physio_config_df,post_comp_name='_soma'):
         '''
         initializes the customized_synapse based on its arguments.
 
@@ -343,7 +396,7 @@ class customized_synapse(object):
         self.output_synapse['post_group_idx'] = int(post_group_idx)
         self.output_synapse['post_group_type'] = post_type
         self.output_synapse['post_comp_name'] = post_comp_name
-        _name_space = synapse_namespaces(self.output_synapse)
+        _name_space = synapse_namespaces(self.output_synapse,physio_config_df)
         self.output_synapse['namespace'] = {}
         self.output_synapse['namespace'] = _name_space.output_namespace
         self.output_synapse['sparseness'] = _name_space.sparseness

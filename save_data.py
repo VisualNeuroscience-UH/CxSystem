@@ -1,9 +1,9 @@
 __author__ = 'V_AD'
-import cPickle as pickle
 from brian2  import *
 from numpy import *
 import os
 import ntpath
+import cPickle as pickle
 import zlib
 import bz2
 
@@ -72,9 +72,4 @@ class save_data(object):
         elif 'pickle' in self.save_extension:
             with open(self.save_path, 'wb') as fb:
                 pickle.dump(self.data,fb , pickle.HIGHEST_PROTOCOL)
-        # if 'mat' in self.save_extension:
-        #     scipy.io.savemat(self.save_path, self.data )
-        # elif 'h5' in self.save_extension:
-        #     hkl.dump(self.data,self.save_path)
-        # scipy.io.savemat(pars_save_path, self.pars) # this is in case you want to keep track of parameter changes
 
