@@ -5,10 +5,12 @@ import zlib
 import os
 from brian2 import *
 
-time_for_visualization=np.array([0,0.09]) +17
+time_for_visualization=np.array([0,0.09])
 time_for_visualization = time_for_visualization + 0.0001 # To accept 0 as starting point. Rounding error for the end.
 dt = 0.01 * ms
 plot_dt = 0.1 * ms
+state_variable_to_monitor = 'vm_all'
+# state_variable_to_monitor = 'wght_all'
 
 
 # data_file_name = '../CX_OUTPUT/CX_Output_20161108_11000084_Python_1000ms.gz'
@@ -23,7 +25,7 @@ with open(data_file_name, 'rb') as compressed_data_file:
 
 positions = data_dictionary['positions_all']
 spikes_all = data_dictionary['spikes_all']
-vm_all = data_dictionary['vm_all']
+stvar_of_interest = data_dictionary[state_variable_to_monitor]
 
 plt.figure()
 
@@ -41,18 +43,21 @@ for plot_index, neuron_group in enumerate(neuron_groups):
     plt.xlim([time_for_visualization[0],time_for_visualization[1]])
     plt.title('%s spikes' % neuron_group)
 
-    if neuron_group in vm_all.keys():
-        membrane_voltages = vm_all[neuron_group]
+    if neuron_group in stvar_of_interest.keys():
+        stvar_value = stvar_of_interest[neuron_group]
         plt.subplot(len(neuron_groups), N_columns, plot_index * N_columns + 3)
-        N_time_points = len(membrane_voltages[0])
+        N_time_points = len(stvar_value[0])
 
 
         data_indices_for_plot = np.array([time_for_visualization[0] * (1 * second) / dt, time_for_visualization[1]  * (1 * second) / dt], dtype=int)
         subsample_step = int(plot_dt / dt)
-        subsampled_data_epoch_for_plot = membrane_voltages[:,data_indices_for_plot[0]:data_indices_for_plot[1]:subsample_step]
+        subsampled_data_epoch_for_plot = stvar_value[:, data_indices_for_plot[0]:data_indices_for_plot[1]:subsample_step]
         time_vector = np.arange(time_for_visualization[0],time_for_visualization[1], plot_dt / (1 * second))
         plt.plot(time_vector,subsampled_data_epoch_for_plot.T, '-')
 
         plt.title('%s vm' % neuron_group)
+    elif ('S%d_Fixed' % plot_index or 'S%d_STDP' % plot_index) in stvar_of_interest.keys():
+        pass
+    # TODO visulize synaptic weights, one per connection. Make routine from plot statements, call, check
 
 plt.show()
