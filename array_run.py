@@ -175,7 +175,7 @@ class array_run(object):
         whitelist = set('abcdefghijklmnopqrstuvwxyABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890')
         try:
             if any(df[0].str.contains('row_type')):
-                definition_rows_indices = array(df[0][df[0].str.contains('row_type')].index.tolist())
+                definition_rows_indices = array(df[0][df[0] == 'row_type'].index.tolist())
                 target_row = max(where(definition_rows_indices < idx[0])[0])
                 title = str(df.loc[target_row][idx[1]])
                 value = str(df.loc[idx[0]][idx[1]])

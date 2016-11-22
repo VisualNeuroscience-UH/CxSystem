@@ -226,11 +226,11 @@ class cortical_system(object):
 
     def set_runtime_parameters(self):
         if not any(self.current_parameters_list.str.contains('runtime')):
-            print "Warning: runtime duration is not defined in the configuration file. The default runtime duratoin is 500*ms"
+            print "\nWarning: runtime duration is not defined in the configuration file. The default runtime duratoin is 500*ms\n"
             self.runtime = 500*ms
         for ParamIdx, parameter in self.current_parameters_list.iteritems():
             if parameter not in self._options.keys():
-                print "Warning: system parameter %s not defined." % parameter
+                print "\nWarning: system parameter %s not defined.\n" % parameter
         options_with_priority = [it for it in self._options if not isnan(self._options[it][0])]
         parameters_to_set_prioritized = [it for priority_idx in range(len(options_with_priority)) for it in self._options if self._options[it][0]==priority_idx]
         for correct_parameter_to_set in parameters_to_set_prioritized:
@@ -585,7 +585,15 @@ class cortical_system(object):
                         sub_mon_arg.append('True')
                     elif '[rec]' in sub_mon_tags:
                         sub_mon_arg[sub_mon_tags.index('[rec]')+1] = 'arange'+ sub_mon_arg[sub_mon_tags.index('[rec]')+1].replace('-', ',')
-                        assert int(sub_mon_arg[sub_mon_tags.index('[rec]')+1].split(',')[1]) < self.customized_neurons_list[-1]['number_of_neurons'], "The stop index (%d) in the following monitor, is higher than the number of neurons in the group (%d): \n %s" %(int(sub_mon_arg[sub_mon_tags.index('[rec]')+1].split(',')[1]),self.customized_neurons_list[-1]['number_of_neurons'],str(self.current_values_list.tolist()),)
+                        if self.scale >= 1:
+                            assert int(sub_mon_arg[sub_mon_tags.index('[rec]')+1].split(',')[1]) < \
+                                   self.customized_neurons_list[-1]['number_of_neurons'], \
+                                "The stop index (%d) in the following monitor, is higher than the number of neurons in the group (%d): \n %s " %(int(sub_mon_arg[sub_mon_tags.index('[rec]')+1].split(',')[1]),self.customized_neurons_list[-1]['number_of_neurons'],str(self.current_values_list.tolist()),)
+                        elif int(sub_mon_arg[sub_mon_tags.index('[rec]')+1].split(',')[1]) < self.customized_neurons_list[-1]['number_of_neurons']:
+                            "\n Warning: The stop index (%d) in the following monitor, is higher than the number of neurons in the group (%d): \n %s . This is caused by using a scale < 1" % (
+                            int(sub_mon_arg[sub_mon_tags.index('[rec]') + 1].split(',')[1]),
+                            self.customized_neurons_list[-1]['number_of_neurons'],
+                            str(self.current_values_list.tolist()),)
 
 
                     assert len(sub_mon_arg) == len(sub_mon_tags) + 1, 'Error in monitor tag definition.'
@@ -900,7 +908,7 @@ class cortical_system(object):
                 try:
                     _current_connections = int(num_tmp/float(syn[self.current_parameters_list[self.current_parameters_list=='n'].index.item()])) / len(self.current_values_list)
                 except ValueError:
-                    print "warning: number of synapses for last connection was equal to number of connections"
+                    print "\nWarning: number of synapses for last connection was equal to number of connections\n"
                     _current_connections = num_tmp
                 self.total_number_of_connections += _current_connections
                 try:
@@ -1249,7 +1257,7 @@ if __name__ == '__main__' :
     # CM.run()
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Cpp',runtime=1000 * ms)
     # CM.run()
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', \
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', \
                          os.path.dirname(os.path.realpath(__file__)) + '/Physiological_Parameters.csv',
                          device='Python')
     CM.run()
