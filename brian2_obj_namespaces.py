@@ -22,21 +22,21 @@ class synapse_namespaces(object):
 
     '''
 
-    def __init__(self,output_synapse,physio_df):
+    def __init__(self,output_synapse,physio_config_df):
         '''
         The initialization method for namespaces() object.
 
         :param output_synapse: This is the dictionary created in customized_neuron() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this class, Synaptic namespace parameters are directly added to it. Following values are set after initialization: Cp, Cd, sparseness, ilam. Other variables are then set based on the type of the synaptic connection (STDP,Fixed).
         '''
         self.output_synapse = output_synapse
-        self.physio_df = physio_df
+        self.physio_config_df = physio_config_df
         synapse_namespaces.type_ref = array (['STDP','Fixed'])
         assert output_synapse['type'] in synapse_namespaces.type_ref, "Cell type '%s' is not defined." % output_synapse['type']
         self.output_namespace = {}
-        self.output_namespace['Cp'] = self.value_extractor(self.physio_df,'Cp')
-        self.output_namespace['Cd'] = self.value_extractor(self.physio_df,'Cd')
-        self.sparseness = self.value_extractor(self.physio_df,'sp_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
-        self.ilam = self.value_extractor(self.physio_df,'ilam_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
+        self.output_namespace['Cp'] = self.value_extractor(self.physio_config_df,'Cp')
+        self.output_namespace['Cd'] = self.value_extractor(self.physio_config_df,'Cd')
+        self.sparseness = self.value_extractor(self.physio_config_df,'sp_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
+        self.ilam = self.value_extractor(self.physio_config_df,'ilam_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
         getattr(synapse_namespaces,output_synapse['type'])(self)
 
     def value_extractor(self, df, key_name):
@@ -70,14 +70,14 @@ class synapse_namespaces(object):
         :param output_synapse:  This is the dictionary created in customized_neuron() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: Apre, Apost, Tau_pre, Tau_post, wght_max, wght0.
         '''
         self.output_namespace['Apre'], self.output_namespace['Apost'], self.output_namespace['taupre'], \
-        self.output_namespace['taupost'] = self.value_extractor(self.physio_df,'stdp_%s_%s' % (self.output_synapse['pre_group_type'], \
+        self.output_namespace['taupost'] = self.value_extractor(self.physio_config_df,'stdp_%s_%s' % (self.output_synapse['pre_group_type'], \
             self.output_synapse['post_group_type'] + self.output_synapse['post_comp_name']))
-        stdp_max_strength_coefficient = self.value_extractor(self.physio_df,'stdp_max_strength_coefficient')
-        self.output_namespace['wght_max'] = self.value_extractor(self.physio_df,'cw_%s_%s'% (self.output_synapse['pre_group_type'],self.output_synapse['post_group_type']))* stdp_max_strength_coefficient
-        std_wght = self.value_extractor(self.physio_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+        stdp_max_strength_coefficient = self.value_extractor(self.physio_config_df,'stdp_max_strength_coefficient')
+        self.output_namespace['wght_max'] = self.value_extractor(self.physio_config_df,'cw_%s_%s'% (self.output_synapse['pre_group_type'],self.output_synapse['post_group_type']))* stdp_max_strength_coefficient
+        std_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
         mu_wght = std_wght / 2.
         self.output_namespace['wght0'] = '(%f * rand() + %f) * nS' % (std_wght , mu_wght)
-        std_delay = self.value_extractor(self.physio_df,'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
+        std_delay = self.value_extractor(self.physio_config_df,'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
         min_delay = std_delay / 2.
         self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, min_delay)
 
@@ -88,12 +88,12 @@ class synapse_namespaces(object):
 
         :param output_synapse: This is the dictionary created in customized_neuron() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: wght_max, wght0.
         '''
-        stdp_max_strength_coefficient = self.value_extractor(self.physio_df,'stdp_max_strength_coefficient')
-        self.output_namespace['wght_max'] = self.value_extractor(self.physio_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type']))* stdp_max_strength_coefficient
-        std_wght = self.value_extractor(self.physio_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+        stdp_max_strength_coefficient = self.value_extractor(self.physio_config_df,'stdp_max_strength_coefficient')
+        self.output_namespace['wght_max'] = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type']))* stdp_max_strength_coefficient
+        std_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
         mu_wght = std_wght / 2.
         self.output_namespace['wght0'] = '(%f * rand() + %f) * nS' % (std_wght , mu_wght)
-        std_delay = self.value_extractor(self.physio_df,'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
+        std_delay = self.value_extractor(self.physio_config_df,'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
         min_delay = std_delay / 2.
         self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, min_delay)
 
@@ -105,18 +105,18 @@ class synapse_namespaces(object):
 
 class neuron_namespaces (object):
     'This class embeds all parameter sets associated to all neuron types and will return it as a namespace in form of dictionary'
-    def __init__(self, output_neuron,physio_df):
-        self.physio_df = physio_df
+    def __init__(self, output_neuron,physio_config_df):
+        self.physio_config_df = physio_config_df
         neuron_namespaces.type_ref = array(['PC', 'SS', 'BC', 'MC','L1i','VPM'])
         assert output_neuron['type'] in neuron_namespaces.type_ref, "Cell type '%s' is not defined." % output_neuron['category']
         self.output_namespace = {}
-        variable_start_idx = self.physio_df['Variable'][self.physio_df['Variable'] == output_neuron['type']].index[0]
+        variable_start_idx = self.physio_config_df['Variable'][self.physio_config_df['Variable'] == output_neuron['type']].index[0]
         try:
-            variable_end_idx = self.physio_df['Variable'].dropna().index.tolist()[
-                self.physio_df['Variable'].dropna().index.tolist().index(variable_start_idx) + 1]
-            cropped_df = self.physio_df.loc[variable_start_idx:variable_end_idx-1]
+            variable_end_idx = self.physio_config_df['Variable'].dropna().index.tolist()[
+                self.physio_config_df['Variable'].dropna().index.tolist().index(variable_start_idx) + 1]
+            cropped_df = self.physio_config_df.loc[variable_start_idx:variable_end_idx-1]
         except IndexError:
-            cropped_df = self.physio_df.loc[variable_start_idx:]
+            cropped_df = self.physio_config_df.loc[variable_start_idx:]
 
         for neural_parameter in cropped_df['Key'].dropna():
             self.output_namespace[neural_parameter] = self.value_extractor(cropped_df,neural_parameter)
@@ -140,28 +140,19 @@ class neuron_namespaces (object):
         self.output_namespace['taum_soma'] = self.output_namespace['C'][1] / self.output_namespace['gL'][1]
 
     def _BC(self,output_neuron):
-        self.output_namespace['taum_soma'] = self.output_namespace['C'] / self.output_namespace['gL']  # Badel et al. 2008: 9 ms
-        self.output_namespace['V_res'] = self.output_namespace['VT'] - 4 * mV  # -55 * mV #self.output_namespace['VT']-4*mV
-        self.output_namespace['Vcut'] = self.output_namespace['VT'] + 5 * self.output_namespace['DeltaT']
+        pass
 
     def _L1i(self,output_neuron):
-        self.output_namespace['C'] = self.output_namespace['taum_soma'] * self.output_namespace['gL']  #
-        self.output_namespace['V_res'] = self.output_namespace['VT'] - 4 * mV  #
-        self.output_namespace['Vcut'] = self.output_namespace['VT'] + 5 * self.output_namespace['DeltaT']
+        pass
 
     def _VPM(self,output_neuron):
         pass
 
     def _MC(self,output_neuron):
-        self.output_namespace['gL'] = self.output_namespace['C'] / self.output_namespace['taum_soma']
-        self.output_namespace['V_res'] = self.output_namespace['VT'] - 4 * mV  # -55 * mV #self.output_namespace['VT']-4*mV # inherited from FS
-        self.output_namespace['Vcut'] = self.output_namespace['VT'] + 5 * self.output_namespace['DeltaT']  # inherited from FS
-
+        pass
 
     def _SS(self,output_neuron):
-        self.output_namespace['C']= 0.03 * self.output_namespace['Cm'] * self.output_namespace['Area_tot_pyram'] * 2 # 0.38 is summation of array([0.2, 0.03, 0.15])
-        self.output_namespace['gL'] = 0.03 * self.output_namespace['gl'] * self.output_namespace['Area_tot_pyram'] # 0.38 is summation of array([0.2, 0.03, 0.15])
-        self.output_namespace['taum_soma'] = self.output_namespace['C'] / self.output_namespace['gL']
+        pass
 
     def value_extractor(self, df, key_name):
         non_dict_indices = df['Variable'].dropna()[df['Key'].isnull()].index.tolist()
@@ -182,7 +173,18 @@ class neuron_namespaces (object):
                     cropped_df = df.loc[variable_start_idx:]
                 return eval(cropped_df['Value'][cropped_df['Key'] == key_name[1]].item())
             else:
-                return eval(df['Value'][df['Key'] == key_name].item())
+                try:
+                    return eval(df['Value'][df['Key'] == key_name].item())
+                except NameError:
+                    df_reset_index = df.reset_index(drop=True)
+                    df_reset_index = df_reset_index[0:df_reset_index[df_reset_index['Key'] == key_name].index[0]]
+                    for neural_parameter in df_reset_index['Key'].dropna():
+                        if neural_parameter  in df['Value'][df['Key'] == key_name].item():
+                            exec "%s =self.value_extractor(df,neural_parameter)" % (neural_parameter)
+                    return eval(df['Value'][df['Key'] == key_name].item())
+                except TypeError:
+                    raise TypeError('The syntax %s is not a valid syntax for physiological configuration file or the elements that comprise this syntax are not defined.'%df['Value'][df['Key'] == key_name].item())
+
         except NameError:
             new_key = df['Value'][df['Key'] == key_name].item().replace("']", "").split("['")
             return self.value_extractor(df,new_key)

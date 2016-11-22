@@ -19,8 +19,9 @@ import __builtin__
 import csv
 import shutil
 import pandas
-import math
 import threading
+import array_run
+import multiprocessing
 
 
 class cortical_system(object):
@@ -46,11 +47,11 @@ class cortical_system(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self, config_path,physio_path, device = 'Python',output_file_suffix = ''):
+    def __init__(self, anatomy_and_system_config,physiology_config, device = 'Python',output_file_suffix = ''):
         '''
         Initialize the cortical system by parsing the configuration file.
 
-        :param config_path: The path to the configuration file.
+        :param anatomy_and_system_config: The path to the configuration file.
         :param output_path: The path to save the final data.
         :param use_genn: switch the GeNN mode on/off (1/0), by default GeNN is off
 
@@ -67,6 +68,9 @@ class cortical_system(object):
 
         '''
         self.start_time = time.time()
+        self.device = device
+        assert self.device in ['GeNN', 'Cpp',
+                               'Python'], 'Device %s is not defined. Check capital letters in device name.' % self.device
         if device != 'Python':
             print "Info: system is going to be run using stand-alone devices, " \
                   "Errors may rise if Brian2/Brian2GeNN/GeNN is not installed correctly or the limitations are not " \
@@ -76,26 +80,27 @@ class cortical_system(object):
             self.CX_module = sys.modules['cortical_system']
         except KeyError:
             pass
-        self.device = device
-        assert self.device in ['GeNN', 'Cpp','Python'], 'Device %s is not defined. Check capital letters in device name.' % self.device
         self._options = {
-            'G': self.neuron_group,
-            'S': self.synapse,
-            'IN': self.relay,
-            'sys_mode': self._set_sys_mode, # either "local" or "expanded"
-            'scale' : self._set_scale,
-            'params': self.set_runtime_parameters,
-            'grid_radius': self._set_grid_radius,
-            'min_distance': self._set_min_distance,
-            'output_path&filename' : self._set_output_path,
-            'brian_data_loading_path&filename': self._set_load_brian_data_path,
-            'brian_data_saving_path&filename': self._set_save_brian_data_path,
-            'do_init_vms': self.do_init_vms,
-            'load_positions_only': self.load_positions_only,
-            'do_benchmark': self.do_benchmark,
-            'runtime' : self._set_runtime,
+            #Parameter_name : [set priority (0 is highest),function_to_run]
+            'save_generated_video_input_flag': [0,self.save_generated_video_input_flag],
+            'runtime': [1,self._set_runtime],
+            'sys_mode': [2,self._set_sys_mode],  # either "local" or "expanded"
+            'scale': [3,self._set_scale],
+            'grid_radius': [4,self._set_grid_radius],
+            'min_distance': [5,self._set_min_distance],
+            'do_init_vms': [6,self.do_init_vms],
+            'output_path&filename': [7,self._set_output_path],
+            'brian_data_saving_path&filename': [8,self._set_save_brian_data_path],
+            'brian_data_loading_path&filename': [9,self._set_load_brian_data_path],
+            'load_positions_only': [10,self.load_positions_only],
+            'do_benchmark': [11,self.do_benchmark],
+            'multidimension_array_run': [12,self.passer],  # this parameter is used by array_run module, so here we just pass
+            'number_of_process': [13,self.passer],  # this parameter is used by array_run module, so here we just pass
+            'G': [nan,self.neuron_group],
+            'S': [nan,self.synapse],
+            'IN': [nan,self.relay],
+            'params': [nan,self.set_runtime_parameters],
         }
-        output_file_suffix = '_' + output_file_suffix if output_file_suffix!='' else output_file_suffix
         self.StartTime_str = '_' + str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '')\
             [0:str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '').index('.')+3].replace('.','') + output_file_suffix
         print "Info: current run filename suffix is: %s"%self.StartTime_str[1:]
@@ -121,7 +126,6 @@ class cortical_system(object):
         self.monitor_idx = 0
         self.total_synapses = 0
         self.sys_mode = ''
-        self.config_path = config_path
         self.total_number_of_synapses = 0
         self.total_number_of_connections = 0
         self.general_grid_radius = 0
@@ -131,111 +135,109 @@ class cortical_system(object):
         self.load_positions_only = 0
         self.awaited_conf_lines = []
 
-        self.physio_df = pandas.read_csv(physio_path)
-        self.physio_df = self.physio_df.applymap(lambda x: NaN if str(x)[0] == '#' else x)
+        self.physio_config_df = pandas.read_csv(physiology_config) if type(physiology_config) == str else physiology_config
+        self.physio_config_df = self.physio_config_df.applymap(lambda x: NaN if str(x)[0] == '#' else x)
 
-        self.conf_df = pandas.read_csv(self.config_path,header=None)
-        self.conf_df = self.conf_df.applymap(lambda x: x.strip() if type(x) == str else x)
-        self.conf_df_to_save = self.conf_df
-        self.physio_df_to_save =  self.physio_df
+        self.anat_and_sys_conf_df = pandas.read_csv(anatomy_and_system_config,header=None) if type(anatomy_and_system_config) == str else anatomy_and_system_config
+        self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.applymap(lambda x: x.strip() if type(x) == str else x)
+        self.conf_df_to_save = self.anat_and_sys_conf_df
+        self.physio_df_to_save =  self.physio_config_df
+        self.array_run = 0
+        check_array_run_anatomy = self.anat_and_sys_conf_df.applymap(lambda x: True if '|' in str(x) else False)
+        check_array_run_physiology = self.physio_config_df.applymap(lambda x: True if '|' in str(x) else False)
+        if any(check_array_run_anatomy) or any(check_array_run_physiology):
+            array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df)
+            self.array_run = 1
+            return
         self.configuration_executer()
-        if type(self.awaited_conf_lines) != list:
+        if type(self.awaited_conf_lines) != list and self.thr.is_alive()==True:
             print "Waiting for the video input"
             self.thr.join()
-            self.conf_df = self.awaited_conf_lines
+            self.anat_and_sys_conf_df = self.awaited_conf_lines
             self.configuration_executer()
 
         print "Cortical Module initialization Done."
 
-    # def array_run(self):
-
 
     def configuration_executer(self):
-        definition_lines_idx = self.conf_df.ix[:,0][self.conf_df.ix[:,0]=='row_type'].index
+        definition_lines_idx = self.anat_and_sys_conf_df.ix[:,0][self.anat_and_sys_conf_df.ix[:,0]=='row_type'].index
         order_of_lines = ['params','IN','G','S']
         for value_line_title in order_of_lines:
             for def_idx in definition_lines_idx:
-                if value_line_title in self.conf_df.ix[def_idx+1,0]:
-                    self.current_parameters_list = self.conf_df.ix[def_idx,1:].dropna()
+                if value_line_title in self.anat_and_sys_conf_df.ix[def_idx+1,0]:
+                    self.current_parameters_list = self.anat_and_sys_conf_df.ix[def_idx,1:].dropna()
                     self.current_parameters_list = self.current_parameters_list[~self.current_parameters_list.str.contains('#')]
                     self.current_parameters_list_orig_len = len(self.current_parameters_list)
                     try:
                         next_def_line_idx = definition_lines_idx[definition_lines_idx.tolist().index(def_idx)+1].item()
                     except IndexError:
-                        next_def_line_idx = self.conf_df[0].__len__()
+                        next_def_line_idx = self.anat_and_sys_conf_df[0].__len__()
                     for self.value_line_idx in range(def_idx+1,next_def_line_idx):
-                        if self.conf_df.ix[self.value_line_idx,0] in self._options and self.conf_df.ix[self.value_line_idx,0][0]!='#':
-                            self.current_parameters_list = self.conf_df.ix[def_idx,1:].dropna()
-                            self.current_parameters_list = self.current_parameters_list[~self.current_parameters_list.str.contains('#')]
-                            self.current_values_list = self.conf_df.ix[self.value_line_idx,self.current_parameters_list.index].dropna()
-                            self._options[self.conf_df.ix[self.value_line_idx,0]]()
+                        if type(self.anat_and_sys_conf_df.ix[self.value_line_idx, 0]) == str:
+                            if self.anat_and_sys_conf_df.ix[self.value_line_idx,0] in self._options.keys() and self.anat_and_sys_conf_df.ix[self.value_line_idx,0][0]!='#':
+                                self.current_parameters_list = self.anat_and_sys_conf_df.ix[def_idx,1:].dropna()
+                                self.current_parameters_list = self.current_parameters_list[~self.current_parameters_list.str.contains('#')]
+                                self.current_values_list = self.anat_and_sys_conf_df.ix[self.value_line_idx,self.current_parameters_list.index].dropna()
+                                self._options[self.anat_and_sys_conf_df.ix[self.value_line_idx,0]][1]()
                     break
 
-        # for self.conf_line in configuration:
-        #     try:
-        #         if self.conf_line[0] == '#' or not self.conf_line.split(','):  # comments
-        #             continue
-        #     except IndexError:
-        #         continue
-        #     _splitted_line = [non_empty.strip() for non_empty in self.conf_line.split(',') if non_empty != '']
-        #     if 'row_type' in self.conf_line:
-        #         self.current_parameters_list = _splitted_line[1:]
-        #         self.current_parameters_list_orig_len = len(self.current_parameters_list)
-        #     elif _splitted_line[0] in self._options :
-        #         self.current_values_list = _splitted_line[1:]
-        #         self._options[_splitted_line[0]]()
+    def passer(self,*args):
+        pass
 
     def run(self):
-        run(self.runtime, report='text')
-        if self.do_benchmark:
-            self.benchmarking_data = {}
-            titles= ['Computer Name','Device','File Suffix','Simulation Time','Python Compilation','Brian Code generation',\
-                     'Device-Specific Compilation','Run','Extract and Save Result','Total Time']
-            self.benchmarking_data['Simulation Time'] = str(self.runtime)
-            self.benchmarking_data['Device'] = self.device
-            self.benchmarking_data['File Suffix'] = self.StartTime_str[1:]
-            if self.device != 'Python':
-                self.benchmarking_data['Python Compilation'] = __builtin__.code_generation_start - self.start_time
-                self.benchmarking_data['Brian Code generation'] = __builtin__.compile_start - __builtin__.code_generation_start
-                self.benchmarking_data['Device-Specific Compilation'] = __builtin__.run_start - __builtin__.compile_start
-            else:
-                self.benchmarking_data['Python Compilation'] = __builtin__.run_start - self.start_time
-                self.benchmarking_data['Brian Code generation'] = '-'
-                self.benchmarking_data['Device-Specific Compilation'] = '-'
-            self.saving_start_time = time.time()
-            self.benchmarking_data['Run'] = self.saving_start_time -  __builtin__.run_start
-        self.gather_result()
-        self.end_time = time.time()
-        if self.do_benchmark:
-            self.benchmarking_data['Extract and Save Result'] = self.end_time - self.saving_start_time
-            self.benchmarking_data['Total Time'] = self.end_time - self.start_time
-            import platform
-            self.benchmarking_data['Computer Name'] = platform.node()
-            write_titles = 1 if not os.path.isfile(os.path.join(self.output_folder,'benchmark.csv')) else 0
-            with open(os.path.join(self.output_folder,'benchmark.csv'), 'ab') as f:
-                w = csv.DictWriter(f, titles)
-                if write_titles:
-                    w.writeheader()
-                w.writerow(self.benchmarking_data)
-                print "Benchmarking data saved"
-        print "Info: simulating %s took in total %d s" % (str(self.runtime),self.end_time-self.start_time)
-        if self.device == 'GeNN':
-            shutil.rmtree(os.path.join(self.output_folder, self.StartTime_str[1:]))
-        elif self.device == 'Cpp':
-            shutil.rmtree(os.path.join(self.output_folder, self.StartTime_str[1:]))
+        if not self.array_run:
+            run(self.runtime, report='text')
+            if self.do_benchmark:
+                self.benchmarking_data = {}
+                titles= ['Computer Name','Device','File Suffix','Simulation Time','Python Compilation','Brian Code generation',\
+                         'Device-Specific Compilation','Run','Extract and Save Result','Total Time']
+                self.benchmarking_data['Simulation Time'] = str(self.runtime)
+                self.benchmarking_data['Device'] = self.device
+                self.benchmarking_data['File Suffix'] = self.StartTime_str[1:]
+                if self.device != 'Python':
+                    self.benchmarking_data['Python Compilation'] = __builtin__.code_generation_start - self.start_time
+                    self.benchmarking_data['Brian Code generation'] = __builtin__.compile_start - __builtin__.code_generation_start
+                    self.benchmarking_data['Device-Specific Compilation'] = __builtin__.run_start - __builtin__.compile_start
+                else:
+                    self.benchmarking_data['Python Compilation'] = __builtin__.run_start - self.start_time
+                    self.benchmarking_data['Brian Code generation'] = '-'
+                    self.benchmarking_data['Device-Specific Compilation'] = '-'
+                self.saving_start_time = time.time()
+                self.benchmarking_data['Run'] = self.saving_start_time -  __builtin__.run_start
+            self.gather_result()
+            self.end_time = time.time()
+            if self.do_benchmark:
+                self.benchmarking_data['Extract and Save Result'] = self.end_time - self.saving_start_time
+                self.benchmarking_data['Total Time'] = self.end_time - self.start_time
+                import platform
+                self.benchmarking_data['Computer Name'] = platform.node()
+                write_titles = 1 if not os.path.isfile(os.path.join(self.output_folder,'benchmark.csv')) else 0
+                with open(os.path.join(self.output_folder,'benchmark.csv'), 'ab') as f:
+                    w = csv.DictWriter(f, titles)
+                    if write_titles:
+                        w.writeheader()
+                    w.writerow(self.benchmarking_data)
+                    print "Benchmarking data saved"
+            print "Info: simulating %s took in total %d s" % (str(self.runtime),self.end_time-self.start_time)
+            if self.device == 'GeNN':
+                shutil.rmtree(os.path.join(self.output_folder, self.StartTime_str[1:]))
+            elif self.device == 'Cpp':
+                shutil.rmtree(os.path.join(self.output_folder, self.StartTime_str[1:]))
 
     def set_runtime_parameters(self):
-        order_of_parameters = ['runtime','sys_mode','scale','grid_radius', 'min_distance', 'do_init_vms','output_path&filename',
-                    'brian_data_saving_path&filename' , 'brian_data_loading_path&filename', 'load_positions_only'
-            ,'do_benchmark']
         if not any(self.current_parameters_list.str.contains('runtime')):
             print "Warning: runtime duration is not defined in the configuration file. The default runtime duratoin is 500*ms"
             self.runtime = 500*ms
-        for correct_parameter_to_set in order_of_parameters:
+        for ParamIdx, parameter in self.current_parameters_list.iteritems():
+            if parameter not in self._options.keys():
+                print "Warning: system parameter %s not defined." % parameter
+        options_with_priority = [it for it in self._options if not isnan(self._options[it][0])]
+        parameters_to_set_prioritized = [it for priority_idx in range(len(options_with_priority)) for it in self._options if self._options[it][0]==priority_idx]
+        for correct_parameter_to_set in parameters_to_set_prioritized:
             for ParamIdx,parameter in self.current_parameters_list.iteritems():
                 if parameter == correct_parameter_to_set:
                     assert (parameter in self._options.keys()), 'The tag %s is not defined.' % parameter
-                    self._options[parameter](self.current_values_list[ParamIdx])
+                    self._options[parameter][1](self.current_values_list[ParamIdx])
                     break
         self.StartTime_str += '_'+self.device+'_'+str(int((self.runtime/second)*1000)) + 'ms'
         if self.sys_mode == '':
@@ -251,6 +253,7 @@ class cortical_system(object):
             set_device('cpp_standalone', directory=os.path.join(self.output_folder, self.StartTime_str[1:]))
             prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
 
+
     def _set_runtime(self,*args):
         assert '*' in args[0], 'Please specify the unit for the runtime parameter, e.g. um , mm '
         self.runtime = eval(args[0])
@@ -258,6 +261,11 @@ class cortical_system(object):
     def _set_sys_mode(self, *args):
         assert args[0] in ['local','expanded'], "System mode should be either local or expanded. "
         self.sys_mode = args[0]
+
+    def save_generated_video_input_flag(self, *args):
+        assert int(args[0]) == 0 or int(args[0]) == 1, \
+            'The do_init_vm flag should be either 0 or 1 but it is %s .' % args[0]
+        self.save_generated_video_input_flag = int(args[0])
 
     def _set_grid_radius(self, *args):
         assert '*' in args[0], 'Please specify the unit for the grid radius parameter, e.g. um , mm '
@@ -279,6 +287,7 @@ class cortical_system(object):
     def _set_output_path(self, *args):
         self.output_path = args[0]
         self.output_folder = os.path.dirname(self.output_path)
+        self.output_file_extension = '.'+self.output_path.split('.')[-1]
         self.save_output_data = save_data(self.output_path,self.StartTime_str)  # This is for saving the output
         self.save_output_data.creat_key('positions_all')
         self.save_output_data.creat_key('Neuron_Groups_Parameters')
@@ -386,7 +395,7 @@ class cortical_system(object):
         assert not any(self.current_values_list.ix[obligatory_indices] == '--'), \
             'Following obligatory values cannot be "--":\n%s' % str([_all_columns[ii] for ii in _obligatory_params])
         assert len(self.current_values_list) == self.current_parameters_list_orig_len,\
-            "One or more of of the columns for NeuronGroup definition is missing in the following line:\n %s " % str(self.conf_df.ix[self.value_line_idx].to_dict().values())
+            "One or more of of the columns for NeuronGroup definition is missing in the following line:\n %s " % str(self.anat_and_sys_conf_df.ix[self.value_line_idx].to_dict().values())
         idx = -1
         net_center = 0 + 0j
         number_of_neurons = 0
@@ -422,7 +431,7 @@ class cortical_system(object):
         except AttributeError:
             pass
         self.customized_neurons_list.append(customized_neuron(idx, number_of_neurons, neuron_type,
-                                                  layer_idx, self.general_grid_radius, self.min_distance,self.physio_df,
+                                                  layer_idx, self.general_grid_radius, self.min_distance,self.physio_config_df,
                                                               network_center=net_center).output_neuron)  # creating a
         # customized_neuron() object and passing the positional arguments to it. The main member of the class called
         # output_neuron is then appended to customized_neurons_list.
@@ -446,6 +455,7 @@ class cortical_system(object):
 
         # next  6 line create the variable that are needed for current target line NeuronGroup().
         self.save_output_data.data['Neuron_Groups_Parameters'][NG_name] = self.customized_neurons_list[-1]
+        self.customized_neurons_list[current_idx]['object_name'] = NG_name
         exec "%s=self.customized_neurons_list[%d]['number_of_neurons']" % (NN_name, current_idx)
         exec "%s=self.customized_neurons_list[%d]['equation']" % (NE_name, current_idx)
         exec "%s=self.customized_neurons_list[%d]['threshold']" % (NT_name, current_idx)
@@ -574,8 +584,10 @@ class cortical_system(object):
                         sub_mon_tags.append('[rec]')
                         sub_mon_arg.append('True')
                     elif '[rec]' in sub_mon_tags:
-                        sub_mon_arg[sub_mon_tags.index('[rec]')+1] = \
-                            'arange'+ sub_mon_arg[sub_mon_tags.index('[rec]')+1].replace('-', ',')
+                        sub_mon_arg[sub_mon_tags.index('[rec]')+1] = 'arange'+ sub_mon_arg[sub_mon_tags.index('[rec]')+1].replace('-', ',')
+                        assert int(sub_mon_arg[sub_mon_tags.index('[rec]')+1].split(',')[1]) < self.customized_neurons_list[-1]['number_of_neurons'], "The stop index (%d) in the following monitor, is higher than the number of neurons in the group (%d): \n %s" %(int(sub_mon_arg[sub_mon_tags.index('[rec]')+1].split(',')[1]),self.customized_neurons_list[-1]['number_of_neurons'],str(self.current_values_list.tolist()),)
+
+
                     assert len(sub_mon_arg) == len(sub_mon_tags) + 1, 'Error in monitor tag definition.'
                 if sub_mon_arg[0] == '':
                     assert mon_tag == '[Sp]', 'The monitor state variable is not defined properly'
@@ -641,7 +653,7 @@ class cortical_system(object):
         assert not any(self.current_values_list.ix[obligatory_indices].isnull()), \
             'Following obligatory values cannot be "--":\n%s' % str([_all_columns[ii] for ii in _obligatory_params])
         assert len(self.current_values_list) == self.current_parameters_list_orig_len, \
-        "One or more of of the columns for synapse definition is missing in the following line:\n %s " %str(self.conf_df.ix[self.value_line_idx].to_dict().values())
+        "One or more of of the columns for synapse definition is missing in the following line:\n %s " %str(self.anat_and_sys_conf_df.ix[self.value_line_idx].to_dict().values())
         _options = {
             '[C]': self.neuron_group,
         }
@@ -679,7 +691,7 @@ class cortical_system(object):
             if current_post_syn_tags == '[C]':  # [C] means the target is a compartment
                 _post_group_idx, _post_com_idx = current_post_syn_idx.split('[' + 'C' + ']')
                 assert int(_post_group_idx) < len(self.neurongroups_list),\
-                'The synapse in the following line is targeting a group index that is not defined:\n%s'%str(self.conf_df.ix[self.value_line_idx].to_dict().values())
+                'The synapse in the following line is targeting a group index that is not defined:\n%s'%str(self.anat_and_sys_conf_df.ix[self.value_line_idx].to_dict().values())
                 self.current_values_list[self.current_parameters_list[self.current_parameters_list=='post_syn_idx'].index.item()] = _post_group_idx
                 pre_group_ref_idx = [self.customized_neurons_list.index(tmp_group) for tmp_group in
                                      self.customized_neurons_list if tmp_group['idx'] == int(current_pre_syn_idx)][0]
@@ -729,7 +741,7 @@ class cortical_system(object):
                 self.current_values_list = [self.current_values_list]
         else:
             assert int(current_post_syn_idx) < len(self.neurongroups_list), \
-                'The synapse in the following line is targeting a group index that is not defined:\n%s' % str(self.conf_df.ix[self.value_line_idx].to_dict().values())
+                'The synapse in the following line is targeting a group index that is not defined:\n%s' % str(self.anat_and_sys_conf_df.ix[self.value_line_idx].to_dict().values())
             pre_group_ref_idx = [self.customized_neurons_list.index(tmp_group) for tmp_group in \
                                  self.customized_neurons_list if int(tmp_group['idx']) == \
                                  int(current_pre_syn_idx)][0]
@@ -768,7 +780,7 @@ class cortical_system(object):
             # creating a customized_synapse object and passing the positional arguments to it. The main member of
             # the class called output_synapse is then appended to customized_synapses_list:
             self.customized_synapses_list.append(customized_synapse(receptor, pre_syn_idx, post_syn_idx, syn_type,
-                                                                 pre_type, post_type,self.physio_df ,post_comp_name).output_synapse)
+                                                                 pre_type, post_type,self.physio_config_df ,post_comp_name).output_synapse)
             _pre_group_idx = self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]
             _post_group_idx = self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']]
             # Generated variable name for the Synapses(), equation, pre_synaptic and post_synaptic equation and Namespace
@@ -811,7 +823,7 @@ class cortical_system(object):
                     self.default_load_flag = -1
                     _do_load = int(syn[self.current_parameters_list[self.current_parameters_list=='load_connection'].index.item()].replace('<--', ''))
                     if _do_load ==1:
-                        assert hasattr(self,'loaded_brian_data'), "Synaptic connection in the following line is set to be loaded, however the load_brian_data_path is not defined in the parameters. The connection is being created:\n%s"%str(self.conf_df.ix[self.value_line_idx].to_dict().values())
+                        assert hasattr(self,'loaded_brian_data'), "Synaptic connection in the following line is set to be loaded, however the load_brian_data_path is not defined in the parameters. The connection is being created:\n%s"%str(self.anat_and_sys_conf_df.ix[self.value_line_idx].to_dict().values())
                 else:
                     _do_load = int(syn[self.current_parameters_list[self.current_parameters_list=='load_connection'].index.item()])
 
@@ -872,16 +884,6 @@ class cortical_system(object):
 
             exec "%s.wght=%s['wght0']" % (S_name, SNS_name)  # set the weights
             exec "%s.delay=%s['delay']" % (S_name, SNS_name)  # set the delays
-            # DO NOT DELETE NEXT TRY EXCEPT
-            # try:
-                # setattr(self.main_module, SE_name, eval(SE_name))
-                # setattr(self.main_module, SPre_name, eval(SPre_name))
-                # setattr(self.main_module, SPost_name, eval(SPost_name))
-                # setattr(self.main_module, SNS_name, eval(SNS_name))
-            # except AttributeError:  # in case of fixed connection
-                # setattr(self.main_module, SE_name, eval(SE_name))
-                # setattr(self.main_module, SPre_name, eval(SPre_name))
-                # setattr(self.main_module, SNS_name, eval(SNS_name))
 
             setattr(self.main_module, S_name, eval(S_name))
             try:
@@ -969,37 +971,25 @@ class cortical_system(object):
         NG_name = ''
         def video(self):
             print "creating an input based on the video input."
-            path = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='path'].index.item()]
+            input_mat_path = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='path'].index.item()]
             freq = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='freq'].index.item()]
-            inp = stimuli(self.runtime)
-            # if __name__ == '__main__':
-            import multiprocessing
-            proc = multiprocessing.Process(target=inp.generate_inputs, args=(path, freq,os.path.join(self.output_folder, self.StartTime_str[1:])))
+            inp = stimuli(duration=self.runtime,input_mat_path=input_mat_path,output_folder=self.output_folder, \
+                          output_file_extension = self.output_file_extension,
+                          save_generated_input_flag = self.save_generated_video_input_flag)
+            proc = multiprocessing.Process(target=inp.generate_inputs, args=(freq,))
             proc.start()
-                # proc.join()
-            # inp.generate_inputs(path,freq)
             self.video_input_idx =len(self.neurongroups_list)
             self.neurongroups_list.append('awaiting_video_group')
 
             def waitress(self):
+                time.sleep(3)
                 while proc.is_alive():
-                    time.sleep(2)
-                thread_spikes_str, thread_times_str, thread_SG_str, thread_number_of_neurons = inp.load_input_seq(path)
-                thread_Spikes_Name = thread_spikes_str.split('=')[0].rstrip()
-                thread_Time_Name = thread_times_str.split('=')[0].rstrip()
-                thread_SG_Name = thread_SG_str.split('=')[0].rstrip()
-                # Internal switch for brian2GeNN:
-
-                # In order to use the dynamic compiler in a sub-routine, the scope in which the syntax is going to be run
-                # should be defined, hence the globals(), locals(). They indicate that the syntaxes should be run in both
-                # global and local scope
-                exec thread_spikes_str in globals(), locals() # running the string containing the syntax for Spike indices in the input neuron group.
-                exec thread_times_str in globals(), locals()# running the string containing the syntax for time indices in the input neuron group.
-                exec thread_SG_str in globals(), locals()# running the string containing the syntax for creating the SpikeGeneratorGroup() based on the input .mat file.
-
-                setattr(self.main_module, thread_SG_Name, eval(thread_SG_Name))
+                    time.sleep(1)
+                SPK_GENERATOR_SP, SPK_GENERATOR_TI, thread_number_of_neurons = inp.load_input_seq(self.output_folder)
+                SPK_GENERATOR = SpikeGeneratorGroup(thread_number_of_neurons , SPK_GENERATOR_SP, SPK_GENERATOR_TI)
+                setattr(self.main_module, 'SPK_GENERATOR', SPK_GENERATOR)
                 try:
-                    setattr(self.CX_module, thread_SG_Name, eval(thread_SG_Name))
+                    setattr(self.CX_module, 'SPK_GENERATOR', SPK_GENERATOR)
                 except AttributeError:
                     pass
                 # Generated variable name for the NeuronGroup, Neuron_number,Equation, Threshold, Reset
@@ -1012,6 +1002,9 @@ class cortical_system(object):
                 Eq = """'''emit_spike : 1
                     x : meter
                     y : meter'''"""
+                # In order to use the dynamic compiler in a sub-routine, the scope in which the syntax is going to be run
+                # should be defined, hence the globals(), locals(). They indicate that the syntaxes should be run in both
+                # global and local scope
                 exec "%s=%s" % (thread_NN_name, thread_number_of_neurons) in globals(), locals()
                 exec "%s=%s" % (thread_NE_name, Eq) in globals(), locals()
                 exec "%s=%s" % (thread_NT_name, "'emit_spike>=1'") in globals(), locals()
@@ -1030,7 +1023,7 @@ class cortical_system(object):
                     self.loaded_brian_data['positions_all']['z_coord'][thread_GroupKeyName]
                     print "Position for the group %s loaded" % thread_NG_name
                 else: # load the positions:
-                    self.customized_neurons_list[self.video_input_idx]['z_positions'] = squeeze(inp.get_input_positions(path))
+                    self.customized_neurons_list[self.video_input_idx]['z_positions'] = squeeze(inp.get_input_positions())
                     self.customized_neurons_list[self.video_input_idx]['w_positions'] = 17 * log(relay_group['z_positions'] + 1)
 
                 # setting the position of the neurons based on the positions in the .mat input file:
@@ -1044,7 +1037,7 @@ class cortical_system(object):
                 self.save_output_data.data['number_of_neurons'][thread_NG_name] = eval(thread_NN_name)
                 thread_SGsyn_name = 'SGEN_Syn' # variable name for the Synapses() object
                 # that connects SpikeGeneratorGroup() and relay neurons.
-                exec "%s = Synapses(GEN, %s, on_pre='emit_spike+=1')" % \
+                exec "%s = Synapses(SPK_GENERATOR, %s, on_pre='emit_spike+=1')" % \
                      (thread_SGsyn_name, thread_NG_name) in globals(), locals()# connecting the SpikeGeneratorGroup() and relay group.
                 exec "%s.connect(j='i')" % thread_SGsyn_name in globals(), locals() # SV change
                 setattr(self.main_module, thread_NG_name, eval(thread_NG_name))
@@ -1057,37 +1050,33 @@ class cortical_system(object):
                 # taking care of the monitors:
                 self.monitors(mons.split(' '), thread_NG_name, self.customized_neurons_list[-1]['equation'])
 
-            # if self.device == 'GeNN':
-            #     set_device('genn',directory=os.path.join(self.output_folder,self.StartTime_str[1:]))
-            #     prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
-            # elif self.device == 'Cpp':
-            #     set_device('cpp_standalone',directory=os.path.join(self.output_folder,self.StartTime_str[1:]))
-            #     prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
             input_neuron_group_idx = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='idx'].index.item()]
-            syn_lines = self.conf_df[self.conf_df[0].str.startswith('S') == True]
+            syn_lines = self.anat_and_sys_conf_df[self.anat_and_sys_conf_df[0].str.startswith('S') == True]
             input_synaptic_lines = syn_lines[syn_lines[2] == '0']
-            row_type_lines = self.conf_df.loc[:input_synaptic_lines.index[0]][0].str.startswith('row_type') == True
-            synapse_def_line = self.conf_df.loc[row_type_lines[row_type_lines == True].index[-1]]
+            row_type_lines = self.anat_and_sys_conf_df.loc[:input_synaptic_lines.index[0]][0].str.startswith('row_type') == True
+            synapse_def_line = self.anat_and_sys_conf_df.loc[row_type_lines[row_type_lines == True].index[-1]]
             load_conn_idx = synapse_def_line[synapse_def_line=='load_connection'].index[0]
             save_conn_idx = synapse_def_line[synapse_def_line=='save_connection'].index[0]
             for conn_load_item in input_synaptic_lines[load_conn_idx]:
                 if '<--' in conn_load_item or '-->' in conn_load_item:
-                    for synaptic_row in range(input_synaptic_lines.index[0]+1 , self.conf_df[0].index[-1]):
-                        if self.conf_df.loc[synaptic_row][0][0]!='#':
+                    for synaptic_row in range(input_synaptic_lines.index[0]+1 , self.anat_and_sys_conf_df[0].index[-1]):
+                        if self.anat_and_sys_conf_df.loc[synaptic_row][0][0]!='#':
                             sign_to_add = '-->' if '-->' in conn_load_item else '<--'
-                            self.conf_df.loc[input_synaptic_lines.index[0]+1,load_conn_idx] += sign_to_add
+                            self.anat_and_sys_conf_df.loc[input_synaptic_lines.index[0]+1,load_conn_idx] += sign_to_add
                             break
             for conn_save_item in input_synaptic_lines[save_conn_idx]:
                 if '<--' in conn_save_item or '-->' in conn_save_item:
-                    for synaptic_row in range (input_synaptic_lines.index[0]+1 , self.conf_df[0].index[-1]):
-                        if self.conf_df.loc[synaptic_row][0][0]!='#':
+                    for synaptic_row in range (input_synaptic_lines.index[0]+1 , self.anat_and_sys_conf_df[0].index[-1]):
+                        if self.anat_and_sys_conf_df.loc[synaptic_row][0][0]!='#':
                             sign_to_add = '-->' if '-->' in conn_save_item else '<--'
-                            self.conf_df.loc[input_synaptic_lines.index[0]+1,save_conn_idx] += sign_to_add
+                            self.anat_and_sys_conf_df.loc[input_synaptic_lines.index[0]+1,save_conn_idx] += sign_to_add
                             break
             self.awaited_conf_lines = synapse_def_line.to_frame().transpose().reset_index(drop=True).append(input_synaptic_lines).reset_index(drop=True)
-            self.conf_df = self.conf_df.drop(input_synaptic_lines.index.tolist()).reset_index(drop=True)
+            self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.drop(input_synaptic_lines.index.tolist()).reset_index(drop=True)
             self.thr = threading.Thread(target = waitress,args=(self,))
             self.thr.start()
+            if inp.file_exist_flag:
+                self.thr.join()
 
         def VPM(self): #ventral posteromedial (VPM) thalamic nucleus
             spike_times = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='spike_times'].index.item()].replace(' ',',')
@@ -1144,7 +1133,7 @@ class cortical_system(object):
                 print "Positions for the group %s loaded" % NG_name
             else: # generating the positions:
                 vpm_customized_neuron = customized_neuron(current_idx, int(number_of_neurons), 'VPM', '0', eval(radius),
-                                                          self.min_distance, self.physio_df ,network_center=net_center)
+                                                          self.min_distance, self.physio_config_df ,network_center=net_center)
                 self.customized_neurons_list[current_idx]['z_positions'] = vpm_customized_neuron.output_neuron[
                     'z_positions']
                 self.customized_neurons_list[current_idx]['w_positions'] = vpm_customized_neuron.output_neuron[
@@ -1260,7 +1249,7 @@ if __name__ == '__main__' :
     # CM.run()
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Cpp',runtime=1000 * ms)
     # CM.run()
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', \
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', \
                          os.path.dirname(os.path.realpath(__file__)) + '/Physiological_Parameters.csv',
                          device='Python')
     CM.run()
