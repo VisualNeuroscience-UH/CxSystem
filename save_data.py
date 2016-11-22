@@ -1,10 +1,11 @@
 __author__ = 'V_AD'
-import cPickle as pickle
-import zlib
 from brian2  import *
 from numpy import *
 import os
 import ntpath
+import cPickle as pickle
+import zlib
+import bz2
 
 class save_data(object):
     '''
@@ -59,16 +60,16 @@ class save_data(object):
         self.save_path = os.path.join(self.save_folder, self.save_pure_filename + self.datetime_str + self.save_extension)
         while os.path.isfile(self.save_path):
             idx = 1
-            self.save_path = os.path.join(self.save_folder,
-                                          self.save_pure_filename + self.datetime_str  + '_%d'%idx + self.save_extension)
+            self.save_path = os.path.join(self.save_folder, self.save_pure_filename + self.datetime_str  + '_%d'%idx + self.save_extension)
             idx +=1
 
         if 'gz' in self.save_extension:
-            with open(self.save_path, 'wb') as fp:
-                fp.write(zlib.compress(pickle.dumps(self.data , pickle.HIGHEST_PROTOCOL), 9))
-        # if 'mat' in self.save_extension:
-        #     scipy.io.savemat(self.save_path, self.data )
-        # elif 'h5' in self.save_extension:
-        #     hkl.dump(self.data,self.save_path)
-        # scipy.io.savemat(pars_save_path, self.pars) # this is in case you want to keep track of parameter changes
+            with open(self.save_path, 'wb') as fb:
+                fb.write(zlib.compress(pickle.dumps(self.data, pickle.HIGHEST_PROTOCOL), 9))
+        elif 'bz2' in self.save_extension:
+            with bz2.BZ2File(self.save_path, 'wb') as fb:
+                pickle.dump(self.data, fb, pickle.HIGHEST_PROTOCOL)
+        elif 'pickle' in self.save_extension:
+            with open(self.save_path, 'wb') as fb:
+                pickle.dump(self.data,fb , pickle.HIGHEST_PROTOCOL)
 

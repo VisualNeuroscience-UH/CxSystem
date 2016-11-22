@@ -1,28 +1,71 @@
 import cortical_system as CX
 import os
 from brian2  import *
-import datetime
+import multiprocessing
+import time
+import numpy as np
+import shutil
 
-default_runtime = 500*ms
+# for benchmarking :
+def multi_run (idx, working):
+    runtime_idx = (idx / 5)
+    working.value += 1
+    np.random.seed(runtime_idx)
+    print "################### Trial %d started running for %d ms ##########################" % ((idx%5)+1, (1000+runtime_idx*3000))
+    cm = CX.cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = 'Python', runtime = (1000+runtime_idx*3000)*ms)
+    cm.run()
+    working.value -= 1
+    shutil.rmtree(os.path.join(os.environ['HOME'], '.cache/scipy'))# this should be used to clear the cache of weave for benchmarking. otherwise weave will mess it up
 
-#CM = CX.cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/pandas_playground/generated_config_file_henri.csv',
-#                         use_genn=0,runtime=500*ms )
-time_start = datetime.datetime.now()
-CM = CX.cortical_system (os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv',
-                         device='', runtime=default_runtime )
 
-time_before_run = datetime.datetime.now()
-CM.run()
-time_end = datetime.datetime.now()
 
-duration_generation = int((time_before_run - time_start).total_seconds())
-duration_simulation = int((time_end - time_before_run).total_seconds())
-duration_total = int((time_end - time_start).total_seconds())
+# Multiprocessing using the Process()
+if __name__ == '__main__':
+    manager = multiprocessing.Manager()
+    jobs = []
+    working = manager.Value('i',0)
+    trials = 40
+    ProcessLimit = 1
+    NotDone = 1
+    while len(jobs)<trials:
+        time.sleep(3)
+        if working.value < ProcessLimit:
+            p = multiprocessing.Process(target=multi_run,args=(len(jobs),working,))
+            jobs.append(p)
+            p.start()
+    for j in jobs:
+        j.join()
 
-print 'Duration of network generation: %d min %d s' % (duration_generation//60, duration_generation%60)
-print 'Duration of actual simulation: %d min %d s' % (duration_simulation//60, duration_simulation%60)
-print 'TOTAL %d min %d s' % (duration_total//60, duration_total%60)
-print '=> %d times realtime' % (duration_total*second / default_runtime)
+
+####
+#### for 200 trials :
+####
+# def multi_run (idx, working):
+#     working.value += 1
+#     np.random.seed(idx)
+#     print "################### process %d started ##########################" % idx
+#     cm = CX.cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = 'C++', runtime = 1000*ms)
+#     cm.run()
+#     working.value -= 1
+#
+# # Multiprocessing using the Process()
+# if __name__ == '__main__':
+#     manager = multiprocessing.Manager()
+#     jobs = []
+#     working = manager.Value('i',0)
+#     trials = 200
+#     ProcessLimit = 30
+#     NotDone = 1
+#     while len(jobs)<trials:
+#         time.sleep(0.3)
+#         if working.value < ProcessLimit:
+#             p = multiprocessing.Process(target=multi_run,args=(len(jobs),working,))
+#             jobs.append(p)
+#             p.start()
+#     for j in jobs:
+#         j.join()
+
+
 
 
 ################ Draw Everything
