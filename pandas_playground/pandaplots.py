@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 vanni_local_connectivity_json = 'pathways_anatomy_vanni.json'
 markram_physiology_json = 'pathways_physiology_factsheets_simplified.json'
+preprocessed_markram_anatomy_json = 'pathways_anatomy_vannilized.json'
 plot_directory = 'plots/'
 
 mycmap = 'jet'
@@ -27,7 +28,7 @@ def plot_local_connectivity(vanni_json = vanni_local_connectivity_json):
                                                        aggfunc = sum)
     plotdata['vanni_conn_probability'] = data.pivot_table('connection_probability',
                                                           index='neurongroup_pre', columns='neurongroup_post',
-                                                          aggfunc=sum)
+                                                          aggfunc=sum)*100
 
     plot_these = ['vanni_mean_synapses', 'vanni_conn_probability']
 
@@ -42,14 +43,40 @@ def plot_local_connectivity(vanni_json = vanni_local_connectivity_json):
 
         plotdata[p].index.name = 'Presynaptic neuron group'
         plotdata[p].columns.name = 'Postsynaptic neuron group'
-        plotobj[p] = sns.heatmap(plotdata[p], cmap=mycmap)
+        plotobj[p] = sns.heatmap(plotdata[p], cmap=mycmap, vmin=0, vmax=5.0)
         plt.tick_params(axis="both", labelsize=8)
         plt.setp(plotobj[p].get_xticklabels(), rotation=90)
         plt.setp(plotobj[p].get_yticklabels(), rotation=0)
-        plt.title(p)
+        plt.title('Simplified neural network')
+        cbar = plotobj[p].collections[0].colorbar
+        cbar.set_label('Connection probability')
         plt.tight_layout()
-        plt.savefig(plot_directory + p + '.png', dpi=100)
+        plt.savefig(plot_directory + p + '.png', dpi=600)
         plt.close()
+
+def plot_markram_connectivity(markram_json = preprocessed_markram_anatomy_json):
+
+    data = pd.read_json(markram_json, orient='index')
+
+    plotdata = data.pivot_table('connection_probability',
+                                index='markram_pre', columns='markram_post',
+                                aggfunc='sum')
+
+    plotdata.index.name = 'Presynaptic neuron group'
+    plotdata.columns.name = 'Postsynaptic neuron group'
+    plotobj = sns.heatmap(plotdata, cmap=mycmap, vmin=0, vmax=30.0)
+    plt.tick_params(axis="both", labelsize=6)
+    plt.setp(plotobj.get_xticklabels(), rotation=90)
+    plt.setp(plotobj.get_yticklabels(), rotation=0)
+    plt.title('Reference neural network')
+    cbar = plotobj.collections[0].colorbar
+    cbar.set_label('Connection probability')
+    plt.tight_layout()
+    plt.savefig(plot_directory + 'markram_conn_prob' + '.png', dpi=600)
+    plt.close()
+
+
+
 
 def plot_mean_epsp(markram_json = markram_physiology_json):
 
@@ -88,5 +115,6 @@ def plot_mean_epsp(markram_json = markram_physiology_json):
     plt.savefig(plot_directory + 'markram_epsp_mean' + '.png', dpi=100)
     plt.close()
 
-#plot_local_connectivity()
-plot_mean_epsp()
+plot_local_connectivity()
+plot_markram_connectivity()
+#plot_mean_epsp()
