@@ -50,7 +50,7 @@ class stimuli(object):
         #type : video
         _V1_mats = {}
 
-        io.loadmat(os.path.abspath(path), _V1_mats)
+        io.loadmat(os.path.abspath(self.input_mat_path), _V1_mats)
 
         # Fill ISI with N-1 times frameduration of zeros
         SOA = 90 # in ms
@@ -71,7 +71,7 @@ class stimuli(object):
         self.frames = frames
         exec 'self.factor = %s' %freq
         self.i_patterns[len(self.i_patterns)] = frames.values * self.factor  # These must be final firing rates
-        _all_stim = squeeze(self._V1_mats['stimulus'])
+        _all_stim = squeeze(_V1_mats['stimulus'])
         if len(_all_stim.shape) == 2:
             slash_indices = [idx for idx, ltr in enumerate(self.input_mat_path) if ltr == '/']
             print 'One video stimulus found in file ' + self.input_mat_path[slash_indices[-1]+1:]

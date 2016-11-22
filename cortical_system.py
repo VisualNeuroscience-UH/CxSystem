@@ -1251,7 +1251,7 @@ if __name__ == '__main__' :
     # CM.run()
     CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', \
                          os.path.dirname(os.path.realpath(__file__)) + '/Physiological_Parameters.csv',
-                         device='Python') # runtime is now set in configuration file
+                         device='GeNN') # runtime is now set in configuration file
     CM.run()
 
     import data_visualization

@@ -1,5 +1,5 @@
 row_type,runtime,sys_mode,scale,grid_radius, min_distance, do_init_vms,output_path&filename, #brian_data_saving_path&filename , #brian_data_loading_path&filename, #load_positions_only, do_benchmark,save_generated_video_input_flag,multidimension_array_run,number_of_process
-params,1000*ms,expanded,2,210*um, 1*um,1,/opt/Laskenta/Output/CX_Output/CX_Output_0p01ms.gz,/opt/Laskenta/Output/CX_Output/connections.gz, /opt3/CX_Output/sivanni/brian_data_20161028_142108.gz,0,0,1,0,20
+params,18000*ms,expanded,2,210*um, 1*um,1,/opt/Laskenta/Output/CX_Output/CX_Output_0p01ms.gz,/opt/Laskenta/Output/CX_Output/connections.gz, /opt3/CX_Output/sivanni/brian_data_20161028_142108.gz,0,0,1,0,20
 
 
 row_type,idx,path,type,freq,monitors,,,,,,
@@ -14,10 +14,10 @@ G,4,300,BC,2,5+0j,[Sp] [St]vm[rec](0-299-20) ,10*mV,,,
 
 
 row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p,n,monitors,load_connection,save_connection,,
-S,ge,0,1[C]0ba,Fixed,0.5+0.5,2+2,N/A,0-->,0-->,
-S,ge,1,2[C]0ba,Fixed,0.5+0.5,1+1,N/A,0,0,
-S,ge,2,1[C]1,Fixed,1,8,N/A,0,0,
-S,ge,1,3,Fixed,0.05,1,N/A,0,0,
-S,gi,3,1[C]0s,Fixed,0.05,1,N/A,0,0,
-S,ge,2,4,Fixed,0.05,1,N/A,0,0,
-S,gi,4,2[C]0s,Fixed,0.05,1,N/A,0<--,0,
+S,ge,0,1[C]0ba,Fixed,0.5+0.5,2+2,--,0-->,0-->,
+S,ge,1,2[C]0ba,Fixed,0.5+0.5,1+1,--,0,0,
+S,ge,2,1[C]1,Fixed,1,8,--,0,0,
+S,ge,1,3,Fixed,0.05,1,--,0,0,
+S,gi,3,1[C]0s,Fixed,0.05,1,--,0,0,
+S,ge,2,4,Fixed,0.05,1,--,0,0,
+S,gi,4,2[C]0s,Fixed,0.05,1,--,0<--,0,
