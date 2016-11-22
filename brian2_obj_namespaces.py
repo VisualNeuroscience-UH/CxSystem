@@ -7,7 +7,7 @@ import pandas
 
 __author__ = 'V_AD'
 
-calcium_concentration = 2.1  # Change calcium concentration here or with _change_calcium()
+calcium_concentration = 2.5  # Change calcium concentration here or with _change_calcium()
 
 class synapse_namespaces(object):
     '''
@@ -27,6 +27,13 @@ class synapse_namespaces(object):
     * conn_prob_gain: This is used for compensation of small number of neurons and thus incoming synapses
 
     '''
+
+    # For _change_calcium()
+    _excitatory_groups = ['PC', 'SS']
+    _steep_post_inhibitory_groups = ['MC']
+    _shallow_post_inhibitory_groups = ['BC']
+    _steep_post = _excitatory_groups + _steep_post_inhibitory_groups
+    _shallow_post = _shallow_post_inhibitory_groups
 
     def __init__(self,output_synapse,physio_config_df):
         '''
