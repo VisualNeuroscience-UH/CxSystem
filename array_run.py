@@ -68,9 +68,9 @@ class array_run(object):
         working.value += 1
         np.random.seed(idx)
         print "################### Trial %d started running for %s ##########################" % (idx,self.final_messages[idx][1:])
-        cm = CX.cortical_system(self.df_anat_final_array[idx],self.df_phys_final_array[idx],device='Python',output_file_suffix = self.final_messages[idx])
+        cm = CX.cortical_system(self.df_anat_final_array[idx],self.df_phys_final_array[idx],device=self.device,output_file_suffix = self.final_messages[idx])
         cm.run()
-        if self.number_of_process ==1 and self.do_benchmark == 1 :
+        if self.number_of_process ==1 and self.do_benchmark == 1 and self.device == 'Python':
             # this should be used to clear the cache of weave for benchmarking. otherwise weave will mess it up
             shutil.rmtree(os.path.join(os.environ['HOME'],'.cache/scipy'))
 
