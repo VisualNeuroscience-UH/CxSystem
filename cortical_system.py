@@ -68,13 +68,6 @@ class cortical_system(object):
 
         '''
         self.start_time = time.time()
-        self.device = device
-        assert self.device in ['GeNN', 'Cpp',
-                               'Python'], 'Device %s is not defined. Check capital letters in device name.' % self.device
-        if device != 'Python':
-            print "Info: system is going to be run using stand-alone devices, " \
-                  "Errors may rise if Brian2/Brian2GeNN/GeNN is not installed correctly or the limitations are not " \
-                  "taken in to account."
         self.main_module = sys.modules['__main__']
         try:  # try to find the CX_module in the sys.modules, to find if the __main__ is cortical_system.py or not
             self.CX_module = sys.modules['cortical_system']
@@ -82,20 +75,21 @@ class cortical_system(object):
             pass
         self._options = {
             #Parameter_name : [set priority (0 is highest),function_to_run]
-            'save_generated_video_input_flag': [0,self.save_generated_video_input_flag],
-            'runtime': [1,self._set_runtime],
-            'sys_mode': [2,self._set_sys_mode],  # either "local" or "expanded"
-            'scale': [3,self._set_scale],
-            'grid_radius': [4,self._set_grid_radius],
-            'min_distance': [5,self._set_min_distance],
-            'do_init_vms': [6,self.do_init_vms],
-            'output_path&filename': [7,self._set_output_path],
-            'brian_data_saving_path&filename': [8,self._set_save_brian_data_path],
-            'brian_data_loading_path&filename': [9,self._set_load_brian_data_path],
-            'load_positions_only': [10,self.load_positions_only],
-            'do_benchmark': [11,self.do_benchmark],
-            'multidimension_array_run': [12,self.passer],  # this parameter is used by array_run module, so here we just pass
-            'number_of_process': [13,self.passer],  # this parameter is used by array_run module, so here we just pass
+            'device': [0,self.set_device],
+            'save_generated_video_input_flag': [1,self.save_generated_video_input_flag],
+            'runtime': [2,self._set_runtime],
+            'sys_mode': [3,self._set_sys_mode],  # either "local" or "expanded"
+            'scale': [4,self._set_scale],
+            'grid_radius': [5,self._set_grid_radius],
+            'min_distance': [6,self._set_min_distance],
+            'do_init_vms': [7,self.do_init_vms],
+            'output_path&filename': [8,self._set_output_path],
+            'brian_data_saving_path&filename': [9,self._set_save_brian_data_path],
+            'brian_data_loading_path&filename': [10,self._set_load_brian_data_path],
+            'load_positions_only': [11,self.load_positions_only],
+            'do_benchmark': [12,self.do_benchmark],
+            'multidimension_array_run': [13,self.passer],  # this parameter is used by array_run module, so here we just pass
+            'number_of_process': [14,self.passer],  # this parameter is used by array_run module, so here we just pass
             'G': [nan,self.neuron_group],
             'S': [nan,self.synapse],
             'IN': [nan,self.relay],
@@ -184,6 +178,15 @@ class cortical_system(object):
     def passer(self,*args):
         pass
 
+    def set_device(self,*args):
+        self.device = args[0]
+        assert self.device in ['GeNN', 'Cpp',
+                               'Python'], 'Device %s is not defined. Check capital letters in device name.' % self.device
+        if device == 'GeNN':
+            print "Warning: system is going to be run using GeNN devices, " \
+                  "Errors may rise if Brian2/Brian2GeNN/GeNN is not installed correctly or the limitations are not " \
+                  "taken in to account."
+
     def run(self):
         if not self.array_run:
             run(self.runtime, report='text')
@@ -241,7 +244,7 @@ class cortical_system(object):
                     break
         self.StartTime_str += '_'+self.device+'_'+str(int((self.runtime/second)*1000)) + 'ms'
         if self.sys_mode == '':
-            print "Warning: system mode is not defined. "
+            raise NameError("System mode is not defined.")
         else:
             print "Info: CX system is running in %s mode" %self.sys_mode
         if self.do_benchmark:
@@ -273,10 +276,8 @@ class cortical_system(object):
         try:
             print "Info: Radius of the system scaled to %s from %s" % (str(sqrt(self.scale)*self.general_grid_radius), str(self.general_grid_radius))
             self.general_grid_radius = sqrt(self.scale)*self.general_grid_radius
-            if self.sys_mode != 'expanded':
-                print '###############\n###############\n' \
-              'WARNING: system is scaled by factor of %f but the system mode is local instead of expanded\n' \
-                      '###############\n###############'%(self.scale)
+            if self.sys_mode != 'expanded' and self.scale != 1:
+                print '\nWARNING: system is scaled by factor of %f but the system mode is local instead of expanded\n'%(self.scale)
         except AttributeError:
             pass
 
@@ -1258,7 +1259,6 @@ if __name__ == '__main__' :
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Cpp',runtime=1000 * ms)
     # CM.run()
     CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', \
-                         os.path.dirname(os.path.realpath(__file__)) + '/Physiological_Parameters.csv',
-                         device='Python')
+                         os.path.dirname(os.path.realpath(__file__)) + '/Physiological_Parameters.csv',)
     CM.run()
     # shutil.rmtree('/home/vafanda/.cache/scipy/') # this should be used for benchmarking otherwise weave will mess up the benchmarking
