@@ -148,7 +148,7 @@ class array_run(object):
             tmp_str = 'arange(' + changing_part + ')'
             variables_to_iterate = eval(tmp_str)
         elif '&' in array_variable:
-            variables_to_iterate = eval('[' + array_variable[opening_braket_idx + 1:closing_braket_idx].replace('&', ',') + ']')
+            variables_to_iterate = eval('["' + array_variable[opening_braket_idx + 1:closing_braket_idx].replace('&', '","') + '"]')
         variables_to_iterate = [template_of_variable.replace('^^^', str(vv)) for vv in variables_to_iterate]
         for var in variables_to_iterate:
             temp_df = original_df.copy()
