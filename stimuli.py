@@ -24,10 +24,10 @@ class stimuli(object):
         self.save_generated_input_flag = save_generated_input_flag
         if os.path.isfile(os.path.join(self.output_folder, 'input'+self.output_file_extension)):
             self.file_exist_flag = 1
-            print "\nWarning: Generated video input exist in %s/input.%s " \
-                  "\nThe input will NOT be overwritten for the sake of array running (even though you might not be using it). " \
-                  "\nIf you need the data to be newly generated, please rename or remove the previous input file.\n" % (
-            self.output_file_extension, self.output_folder)
+            print "\nWarning: Generated input spike sequence exist in %s/input%s " \
+                  "\nThe input will NOT be overwritten. " \
+                  "\nIf you need the spikes regenerated or permanently saved, \nplease rename or remove the previous spike sequence file.\n" % (
+                  self.output_folder,self.output_file_extension)
         else:
             self.file_exist_flag = 0
     def generate_inputs(self, freq):
