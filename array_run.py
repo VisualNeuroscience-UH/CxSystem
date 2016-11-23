@@ -71,8 +71,8 @@ class array_run(object):
         working.value += 1
         np.random.seed(idx)
         idx = idx/self.trials_per_config
-        tr = idx % self.trials_per_config
-        print "################### Trial %d started running for simulation number %d: %s ##########################" % (tr ,idx,self.final_messages[idx][1:])
+        tr = (idx % self.trials_per_config) + 1
+        print "################### Trial %d/%d started running for simulation number %d: %s ##########################" % (tr,self.trials_per_config,idx+1,self.final_messages[idx][1:])
         cm = CX.cortical_system(self.df_anat_final_array[idx],self.df_phys_final_array[idx],output_file_suffix = self.final_messages[idx])
         cm.run()
         if self.number_of_process ==1 and self.do_benchmark == 1 and self.device == 'Python':

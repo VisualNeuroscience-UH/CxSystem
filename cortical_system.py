@@ -135,6 +135,12 @@ class cortical_system(object):
         self.physio_config_df = self.physio_config_df.applymap(lambda x: NaN if str(x)[0] == '#' else x)
         self.anat_and_sys_conf_df = pandas.read_csv(anatomy_and_system_config,header=None) if type(anatomy_and_system_config) == str else anatomy_and_system_config
         self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.applymap(lambda x: x.strip() if type(x) == str else x)
+        ## dropping the commented lines :
+        self.anat_and_sys_conf_df.drop(self.anat_and_sys_conf_df[0].index[self.anat_and_sys_conf_df[0][
+            self.anat_and_sys_conf_df[0].str.contains('#') == True].index.tolist()])
+        self.physio_config_df.drop(self.physio_config_df['Variable'].index[self.physio_config_df['Variable'][
+            self.physio_config_df['Variable'].str.contains('#') == True].index.tolist()])
+
         self.conf_df_to_save = self.anat_and_sys_conf_df
         self.physio_df_to_save =  self.physio_config_df
         self.array_run = 0
@@ -299,7 +305,6 @@ class cortical_system(object):
         self.save_output_data = save_data(self.output_path,self.StartTime_str)  # This is for saving the output
         self.save_output_data.creat_key('positions_all')
         self.save_output_data.creat_key('Neuron_Groups_Parameters')
-        self.save_output_data.creat_key('Configuration_File')
         self.save_output_data.data['Anatomy_configuration'] = self.conf_df_to_save
         self.save_output_data.data['Physiology_configuration'] = self.physio_df_to_save
         self.save_output_data.data['time_vector'] = arange(0,self.runtime,defaultclock.dt)
