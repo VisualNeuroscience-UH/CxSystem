@@ -24,10 +24,10 @@ class stimuli(object):
         self.save_generated_input_flag = save_generated_input_flag
         if os.path.isfile(os.path.join(self.output_folder, 'input'+self.output_file_extension)):
             self.file_exist_flag = 1
-            print "\nWarning: Generated video input exist in %s/input.%s " \
-                  "\nThe input will NOT be overwritten for the sake of array running (even though you might not be using it). " \
-                  "\nIf you need the data to be newly generated, please rename or remove the previous input file.\n" % (
-            self.output_file_extension, self.output_folder)
+            print "\nWarning: Generated input spike sequence exist in %s/input%s " \
+                  "\nThe input will NOT be overwritten. " \
+                  "\nIf you need the spikes regenerated or permanently saved, \nplease rename or remove the previous spike sequence file.\n" % (
+                  self.output_folder,self.output_file_extension)
         else:
             self.file_exist_flag = 0
     def generate_inputs(self, freq):
@@ -47,18 +47,31 @@ class stimuli(object):
     def initialize_inputs(self,  freq):
         print "Initializing stimuli..."
 
-        self._V1_mats = {}
-        io.loadmat(os.path.abspath(self.input_mat_path), self._V1_mats)
+        #type : video
+        _V1_mats = {}
+
+        io.loadmat(os.path.abspath(self.input_mat_path), _V1_mats)
+
+        # Fill ISI with N-1 times frameduration of zeros
+        SOA = 90 # in ms
+        stimulus_epoch_duration = 15 # in ms, duration of Burbank whole stimulus
+        assert np.mod(SOA, stimulus_epoch_duration) == 0, 'Stimulus onset asynchrony (SOA) must be an integer times frameduration, aborting...'
+        SOA_in_N_frames = int(SOA / stimulus_epoch_duration)
+        dense_stimulus = _V1_mats['stimulus']
+        sparse_stimulus = np.tile(np.zeros_like(dense_stimulus), (1, SOA_in_N_frames))
+        sparse_stimulus[:, 0::SOA_in_N_frames] = dense_stimulus
+
         try:
-            frameduration = double(self._V1_mats['frameduration'])  # _V1_mats['frameduration'] is numpy nd array
+            frameduration = double(_V1_mats['frameduration'])
+            raise NotImplementedError('Frameduration coming from actual video frame rate. This is not implemented yet for CXSystem')
         except:
-            frameduration = 100  # in ms
-        frames = TimedArray(np.transpose(self._V1_mats['stimulus']),
+            frameduration = stimulus_epoch_duration
+        frames = TimedArray(np.transpose(sparse_stimulus),
                             dt=frameduration * ms)  # video_data has to be shape (frames, neurons), dt=frame rate
         self.frames = frames
         exec 'self.factor = %s' %freq
         self.i_patterns[len(self.i_patterns)] = frames.values * self.factor  # These must be final firing rates
-        _all_stim = squeeze(self._V1_mats['stimulus'])
+        _all_stim = squeeze(_V1_mats['stimulus'])
         if len(_all_stim.shape) == 2:
             slash_indices = [idx for idx, ltr in enumerate(self.input_mat_path) if ltr == '/']
             print 'One video stimulus found in file ' + self.input_mat_path[slash_indices[-1]+1:]

@@ -47,7 +47,7 @@ class cortical_system(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self, anatomy_and_system_config,physiology_config, device = 'Python',output_file_suffix = ''):
+    def __init__(self, anatomy_and_system_config,physiology_config, output_file_suffix = ''):
         '''
         Initialize the cortical system by parsing the configuration file.
 
@@ -83,13 +83,14 @@ class cortical_system(object):
             'grid_radius': [5,self._set_grid_radius],
             'min_distance': [6,self._set_min_distance],
             'do_init_vms': [7,self.do_init_vms],
-            'output_path&filename': [8,self._set_output_path],
-            'brian_data_saving_path&filename': [9,self._set_save_brian_data_path],
-            'brian_data_loading_path&filename': [10,self._set_load_brian_data_path],
+            'output_path_and_filename': [8,self._set_output_path],
+            'connections_saving_path_and_filename': [9,self._set_save_brian_data_path],
+            'connections_loading_path_and_filename': [10,self._set_load_brian_data_path],
             'load_positions_only': [11,self.load_positions_only],
             'do_benchmark': [12,self.do_benchmark],
             'multidimension_array_run': [13,self.passer],  # this parameter is used by array_run module, so here we just pass
             'number_of_process': [14,self.passer],  # this parameter is used by array_run module, so here we just pass
+            'trials_per_config': [15,self.passer],
             'G': [nan,self.neuron_group],
             'S': [nan,self.synapse],
             'IN': [nan,self.relay],
@@ -100,7 +101,9 @@ class cortical_system(object):
         print "Info: current run filename suffix is: %s"%self.StartTime_str[1:]
         # self.scale = 1
         self.do_benchmark = 0
-        # defaultclock.dt = 0.01 * ms
+        defaultclock.dt = 0.01 * ms
+        if defaultclock.dt != 0.1 * ms:
+            print "Warning: default clock is %s" %str(defaultclock.dt)
         self.numerical_integration_method = 'euler'
         print "Info : the system is running with %s integration method"%self.numerical_integration_method
         # self.conn_prob_gain = synapse_namespaces.conn_prob_gain
@@ -137,18 +140,19 @@ class cortical_system(object):
         self.conf_df_to_save = self.anat_and_sys_conf_df
         self.physio_df_to_save =  self.physio_config_df
         self.array_run = 0
-        check_array_run_anatomy = self.anat_and_sys_conf_df.applymap(lambda x: True if '|' in str(x) else False)
-        check_array_run_physiology = self.physio_config_df.applymap(lambda x: True if '|' in str(x) else False)
+        check_array_run_anatomy = self.anat_and_sys_conf_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)
+        check_array_run_physiology = self.physio_config_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)
         if any(check_array_run_anatomy) or any(check_array_run_physiology):
             array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df)
             self.array_run = 1
             return
         self.configuration_executer()
-        if type(self.awaited_conf_lines) != list and self.thr.is_alive()==True:
-            print "Waiting for the video input"
-            self.thr.join()
-            self.anat_and_sys_conf_df = self.awaited_conf_lines
-            self.configuration_executer()
+        if type(self.awaited_conf_lines) != list :
+           if self.thr.is_alive()==True:
+               print "Waiting for the video input"
+               self.thr.join()
+           self.anat_and_sys_conf_df = self.awaited_conf_lines
+           self.configuration_executer()
 
         print "Cortical Module initialization Done."
 
@@ -231,6 +235,9 @@ class cortical_system(object):
         if not any(self.current_parameters_list.str.contains('runtime')):
             print "\nWarning: runtime duration is not defined in the configuration file. The default runtime duratoin is 500*ms\n"
             self.runtime = 500*ms
+        if not any(self.current_parameters_list.str.contains('device')):
+            print "\nWarning: device is not defined in the configuration file. The default device is Python.\n"
+            self.device = 'Python'
         for ParamIdx, parameter in self.current_parameters_list.iteritems():
             if parameter not in self._options.keys():
                 print "\nWarning: system parameter %s not defined.\n" % parameter
@@ -242,7 +249,6 @@ class cortical_system(object):
                     assert (parameter in self._options.keys()), 'The tag %s is not defined.' % parameter
                     self._options[parameter][1](self.current_values_list[ParamIdx])
                     break
-        self.StartTime_str += '_'+self.device+'_'+str(int((self.runtime/second)*1000)) + 'ms'
         if self.sys_mode == '':
             raise NameError("System mode is not defined.")
         else:
@@ -287,8 +293,10 @@ class cortical_system(object):
 
     def _set_output_path(self, *args):
         self.output_path = args[0]
+        assert os.path.splitext(self.output_path)[1], "The output_path_and_filename should contain file extension (.gz, .bz2 or .pickle)"
         self.output_folder = os.path.dirname(self.output_path)
         self.output_file_extension = '.'+self.output_path.split('.')[-1]
+        self.StartTime_str += '_' + self.device + '_' + str(int((self.runtime / second) * 1000)) + 'ms'
         self.save_output_data = save_data(self.output_path,self.StartTime_str)  # This is for saving the output
         self.save_output_data.creat_key('positions_all')
         self.save_output_data.creat_key('Neuron_Groups_Parameters')
@@ -308,6 +316,7 @@ class cortical_system(object):
 
     def _set_load_brian_data_path(self, *args):
         self.load_brian_data_path = args[0]
+        assert os.path.splitext(self.load_brian_data_path)[1], "The connections_loading_path_and_filename should contain file extension (.gz, .bz2 or .pickle)"
         self.load_brian_data_filename = ntpath.basename(self.load_brian_data_path)
         self.load_brian_data_folder = ntpath.dirname(self.load_brian_data_path)
         self.load_brian_data_extension = os.path.splitext(self.load_brian_data_path)[1]
@@ -332,6 +341,7 @@ class cortical_system(object):
 
     def _set_save_brian_data_path(self, *args):
         self.save_brian_data_path = args[0]
+        assert os.path.splitext(self.save_brian_data_path)[1], "The connections_saving_path_and_filename should contain file extension (.gz, .bz2 or .pickle)"
         self.save_brian_data_filename = ntpath.basename(self.save_brian_data_path)
         self.save_brian_data_folder = ntpath.dirname(self.save_brian_data_path)
         self.save_brian_data_extension = os.path.splitext(self.save_brian_data_path)[1]
@@ -1258,7 +1268,8 @@ if __name__ == '__main__' :
     # CM.run()
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Cpp',runtime=1000 * ms)
     # CM.run()
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', \
-                         os.path.dirname(os.path.realpath(__file__)) + '/Physiological_Parameters.csv',)
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', \
+                         os.path.dirname(os.path.realpath(__file__)) + '/Physiological_Parameters.csv',) # runtime and device are now set in configuration file
     CM.run()
-    # shutil.rmtree('/home/vafanda/.cache/scipy/') # this should be used for benchmarking otherwise weave will mess up the benchmarking
+
+    import data_visualization
