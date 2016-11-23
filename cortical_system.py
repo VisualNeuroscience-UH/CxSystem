@@ -100,10 +100,10 @@ class cortical_system(object):
             [0:str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '').index('.')+3].replace('.','') + output_file_suffix
         print "Info: current run filename suffix is: %s"%self.StartTime_str[1:]
         # self.scale = 1
-        self.do_benchmark = 0
-        defaultclock.dt = 0.01 * ms
-        if defaultclock.dt != 0.1 * ms:
-            print "Warning: default clock is %s" %str(defaultclock.dt)
+        #self.do_benchmark = 0
+        # defaultclock.dt = 0.01 * ms
+        if defaultclock.dt/second != 1e-5:
+            print "\nWarning: default clock is %s\n" %str(defaultclock.dt)
         self.numerical_integration_method = 'euler'
         print "Info : the system is running with %s integration method"%self.numerical_integration_method
         # self.conn_prob_gain = synapse_namespaces.conn_prob_gain
@@ -240,7 +240,7 @@ class cortical_system(object):
             self.device = 'Python'
         for ParamIdx, parameter in self.current_parameters_list.iteritems():
             if parameter not in self._options.keys():
-                print "\nWarning: system parameter %s not defined.\n" % parameter
+                print "Warning: system parameter %s not defined." % parameter
         options_with_priority = [it for it in self._options if not isnan(self._options[it][0])]
         parameters_to_set_prioritized = [it for priority_idx in range(len(options_with_priority)) for it in self._options if self._options[it][0]==priority_idx]
         for correct_parameter_to_set in parameters_to_set_prioritized:
@@ -367,7 +367,7 @@ class cortical_system(object):
         assert int(args[0]) == 0 or int(args[0]) == 1, \
             'The load_positions_only flag should be either 0 or 1 but it is %s .' % args[0]
         self.load_positions_only = int(args[0])
-        if self.load_positions_only:
+        if self.load_positions_only and hasattr(self,'loaded_brian_data'):
             print "Info: only positions are being loaded from the brian_data_file"
 
     def do_benchmark(self,*args):
@@ -1268,8 +1268,6 @@ if __name__ == '__main__' :
     # CM.run()
     # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Cpp',runtime=1000 * ms)
     # CM.run()
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', \
+    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', \
                          os.path.dirname(os.path.realpath(__file__)) + '/Physiological_Parameters.csv',) # runtime and device are now set in configuration file
     CM.run()
-
-    import data_visualization
