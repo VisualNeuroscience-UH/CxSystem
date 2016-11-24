@@ -1,5 +1,5 @@
 row_type,runtime,device,sys_mode,scale,grid_radius, min_distance, do_init_vms,output_path_and_filename,#connections_saving_path_and_filename , #connections_loading_path_and_filename, #load_positions_only, do_benchmark,save_generated_video_input_flag,multidimension_array_run,number_of_process,#trials_per_config
-params,18000*ms,GeNN,expanded,1,210*um, 1*um,1,/opt3/CX_Output/CX_Output.gz,/opt3/CX_Output/brian_data.gz, /opt3/CX_Output/sivanni/brian_data_20161028_142108.gz,0,0,0,0,1,1
+params,18000*ms,Python,expanded,1,210*um, 1*um,1,/opt3/CX_Output/CX_Output.gz,/opt3/CX_Output/brian_data.gz, /opt3/CX_Output/sivanni/brian_data_20161028_142108.gz,0,0,1,0,20,1
 ,,,,,,,,,,,,,,,,
 ,,,,,,,,,,,,,,,,
 row_type,idx,path,type,freq,monitors,,,,,,,,,,,
@@ -21,4 +21,3 @@ S,ge,1,3,Fixed,0.05,1,--,0,0,,,,,,,
 S,gi,3,1[C]0s,Fixed,0.05,1,--,0,0,,,,,,,
 S,ge,2,4,Fixed,0.05,1,--,0,0,,,,,,,
 S,gi,4,2[C]0s,Fixed,0.05,1,--,0<--,0,,,,,,,
-

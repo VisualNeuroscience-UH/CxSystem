@@ -4,10 +4,15 @@ import multiprocessing
 import time
 import shutil
 import os
+import pandas as pd
+import zlib
+import bz2
+import cPickle as pickle
 
 class array_run(object):
 
     def __init__(self,anatomy_df,physiology_df):
+        self.array_run_metadata = pd.DataFrame
         self.anatomy_df = anatomy_df
         self.physiology_df =physiology_df
         try :
@@ -30,7 +35,15 @@ class array_run(object):
         else:
             anatomy_default = anatomy_df
             physio_default = physiology_df
+        ## creating the array of dataframes for array run
         if self.multidimension_array_run:
+            ## initializing the metadata :
+            meta_columns = []
+            for meta_col_idx in range(1,1+len(arrays_idx_anatomy) + len(arrays_idx_physio)):
+                meta_columns.append('Level-%d Parameter'%meta_col_idx)
+                meta_columns.append('Level-%d Value' % meta_col_idx)
+            meta_columns.extend(['Full path'])
+            self.array_run_metadata = pd.DataFrame(index=[0],columns=meta_columns)
             if arrays_idx_anatomy:
                 anat_variations, anat_messages = self.df_builder_for_array_run( anatomy_df, arrays_idx_anatomy)
             if arrays_idx_physio:
@@ -51,8 +64,11 @@ class array_run(object):
                     self.df_phys_final_array.append(physio_df)
                     self.final_messages.append(physio_messages[physio_idx])
 
-
         else:
+            ## initializing the metadata :
+            meta_columns = []
+            meta_columns.extend(['Level-1 Parameter','Level-1 Value','Full path'])
+            self.array_run_metadata = pd.DataFrame(index=[0],columns=meta_columns)
             if arrays_idx_anatomy:
                 df_anat_array, anat_messages = self.df_builder_for_array_run(anatomy_df, arrays_idx_anatomy)
                 self.df_anat_final_array.extend(df_anat_array)
@@ -63,21 +79,24 @@ class array_run(object):
                 self.df_phys_final_array.extend(df_phys_array)
                 self.df_anat_final_array.extend([anatomy_default for _ in range(len(self.df_phys_final_array))])
                 self.final_messages.extend(physio_messages)
-
+        self.array_run_metadata = self.array_run_metadata.drop(self.array_run_metadata.index.tolist()[-1]) # droping the last line
         print "Info: array of Dataframes for anatomical and physiological configuration are ready"
         self.spawner()
 
-    def arr_run(self,idx, working):
+    def arr_run(self,idx, working,paths):
         working.value += 1
         np.random.seed(idx)
+        device = self.parameter_finder(self.df_anat_final_array[idx],'device')
         idx = idx/self.trials_per_config
         tr = (idx % self.trials_per_config) + 1
         print "################### Trial %d/%d started running for simulation number %d: %s ##########################" % (tr,self.trials_per_config,idx+1,self.final_messages[idx][1:])
         cm = CX.cortical_system(self.df_anat_final_array[idx],self.df_phys_final_array[idx],output_file_suffix = self.final_messages[idx])
         cm.run()
-        if self.number_of_process ==1 and self.do_benchmark == 1 and self.device == 'Python':
+        paths[idx] = cm.save_output_data.data['Full path']
+        if self.number_of_process ==1 and self.do_benchmark == 1 and device == 'Python':
             # this should be used to clear the cache of weave for benchmarking. otherwise weave will mess it up
             shutil.rmtree(os.path.join(os.environ['HOME'],'.cache/scipy'))
+            print "Info: scipy cache deleted to prevent benchmarking issues."
 
         working.value -= 1
 
@@ -105,30 +124,36 @@ class array_run(object):
         manager = multiprocessing.Manager()
         jobs = []
         working = manager.Value('i', 0)
+        paths = manager.dict()
         number_of_runs = len(self.final_messages) * self.trials_per_config
         assert len(self.final_messages) < 1000 , 'The array run is trying to run more than 1000 simulations, this is not allowed unless you REALLY want it and if you REALLY want it you should konw what to do.'
         while len(jobs) < number_of_runs:
             time.sleep(0.3)
             if working.value < self.number_of_process:
-                p = multiprocessing.Process(target=self.arr_run, args=(len(jobs), working,))
+                p = multiprocessing.Process(target=self.arr_run, args=(len(jobs), working,paths))
                 jobs.append(p)
                 p.start()
         for j in jobs:
             j.join()
+
+        for idx in range(len(paths)):
+            self.array_run_metadata['Full path'][idx] = paths[idx]
+        self.data_saver(os.path.join(os.path.dirname(paths[0]),'array_run_metadata.gz'),self.array_run_metadata)
+        print "Array run metadata saved at: %s"%os.path.join(os.path.dirname(paths[0]),'array_run_metadata.gz')
 
     def parameter_finder(self,df,keyword):
         location = where(df.values == keyword)
         if location:
             counter = int(location[0])+1
             while counter < df.shape[0] :
-                if '#' not in str(self.anatomy_df.ix[counter][int(location[1])]):
-                    value = self.anatomy_df.ix[counter][int(location[1])]
+                if '#' not in str(df.ix[counter][int(location[1])]):
+                    value = df.ix[counter][int(location[1])]
                     break
                 else:
                     counter+=1
             return value
 
-    def df_builder_for_array_run(self, original_df, index_of_array_variable,message=''):
+    def df_builder_for_array_run(self, original_df, index_of_array_variable,message='',recursion_counter = 1):
         array_of_dfs = []
         run_messages = []
         array_variable = original_df.ix[index_of_array_variable[0][0]][index_of_array_variable[0][1]]
@@ -151,18 +176,31 @@ class array_run(object):
             variables_to_iterate = eval('["' + array_variable[opening_braket_idx + 1:closing_braket_idx].replace('&', '","') + '"]')
         variables_to_iterate = [template_of_variable.replace('^^^', str(vv)) for vv in variables_to_iterate]
         for var in variables_to_iterate:
+            if type(var) == str :
+                var = var.strip()
             temp_df = original_df.copy()
             temp_df.ix[index_of_array_variable[0][0]][index_of_array_variable[0][1]] = var
             if self.multidimension_array_run and len(index_of_array_variable)>1:
-                tmp_message = self.message_finder(temp_df, index_of_array_variable)
-                temp_df, messages = self.df_builder_for_array_run(temp_df, index_of_array_variable[1:],tmp_message)
+                tmp_title,tmp_value,tmp_message = self.message_finder(temp_df, index_of_array_variable)
+                self.array_run_metadata['Level-%d Parameter' % recursion_counter].iloc[-1] = tmp_title
+                self.array_run_metadata['Level-%d Value' % recursion_counter].iloc[-1] = tmp_value
+                temp_df, messages = self.df_builder_for_array_run(temp_df, index_of_array_variable[1:],tmp_message,recursion_counter=recursion_counter+1)
             else:
                 temp_df = [self.df_default_finder(temp_df)]
-                messages = [message+self.message_finder(temp_df[0], index_of_array_variable)]
+                tmp_title, tmp_value, tmp_message = self.message_finder(temp_df[0], index_of_array_variable)
+                self.array_run_metadata['Level-%d Parameter' % recursion_counter].iloc[-1] = tmp_title
+                self.array_run_metadata['Level-%d Value' % recursion_counter].iloc[-1] = tmp_value
+                messages = [message+tmp_message]
+            if recursion_counter >= 2 or not self.multidimension_array_run:
+                self.array_run_metadata = self.array_run_metadata.append(pd.DataFrame(index=[0],columns=self.array_run_metadata.columns)).reset_index(drop=True)
+                for recur_idx in range(1,recursion_counter):
+                    self.array_run_metadata['Level-%d Parameter' % recur_idx].iloc[-1] =self.array_run_metadata['Level-%d Parameter' % recur_idx].iloc[-2]
+                    self.array_run_metadata['Level-%d Value' % recur_idx].iloc[-1] =self.array_run_metadata['Level-%d Value' % recur_idx].iloc[-2]
             array_of_dfs.extend(temp_df)
             run_messages.extend(messages)
+
         if not self.multidimension_array_run and len(index_of_array_variable)>1:
-            temp_df, messages = self.df_builder_for_array_run(original_df, index_of_array_variable[1:])
+            temp_df, messages = self.df_builder_for_array_run(original_df, index_of_array_variable[1:],message='')
             array_of_dfs.extend(temp_df)
             run_messages.extend(messages)
         return array_of_dfs, run_messages
@@ -203,5 +241,15 @@ class array_run(object):
                     title = str(df['Key'][idx[0]])
                     value = str(df.ix[idx[0]][idx[1]])
                 message = '_' + title + ''.join(filter(whitelist.__contains__, value))
-        return message
+        return title,value, message
 
+    def data_saver(self, save_path, data):
+        if '.gz' in save_path:
+            with open(save_path, 'wb') as fb:
+                fb.write(zlib.compress(pickle.dumps(data, pickle.HIGHEST_PROTOCOL), 9))
+        elif '.bz2' in save_path:
+            with bz2.BZ2File(save_path, 'wb') as fb:
+                pickle.dump(data, fb, pickle.HIGHEST_PROTOCOL)
+        elif '.pickle' in save_path:
+            with open(save_path, 'wb') as fb:
+                pickle.dump(data, fb, pickle.HIGHEST_PROTOCOL)

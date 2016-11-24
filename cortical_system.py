@@ -493,8 +493,11 @@ class cortical_system(object):
             self.customized_neurons_list[current_idx]['z_positions'] = self.loaded_brian_data['positions_all']['z_coord'][GroupKeyName]
             print "Position for the group %s loaded" %NG_name
         # Setting the position of the neurons in the current NeuronGroup.
-        exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % (
-            NG_name, current_idx, NG_name, current_idx)
+        try :
+            exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % (
+                NG_name, current_idx, NG_name, current_idx)
+        except ValueError as e:
+            raise ValueError(e.message + '\n You are probably trying to load the positions from a file that does not contain the same number of cells.')
         # Saving the neurons' positions both in visual field and cortical coordinates in save_data() object.
         self.save_output_data.data['positions_all']['z_coord'][NG_name] = \
             self.customized_neurons_list[current_idx]['z_positions']
