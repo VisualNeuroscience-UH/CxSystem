@@ -248,24 +248,6 @@ PC,Cm,(1*ufarad*cm**-2),
 ,tau_e,3 * ms,"# 1.7 ms from Markram Cell 2015. This however misses NMDA contribution (12% according to Markram Cell 2015). Given this proportion and AMPA tau 3 ms and NMDA tau 200 ms(NMDA fast decay; both from Spruston JPhysiol 1995), we get double exponential decay"
 ,tau_eX, 3 * ms,
 ,tau_i,8.3 * ms,
-,eq_template_soma,"'''
-        dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr) / C) +  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
-        dge/dt = -ge/tau_e : siemens
-        dgealpha/dt = (ge-gealpha)/tau_e : siemens
-        dgeX/dt = -geX/tau_eX : siemens
-        dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
-        dgi/dt = -gi/tau_i : siemens
-        dgialpha/dt = (gi-gialpha)/tau_i : siemens
-        '''",
-,eq_template_dend,"'''
-        dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) +I_dendr) / C : volt
-        dge/dt = -ge/tau_e : siemens
-        dgealpha/dt = (ge-gealpha)/tau_e : siemens
-        dgeX/dt = -geX/tau_eX : siemens
-        dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
-        dgi/dt = -gi/tau_i : siemens
-        dgialpha/dt = (gi-gialpha)/tau_i : siemens
-        '''",
 ,,,
 ,,,
 ,,,
@@ -282,11 +264,6 @@ BC,C,100 * pF,"# Somatosensory cortex, Beierlein 2000 - Badel et al., 2008: 90 p
 ,taum_soma,C/gL,
 ,V_res,VT- 4 * mV,
 ,Vcut,VT+ 5*DeltaT,
-,eq_template,"'''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) +  noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
-            dge/dt = -ge/tau_e : siemens
-            dgi/dt = -gi/tau_i : siemens
-            '''",
 ,,,
 ,,,
 L1i,gL,3.2 * nS  ,"# 3.2 nsiemens mean of cell types in L1, Muralidhar 2014 Front Neuroanat, Table 3, mean of 1/""input resistance for steady state"""
@@ -302,11 +279,6 @@ L1i,gL,3.2 * nS  ,"# 3.2 nsiemens mean of cell types in L1, Muralidhar 2014 Fron
 ,C,taum_soma * gL,
 ,V_res,VT- 4 * mV,
 ,Vcut,VT+ 5*DeltaT,
-,eq_template,"'''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) +  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
-            dge/dt = -ge/tau_e : siemens
-            dgi/dt = -gi/tau_i : siemens
-            '''",
 ,,,
 ,,,
 ,,,
@@ -323,11 +295,6 @@ MC,C,92.1 * pF,"# 92.1 +- 8.4, Paluszkiewicz 2011 J Neurophysiol"
 ,gL,C/taum_soma,
 ,V_res,VT- 4 * mV,
 ,Vcut,VT+ 5*DeltaT,
-,eq_template,"'''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C)+  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
-            dge/dt = -ge/tau_e : siemens
-            dgi/dt = -gi/tau_i : siemens
-            '''",
 ,,,
 ,,,
 SS,Cm,(1 * ufarad * cm ** -2),"# Capacitance, multiplied by the compartmental area to get the final C(compartment)"
@@ -349,8 +316,3 @@ SS,Cm,(1 * ufarad * cm ** -2),"# Capacitance, multiplied by the compartmental ar
 ,C,0.03 * Cm * Area_tot_pyram *2,
 ,gL,0.03 * gl * Area_tot_pyram *2,
 ,taum_soma,C/gL,
-,eq_template,"'''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C)+  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
-            dge/dt = -ge/tau_e : siemens
-            dgi/dt = -gi/tau_i : siemens
-            '''",
