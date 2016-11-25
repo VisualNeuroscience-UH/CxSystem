@@ -86,9 +86,9 @@ class array_run(object):
     def arr_run(self,idx, working,paths):
         working.value += 1
         np.random.seed(idx)
-        device = self.parameter_finder(self.df_anat_final_array[idx],'device')
         idx = idx/self.trials_per_config
         tr = (idx % self.trials_per_config) + 1
+        device = self.parameter_finder(self.df_anat_final_array[idx], 'device')
         print "################### Trial %d/%d started running for simulation number %d: %s ##########################" % (tr,self.trials_per_config,idx+1,self.final_messages[idx][1:])
         cm = CX.cortical_system(self.df_anat_final_array[idx],self.df_phys_final_array[idx],output_file_suffix = self.final_messages[idx])
         cm.run()
