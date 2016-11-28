@@ -8,6 +8,7 @@ import pandas as pd
 import zlib
 import bz2
 import cPickle as pickle
+import sys
 
 class array_run(object):
 
@@ -84,19 +85,24 @@ class array_run(object):
         self.spawner()
 
     def arr_run(self,idx, working,paths):
+
         working.value += 1
         np.random.seed(idx)
-        device = self.parameter_finder(self.df_anat_final_array[idx],'device')
         idx = idx/self.trials_per_config
-        tr = (idx % self.trials_per_config) + 1
+        tr = (idx+1) % self.trials_per_config
+        device = self.parameter_finder(self.df_anat_final_array[idx], 'device')
+        if self.number_of_process ==1 and self.do_benchmark == 1 and device == 'Python':
+            # this should be used to clear the cache of weave for benchmarking. otherwise weave will mess it up
+            if sys.platform == 'win32':
+                shutil.rmtree(os.path.join(os.environ['USERPROFILE'],'AppData','Local','Temp',os.environ['USERNAME'],'python27_compiled'))
+            else:
+                shutil.rmtree(os.path.join(os.environ['HOME'],'.cache/scipy'))
+            print "Info: scipy cache deleted to prevent benchmarking issues."
         print "################### Trial %d/%d started running for simulation number %d: %s ##########################" % (tr,self.trials_per_config,idx+1,self.final_messages[idx][1:])
         cm = CX.cortical_system(self.df_anat_final_array[idx],self.df_phys_final_array[idx],output_file_suffix = self.final_messages[idx])
         cm.run()
         paths[idx] = cm.save_output_data.data['Full path']
-        if self.number_of_process ==1 and self.do_benchmark == 1 and device == 'Python':
-            # this should be used to clear the cache of weave for benchmarking. otherwise weave will mess it up
-            shutil.rmtree(os.path.join(os.environ['HOME'],'.cache/scipy'))
-            print "Info: scipy cache deleted to prevent benchmarking issues."
+
 
         working.value -= 1
 
