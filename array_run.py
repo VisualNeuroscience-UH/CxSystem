@@ -88,8 +88,8 @@ class array_run(object):
 
         working.value += 1
         np.random.seed(idx)
+        tr = idx % self.trials_per_config
         idx = idx/self.trials_per_config
-        tr = (idx+1) % self.trials_per_config
         device = self.parameter_finder(self.df_anat_final_array[idx], 'device')
         if self.number_of_process ==1 and self.do_benchmark == 1 and device == 'Python':
             # this should be used to clear the cache of weave for benchmarking. otherwise weave will mess it up
@@ -98,7 +98,7 @@ class array_run(object):
             else:
                 shutil.rmtree(os.path.join(os.environ['HOME'],'.cache/scipy'))
             print "Info: scipy cache deleted to prevent benchmarking issues."
-        print "################### Trial %d/%d started running for simulation number %d: %s ##########################" % (tr,self.trials_per_config,idx+1,self.final_messages[idx][1:])
+        print "################### Trial %d/%d started running for simulation number %d: %s ##########################" % (tr+1,self.trials_per_config,idx,self.final_messages[idx][1:])
         cm = CX.cortical_system(self.df_anat_final_array[idx],self.df_phys_final_array[idx],output_file_suffix = self.final_messages[idx])
         cm.run()
         paths[idx] = cm.save_output_data.data['Full path']
@@ -134,9 +134,10 @@ class array_run(object):
         number_of_runs = len(self.final_messages) * self.trials_per_config
         assert len(self.final_messages) < 1000 , 'The array run is trying to run more than 1000 simulations, this is not allowed unless you REALLY want it and if you REALLY want it you should konw what to do.'
         while len(jobs) < number_of_runs:
-            time.sleep(0.3)
+            time.sleep(1.5)
             if working.value < self.number_of_process:
-                p = multiprocessing.Process(target=self.arr_run, args=(len(jobs), working,paths))
+                idx = len(jobs)
+                p = multiprocessing.Process(target=self.arr_run, args=(idx, working,paths))
                 jobs.append(p)
                 p.start()
         for j in jobs:

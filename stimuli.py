@@ -14,22 +14,18 @@ class stimuli(object):
     '''
     [Extracted from VCX_model] This is the stimulation object for applying the input to a particular NeuronGroup(). Currently only video input is supported.
     '''
-    def __init__(self,duration,input_mat_path,output_folder,output_file_extension,save_generated_input_flag):
+    def __init__(self,duration,input_mat_path,output_folder,output_file_suffix,output_file_extension):
         self.i_patterns = {}
         self.BaseLine= 0 * second
         self.input_mat_path = input_mat_path
         self.duration = duration
         self.output_folder = output_folder
+        self.output_file_suffix = output_file_suffix
         self.output_file_extension = output_file_extension
-        self.save_generated_input_flag = save_generated_input_flag
-        if os.path.isfile(os.path.join(self.output_folder, 'input'+self.output_file_extension)):
-            self.file_exist_flag = 1
-            print "\nWarning: Generated input spike sequence exist in %s/input%s " \
-                  "\nThe input will NOT be overwritten. " \
-                  "\nIf you need the spikes regenerated or permanently saved, \nplease rename or remove the previous spike sequence file.\n" % (
-                  self.output_folder,self.output_file_extension)
-        else:
-            self.file_exist_flag = 0
+        # print "\nWarning: Generated input spike sequence exist in %s/input%s " \
+        #       "\nThe input will NOT be overwritten. " \
+        #       "\nIf you need the spikes regenerated or permanently saved, \nplease rename or remove the previous spike sequence file.\n" % (
+        #       self.output_folder,self.output_file_extension)
     def generate_inputs(self, freq):
         '''
         The method for generating input based on the .mat file, using the internal _initialize_inputs() and _calculate_input_seqs() methods.
@@ -38,11 +34,8 @@ class stimuli(object):
         :param freq: frequency.
         :return:
         '''
-        if not self.file_exist_flag:
-            self.initialize_inputs(freq)
-            self.calculate_input_seqs()
-        else:
-            return
+        self.initialize_inputs(freq)
+        self.calculate_input_seqs()
 
     def initialize_inputs(self,  freq):
         print "Initializing stimuli..."
@@ -94,27 +87,25 @@ class stimuli(object):
         else:
             tmp_network.run(self.BaseLine)
             tmp_network.run(self.duration - self.BaseLine)
-        self.save_input_sequence(spikemons,os.path.join(self.output_folder,'input' ))
+        self.save_input_sequence(spikemons,os.path.join(self.output_folder,'input'+self.output_file_suffix ))
         shutil.rmtree(os.path.join(self.output_folder,'Input_cpp_run'))
 
     def save_input_sequence(self,spike_mons, save_path):
-        if self.save_generated_input_flag:
-            print "Saving the generated video input..."
-            self.generated_input_folder = save_path + self.output_file_extension
-            data_to_save = {}
-            for ii in range(len(spike_mons)):
-                data_to_save['spikes_' + str(ii)] = []
-                data_to_save['spikes_' + str(ii)].append(spike_mons[ii].it[0].__array__())
-                data_to_save['spikes_' + str(ii)].append(spike_mons[ii].it[1].__array__())
-            self.data_saver(save_path+self.output_file_extension,data_to_save)
-        else:
-            print "\n Warning: generated video output is NOT saved.\n"
+        print "Saving the generated video input..."
+        self.generated_input_folder = save_path + self.output_file_extension
+        data_to_save = {}
+        for ii in range(len(spike_mons)):
+            data_to_save['spikes_' + str(ii)] = []
+            data_to_save['spikes_' + str(ii)].append(spike_mons[ii].it[0].__array__())
+            data_to_save['spikes_' + str(ii)].append(spike_mons[ii].it[1].__array__())
+        self.data_saver(save_path+self.output_file_extension,data_to_save)
+
 
     def load_input_seq(self,input_spike_file_location):
         if os.path.isfile(input_spike_file_location):
             input_spike_file_location = input_spike_file_location
         else:
-            input_spike_file_location = os.path.join(input_spike_file_location, 'input' + self.output_file_extension)
+            input_spike_file_location = os.path.join(input_spike_file_location, 'input' + self.output_file_suffix + self.output_file_extension)
         self.loaded_data = self.data_loader(input_spike_file_location)
         new_spikes = self.loaded_data['spikes_0']
         neuron_positions_in_cortex = io.loadmat(self.input_mat_path, variable_names='w_coord')

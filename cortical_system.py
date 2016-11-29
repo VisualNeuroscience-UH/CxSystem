@@ -901,7 +901,7 @@ class cortical_system(object):
                 print "Warning: synaptic connection is set to be loaded, however the load_brian_data_path is not defined in the parameters. The connection is being created."
 
             else:
-                syn_con_str = "%s.connect('i!=j', p= " % S_name
+                syn_con_str = "%s.connect(condition='i!=j', p= " % S_name
                 # Connecting the synapses based on either [the defined probability and the distance] or
                 # [only the distance] plus considering the number of connections
                 try:
@@ -1021,8 +1021,7 @@ class cortical_system(object):
             input_mat_path = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='path'].index.item()]
             freq = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='freq'].index.item()]
             inp = stimuli(duration=self.runtime,input_mat_path=input_mat_path,output_folder=self.output_folder, \
-                          output_file_extension = self.output_file_extension,
-                          save_generated_input_flag = self.save_generated_video_input_flag)
+                          output_file_suffix = self.StartTime_str ,output_file_extension = self.output_file_extension)
             proc = multiprocessing.Process(target=inp.generate_inputs, args=(freq,))
             proc.start()
             self.video_input_idx =len(self.neurongroups_list)
@@ -1033,6 +1032,9 @@ class cortical_system(object):
                 while proc.is_alive():
                     time.sleep(1)
                 SPK_GENERATOR_SP, SPK_GENERATOR_TI, thread_number_of_neurons = inp.load_input_seq(self.output_folder)
+                if not self.save_generated_video_input_flag:
+                    print "\n Warning: generated video output is NOT saved.\n"
+                    os.remove(os.path.join(self.output_folder,'input'+self.StartTime_str+self.output_file_extension))
                 SPK_GENERATOR = SpikeGeneratorGroup(thread_number_of_neurons , SPK_GENERATOR_SP, SPK_GENERATOR_TI)
                 setattr(self.main_module, 'SPK_GENERATOR', SPK_GENERATOR)
                 try:
@@ -1122,8 +1124,8 @@ class cortical_system(object):
             self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.drop(input_synaptic_lines.index.tolist()).reset_index(drop=True)
             self.thr = threading.Thread(target = waitress,args=(self,))
             self.thr.start()
-            if inp.file_exist_flag:
-                self.thr.join()
+            # if inp.file_exist_flag:
+            #     self.thr.join()
 
         def VPM(self): #ventral posteromedial (VPM) thalamic nucleus
             spike_times = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='spike_times'].index.item()].replace(' ',',')
