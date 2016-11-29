@@ -1,6 +1,6 @@
 __author__ = 'V_AD'
 from brian2 import *
-#import brian2genn
+import brian2genn
 import os
 import sys
 from brian2_obj_defs import *

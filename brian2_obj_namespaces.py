@@ -1,4 +1,4 @@
-__author__ = 'V_AD'
+from __future__ import division
 from brian2  import *
 import numpy as np
 from matplotlib import pyplot
@@ -7,7 +7,7 @@ import pandas
 
 __author__ = 'V_AD'
 
-calcium_concentration = 2.5  # Change calcium concentration here or with _change_calcium()
+calcium_concentration = 1.0  # Change calcium concentration here or with _change_calcium()
 
 class synapse_namespaces(object):
     '''
@@ -88,16 +88,15 @@ class synapse_namespaces(object):
             new_key = df['Value'][df['Key'] == key_name].item().replace("']", "").split("['")
             return self.value_extractor(df,new_key)
 
-    def _change_calcium(self, ca): # TODO FIX!!
+    def _change_calcium(self, ca):
 
         original_synapse_strength = self.cw_baseline_calcium
         ca0 = 2.0  # The Ca concentration in which cw_baseline_calcium is given
 
         calcium_factor = (pow(ca,4)/(pow(self._K12,4) + pow(ca,4))) / (pow(ca0,4)/(pow(self._K12,4) + pow(ca0,4)))
         final_synapse_strength = original_synapse_strength * calcium_factor
-        self.output_namespace['wght0'] = final_synapse_strength
 
-        return calcium_factor
+        return final_synapse_strength
 
     def STDP(self):
         '''
@@ -128,13 +127,17 @@ class synapse_namespaces(object):
         self.output_namespace['wght_max'] = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type']))* stdp_max_strength_coefficient
         std_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
         mu_wght = std_wght / 2.
+
+        if calcium_concentration > 0: # For change_calcium()
+            self.cw_baseline_calcium = std_wght
+            std_wght = self._change_calcium(calcium_concentration)
+
         self.output_namespace['wght0'] = '(%f * rand() + %f) * nS' % (std_wght , mu_wght)
         std_delay = self.value_extractor(self.physio_config_df,'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
         min_delay = std_delay / 2.
         self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, min_delay)
 
-        if calcium_concentration > 0:
-            self.cw_baseline_calcium = self.output_namespace['wght0']
+
 
 
 #############################################

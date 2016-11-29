@@ -8,14 +8,15 @@ import pandas as pd
 import os.path
 import zlib
 import cPickle as pickle
+import bz2
 
 
 
 class SimulationData(object):
 
-    default_data_file = '/home/henri/PycharmProjects/CX_Output/calcium20.gz'
-    #default_data_file = '/opt3/CX_Output/calcium/calcium21_2s.gz'
-    default_data_file_path = '/opt3/CX_Output/calcium/'
+    #default_data_file = '/home/henri/PycharmProjects/CX_Output/'
+    default_data_file = '/opt3/CX_Output/calcium/calcium21_2s.gz'
+    default_data_file_path = '/opt3/CX_Output/calcium/with_noise/'
     default_sampling_frequency = 1000
 
     group_numbering = {1: 'NG1_L1i_L1', 2: 'NG2_PC_L2toL1', 3: 'NG3_BC_L2', 4: 'NG4_MC_L2', 5: 'NG5_PC_L4toL2',
@@ -23,13 +24,15 @@ class SimulationData(object):
                        11: 'NG11_BC_L5', 12: 'NG12_MC_L5', 13: 'NG13_PC_L6toL4', 14: 'NG14_PC_L6toL1',
                        15: 'NG15_BC_L6', 16: 'NG16_MC_L6'}
 
-    def __init__(self, data_file=default_data_file):
+    def __init__(self, data_file=default_data_file, data_path=default_data_file_path):
 
         basename = os.path.basename(data_file)
         if basename[-2:] == 'gz':
-            self.data = self._loadgz(data_file)
+            self.data = self._loadgz(data_path + data_file)
         elif basename[-3:] == 'mat':
-            self.data = self._loadmat(data_file)
+            self.data = self._loadmat(data_path + data_file)
+        elif basename[-3:] == 'bz2':
+            self.data = self._loadbz2(data_path + data_file)
         else:
             print 'Format not supported so no file was loaded.'
 
@@ -44,6 +47,12 @@ class SimulationData(object):
         with open(filename, 'rb') as fb:
             d_pickle = zlib.decompress(fb.read())
             data = pickle.loads(d_pickle)
+
+        return data
+
+    def _loadbz2(self, filename):
+        with bz2.BZ2File(filename, 'rb') as fb:
+            data = pickle.load(fb)
 
         return data
 
@@ -171,7 +180,7 @@ class SimulationData(object):
         sampling_frequency = 1000000
         delta_t = float(1 / sampling_frequency)
         bins = np.arange(0.0, self.runtime, delta_t)
-        # counts_n = len(bins)
+        counts_n = len(bins) # Broken?
         freqs = np.fft.rfftfreq(counts_n, delta_t)
         counts_n = len(freqs)
 

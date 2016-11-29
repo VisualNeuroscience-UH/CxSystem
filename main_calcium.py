@@ -3,7 +3,7 @@ import os
 from brian2  import *
 import datetime
 
-default_runtime = 500*ms
+default_runtime = 3000*ms
 
 time_start = datetime.datetime.now()
 CM = CX.cortical_system(anatomy_and_system_config = os.path.dirname(os.path.realpath(__file__)) + '/calcium_config_file.csv',
