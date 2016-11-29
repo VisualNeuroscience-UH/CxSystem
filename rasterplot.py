@@ -1,5 +1,6 @@
 from __future__ import division
 import matplotlib.pyplot as plt
+import seaborn as sns; sns.set()
 import scipy.io as spio
 from collections import OrderedDict
 import numpy as np
@@ -27,12 +28,13 @@ class SimulationData(object):
     def __init__(self, data_file=default_data_file, data_path=default_data_file_path):
 
         basename = os.path.basename(data_file)
+        data_loc = data_path + data_file
         if basename[-2:] == 'gz':
-            self.data = self._loadgz(data_path + data_file)
+            self.data = self._loadgz(data_loc)
         elif basename[-3:] == 'mat':
-            self.data = self._loadmat(data_path + data_file)
+            self.data = self._loadmat(data_loc)
         elif basename[-3:] == 'bz2':
-            self.data = self._loadbz2(data_path + data_file)
+            self.data = self._loadbz2(data_loc)
         else:
             print 'Format not supported so no file was loaded.'
 
@@ -173,7 +175,6 @@ class SimulationData(object):
         [plt.plot(voltage[i]) for i in range(0,len(voltage))]
         plt.show()
 
-
     def voltage_spectrum_group(self, neuron_group):
 
         neuron_group = self._check_group_name(neuron_group)
@@ -192,15 +193,107 @@ class SimulationData(object):
 
         return freqs, pow_spectrum
 
+    def rasterplot_compressed(self, neurons_per_group=20, ax=None):
+        print 'Working on ' + self.datafile
+        spike_dict = dict()
+        indices_dict = dict()
+        number_of_group = {value: key for (key,value) in SimulationData.group_numbering.items()}
+
+        for group in self.neuron_groups:
+            print '   Processing ' + group
+            group_sp = self.spikedata[group]
+            N = len(group_sp[0])  # = len(group_sp[1])
+            if N > 0:
+                spike_tuples = [(int(group_sp[0][i]), group_sp[1][i], group) for i in range(N)]
+                spikes = pd.DataFrame(spike_tuples)
+                spikes.columns = ['neuron_index', 'time', 'group']
+
+                if len(spikes.neuron_index.unique()) > neurons_per_group:
+                    indices = np.random.choice(spikes.neuron_index.unique(), neurons_per_group, replace=False)
+                    spikes = spikes[spikes.neuron_index.isin(indices)]
+                    start_index = (16 - number_of_group[group]) * neurons_per_group + 1
+                    fixed_indices = range(start_index, start_index+neurons_per_group+1)
+                    fixed_ind_dict = {indices[i]: fixed_indices[i] for i in range(neurons_per_group)}
+                    spikes.neuron_index = spikes.neuron_index.map(fixed_ind_dict)
+
+                    spike_dict[group] = spikes
+                else:
+                    print '   Group ' + group + ' has too few spiking neurons (or sampling was too sparse)! Skipping...'
+
+
+        spike_df = pd.concat(spike_dict)
+        if ax is None:
+            plt.scatter(spike_df.time, spike_df.neuron_index, s=0.8)
+            q = neurons_per_group
+            runtime = self.data['runtime']
+
+            ticklabels = ['VI', 'V', 'IV', 'II/III', 'I']
+            plt.yticks([4 * q, 7 * q, 12 * q, 15 * q, 16 * q], ticklabels)
+            plt.xticks(np.arange(runtime + 0.1, step=1))
+            plt.xlabel('Time (s)')
+
+            plt.xlim([0, runtime])
+            plt.ylim([0, 16 * q])
+
+            plt.show()
+
+        else:
+            scatplot = ax.scatter(spike_df.time, spike_df.neuron_index, s=0.8)
+            return scatplot
+
+
+def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20):
+
+    sim_n = len(sim_files)
+    q = neurons_per_group
+
+    ticklabels = ['VI', 'V', 'IV', 'II/III', 'I']
+    fig, ax = plt.subplots(ncols=sim_n)
+    plt.style.use('seaborn-whitegrid')
+
+    fig.suptitle('$Ca^{2+}$ concentration (mM)', fontsize=14)
+    fig.subplots_adjust(top=0.85)
+    plt.setp(ax, xticks=np.arange(runtime + 0.1, step=1),
+             yticks=[4 * q, 7 * q, 12 * q, 15 * q, 16 * q], yticklabels=ticklabels, xlim=[0, runtime],
+             ylim=[0, 16 * q],
+             xlabel='Time (s)')
+
+    [SimulationData(sim_files[i]).rasterplot_compressed(40, ax[i]) for i in range(sim_n)]
+    [ax[i].set_title(sim_titles[i]) for i in range(sim_n)]
+
+    plt.show()
+
+
 # MAIN
 
 if __name__ == '__main__':
-    calcium_sim = SimulationData()
-    #calcium_sim.plot_spikes_spectra()
-    #calcium_sim.plot_voltage(7)
-    #calcium_sim.rasterplot()
-    #pass
-    freqs, spectrum = calcium_sim.voltage_spectrum_group(7)
-    plt.plot(freqs, spectrum)
+
+    simulations = ['calcium21.bz2', 'calcium20.bz2', 'calcium15.bz2', 'calcium12.bz2']
+    sim_title = ['2.1', '2.0', '1.5', '1.2']
+
+    calciumplot(sim_files=simulations, sim_titles=sim_title, neurons_per_group=40, runtime=3.0)
 
 
+    # sim_n = len(simulations)
+    # q = 40
+    # runtime = 3.0
+    #
+    # ticklabels = ['VI', 'V', 'IV', 'II/III', 'I']
+    # fig, ax = plt.subplots(ncols = sim_n)
+    # plt.style.use('seaborn-whitegrid')
+    #
+    # fig.suptitle('$Ca^{2+}$ concentration (mM)', fontsize=14)
+    # fig.subplots_adjust(top=0.85)
+    # plt.setp(ax, xticks=np.arange(runtime+0.1, step=1),
+    #          yticks=[4*q, 7*q, 12*q, 15*q, 16*q], yticklabels=ticklabels, xlim=[0, runtime], ylim=[0,16*q],
+    #          xlabel='Time (s)')
+    #
+    # [SimulationData(simulations[i]).rasterplot_compressed(40, ax[i]) for i in range(sim_n)]
+    # [ax[i].set_title(sim_title[i]) for i in range(sim_n)]
+    #
+    # plt.show()
+
+    #sim = SimulationData('calcium21.bz2')
+    #axx = sim.rasterplot_compressed(neurons_per_group=40)
+    #axx.show()
+    #sim.rasterplot()
