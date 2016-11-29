@@ -136,28 +136,29 @@ class customized_neuron(object):
         '''
 
         #: The template for the somatic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
-        # eq_template_soma = '''
-        # dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr) / C) +  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
-        # dge/dt = -ge/tau_e : siemens
-        # dgealpha/dt = (ge-gealpha)/tau_e : siemens
-        # dgeX/dt = -geX/tau_eX : siemens
-        # dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
-        # dgi/dt = -gi/tau_i : siemens
-        # dgialpha/dt = (gi-gialpha)/tau_i : siemens
-        # '''
-        #: The template for the dendritic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
-        # eq_template_dend = '''
-        # dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) +I_dendr) / C : volt
-        # dge/dt = -ge/tau_e : siemens
-        # dgealpha/dt = (ge-gealpha)/tau_e : siemens
-        # dgeX/dt = -geX/tau_eX : siemens
-        # dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
-        # dgi/dt = -gi/tau_i : siemens
-        # dgialpha/dt = (gi-gialpha)/tau_i : siemens
-        # '''
 
-        eq_template_soma = self.value_extractor(self.cropped_df_for_current_type,'eq_template_soma')
-        eq_template_dend = self.value_extractor(self.cropped_df_for_current_type,'eq_template_dend')
+        # eq_template_soma = self.value_extractor(self.cropped_df_for_current_type,'eq_template_soma')
+        # eq_template_dend = self.value_extractor(self.cropped_df_for_current_type,'eq_template_dend')
+
+        eq_template_soma = '''
+        dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr) / C) +  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
+        dge/dt = -ge/tau_e : siemens
+        dgealpha/dt = (ge-gealpha)/tau_e : siemens
+        dgeX/dt = -geX/tau_eX : siemens
+        dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
+        dgi/dt = -gi/tau_i : siemens
+        dgialpha/dt = (gi-gialpha)/tau_i : siemens
+        '''
+        #: The template for the dendritic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
+        eq_template_dend = '''
+        dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) +I_dendr) / C : volt
+        dge/dt = -ge/tau_e : siemens
+        dgealpha/dt = (ge-gealpha)/tau_e : siemens
+        dgeX/dt = -geX/tau_eX : siemens
+        dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
+        dgi/dt = -gi/tau_i : siemens
+        dgialpha/dt = (gi-gialpha)/tau_i : siemens
+        '''
 
         self.output_neuron['equation'] = Equations(eq_template_dend, vm="vm_basal", ge="ge_basal",
                                                    gealpha="gealpha_basal",
@@ -223,15 +224,14 @@ class customized_neuron(object):
                 x : meter
                 y : meter
         '''
-        eq_template = self.value_extractor(self.cropped_df_for_current_type,'eq_template')
+        # eq_template = self.value_extractor(self.cropped_df_for_current_type,'eq_template')
+        # self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
+        self.output_neuron['equation'] = Equations('''
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) +  noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+            dge/dt = -ge/tau_e : siemens
+            dgi/dt = -gi/tau_i : siemens
+            ''', ge='ge_soma', gi='gi_soma')
 
-        # self.output_neuron['equation'] = Equations('''
-        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) +  noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
-        #     dge/dt = -ge/tau_e : siemens
-        #     dgi/dt = -gi/tau_i : siemens
-        #     ''', ge='ge_soma', gi='gi_soma')
-
-        self.output_neuron['equation'] = Equations(eq_template , ge='ge_soma', gi='gi_soma')
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
 
@@ -249,15 +249,13 @@ class customized_neuron(object):
                 x : meter
                 y : meter
         '''
-        eq_template = self.value_extractor(self.cropped_df_for_current_type, 'eq_template')
-        # self.output_neuron['equation'] = Equations('''
-        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) +  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
-        #     dge/dt = -ge/tau_e : siemens
-        #     dgi/dt = -gi/tau_i : siemens
-        #     ''', ge='ge_soma', gi='gi_soma')
-
-        self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
-
+        # eq_template = self.value_extractor(self.cropped_df_for_current_type, 'eq_template')
+        # self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
+        self.output_neuron['equation'] = Equations('''
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) +  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
+            dge/dt = -ge/tau_e : siemens
+            dgi/dt = -gi/tau_i : siemens
+            ''', ge='ge_soma', gi='gi_soma')
 
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
@@ -277,13 +275,14 @@ class customized_neuron(object):
                     x : meter
                     y : meter
             '''
-        # self.output_neuron['equation'] = Equations('''
-        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C)+  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
-        #     dge/dt = -ge/tau_e : siemens
-        #     dgi/dt = -gi/tau_i : siemens
-        #     ''', ge='ge_soma', gi='gi_soma')
-        eq_template = self.value_extractor(self.cropped_df_for_current_type, 'eq_template')
-        self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
+        # eq_template = self.value_extractor(self.cropped_df_for_current_type, 'eq_template')
+        # self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
+
+        self.output_neuron['equation'] = Equations('''
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C)+  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
+            dge/dt = -ge/tau_e : siemens
+            dgi/dt = -gi/tau_i : siemens
+            ''', ge='ge_soma', gi='gi_soma')
 
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
@@ -302,9 +301,15 @@ class customized_neuron(object):
                     x : meter
                     y : meter
             '''
-        eq_template = self.value_extractor(self.cropped_df_for_current_type, 'eq_template')
-        self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
 
+        # eq_template = self.value_extractor(self.cropped_df_for_current_type, 'eq_template')
+        # self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
+
+        self.output_neuron['equation'] = Equations('''
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C)+  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
+            dge/dt = -ge/tau_e : siemens
+            dgi/dt = -gi/tau_i : siemens
+            ''', ge='ge_soma', gi='gi_soma')
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
 

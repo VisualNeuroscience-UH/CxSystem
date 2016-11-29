@@ -58,6 +58,7 @@ class save_data(object):
         if not os.path.exists(self.save_folder):
             os.makedirs(self.save_folder)
         self.save_path = os.path.join(self.save_folder, self.save_pure_filename + self.datetime_str + self.save_extension)
+        self.data['Full path'] = self.save_path
         while os.path.isfile(self.save_path):
             idx = 1
             self.save_path = os.path.join(self.save_folder, self.save_pure_filename + self.datetime_str  + '_%d'%idx + self.save_extension)

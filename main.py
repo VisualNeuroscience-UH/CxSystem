@@ -8,7 +8,6 @@ import shutil
 
 # for benchmarking :
 def multi_run (idx, working):
-    runtime_idx = (idx / 5)
     working.value += 1
     np.random.seed(runtime_idx)
     print "################### Trial %d started running for %d ms ##########################" % ((idx%5)+1, (1000+runtime_idx*3000))
@@ -28,7 +27,7 @@ if __name__ == '__main__':
     ProcessLimit = 1
     NotDone = 1
     while len(jobs)<trials:
-        time.sleep(3)
+        time.sleep(0.3)
         if working.value < ProcessLimit:
             p = multiprocessing.Process(target=multi_run,args=(len(jobs),working,))
             jobs.append(p)
