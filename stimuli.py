@@ -12,7 +12,7 @@ import shutil
 
 class stimuli(object):
     '''
-    [Extracted from VCX_model] This is the stimulation object for applying the input to a particular NeuronGroup(). Currently only video input is supported.
+    [Extracted from VCxmodel] This is the stimulation object for applying the input to a particular NeuronGroup(). Currently only video input is supported.
     '''
     def __init__(self,duration,input_mat_path,output_folder,output_file_suffix,output_file_extension):
         self.i_patterns = {}
@@ -44,7 +44,8 @@ class stimuli(object):
         _V1_mats = {}
 
         io.loadmat(os.path.abspath(self.input_mat_path), _V1_mats)
-
+        self.w_coord =_V1_mats['w_coord']
+        self.z_coord = _V1_mats['z_coord']
         # Fill ISI with N-1 times frameduration of zeros
         SOA = 90 # in ms
         stimulus_epoch_duration = 15 # in ms, duration of Burbank whole stimulus
@@ -56,7 +57,7 @@ class stimuli(object):
 
         try:
             frameduration = double(_V1_mats['frameduration'])
-            raise NotImplementedError('Frameduration coming from actual video frame rate. This is not implemented yet for CXSystem')
+            raise NotImplementedError('Frameduration coming from actual video frame rate. This is not implemented yet for CxSystem')
         except:
             frameduration = stimulus_epoch_duration
         frames = TimedArray(np.transpose(sparse_stimulus),
@@ -98,6 +99,8 @@ class stimuli(object):
             data_to_save['spikes_' + str(ii)] = []
             data_to_save['spikes_' + str(ii)].append(spike_mons[ii].it[0].__array__())
             data_to_save['spikes_' + str(ii)].append(spike_mons[ii].it[1].__array__())
+        data_to_save['w_coord'] = self.w_coord
+        data_to_save['z_coord'] = self.z_coord
         self.data_saver(save_path+self.output_file_extension,data_to_save)
 
 

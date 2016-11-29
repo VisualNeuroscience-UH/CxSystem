@@ -1,4 +1,4 @@
-import cortical_system as CX
+import CxSystem as CX
 from brian2 import *
 import multiprocessing
 import time
@@ -99,7 +99,7 @@ class array_run(object):
                 shutil.rmtree(os.path.join(os.environ['HOME'],'.cache/scipy'))
             print "Info: scipy cache deleted to prevent benchmarking issues."
         print "################### Trial %d/%d started running for simulation number %d: %s ##########################" % (tr+1,self.trials_per_config,idx,self.final_messages[idx][1:])
-        cm = CX.cortical_system(self.df_anat_final_array[idx],self.df_phys_final_array[idx],output_file_suffix = self.final_messages[idx])
+        cm = CX.CxSystem(self.df_anat_final_array[idx], self.df_phys_final_array[idx], output_file_suffix = self.final_messages[idx])
         cm.run()
         paths[idx] = cm.save_output_data.data['Full path']
 
@@ -211,7 +211,6 @@ class array_run(object):
             array_of_dfs.extend(temp_df)
             run_messages.extend(messages)
         return array_of_dfs, run_messages
-
 
     def df_default_finder(self,df_):
         df = df_.copy()

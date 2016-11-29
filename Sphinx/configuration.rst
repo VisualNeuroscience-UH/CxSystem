@@ -29,7 +29,7 @@ These four values are in correspondence with the column titles of the previous T
 
 Currently there are three types of **row_type** implemented: 
 
-* params: defines the run-time parameters of the system run (partially equivalent to the VCX_run)
+* params: defines the run-time parameters of the system run (partially equivalent to the VCxrun)
 * G: defines the NeuronGroup()s in the system 
 * S: defines the Synapses() connecting the NeuronGroup()s in the system
 

@@ -4,8 +4,8 @@ note "called by neuron_group()" as N1
 note "called by synapse()" as N2
 note "called by relay()" as N3
 
-package "cortical_system module"{
-class cortical_system {
+package "CxSystem module"{
+class CxSystem {
 customized_neurons_list[]
 customized_synapses_list[]
 .. Setters ..
@@ -22,7 +22,7 @@ gather_result()
 }
 
 package "brian2_obj_definitions module"{
-class customized_neuron{
+class neuron_reference{
 output_neuron{}
 void PC()
 void BC()
@@ -37,10 +37,10 @@ void STDP()
 void Fixed()
 }
 
-customized_neuron <- N1
-N1 -cortical_system
+neuron_reference <- N1
+N1 -CxSystem
 customized_synapses <- N2
-N2-cortical_system
+N2-CxSystem
 }
 
 package "brian2_obj_namespaces module" {
@@ -66,7 +66,7 @@ void _L1i()
 void _MC()
 void _SS()
 }
-neurons_namespaces<-customized_neuron
+neurons_namespaces<-neuron_reference
 synapses_namespaces<-customized_synapses
 }
 
@@ -77,7 +77,7 @@ syntax_bank[]
 void creat_key()
 void save_to_file()
 }
-cortical_system->save_data
+CxSystem->save_data
 }
 
 package "stimuli module" {
@@ -87,13 +87,13 @@ indices[]
 times[]
 generate_inputs()
 load_input_seq()
-VCX_save_input_sequence()
+VCxsave_input_sequence()
 }
-cortical_system->N3
+CxSystem->N3
 N3->stimuli
 }
 
 interface configuration_file
-configuration_file->cortical_system
+configuration_file->CxSystem
 
 @enduml

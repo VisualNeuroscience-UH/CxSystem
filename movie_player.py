@@ -109,7 +109,7 @@ def sparse_to_rgba (sparse_matrix):
     return rollaxis(arr,0,3)
 
 extension = ''
-filepath = '/opt3/Noise_Test/CX_Output_20161107_15134440_GeNN_2000ms.gz'
+filepath = '/opt3/Noise_Test/CxOutput_20161107_15134440_GeNN_2000ms.gz'
 filename = ntpath.basename(os.path.splitext(filepath)[0])
 folderpath = os.path.dirname(filepath)
 data = data_loader(filepath)

@@ -53,7 +53,7 @@ And similar prefixes for monitors:
 
 Although mentioned as a dangerous method in the literature, updating the Globals() directly, is a practical approach in our case. This method is partially similar to previous method as it also needs all the prefixes and corresponding variables. However, the variables does not have to *wait* inside the syntax bank to be run after the main object call. They can be implicitly executed inside the main object and still become "visible" to the magic network by putting them in Globals(). In this case, the user does not have to face a manual syntax-executer outside of the main object call. 
 
-Accordingly, most of the *exec* commands inside the main object cortical_system() are creating the required variable and making them visible to *magic network* of brian2 by updating the Globals() and putting them inside that. In the following example, the NG0 is put in the Globals(): 
+Accordingly, most of the *exec* commands inside the main object CxSystem() are creating the required variable and making them visible to *magic network* of brian2 by updating the Globals() and putting them inside that. In the following example, the NG0 is put in the Globals():
 
 ::
 

@@ -42,10 +42,10 @@ class CellGroupData:
             'L6_TPC_L1': 1637, 'L6_DBC': 31, 'L6_TPC_L4': 1440, 'L6_UTPC': 1735, 'L6_BP': 7}
 
         self.own_Ncell_dict, self.ordered_own_Ncell_list, self.proportion_MC, self.proportion_BC = \
-            self._cx_ncells(_cell_group_dict,_cell_N_dict)
-        self.own_connections2markram_connections_map, self.own_data_vector = self._cx_nsynapses(_cell_group_dict,_cell_N_dict)
+            self._Cxncells(_cell_group_dict,_cell_N_dict)
+        self.own_connections2markram_connections_map, self.own_data_vector = self._Cxnsynapses(_cell_group_dict,_cell_N_dict)
 
-    def _cx_ncells(self,_cell_group_dict,_cell_N_dict):
+    def _Cxncells(self,_cell_group_dict,_cell_N_dict):
         own_cell_groups=set(_cell_group_dict.values())
 
         # Get a list of Markram neuron groups mathing own search group
@@ -93,7 +93,7 @@ class CellGroupData:
         # print ordered_own_Ncell_list
         # print cellsum
 
-    def _cx_nsynapses(self,_cell_group_dict,_cell_N_dict):
+    def _Cxnsynapses(self,_cell_group_dict,_cell_N_dict):
         own_cell_groups=set(_cell_group_dict.values())
 
         # Map own cell groups to Markram cell groups

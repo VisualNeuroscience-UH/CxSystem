@@ -1,4 +1,4 @@
-import cortical_system as CX
+import CxSystem as CX
 import os
 from brian2  import *
 import multiprocessing
@@ -11,7 +11,7 @@ def multi_run (idx, working):
     working.value += 1
     np.random.seed(runtime_idx)
     print "################### Trial %d started running for %d ms ##########################" % ((idx%5)+1, (1000+runtime_idx*3000))
-    cm = CX.cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = 'Python', runtime = (1000+runtime_idx*3000)*ms)
+    cm = CX.CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device ='Python', runtime =(1000 + runtime_idx * 3000) * ms)
     cm.run()
     working.value -= 1
     shutil.rmtree(os.path.join(os.environ['HOME'], '.cache/scipy'))# this should be used to clear the cache of weave for benchmarking. otherwise weave will mess it up
@@ -43,7 +43,7 @@ if __name__ == '__main__':
 #     working.value += 1
 #     np.random.seed(idx)
 #     print "################### process %d started ##########################" % idx
-#     cm = CX.cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = 'C++', runtime = 1000*ms)
+#     cm = CX.CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', device = 'C++', runtime = 1000*ms)
 #     cm.run()
 #     working.value -= 1
 #

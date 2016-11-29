@@ -18,8 +18,8 @@ def data_loader(path):
             loaded_data = pickle.load(fb)
     return loaded_data
 
-path = '/opt3/CX_Output'
-FileName = 'CX_Output_20161114_12430741_Python_1000ms.bz2'
+path = '/opt3/CxOutput'
+FileName = 'CxOutput_20161114_12430741_Python_1000ms.bz2'
 ThisTrial = data_loader(os.path.join(path,FileName))
 
 # SS = ThisTrial['spikes_all'][ 'NG7_SS_L4']

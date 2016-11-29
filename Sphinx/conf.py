@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# CX_System documentation build configuration file, created by
+# CxSystem documentation build configuration file, created by
 # sphinx-quickstart on Mon Jun  6 14:36:08 2016.
 #
 # This file is execfile()d with the current directory set to its
@@ -47,7 +47,7 @@ source_suffix = '.rst'
 master_doc = 'Documentation'
 
 # General information about the project.
-project = u'CX_System'
+project = u'CxSystem'
 copyright = u'2016, Vafa Andalibi'
 author = u'Vafa Andalibi'
 
@@ -201,7 +201,7 @@ html_static_path = ['_static']
 #html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'CX_Systemdoc'
+htmlhelp_basename = 'CxSystemdoc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -223,7 +223,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'CX_System.tex', u'CX\\_System Documentation',
+    (master_doc, 'CxSystem.tex', u'CX\\_System Documentation',
      u'Vafa Andalibi', 'manual'),
 ]
 
@@ -253,7 +253,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'cx_system', u'CX_System Documentation',
+    (master_doc, 'CxSystem', u'CxSystem Documentation',
      [author], 1)
 ]
 
@@ -267,8 +267,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'CX_System', u'CX_System Documentation',
-     author, 'CX_System', 'One line description of project.',
+    (master_doc, 'CxSystem', u'CxSystem Documentation',
+     author, 'CxSystem', 'One line description of project.',
      'Miscellaneous'),
 ]
 

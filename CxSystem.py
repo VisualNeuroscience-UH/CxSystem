@@ -3,7 +3,7 @@ from brian2 import *
 import brian2genn
 import os
 import sys
-from brian2_obj_defs import *
+from physiology_reference import *
 from matplotlib.pyplot import  *
 from save_data import *
 from stimuli import *
@@ -24,7 +24,7 @@ import array_run
 import multiprocessing
 
 
-class cortical_system(object):
+class CxSystem(object):
     '''
     The main object of cortical system module for building and running a customized model of cortical module in Brian2Genn.
     '''
@@ -58,8 +58,8 @@ class cortical_system(object):
         Main internal variables:
 
 
-        * customized_neurons_list: This list contains the customized_neuron instances. So for each neuron group target line, there would be an element in this list which contains all the information for that particular neuron group.
-        * customized_synapses_list: This list contains the customized_synapse instances. Hence, for each synapse custom line, there would be an element in this list, containing all the necessary information.
+        * customized_neurons_list: This list contains the neuron_reference instances. So for each neuron group target line, there would be an element in this list which contains all the information for that particular neuron group.
+        * customized_synapses_list: This list contains the synapse_reference instances. Hence, for each synapse custom line, there would be an element in this list, containing all the necessary information.
         * neurongroups_list: This list contains name of the NeuronGroup() instances that are placed in the Globals().
         * synapses_name_list: This list contains name of the Synapses() instances that are placed in the Globals().
         * monitor_name_bank: The dictionary containing the name of the monitors that are defined for any NeuronGroup() or Synapses().
@@ -69,11 +69,12 @@ class cortical_system(object):
         '''
         self.start_time = time.time()
         self.main_module = sys.modules['__main__']
-        try:  # try to find the CX_module in the sys.modules, to find if the __main__ is cortical_system.py or not
-            self.CX_module = sys.modules['cortical_system']
+        try:  # try to find the Cxmodule in the sys.modules, to find if the __main__ is CxSystem.py or not
+            self.Cxmodule = sys.modules['CxSystem']
         except KeyError:
             pass
-        self._options = {
+        self.parameter_to_method_mapping = {
+            ### system parameter definitions:
             #Parameter_name : [set priority (0 is highest),function_to_run]
             'device': [0,self.set_device],
             'save_generated_video_input_flag': [1,self.save_generated_video_input_flag],
@@ -91,6 +92,9 @@ class cortical_system(object):
             'multidimension_array_run': [13,self.passer],  # this parameter is used by array_run module, so here we just pass
             'number_of_process': [14,self.passer],  # this parameter is used by array_run module, so here we just pass
             'trials_per_config': [15,self.passer],
+            'default_clock': [16,self.set_default_clock],
+            ####
+            #### Line definitions:
             'G': [nan,self.neuron_group],
             'S': [nan,self.synapse],
             'IN': [nan,self.relay],
@@ -102,16 +106,16 @@ class cortical_system(object):
         self.scale = 1
         self.do_benchmark = 0
         # defaultclock.dt = 0.01 * ms
-        if defaultclock.dt/second != 1e-4:
-            print "\nWarning: default clock is %s\n" %str(defaultclock.dt)
+        # if defaultclock.dt/second != 1e-4:
+        #     print "\nWarning: default clock is %s\n" %str(defaultclock.dt)
         self.numerical_integration_method = 'euler'
         print "Info : the system is running with %s integration method"%self.numerical_integration_method
         self.current_parameters_list = []
         self.current_parameters_list_orig_len = 0 # current_parameters_list is changing at some point in the code, so the original length of it is needed
         self.current_values_list = []
         self.NG_indices = []
-        self.customized_neurons_list = []  # This list contains the customized_neuron instances. So for each neuron group target line, there would be an element in this list which contains all the information for that particular neuron group.
-        self.customized_synapses_list = []  # This list contains the customized_synapse instances. Hence, for each synapse custom line, there would be an element in this list, containing all the necessary information.
+        self.customized_neurons_list = []  # This list contains the neuron_reference instances. So for each neuron group target line, there would be an element in this list which contains all the information for that particular neuron group.
+        self.customized_synapses_list = []  # This list contains the synapse_reference instances. Hence, for each synapse custom line, there would be an element in this list, containing all the necessary information.
         self.neurongroups_list = []  # This list contains name of the NeuronGroup() instances that are placed in the Globals().
         self.synapses_name_list = []  # This list contains name of the Synapses() instances that are placed in the Globals().
         self.monitor_name_bank = {}  # The dictionary containing the name of the monitors that are defined for any NeuronGroup() or Synapses().
@@ -178,12 +182,17 @@ class cortical_system(object):
                         next_def_line_idx = self.anat_and_sys_conf_df[0].__len__()
                     for self.value_line_idx in range(def_idx+1,next_def_line_idx):
                         if type(self.anat_and_sys_conf_df.ix[self.value_line_idx, 0]) == str:
-                            if self.anat_and_sys_conf_df.ix[self.value_line_idx,0] in self._options.keys() and self.anat_and_sys_conf_df.ix[self.value_line_idx,0][0]!='#':
+                            if self.anat_and_sys_conf_df.ix[self.value_line_idx,0] in self.parameter_to_method_mapping.keys() and self.anat_and_sys_conf_df.ix[self.value_line_idx, 0][0]!= '#':
                                 self.current_parameters_list = self.anat_and_sys_conf_df.ix[def_idx,1:].dropna()
                                 self.current_parameters_list = self.current_parameters_list[~self.current_parameters_list.str.contains('#')]
                                 self.current_values_list = self.anat_and_sys_conf_df.ix[self.value_line_idx,self.current_parameters_list.index].dropna()
-                                self._options[self.anat_and_sys_conf_df.ix[self.value_line_idx,0]][1]()
+                                self.parameter_to_method_mapping[self.anat_and_sys_conf_df.ix[self.value_line_idx, 0]][1]()
                     break
+
+    def set_default_clock(self,*args):
+        defaultclock.dt = eval(args[0])
+        if defaultclock.dt/second != 1e-4:
+            print "\nWarning: default clock is %s\n" %str(defaultclock.dt)
 
     def passer(self,*args):
         pass
@@ -249,29 +258,28 @@ class cortical_system(object):
             print "\nWarning: device is not defined in the configuration file. The default device is Python.\n"
             self.device = 'Python'
         for ParamIdx, parameter in self.current_parameters_list.iteritems():
-            if parameter not in self._options.keys():
+            if parameter not in self.parameter_to_method_mapping.keys():
                 print "Warning: system parameter %s not defined." % parameter
-        options_with_priority = [it for it in self._options if not isnan(self._options[it][0])]
-        parameters_to_set_prioritized = [it for priority_idx in range(len(options_with_priority)) for it in self._options if self._options[it][0]==priority_idx]
+        options_with_priority = [it for it in self.parameter_to_method_mapping if not isnan(self.parameter_to_method_mapping[it][0])]
+        parameters_to_set_prioritized = [it for priority_idx in range(len(options_with_priority)) for it in self.parameter_to_method_mapping if self.parameter_to_method_mapping[it][0] == priority_idx]
         for correct_parameter_to_set in parameters_to_set_prioritized:
             for ParamIdx,parameter in self.current_parameters_list.iteritems():
                 if parameter == correct_parameter_to_set:
-                    assert (parameter in self._options.keys()), 'The tag %s is not defined.' % parameter
-                    self._options[parameter][1](self.current_values_list[ParamIdx])
+                    assert (parameter in self.parameter_to_method_mapping.keys()), 'The tag %s is not defined.' % parameter
+                    self.parameter_to_method_mapping[parameter][1](self.current_values_list[ParamIdx])
                     break
         if self.sys_mode == '':
             raise NameError("System mode is not defined.")
         else:
-            print "Info: CX system is running in %s mode" %self.sys_mode
+            print "Info: CxSystem is running in %s mode" %self.sys_mode
         if self.do_benchmark:
-            print "####### Warning: CX_system is performing benchmarking. The Brian2 should be configured to use benchmarking."
+            print "####### Warning: CxSystem is performing benchmarking. The Brian2 should be configured to use benchmarking."
         if self.device == 'GeNN':
             set_device('genn', directory=os.path.join(self.output_folder, self.StartTime_str[1:]))
             prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
         elif self.device == 'Cpp':
             set_device('cpp_standalone', directory=os.path.join(self.output_folder, self.StartTime_str[1:]))
             prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
-
 
     def _set_runtime(self,*args):
         assert '*' in args[0], 'Please specify the unit for the runtime parameter, e.g. um , mm '
@@ -372,7 +380,7 @@ class cortical_system(object):
         # if float(args[0])!=1.0:
         self.scale = float(args[0])
         if self.scale != 1 :
-            print "Info: CX System is being build on the scale of %s" %args[0]
+            print "Info: CxSystem is being build on the scale of %s" %args[0]
 
     def load_positions_only(self,*args):
         assert int(args[0]) == 0 or int(args[0]) == 1, \
@@ -452,10 +460,10 @@ class cortical_system(object):
             number_of_neurons = str(int(int(number_of_neurons) * self.scale))
         except AttributeError:
             pass
-        self.customized_neurons_list.append(customized_neuron(idx, number_of_neurons, neuron_type,
-                                                  layer_idx, self.general_grid_radius, self.min_distance,self.physio_config_df,
-                                                              network_center=net_center).output_neuron)  # creating a
-        # customized_neuron() object and passing the positional arguments to it. The main member of the class called
+        self.customized_neurons_list.append(neuron_reference(idx, number_of_neurons, neuron_type,
+                                                             layer_idx, self.general_grid_radius, self.min_distance, self.physio_config_df,
+                                                             network_center=net_center).output_neuron)  # creating a
+        # neuron_reference() object and passing the positional arguments to it. The main member of the class called
         # output_neuron is then appended to customized_neurons_list.
         # in case of threshold/reset/refractory overwrite
         if threshold != '--':
@@ -531,7 +539,7 @@ class cortical_system(object):
             exec NG_init
         setattr(self.main_module, _dyn_neurongroup_name, eval(_dyn_neurongroup_name))
         try:
-            setattr(self.CX_module, _dyn_neurongroup_name, eval(_dyn_neurongroup_name))
+            setattr(self.Cxmodule, _dyn_neurongroup_name, eval(_dyn_neurongroup_name))
         except AttributeError:
             pass
 
@@ -652,7 +660,7 @@ class cortical_system(object):
                 exec Mon_str
                 setattr(self.main_module, Mon_name, eval(Mon_name))
                 try:
-                    setattr(self.CX_module, Mon_name, eval(Mon_name))
+                    setattr(self.Cxmodule, Mon_name, eval(Mon_name))
                 except AttributeError:
                     pass
                 self.monitor_idx += 1
@@ -826,10 +834,10 @@ class cortical_system(object):
             post_comp_name= syn[self.current_parameters_list[self.current_parameters_list=='post_comp_name'].index.item()]
             # check monitors in line:
             current_idx = len(self.customized_synapses_list)
-            # creating a customized_synapse object and passing the positional arguments to it. The main member of
+            # creating a synapse_reference object and passing the positional arguments to it. The main member of
             # the class called output_synapse is then appended to customized_synapses_list:
-            self.customized_synapses_list.append(customized_synapse(receptor, pre_syn_idx, post_syn_idx, syn_type,
-                                                                 pre_type, post_type,self.physio_config_df ,post_comp_name).output_synapse)
+            self.customized_synapses_list.append(synapse_reference(receptor, pre_syn_idx, post_syn_idx, syn_type,
+                                                                   pre_type, post_type, self.physio_config_df, post_comp_name).output_synapse)
             _pre_group_idx = self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]
             _post_group_idx = self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']]
             # Generated variable name for the Synapses(), equation, pre_synaptic and post_synaptic equation and Namespace
@@ -940,7 +948,7 @@ class cortical_system(object):
             exec "%s.delay=%s['delay']" % (_dyn_syn_name, _dyn_syn_namespace_name)  # set the delays
             setattr(self.main_module, _dyn_syn_name, eval(_dyn_syn_name))
             try:
-                setattr(self.CX_module, _dyn_syn_name, eval(_dyn_syn_name))
+                setattr(self.Cxmodule, _dyn_syn_name, eval(_dyn_syn_name))
             except AttributeError:
                 pass
 
@@ -1044,7 +1052,7 @@ class cortical_system(object):
                 SPK_GENERATOR = SpikeGeneratorGroup(thread_number_of_neurons , SPK_GENERATOR_SP, SPK_GENERATOR_TI)
                 setattr(self.main_module, 'SPK_GENERATOR', SPK_GENERATOR)
                 try:
-                    setattr(self.CX_module, 'SPK_GENERATOR', SPK_GENERATOR)
+                    setattr(self.Cxmodule, 'SPK_GENERATOR', SPK_GENERATOR)
                 except AttributeError:
                     pass
                 # Generated variable name for the NeuronGroup, Neuron_number,Equation, Threshold, Reset
@@ -1098,8 +1106,8 @@ class cortical_system(object):
                 setattr(self.main_module, thread_NG_name, eval(thread_NG_name))
                 setattr(self.main_module, thread_SGsyn_name, eval(thread_SGsyn_name))
                 try:
-                    setattr(self.CX_module, thread_NG_name, eval(thread_NG_name))
-                    setattr(self.CX_module, thread_SGsyn_name, eval(thread_SGsyn_name))
+                    setattr(self.Cxmodule, thread_NG_name, eval(thread_NG_name))
+                    setattr(self.Cxmodule, thread_SGsyn_name, eval(thread_SGsyn_name))
                 except AttributeError:
                     pass
                 # taking care of the monitors:
@@ -1158,7 +1166,7 @@ class cortical_system(object):
 
             setattr(self.main_module, SG_Name, eval(SG_Name))
             try:
-                setattr(self.CX_module, SG_Name, eval(SG_Name))
+                setattr(self.Cxmodule, SG_Name, eval(SG_Name))
             except AttributeError:
                 pass
 
@@ -1187,8 +1195,8 @@ class cortical_system(object):
                 self.customized_neurons_list[current_idx]['z_positions'] = self.loaded_brian_data['positions_all']['z_coord'][GroupKeyName]
                 print "Positions for the group %s loaded" % _dyn_neurongroup_name
             else: # generating the positions:
-                vpm_customized_neuron = customized_neuron(current_idx, int(number_of_neurons), 'VPM', '0', eval(radius),
-                                                          self.min_distance, self.physio_config_df ,network_center=net_center)
+                vpm_customized_neuron = neuron_reference(current_idx, int(number_of_neurons), 'VPM', '0', eval(radius),
+                                                         self.min_distance, self.physio_config_df, network_center=net_center)
                 self.customized_neurons_list[current_idx]['z_positions'] = vpm_customized_neuron.output_neuron[
                     'z_positions']
                 self.customized_neurons_list[current_idx]['w_positions'] = vpm_customized_neuron.output_neuron[
@@ -1211,32 +1219,109 @@ class cortical_system(object):
             setattr(self.main_module, _dyn_neurongroup_name, eval(_dyn_neurongroup_name))
             setattr(self.main_module, SGsyn_name, eval(SGsyn_name))
             try:
-                setattr(self.CX_module, _dyn_neurongroup_name, eval(_dyn_neurongroup_name))
-                setattr(self.CX_module, SGsyn_name, eval(SGsyn_name))
+                setattr(self.Cxmodule, _dyn_neurongroup_name, eval(_dyn_neurongroup_name))
+                setattr(self.Cxmodule, SGsyn_name, eval(SGsyn_name))
             except AttributeError:
                 pass
             # taking care of the monitors:
             self.monitors(mons.split(' '), _dyn_neurongroup_name,self.customized_neurons_list[-1]['equation'])
 
+        def spikes(self):
+            input_spikes_filename = self.current_values_list[self.current_parameters_list[self.current_parameters_list == 'input_spikes_filename'].index.item()]
+            spikes_data = self.data_loader(os.path.join(self.output_folder, input_spikes_filename))
+            print "Info: Spike file loaded from: %s" %os.path.join(self.output_folder, input_spikes_filename)
+            SPK_GENERATOR_SP = spikes_data['spikes_0'][0]
+            SPK_GENERATOR_TI = spikes_data['spikes_0'][1]
+            number_of_neurons =  len(spikes_data['w_coord'])
+            SPK_GENERATOR = SpikeGeneratorGroup(number_of_neurons, SPK_GENERATOR_SP, SPK_GENERATOR_TI)
+            setattr(self.main_module, 'SPK_GENERATOR', SPK_GENERATOR)
+            try:
+                setattr(self.Cxmodule, 'SPK_GENERATOR', SPK_GENERATOR)
+            except AttributeError:
+                pass
+            # Generated variable name for the NeuronGroup, Neuron_number,Equation, Threshold, Reset
+            self.spike_input_group_idx = len(self.neurongroups_list)
+            NG_name = self._NeuronGroup_prefix + str(self.spike_input_group_idx) + '_relay_spikes'
+            self.neurongroups_list.append(NG_name)
+            NN_name = self._NeuronNumber_prefix + str(self.spike_input_group_idx)
+            NE_name = self._NeuronEquation_prefix + str(self.spike_input_group_idx)
+            NT_name = self._NeuronThreshold_prefix + str(self.spike_input_group_idx)
+            NRes_name = self._NeuronReset_prefix + str(self.spike_input_group_idx)
+            Eq = """'''emit_spike : 1
+                                x : meter
+                                y : meter'''"""
+            # In order to use the dynamic compiler in a sub-routine, the scope in which the syntax is going to be run
+            # should be defined, hence the globals(), locals(). They indicate that the syntaxes should be run in both
+            # global and local scope
+            exec "%s=%s" % (NN_name, number_of_neurons) in globals(), locals()
+            exec "%s=%s" % (NE_name, Eq) in globals(), locals()
+            exec "%s=%s" % (NT_name, "'emit_spike>=1'") in globals(), locals()
+            exec "%s=%s" % (NRes_name, "'emit_spike=0'") in globals(), locals()
+            exec "%s= NeuronGroup(%s, model=%s,method='%s', threshold=%s, reset=%s)" \
+                 % (NG_name, NN_name, NE_name, self.numerical_integration_method, NT_name,
+                    NRes_name) in globals(), locals()
+            if hasattr(self, 'loaded_brian_data'):
+                # in case the NG index are different. for example a MC_L2 neuron might have had
+                # index 3 as NG3_MC_L2 and now it's NG10_MC_L2 :
+                Group_type = NG_name[NG_name.index('_') + 1:]
+                GroupKeyName = \
+                    [kk for kk in self.loaded_brian_data['positions_all']['w_coord'].keys() if Group_type in kk][
+                        0]
+                self.customized_neurons_list[self.spike_input_group_idx]['w_positions'] = \
+                    self.loaded_brian_data['positions_all']['w_coord'][GroupKeyName]
+                self.customized_neurons_list[self.spike_input_group_idx]['z_positions'] = \
+                    self.loaded_brian_data['positions_all']['z_coord'][GroupKeyName]
+                print "Position for the group %s loaded" % NG_name
+            else:  # load the positions:
+                self.customized_neurons_list[self.spike_input_group_idx]['z_positions'] = squeeze(spikes_data['z_coord'])
+                self.customized_neurons_list[self.spike_input_group_idx]['w_positions'] = squeeze(spikes_data['w_coord'])
+
+            # setting the position of the neurons based on the positions in the .mat input file:
+            exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n" \
+                 "%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % \
+                 (NG_name, self.spike_input_group_idx, NG_name, self.spike_input_group_idx) in globals(), locals()
+            self.save_output_data.data['positions_all']['z_coord'][NG_name] = \
+                self.customized_neurons_list[self.spike_input_group_idx]['z_positions']
+            self.save_output_data.data['positions_all']['w_coord'][NG_name] = \
+                self.customized_neurons_list[self.spike_input_group_idx]['w_positions']
+            self.save_output_data.data['number_of_neurons'][NG_name] = eval(NN_name)
+            SGsyn_name = 'SGEN_Syn'  # variable name for the Synapses() object
+            # that connects SpikeGeneratorGroup() and relay neurons.
+            exec "%s = Synapses(SPK_GENERATOR, %s, on_pre='emit_spike+=1')" % \
+                 (SGsyn_name,
+                  NG_name) in globals(), locals()  # connecting the SpikeGeneratorGroup() and relay group.
+            exec "%s.connect(j='i')" % SGsyn_name in globals(), locals()  # SV change
+            setattr(self.main_module, NG_name, eval(NG_name))
+            setattr(self.main_module, SGsyn_name, eval(SGsyn_name))
+            try:
+                setattr(self.Cxmodule, NG_name, eval(NG_name))
+                setattr(self.Cxmodule, SGsyn_name, eval(SGsyn_name))
+            except AttributeError:
+                pass
+            # taking care of the monitors:
+            self.monitors(mons.split(' '), NG_name, self.customized_neurons_list[-1]['equation'])
+
+
         assert self.sys_mode != '', "Error: System mode not defined."
         assert any(self.current_parameters_list.str.contains('type')), 'The type of the input is not defined in the configuration file.'
-        _input_params = {
+        input_type_to_method_mapping = {
+            # input type : [ columns , obligatory column indices,  sub-routine to call     ]
             'video': [['idx', 'type', 'path','freq', 'monitors'], [0, 1, 2], video],
-            'VPM': [['idx', 'type', 'number_of_neurons', 'radius', 'spike_times', 'net_center', 'monitors'],
-                    [0, 1, 2, 3, 4], VPM]
+            'VPM': [['idx', 'type', 'number_of_neurons', 'radius', 'spike_times', 'net_center', 'monitors'],[0, 1, 2, 3, 4], VPM],
+            'spikes': [ ['idx','type','input_spikes_filename','monitors'] , [0,1,2] ,  spikes ]
         }
         _input_type = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='type'].index.item()]
-        _all_columns = _input_params[_input_type][0] # all possible columns of parameters for the current type of input in configuration fil
-        assert _input_type in _input_params.keys(), 'The input type %s of the configuration file is ' \
+        _all_columns = input_type_to_method_mapping[_input_type][0] # all possible columns of parameters for the current type of input in configuration fil
+        assert _input_type in input_type_to_method_mapping.keys(), 'The input type %s of the configuration file is ' \
             'not defined' % _input_type
 
-        _obligatory_params = _input_params[_input_type][1]
+        _obligatory_params = input_type_to_method_mapping[_input_type][1]
         assert len(self.current_values_list) >= len(_obligatory_params), \
             'One or more of of the columns for input definition is missing. Following obligatory columns should be defined:\n%s\n' % str(
             [_all_columns[ii] for ii in _obligatory_params])
-        assert len (self.current_parameters_list) <= len(_input_params[_input_type][0]), 'Too many parameters for the\
-         current %s input. The parameters should be consist of:\n %s'%(_input_type,_input_params[_input_type][0])
-        obligatory_columns = list(array(_input_params[_input_type][0])[_input_params[_input_type][1]])
+        assert len (self.current_parameters_list) <= len(input_type_to_method_mapping[_input_type][0]), 'Too many parameters for the\
+         current %s input. The parameters should be consist of:\n %s'%(_input_type,input_type_to_method_mapping[_input_type][0])
+        obligatory_columns = list(array(input_type_to_method_mapping[_input_type][0])[input_type_to_method_mapping[_input_type][1]])
         obligatory_indices = [self.current_parameters_list[self.current_parameters_list==ii].index.item() for ii in obligatory_columns]
         assert not any(self.current_values_list.ix[obligatory_indices]=='--'), \
             'Following obligatory values cannot be "--":\n%s' % str([_all_columns[ii] for ii in _obligatory_params])
@@ -1259,8 +1344,20 @@ class cortical_system(object):
         relay_group['w_positions'] = []
         relay_group['equation'] = ''
         self.customized_neurons_list.append(relay_group)
-        _input_params[_input_type][2](self)
+        input_type_to_method_mapping[_input_type][2](self)
 
+    def data_loader(self,input_path):
+        if '.gz' in input_path:
+            with open(input_path, 'rb') as fb:
+                data = zlib.decompress(fb.read())
+                loaded_data = pickle.loads(data)
+        elif '.bz2' in input_path:
+            with bz2.BZ2File(input_path, 'rb') as fb:
+                loaded_data = pickle.load(fb)
+        elif 'pickle' in input_path:
+            with open(input_path, 'rb') as fb:
+                loaded_data= pickle.load(fb)
+        return loaded_data
 
     def gather_result(self):
         '''
@@ -1300,10 +1397,10 @@ class cortical_system(object):
 
 
 if __name__ == '__main__' :
-    # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device = 'Python' , runtime=1000* ms)
+    # CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device = 'Python' , runtime=1000* ms)
     # CM.run()
-    # CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Cpp',runtime=1000 * ms)
+    # CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Cpp',runtime=1000 * ms)
     # CM.run()
-    CM = cortical_system(os.path.dirname(os.path.realpath(__file__)) + '/Markram_config_file.csv', \
-                         os.path.dirname(os.path.realpath(__file__)) + '/Physiological_Parameters.csv',) # runtime and device are now set in configuration file
+    CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', \
+                  os.path.dirname(os.path.realpath(__file__)) + '/Physiological_Parameters.csv', ) # runtime and device are now set in configuration file
     CM.run()

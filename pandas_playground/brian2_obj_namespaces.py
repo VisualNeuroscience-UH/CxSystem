@@ -210,7 +210,7 @@ class synapse_namespaces(object):
         '''
         The initialization method for namespaces() object.
 
-        :param output_synapse: This is the dictioanry created in customized_neuron() in brian2_obj_namespaces module. This contains all the informatino about the synaptic connection. In this class, Synaptic namespace parameters are directly added to it. Following valus are set after initialization: Cp, Cd, sparseness, ilan. Other variables are then set based on the type of the synaptic connection (STDP,Fixed).
+        :param output_synapse: This is the dictioanry created in neuron_reference() in brian2_obj_namespaces module. This contains all the informatino about the synaptic connection. In this class, Synaptic namespace parameters are directly added to it. Following valus are set after initialization: Cp, Cd, sparseness, ilan. Other variables are then set based on the type of the synaptic connection (STDP,Fixed).
         '''
 
         # synapse_namespaces.type_ref = array (['STDP','Fixed'])
@@ -229,7 +229,7 @@ class synapse_namespaces(object):
         '''
         The STDP method for assigning the STDP parameters to the customized_synapses() object.
 
-        :param output_synapse:  This is the dictioanry created in customized_neuron() in brian2_obj_namespaces module. This contains all the informatino about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP valus are set in this method: Apre, Apost, Tau_pre, Tau_post, wght_max, wght0.
+        :param output_synapse:  This is the dictioanry created in neuron_reference() in brian2_obj_namespaces module. This contains all the informatino about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP valus are set in this method: Apre, Apost, Tau_pre, Tau_post, wght_max, wght0.
         '''
         self.output_namespace['Apre'], self.output_namespace['Apost'], self.output_namespace['taupre'], \
         self.output_namespace['taupost'] = synapse_namespaces.stdp['stdp_%s_%s' % (output_synapse['pre_group_type'], \
@@ -242,7 +242,7 @@ class synapse_namespaces(object):
         '''
         The Fixed method for assigning the parameters for Fixed synaptic connection to the customized_synapses() object.
 
-        :param output_synapse: This is the dictioanry created in customized_neuron() in brian2_obj_namespaces module. This contains all the informatino about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP valus are set in this method: wght_max, wght0.
+        :param output_synapse: This is the dictioanry created in neuron_reference() in brian2_obj_namespaces module. This contains all the informatino about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP valus are set in this method: wght_max, wght0.
         '''
 
         self.output_namespace['wght_max'] = synapse_namespaces.cw['cw_%s_%s' % (output_synapse['pre_group_type'],

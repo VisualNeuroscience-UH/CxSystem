@@ -2,12 +2,12 @@ from networkx.drawing import layout
 
 __author__ = 'V_AD'
 from brian2  import *
-from brian2_obj_namespaces import *
+from parameter_parser import *
 import random as rnd
 import operator
 
 
-class customized_neuron(object):
+class neuron_reference(object):
     '''
     Using this class, a dictionary object is created which contains all parameters and variables that are needed to \
     create a group of that customized cell. This dictionary will eventually be used in process of building the cortical module.\
@@ -16,7 +16,7 @@ class customized_neuron(object):
 
     def __init__(self,idx, number_of_neurons, cell_type, layers_idx, general_grid_radius ,min_distance, physio_config_df, network_center=0 + 0j):
         '''
-        initialize the customized_neuron based on the arguments.
+        initialize the neuron_reference based on the arguments.
 
         :param number_of_neurons: number of neurons in the NeuronGroup() object.
         :param cell_type: type of cell in the NeuronGroup: currently PC, SS, BC, MC and L1i.
@@ -33,9 +33,9 @@ class customized_neuron(object):
         * output_neuron: the main dictionary containing all the data about current Customized_neuron_group including: number of neurons, threshold, reset, refractory, neuron type, soma position(layer), dendrites layer, total number of compartments, namespace, equation, positions (both in cortical and visual coordinates).
         '''
         self.physio_config_df = physio_config_df
-        customized_neuron._celltypes = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM'])
+        neuron_reference._celltypes = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM'])
         assert general_grid_radius > min_distance , 'The distance between cells should be less than the grid radius'
-        assert cell_type in customized_neuron._celltypes, "Cell type '%s' is not defined" % cell_type  # check cell type
+        assert cell_type in neuron_reference._celltypes, "Cell type '%s' is not defined" % cell_type  # check cell type
         assert len(layers_idx) < 3, "Length of layers_idx array is larger than 2"  # check layer index
         if len(layers_idx) == 2:
             assert layers_idx[1] < layers_idx[0], "Indices of the layer_idx array are not descending"
@@ -64,7 +64,7 @@ class customized_neuron(object):
             self.output_neuron['total_comp_num'] = array([1])
             # number of compartments if applicable
 
-        self.output_neuron['namespace'] = neuron_namespaces(self.output_neuron,physio_config_df).output_namespace
+        self.output_neuron['namespace'] = neuron_parser(self.output_neuron, physio_config_df).output_namespace
         self.output_neuron['equation'] = ''
 
         variable_start_idx = self.physio_config_df['Variable'][self.physio_config_df['Variable'] == self.output_neuron['type']].index[0]
@@ -363,7 +363,7 @@ class customized_neuron(object):
 
 
 
-class customized_synapse(object):
+class synapse_reference(object):
     '''
         In this class, a dictionary object is created which contains all parameters and variables that are needed to \
         create a Synapses() object between two neuron group. This dictionary will eventually be used in process of \
@@ -372,7 +372,7 @@ class customized_synapse(object):
 
     def __init__(self, receptor, pre_group_idx, post_group_idx, syn_type, pre_type, post_type,physio_config_df,post_comp_name='_soma'):
         '''
-        initializes the customized_synapse based on its arguments.
+        initializes the synapse_reference based on its arguments.
 
         :param receptor: defines the type of the receptor in the synaptic connection. Currently ge and gi are implemented.
         :param pre_group_idx: The index of the pre-synaptic group.
@@ -388,8 +388,8 @@ class customized_synapse(object):
         * _name_space: An instance of brian2_obj_namespaces() object which contains all the constant parameters for this synaptic equation.
 
         '''
-        customized_synapse.syntypes = array(['STDP', 'Fixed'])
-        assert syn_type in customized_synapse.syntypes, "Cell type '%s' is not defined" % syn_type
+        synapse_reference.syntypes = array(['STDP', 'Fixed'])
+        assert syn_type in synapse_reference.syntypes, "Cell type '%s' is not defined" % syn_type
         self.output_synapse = {}
         self.output_synapse['type'] = syn_type
         self.output_synapse['receptor'] = receptor
@@ -401,7 +401,7 @@ class customized_synapse(object):
         self.output_synapse['post_group_idx'] = int(post_group_idx)
         self.output_synapse['post_group_type'] = post_type
         self.output_synapse['post_comp_name'] = post_comp_name
-        _name_space = synapse_namespaces(self.output_synapse,physio_config_df)
+        _name_space = synapse_parser(self.output_synapse, physio_config_df)
         self.output_synapse['namespace'] = {}
         self.output_synapse['namespace'] = _name_space.output_namespace
         self.output_synapse['sparseness'] = _name_space.sparseness

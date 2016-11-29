@@ -237,8 +237,8 @@ class illustrator:
                 pickle.dump(data, fb, pickle.HIGHEST_PROTOCOL)
 
 if __name__ == '__main__':
-    illus = illustrator(mode='saving',CXOutputPath='/opt3/Noise_Test/',FilePattern='CX_Output_',
-                        IllustratorOutputFile='/opt3/CX_Output/Outputs/Illustrator_Output/Illus_out.gz',InputTime=0.5,latency_threshold=0.03)
+    illus = illustrator(mode='saving',CXOutputPath='/opt3/Noise_Test/',FilePattern='CxOutput_',
+                        IllustratorOutputFile='/opt3/CxOutput/Outputs/Illustrator_Output/Illus_out.gz',InputTime=0.5,latency_threshold=0.03)
     illus.Responses(PlotStartTime=0.46,PlotEndTime=0.56,DoSkip=['PC_L6toL1','PC_L6toL4'])
     illus.ResponseLatency()
-    # rossert_fig9C = illustrator('/opt3/CX_Output/Ouputs', 'Gain-EE1EI1', 'cell_type_response_latency',InputTime=0.5)
+    # rossert_fig9C = illustrator('/opt3/CxOutput/Ouputs', 'Gain-EE1EI1', 'cell_type_response_latency',InputTime=0.5)

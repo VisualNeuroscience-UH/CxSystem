@@ -3,7 +3,7 @@ from brian2  import *
 import sys
 import pandas
 
-class synapse_namespaces(object):
+class synapse_parser(object):
     '''
     This class contains all the variables that are required for the Synapses() object namespaces. There are several reference dictionaries in this class for:
 
@@ -26,18 +26,18 @@ class synapse_namespaces(object):
         '''
         The initialization method for namespaces() object.
 
-        :param output_synapse: This is the dictionary created in customized_neuron() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this class, Synaptic namespace parameters are directly added to it. Following values are set after initialization: Cp, Cd, sparseness, ilam. Other variables are then set based on the type of the synaptic connection (STDP,Fixed).
+        :param output_synapse: This is the dictionary created in neuron_reference() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this class, Synaptic namespace parameters are directly added to it. Following values are set after initialization: Cp, Cd, sparseness, ilam. Other variables are then set based on the type of the synaptic connection (STDP,Fixed).
         '''
         self.output_synapse = output_synapse
         self.physio_config_df = physio_config_df
-        synapse_namespaces.type_ref = array (['STDP','Fixed'])
-        assert output_synapse['type'] in synapse_namespaces.type_ref, "Cell type '%s' is not defined." % output_synapse['type']
+        synapse_parser.type_ref = array (['STDP', 'Fixed'])
+        assert output_synapse['type'] in synapse_parser.type_ref, "Cell type '%s' is not defined." % output_synapse['type']
         self.output_namespace = {}
         self.output_namespace['Cp'] = self.value_extractor(self.physio_config_df,'Cp')
         self.output_namespace['Cd'] = self.value_extractor(self.physio_config_df,'Cd')
         self.sparseness = self.value_extractor(self.physio_config_df,'sp_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
         self.ilam = self.value_extractor(self.physio_config_df,'ilam_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
-        getattr(synapse_namespaces,output_synapse['type'])(self)
+        getattr(synapse_parser, output_synapse['type'])(self)
 
     def value_extractor(self, df, key_name):
         non_dict_indices = df['Variable'].dropna()[df['Key'].isnull()].index.tolist()
@@ -67,7 +67,7 @@ class synapse_namespaces(object):
         '''
         The STDP method for assigning the STDP parameters to the customized_synapses() object.
 
-        :param output_synapse:  This is the dictionary created in customized_neuron() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: Apre, Apost, Tau_pre, Tau_post, wght_max, wght0.
+        :param output_synapse:  This is the dictionary created in neuron_reference() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: Apre, Apost, Tau_pre, Tau_post, wght_max, wght0.
         '''
         self.output_namespace['Apre'], self.output_namespace['Apost'], self.output_namespace['taupre'], \
         self.output_namespace['taupost'] = self.value_extractor(self.physio_config_df,'stdp_%s_%s' % (self.output_synapse['pre_group_type'], \
@@ -86,7 +86,7 @@ class synapse_namespaces(object):
         '''
         The Fixed method for assigning the parameters for Fixed synaptic connection to the customized_synapses() object.
 
-        :param output_synapse: This is the dictionary created in customized_neuron() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: wght_max, wght0.
+        :param output_synapse: This is the dictionary created in neuron_reference() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: wght_max, wght0.
         '''
         stdp_max_strength_coefficient = self.value_extractor(self.physio_config_df,'stdp_max_strength_coefficient')
         self.output_namespace['wght_max'] = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type']))* stdp_max_strength_coefficient
@@ -103,12 +103,12 @@ class synapse_namespaces(object):
 ############################################
 
 
-class neuron_namespaces (object):
+class neuron_parser (object):
     'This class embeds all parameter sets associated to all neuron types and will return it as a namespace in form of dictionary'
     def __init__(self, output_neuron,physio_config_df):
         self.physio_config_df = physio_config_df
-        neuron_namespaces.type_ref = array(['PC', 'SS', 'BC', 'MC','L1i','VPM'])
-        assert output_neuron['type'] in neuron_namespaces.type_ref, "Cell type '%s' is not defined." % output_neuron['category']
+        neuron_parser.type_ref = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM'])
+        assert output_neuron['type'] in neuron_parser.type_ref, "Cell type '%s' is not defined." % output_neuron['category']
         self.output_namespace = {}
         variable_start_idx = self.physio_config_df['Variable'][self.physio_config_df['Variable'] == output_neuron['type']].index[0]
         try:

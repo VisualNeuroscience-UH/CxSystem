@@ -1,5 +1,5 @@
 # Playing around with Pandas
-# Importing connection params from CXSystem's brian2_obj_namespaces file
+# Importing connection params from CxSystem's brian2_obj_namespaces file
 
 import brian2_obj_namespaces as ns
 import pandas as pd

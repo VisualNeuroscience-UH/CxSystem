@@ -45,7 +45,7 @@ class save_data(object):
         if not key in self.data:
             self.data[key] = {}
 
-    def gather_result(self,CX_system):
+    def gather_result(self,CxSystem):
         for syntax in self.syntax_bank:
             exec syntax
         self.save_to_file()
