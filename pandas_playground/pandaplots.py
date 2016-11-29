@@ -51,7 +51,7 @@ def plot_local_connectivity(vanni_json = vanni_local_connectivity_json):
         cbar = plotobj[p].collections[0].colorbar
         cbar.set_label('Connection probability')
         plt.tight_layout()
-        plt.savefig(plot_directory + p + '.png', dpi=600)
+        plt.savefig(plot_directory + p + '.eps', dpi=600)
         plt.close()
 
 def plot_markram_connectivity(markram_json = preprocessed_markram_anatomy_json):
@@ -72,7 +72,7 @@ def plot_markram_connectivity(markram_json = preprocessed_markram_anatomy_json):
     cbar = plotobj.collections[0].colorbar
     cbar.set_label('Connection probability')
     plt.tight_layout()
-    plt.savefig(plot_directory + 'markram_conn_prob' + '.png', dpi=600)
+    plt.savefig(plot_directory + 'markram_conn_prob' + '.eps', dpi=600)
     plt.close()
 
 

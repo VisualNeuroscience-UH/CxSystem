@@ -1,5 +1,6 @@
 from __future__ import division
 import matplotlib.pyplot as plt
+import matplotlib
 import seaborn as sns; sns.set()
 import scipy.io as spio
 from collections import OrderedDict
@@ -238,7 +239,7 @@ class SimulationData(object):
             plt.show()
 
         else:
-            scatplot = ax.scatter(spike_df.time, spike_df.neuron_index, s=0.8)
+            scatplot = ax.scatter(spike_df.time, spike_df.neuron_index, s=0.6, c='gray')
             return scatplot
 
 
@@ -248,11 +249,13 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20):
     q = neurons_per_group
 
     ticklabels = ['VI', 'V', 'IV', 'II/III', 'I']
-    fig, ax = plt.subplots(ncols=sim_n)
+    w, h = matplotlib.figure.figaspect(1 / sim_n)
+    fig, ax = plt.subplots(ncols=sim_n, figsize=(w, h), dpi=600)
     plt.style.use('seaborn-whitegrid')
 
-    fig.suptitle('$Ca^{2+}$ concentration (mM)', fontsize=14)
-    fig.subplots_adjust(top=0.85)
+
+    fig.suptitle('$Ca^{2+}$ concentration (mM)', fontsize=16)
+    fig.subplots_adjust(top=0.85, bottom=0.1, left=0.03, right=0.97)
     plt.setp(ax, xticks=np.arange(runtime + 0.1, step=1),
              yticks=[4 * q, 7 * q, 12 * q, 15 * q, 16 * q], yticklabels=ticklabels, xlim=[0, runtime],
              ylim=[0, 16 * q],
@@ -261,7 +264,9 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20):
     [SimulationData(sim_files[i]).rasterplot_compressed(40, ax[i]) for i in range(sim_n)]
     [ax[i].set_title(sim_titles[i]) for i in range(sim_n)]
 
-    plt.show()
+    #plt.tight_layout()
+    plt.savefig('calciumplot.eps', dpi=600)
+    #plt.show()
 
 
 # MAIN
@@ -274,26 +279,3 @@ if __name__ == '__main__':
     calciumplot(sim_files=simulations, sim_titles=sim_title, neurons_per_group=40, runtime=3.0)
 
 
-    # sim_n = len(simulations)
-    # q = 40
-    # runtime = 3.0
-    #
-    # ticklabels = ['VI', 'V', 'IV', 'II/III', 'I']
-    # fig, ax = plt.subplots(ncols = sim_n)
-    # plt.style.use('seaborn-whitegrid')
-    #
-    # fig.suptitle('$Ca^{2+}$ concentration (mM)', fontsize=14)
-    # fig.subplots_adjust(top=0.85)
-    # plt.setp(ax, xticks=np.arange(runtime+0.1, step=1),
-    #          yticks=[4*q, 7*q, 12*q, 15*q, 16*q], yticklabels=ticklabels, xlim=[0, runtime], ylim=[0,16*q],
-    #          xlabel='Time (s)')
-    #
-    # [SimulationData(simulations[i]).rasterplot_compressed(40, ax[i]) for i in range(sim_n)]
-    # [ax[i].set_title(sim_title[i]) for i in range(sim_n)]
-    #
-    # plt.show()
-
-    #sim = SimulationData('calcium21.bz2')
-    #axx = sim.rasterplot_compressed(neurons_per_group=40)
-    #axx.show()
-    #sim.rasterplot()
