@@ -87,7 +87,7 @@ class cortical_system(object):
             'connections_saving_path_and_filename': [9,self._set_save_brian_data_path],
             'connections_loading_path_and_filename': [10,self._set_load_brian_data_path],
             'load_positions_only': [11,self.load_positions_only],
-            'do_benchmark': [12,self.do_benchmark],
+            'do_benchmark': [12,self.set_do_benchmark],
             'multidimension_array_run': [13,self.passer],  # this parameter is used by array_run module, so here we just pass
             'number_of_process': [14,self.passer],  # this parameter is used by array_run module, so here we just pass
             'trials_per_config': [15,self.passer],
@@ -99,15 +99,13 @@ class cortical_system(object):
         self.StartTime_str = '_' + str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '')\
             [0:str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '').index('.')+3].replace('.','') + output_file_suffix
         print "Info: current run filename suffix is: %s"%self.StartTime_str[1:]
-        # self.scale = 1
-        #self.do_benchmark = 0
+        self.scale = 1
+        self.do_benchmark = 0
         # defaultclock.dt = 0.01 * ms
         if defaultclock.dt/second != 1e-4:
             print "\nWarning: default clock is %s\n" %str(defaultclock.dt)
         self.numerical_integration_method = 'euler'
         print "Info : the system is running with %s integration method"%self.numerical_integration_method
-        # self.conn_prob_gain = synapse_namespaces.conn_prob_gain
-        self.conn_prob_gain =1
         self.current_parameters_list = []
         self.current_parameters_list_orig_len = 0 # current_parameters_list is changing at some point in the code, so the original length of it is needed
         self.current_values_list = []
@@ -150,6 +148,10 @@ class cortical_system(object):
             array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df)
             self.array_run = 1
             return
+        try:
+            self.conn_prob_gain = int(self.physio_config_df.ix[where(self.physio_config_df.values=='conn_prob_gain')[0]]['Value'].item())
+        except ValueError:
+            self.conn_prob_gain =1
         self.configuration_executer()
         if type(self.awaited_conf_lines) != list :
            if self.thr.is_alive()==True:
@@ -199,22 +201,26 @@ class cortical_system(object):
         if not self.array_run:
             run(self.runtime, report='text')
             if self.do_benchmark:
-                self.benchmarking_data = {}
-                titles= ['Computer Name','Device','File Suffix','Simulation Time','Python Compilation','Brian Code generation',\
-                         'Device-Specific Compilation','Run','Extract and Save Result','Total Time']
-                self.benchmarking_data['Simulation Time'] = str(self.runtime)
-                self.benchmarking_data['Device'] = self.device
-                self.benchmarking_data['File Suffix'] = self.StartTime_str[1:]
-                if self.device != 'Python':
-                    self.benchmarking_data['Python Compilation'] = __builtin__.code_generation_start - self.start_time
-                    self.benchmarking_data['Brian Code generation'] = __builtin__.compile_start - __builtin__.code_generation_start
-                    self.benchmarking_data['Device-Specific Compilation'] = __builtin__.run_start - __builtin__.compile_start
-                else:
-                    self.benchmarking_data['Python Compilation'] = __builtin__.run_start - self.start_time
-                    self.benchmarking_data['Brian Code generation'] = '-'
-                    self.benchmarking_data['Device-Specific Compilation'] = '-'
-                self.saving_start_time = time.time()
-                self.benchmarking_data['Run'] = self.saving_start_time -  __builtin__.run_start
+                try:
+                    self.benchmarking_data = {}
+                    titles= ['Computer Name','Device','File Suffix','Simulation Time','Python Compilation','Brian Code generation',\
+                             'Device-Specific Compilation','Run','Extract and Save Result','Total Time']
+                    self.benchmarking_data['Simulation Time'] = str(self.runtime)
+                    self.benchmarking_data['Device'] = self.device
+                    self.benchmarking_data['File Suffix'] = self.StartTime_str[1:]
+                    if self.device != 'Python':
+                        self.benchmarking_data['Python Compilation'] = __builtin__.code_generation_start - self.start_time
+                        self.benchmarking_data['Brian Code generation'] = __builtin__.compile_start - __builtin__.code_generation_start
+                        self.benchmarking_data['Device-Specific Compilation'] = __builtin__.run_start - __builtin__.compile_start
+                    else:
+                        self.benchmarking_data['Python Compilation'] = __builtin__.run_start - self.start_time
+                        self.benchmarking_data['Brian Code generation'] = '-'
+                        self.benchmarking_data['Device-Specific Compilation'] = '-'
+                    self.saving_start_time = time.time()
+                    self.benchmarking_data['Run'] = self.saving_start_time -  __builtin__.run_start
+                except AttributeError:
+                    print "\n Warning: the system could not perform the benchmarking since the brian2/brian2genn libraries are not modified to do so."
+                    self.do_benchmark = 0
             self.gather_result()
             self.end_time = time.time()
             if self.do_benchmark:
@@ -375,7 +381,7 @@ class cortical_system(object):
         if self.load_positions_only and hasattr(self,'loaded_brian_data'):
             print "Info: only positions are being loaded from the brian_data_file"
 
-    def do_benchmark(self,*args):
+    def set_do_benchmark(self,*args):
         assert int(args[0]) in [0,1] , "Do benchmark flag should be either 0 or 1"
         self.do_benchmark = int(args[0])
 
@@ -389,13 +395,13 @@ class cortical_system(object):
 
         * mon_args: contains the monitor arguments extracted from the target line.
         * net_center: center position of the neuron group in visual field coordinates, description can be found in configuration file tutorial.
-        * NG_name: Generated variable name for the NeuronGroup() object in brian2.
-        * NN_name: Generated variable name for corresponding Neuron Number.
-        * NE_name: Generated variable name for the NeuronGroup() equation.
-        * NT_name: Generated variable name for the NeuronGroup() threshold.
-        * NRes_name: Generated variable name for the NeuronGroup() reset value.
-        * NRef_name: Generated variable name for the NeuronGroup() refractory value.
-        * NNS_name: Generated variable name for the NeuronGroup() namespace.
+        * _dyn_neurongroup_name: Generated variable name for the NeuronGroup() object in brian2.
+        * _dyn_neuronnumber_name: Generated variable name for corresponding Neuron Number.
+        * _dyn_neuron_eq_name: Generated variable name for the NeuronGroup() equation.
+        * _dyn_neuron_thres_name: Generated variable name for the NeuronGroup() threshold.
+        * _dyn_neuron_reset_name: Generated variable name for the NeuronGroup() reset value.
+        * _dyn_neuron_refra_name: Generated variable name for the NeuronGroup() refractory value.
+        * _dyn_neuron_namespace_name: Generated variable name for the NeuronGroup() namespace.
         * NG_init: NeuronGroups() should be initialized with a random vm, ge and gi values. To address this, a 6-line code is generated and put in this variable, the running of which will lead to initialization of current NeuronGroup().
         '''
         assert self.sys_mode != '', "System mode is not defined."
@@ -459,79 +465,79 @@ class cortical_system(object):
         if refractory != '--':
             self.customized_neurons_list[-1]['refractory'] = refractory
         # Generating variable names for Groups, NeuronNumbers, Equations, Threshold, Reset, Refractory and Namespace
-        NG_name = self._NeuronGroup_prefix + str(current_idx) + '_' + neuron_type + '_L' + str(layer_idx).replace\
+        _dyn_neurongroup_name = self._NeuronGroup_prefix + str(current_idx) + '_' + neuron_type + '_L' + str(layer_idx).replace\
             (' ', 'toL').replace('[', '').replace(']', '')
-        self.neurongroups_list.append(NG_name)
-        NN_name = self._NeuronNumber_prefix + str(current_idx)
-        NE_name = self._NeuronEquation_prefix + str(current_idx)
-        NT_name = self._NeuronThreshold_prefix + str(current_idx)
-        NRes_name = self._NeuronReset_prefix + str(current_idx)
-        NRef_name = self._NeuronRef_prefix + str(current_idx)
-        NNS_name = self._NeuronNS_prefix + str(current_idx)
+        self.neurongroups_list.append(_dyn_neurongroup_name)
+        _dyn_neuronnumber_name = self._NeuronNumber_prefix + str(current_idx)
+        _dyn_neuron_eq_name = self._NeuronEquation_prefix + str(current_idx)
+        _dyn_neuron_thres_name = self._NeuronThreshold_prefix + str(current_idx)
+        _dyn_neuron_reset_name = self._NeuronReset_prefix + str(current_idx)
+        _dyn_neuron_refra_name = self._NeuronRef_prefix + str(current_idx)
+        _dyn_neuron_namespace_name = self._NeuronNS_prefix + str(current_idx)
 
         # next  6 line create the variable that are needed for current target line NeuronGroup().
-        self.save_output_data.data['Neuron_Groups_Parameters'][NG_name] = self.customized_neurons_list[-1]
-        self.customized_neurons_list[current_idx]['object_name'] = NG_name
-        exec "%s=self.customized_neurons_list[%d]['number_of_neurons']" % (NN_name, current_idx)
-        exec "%s=self.customized_neurons_list[%d]['equation']" % (NE_name, current_idx)
-        exec "%s=self.customized_neurons_list[%d]['threshold']" % (NT_name, current_idx)
-        exec "%s=self.customized_neurons_list[%d]['reset']" % (NRes_name, current_idx)
-        exec "%s=self.customized_neurons_list[%d]['refractory']" % (NRef_name, current_idx)
-        exec "%s=self.customized_neurons_list[%d]['namespace']" % (NNS_name, current_idx)
+        self.save_output_data.data['Neuron_Groups_Parameters'][_dyn_neurongroup_name] = self.customized_neurons_list[-1]
+        self.customized_neurons_list[current_idx]['object_name'] = _dyn_neurongroup_name
+        exec "%s=self.customized_neurons_list[%d]['number_of_neurons']" % (_dyn_neuronnumber_name, current_idx)
+        exec "%s=self.customized_neurons_list[%d]['equation']" % (_dyn_neuron_eq_name, current_idx)
+        exec "%s=self.customized_neurons_list[%d]['threshold']" % (_dyn_neuron_thres_name, current_idx)
+        exec "%s=self.customized_neurons_list[%d]['reset']" % (_dyn_neuron_reset_name, current_idx)
+        exec "%s=self.customized_neurons_list[%d]['refractory']" % (_dyn_neuron_refra_name, current_idx)
+        exec "%s=self.customized_neurons_list[%d]['namespace']" % (_dyn_neuron_namespace_name, current_idx)
         # Adding the noise sigma to the namespace
         self.customized_neurons_list[current_idx]['namespace']['noise_sigma'] = noise_sigma
         # Creating the actual NeuronGroup() using the variables in the previous 6 lines
         exec "%s= NeuronGroup(%s, model=%s, method='%s', threshold=%s, reset=%s,refractory = %s, namespace = %s)" \
-             % (NG_name, NN_name, NE_name,self.numerical_integration_method ,NT_name, NRes_name, NRef_name, NNS_name)
+             % (_dyn_neurongroup_name, _dyn_neuronnumber_name, _dyn_neuron_eq_name,self.numerical_integration_method ,_dyn_neuron_thres_name, _dyn_neuron_reset_name, _dyn_neuron_refra_name, _dyn_neuron_namespace_name)
         # trying to load the positions in the groups
         if hasattr(self,'loaded_brian_data'):
             # in case the NG index are different.
             # for example a MC_L2 neuron might have had index 3 as NG3_MC_L2 and now it's NG10_MC_L2 :
-            Group_type = NG_name[NG_name.index('_')+1:]
+            Group_type = _dyn_neurongroup_name[_dyn_neurongroup_name.index('_')+1:]
             GroupKeyName =[kk for kk in self.loaded_brian_data['positions_all']['w_coord'].keys() if Group_type in kk][0]
             self.customized_neurons_list[current_idx]['w_positions'] = self.loaded_brian_data['positions_all']['w_coord'][GroupKeyName]
             self.customized_neurons_list[current_idx]['z_positions'] = self.loaded_brian_data['positions_all']['z_coord'][GroupKeyName]
-            print "Position for the group %s loaded" %NG_name
+            print "Position for the group %s loaded" %_dyn_neurongroup_name
         # Setting the position of the neurons in the current NeuronGroup.
         try :
             exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % (
-                NG_name, current_idx, NG_name, current_idx)
+                _dyn_neurongroup_name, current_idx, _dyn_neurongroup_name, current_idx)
         except ValueError as e:
             raise ValueError(e.message + '\n You are probably trying to load the positions from a file that does not contain the same number of cells.')
         # Saving the neurons' positions both in visual field and cortical coordinates in save_data() object.
-        self.save_output_data.data['positions_all']['z_coord'][NG_name] = \
+        self.save_output_data.data['positions_all']['z_coord'][_dyn_neurongroup_name] = \
             self.customized_neurons_list[current_idx]['z_positions']
-        self.save_output_data.data['positions_all']['w_coord'][NG_name] = \
+        self.save_output_data.data['positions_all']['w_coord'][_dyn_neurongroup_name] = \
             self.customized_neurons_list[current_idx]['w_positions']
-        self.save_output_data.data['number_of_neurons'][NG_name] = eval(NN_name)
+        self.save_output_data.data['number_of_neurons'][_dyn_neurongroup_name] = eval(_dyn_neuronnumber_name)
         # NeuronGroups() should be initialized with a random vm, ge and gi values.
         # To address this, a 6-line code is generated and put in NG_init variable,
         # the running of which will lead to initialization of current NeuronGroup().
         if self.do_init_vms:
-            NG_init = 'Vr_offset = rand(len(%s))\n' % NG_name
-            NG_init += "for _key in %s.variables.keys():\n" % NG_name
+            NG_init = 'Vr_offset = rand(len(%s))\n' % _dyn_neurongroup_name
+            NG_init += "for _key in %s.variables.keys():\n" % _dyn_neurongroup_name
             NG_init += "\tif _key.find('vm')>=0:\n"
             NG_init += "\t\tsetattr(%s,_key,%s['Vr']+Vr_offset * (%s['VT']-%s['Vr']))\n" % \
-                       (NG_name, NNS_name, NNS_name, NNS_name)
+                       (_dyn_neurongroup_name, _dyn_neuron_namespace_name, _dyn_neuron_namespace_name, _dyn_neuron_namespace_name)
             NG_init += "\telif ((_key.find('ge')>=0) or (_key.find('gi')>=0)):\n"
-            NG_init += "\t\tsetattr(%s,_key,0)" % NG_name
+            NG_init += "\t\tsetattr(%s,_key,0)" % _dyn_neurongroup_name
             exec NG_init
         else:
-            NG_init = "for _key in %s.variables.keys():\n" % NG_name
+            NG_init = "for _key in %s.variables.keys():\n" % _dyn_neurongroup_name
             NG_init += "\tif _key.find('vm')>=0:\n"
-            NG_init += "\t\tsetattr(%s,_key,%s['Vr'])\n" % (NG_name, NNS_name)
+            NG_init += "\t\tsetattr(%s,_key,%s['Vr'])\n" % (_dyn_neurongroup_name, _dyn_neuron_namespace_name)
             NG_init += "\telif ((_key.find('ge')>=0) or (_key.find('gi')>=0)):\n"
-            NG_init += "\t\tsetattr(%s,_key,0)" % NG_name
+            NG_init += "\t\tsetattr(%s,_key,0)" % _dyn_neurongroup_name
             exec NG_init
-        setattr(self.main_module, NG_name, eval(NG_name))
+        setattr(self.main_module, _dyn_neurongroup_name, eval(_dyn_neurongroup_name))
         try:
-            setattr(self.CX_module, NG_name, eval(NG_name))
+            setattr(self.CX_module, _dyn_neurongroup_name, eval(_dyn_neurongroup_name))
         except AttributeError:
             pass
 
 
         # passing remainder of the arguments to monitors() method to take care of the arguments.
-        self.monitors(str(monitors).split(' '), NG_name, self.customized_neurons_list[-1]['equation'])
+        self.monitors(str(monitors).split(' '), _dyn_neurongroup_name, self.customized_neurons_list[-1]['equation'])
 
     def monitors(self, mon_args, object_name, equation):
         '''
@@ -661,11 +667,11 @@ class cortical_system(object):
 
         * mon_args: contains the monitor arguments extracted from the target line.
         * args: normally args contains a set of arguments for a single Synapses() object. However, this changes when the post-synaptic neuron is the first (with index of 0) compartment of a multi-compartmental neuron. In this case, one might intend to target all three sub-compartments, i.e. Basal dendrites, Soma and proximal apical dendrites. So the single set of arguments will be changed to 3 sets of arguments and a for loop will take care of every one of them.
-        * S_name: Generated variable name for the Synapses() object in brian2.
-        * SE_name: Generated variable name for the Synapses() equation.
-        * SPre_name: Generated variable name for pre_synaptic equations, i.e. "on_pre=..."
-        * SPost_name: Generated variable name for post_synaptic equations, i.e. "on_post= ..."
-        * SNS_name: Generated variable name for the Synapses() namespace.
+        * dyn_syn_name: Generated variable name for the Synapses() object in brian2.
+        * _dyn_syn_eq_name: Generated variable name for the Synapses() equation.
+        * _dyn_syn_pre_eq_name: Generated variable name for pre_synaptic equations, i.e. "on_pre=..."
+        * _dyn_syn_post_eq_name: Generated variable name for post_synaptic equations, i.e. "on_post= ..."
+        * _dyn_syn_namespace_name: Generated variable name for the Synapses() namespace.
         * syn_con_str: The string containing the syntax for connect() method of a current Synapses() object. This string changes depending on using the [p] and [n] tags in the configuration file.
         '''
         _all_columns = ['receptor', 'pre_syn_idx', 'post_syn_idx', 'syn_type', 'p', 'n', 'monitors','load_connection',\
@@ -827,28 +833,28 @@ class cortical_system(object):
             _pre_group_idx = self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]
             _post_group_idx = self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']]
             # Generated variable name for the Synapses(), equation, pre_synaptic and post_synaptic equation and Namespace
-            S_name = self._Synapses_prefix + str(current_idx) + '_' + syn_type
-            self.synapses_name_list.append(S_name)
-            SE_name = self._SynapsesEquation_prefix + str(current_idx)
-            SPre_name = self._SynapsesPre_prefix + str(current_idx)
-            SPost_name = self._SynapsesPost_prefix + str(current_idx)
-            SNS_name = self._SynapsesNS_prefix + str(current_idx)
+            _dyn_syn_name = self._Synapses_prefix + str(current_idx) + '_' + syn_type +'_'+_pre_group_idx + '__to__' +_post_group_idx
+            self.synapses_name_list.append(_dyn_syn_name)
+            _dyn_syn_eq_name = self._SynapsesEquation_prefix + str(current_idx)
+            _dyn_syn_pre_eq_name = self._SynapsesPre_prefix + str(current_idx)
+            _dyn_syn_post_eq_name = self._SynapsesPost_prefix + str(current_idx)
+            _dyn_syn_namespace_name = self._SynapsesNS_prefix + str(current_idx)
 
-            exec "%s=self.customized_synapses_list[%d]['equation']" % (SE_name, current_idx)
-            exec "%s=self.customized_synapses_list[%d]['pre_eq']" % (SPre_name, current_idx)
+            exec "%s=self.customized_synapses_list[%d]['equation']" % (_dyn_syn_eq_name, current_idx)
+            exec "%s=self.customized_synapses_list[%d]['pre_eq']" % (_dyn_syn_pre_eq_name, current_idx)
             try:  # in case of a fixed synapse there is no "on_post = ...", hence the pass
-                exec "%s=self.customized_synapses_list[%d]['post_eq']" % (SPost_name, current_idx)
+                exec "%s=self.customized_synapses_list[%d]['post_eq']" % (_dyn_syn_post_eq_name, current_idx)
             except KeyError:
                 pass
-            exec "%s=self.customized_synapses_list[%d]['namespace']" % (SNS_name, current_idx)
+            exec "%s=self.customized_synapses_list[%d]['namespace']" % (_dyn_syn_namespace_name, current_idx)
 
             ### creating the initial synaptic connection :
             try:
                 exec "%s = Synapses(%s,%s,model = %s, on_pre = %s, on_post = %s, namespace= %s)" \
-                     % (S_name, _pre_group_idx, _post_group_idx, SE_name,SPre_name, SPost_name, SNS_name)
+                     % (_dyn_syn_name, _pre_group_idx, _post_group_idx, _dyn_syn_eq_name,_dyn_syn_pre_eq_name, _dyn_syn_post_eq_name, _dyn_syn_namespace_name)
             except NameError:  # for when there is no "on_post =...", i.e. fixed connection
                 exec "%s = Synapses(%s,%s,model = %s, on_pre = %s, namespace= %s)" \
-                     % (S_name, _pre_group_idx, _post_group_idx,SE_name, SPre_name, SNS_name)
+                     % (_dyn_syn_name, _pre_group_idx, _post_group_idx,_dyn_syn_eq_name, _dyn_syn_pre_eq_name, _dyn_syn_namespace_name)
 
             ###############
             ############### Connecting synapses
@@ -889,10 +895,10 @@ class cortical_system(object):
                     hasattr(self,'loaded_brian_data') and not self.load_positions_only:
                 assert _syn_ref_name in self.loaded_brian_data.keys(), \
                     "The data for the following connection was not found in the loaded brian data: %s" % _syn_ref_name
-                eval(S_name).connect(i=self.loaded_brian_data[_syn_ref_name]['data'][0][0].tocoo().row, \
+                eval(_dyn_syn_name).connect(i=self.loaded_brian_data[_syn_ref_name]['data'][0][0].tocoo().row, \
                                      j=self.loaded_brian_data[_syn_ref_name]['data'][0][0].tocoo().col,\
                                      n = int(self.loaded_brian_data[_syn_ref_name]['n']))
-                eval(S_name).wght = repeat(self.loaded_brian_data[_syn_ref_name]['data'][0][0].data/int(self.\
+                eval(_dyn_syn_name).wght = repeat(self.loaded_brian_data[_syn_ref_name]['data'][0][0].data/int(self.\
                     loaded_brian_data[_syn_ref_name]['n']),int(self.loaded_brian_data[_syn_ref_name]['n'])) * siemens
                 _load_str = 'Connection loaded from '
 
@@ -901,7 +907,7 @@ class cortical_system(object):
                 print "Warning: synaptic connection is set to be loaded, however the load_brian_data_path is not defined in the parameters. The connection is being created."
 
             else:
-                syn_con_str = "%s.connect(condition='i!=j', p= " % S_name
+                syn_con_str = "%s.connect(condition='i!=j', p= " % _dyn_syn_name
                 # Connecting the synapses based on either [the defined probability and the distance] or
                 # [only the distance] plus considering the number of connections
                 try:
@@ -930,19 +936,19 @@ class cortical_system(object):
                 except ValueError:
                     syn_con_str += ')'
                 exec syn_con_str
-            exec "%s.wght=%s['wght0']" % (S_name, SNS_name)  # set the weights
-            exec "%s.delay=%s['delay']" % (S_name, SNS_name)  # set the delays
-            setattr(self.main_module, S_name, eval(S_name))
+            exec "%s.wght=%s['wght0']" % (_dyn_syn_name, _dyn_syn_namespace_name)  # set the weights
+            exec "%s.delay=%s['delay']" % (_dyn_syn_name, _dyn_syn_namespace_name)  # set the delays
+            setattr(self.main_module, _dyn_syn_name, eval(_dyn_syn_name))
             try:
-                setattr(self.CX_module, S_name, eval(S_name))
+                setattr(self.CX_module, _dyn_syn_name, eval(_dyn_syn_name))
             except AttributeError:
                 pass
 
-            self.monitors(monitors.split(' '), S_name, self.customized_synapses_list[-1]['equation'])
+            self.monitors(monitors.split(' '), _dyn_syn_name, self.customized_synapses_list[-1]['equation'])
 
             if self.device == 'Python' :
                 num_tmp = 0
-                exec "num_tmp = len(%s.i)" % S_name
+                exec "num_tmp = len(%s.i)" % _dyn_syn_name
                 self.total_number_of_synapses += num_tmp
                 try:
                     _current_connections = int(num_tmp/float(syn[self.current_parameters_list[self.current_parameters_list=='n'].index.item()])) / len(self.current_values_list)
@@ -969,7 +975,7 @@ class cortical_system(object):
                 self.save_brian_data.creat_key(_syn_ref_name)
                 self.save_brian_data.syntax_bank.append('self.save_brian_data.data["%s"]["data"] = \
                 csr_matrix((%s.wght[:],(%s.i[:],%s.j[:])),shape=(len(%s.source),len(%s.target)))' \
-                                                        %(_syn_ref_name,S_name,S_name,S_name,S_name,S_name))
+                                                        %(_syn_ref_name,_dyn_syn_name,_dyn_syn_name,_dyn_syn_name,_dyn_syn_name,_dyn_syn_name))
                 self.save_brian_data.syntax_bank.append('self.save_brian_data.data["%s"]["n"] = %d' \
                                                         %(_syn_ref_name,int(n_arg)))
             elif (self.default_save_flag==1 or (self.default_save_flag==-1 and _do_save )) and \
@@ -1001,11 +1007,11 @@ class cortical_system(object):
 
         * inp: an instance of stimuli() object from stimuli module.
         * relay_group: the dictionary containing the data for relay NeuronGroup()
-        * NG_name: Generated variable name for the NeuronGroup() object in brian2.
-        * NN_name: Generated variable name for corresponding Neuron Number.
-        * NE_name: Generated variable name for the NeuronGroup() equation.
-        * NT_name: Generated variable name for the NeuronGroup() threshold.
-        * NRes_name: Generated variable name for the NeuronGroup() reset value.
+        * _dyn_neurongroup_name: Generated variable name for the NeuronGroup() object in brian2.
+        * _dyn_neuronnumber_name: Generated variable name for corresponding Neuron Number.
+        * _dyn_neuron_eq_name: Generated variable name for the NeuronGroup() equation.
+        * _dyn_neuron_thres_name: Generated variable name for the NeuronGroup() threshold.
+        * _dyn_neuron_reset_name: Generated variable name for the NeuronGroup() reset value.
         * SGsyn_name: variable name for the Synapses() object that connects SpikeGeneratorGroup() and relay neurons.
 
         following four variables are build using the load_input_seq() method in stimuli object:
@@ -1015,7 +1021,7 @@ class cortical_system(object):
         * SG_str: The string containing the syntax for creating the SpikeGeneratorGroup() based on the input .mat file.
         * number_of_neurons: The number of neurons that exist in the input .mat file.
         '''
-        NG_name = ''
+        _dyn_neurongroup_name = ''
         def video(self):
             print "creating an input based on the video input."
             input_mat_path = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='path'].index.item()]
@@ -1156,30 +1162,30 @@ class cortical_system(object):
             except AttributeError:
                 pass
 
-            NG_name = self._NeuronGroup_prefix + str(current_idx) + '_relay_vpm'  # Generated variable name for the NeuronGroup() object in brian2.
-            self.neurongroups_list.append(NG_name)
-            NN_name = self._NeuronNumber_prefix + str(current_idx)  # Generated variable name for corresponding Neuron Number.
-            NE_name = self._NeuronEquation_prefix + str(current_idx)  # Generated variable name for the NeuronGroup() equation.
-            NT_name = self._NeuronThreshold_prefix + str(current_idx)  # Generated variable name for the NeuronGroup() threshold.
-            NRes_name = self._NeuronReset_prefix + str(current_idx)  # Generated variable name for the NeuronGroup() reset value.
+            _dyn_neurongroup_name = self._NeuronGroup_prefix + str(current_idx) + '_relay_vpm'  # Generated variable name for the NeuronGroup() object in brian2.
+            self.neurongroups_list.append(_dyn_neurongroup_name)
+            _dyn_neuronnumber_name = self._NeuronNumber_prefix + str(current_idx)  # Generated variable name for corresponding Neuron Number.
+            _dyn_neuron_eq_name = self._NeuronEquation_prefix + str(current_idx)  # Generated variable name for the NeuronGroup() equation.
+            _dyn_neuron_thres_name = self._NeuronThreshold_prefix + str(current_idx)  # Generated variable name for the NeuronGroup() threshold.
+            _dyn_neuron_reset_name = self._NeuronReset_prefix + str(current_idx)  # Generated variable name for the NeuronGroup() reset value.
             Eq = """'''emit_spike : 1
                             x : meter
                             y : meter'''"""
-            exec "%s=%s" % (NN_name, number_of_neurons) in globals(), locals()
-            exec "%s=%s" % (NE_name, Eq) in globals(), locals()
-            exec "%s=%s" % (NT_name, "'emit_spike>=1'") in globals(), locals()
-            exec "%s=%s" % (NRes_name, "'emit_spike=0'") in globals(), locals()
+            exec "%s=%s" % (_dyn_neuronnumber_name, number_of_neurons) in globals(), locals()
+            exec "%s=%s" % (_dyn_neuron_eq_name, Eq) in globals(), locals()
+            exec "%s=%s" % (_dyn_neuron_thres_name, "'emit_spike>=1'") in globals(), locals()
+            exec "%s=%s" % (_dyn_neuron_reset_name, "'emit_spike=0'") in globals(), locals()
             exec "%s= NeuronGroup(%s, model=%s, method='%s',threshold=%s, reset=%s)" \
-                 % (NG_name, NN_name, NE_name, self.numerical_integration_method, NT_name, NRes_name) in globals(), locals()
+                 % (_dyn_neurongroup_name, _dyn_neuronnumber_name, _dyn_neuron_eq_name, self.numerical_integration_method, _dyn_neuron_thres_name, _dyn_neuron_reset_name) in globals(), locals()
             if hasattr(self, 'loaded_brian_data'): # load the positions if available
                 # in case the NG index are different. for example a MC_L2 neuron might have had
                 # index 3 as NG3_MC_L2 and now it's NG10_MC_L2 :
-                Group_type = NG_name[NG_name.index('_') + 1:]
+                Group_type = _dyn_neurongroup_name[_dyn_neurongroup_name.index('_') + 1:]
                 GroupKeyName = \
                 [kk for kk in self.loaded_brian_data['positions_all']['w_coord'].keys() if Group_type in kk][0]
                 self.customized_neurons_list[current_idx]['w_positions'] = self.loaded_brian_data['positions_all']['w_coord'][GroupKeyName]
                 self.customized_neurons_list[current_idx]['z_positions'] = self.loaded_brian_data['positions_all']['z_coord'][GroupKeyName]
-                print "Positions for the group %s loaded" % NG_name
+                print "Positions for the group %s loaded" % _dyn_neurongroup_name
             else: # generating the positions:
                 vpm_customized_neuron = customized_neuron(current_idx, int(number_of_neurons), 'VPM', '0', eval(radius),
                                                           self.min_distance, self.physio_config_df ,network_center=net_center)
@@ -1190,27 +1196,27 @@ class cortical_system(object):
             # setting the position of the neurons:
             exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n"\
                  "%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" \
-                 %(NG_name, current_idx, NG_name, current_idx) in globals(), locals()
+                 %(_dyn_neurongroup_name, current_idx, _dyn_neurongroup_name, current_idx) in globals(), locals()
             # saving the positions :
-            self.save_output_data.data['positions_all']['z_coord'][NG_name] = \
+            self.save_output_data.data['positions_all']['z_coord'][_dyn_neurongroup_name] = \
                 self.customized_neurons_list[current_idx]['z_positions']
-            self.save_output_data.data['positions_all']['w_coord'][NG_name] = \
+            self.save_output_data.data['positions_all']['w_coord'][_dyn_neurongroup_name] = \
                 self.customized_neurons_list[current_idx]['w_positions']
-            self.save_output_data.data['number_of_neurons'][NG_name] = eval(NN_name)
+            self.save_output_data.data['number_of_neurons'][_dyn_neurongroup_name] = eval(_dyn_neuronnumber_name)
             SGsyn_name = 'SGEN_Syn'  # variable name for the Synapses() object
             # that connects SpikeGeneratorGroup() and relay neurons.
             exec "%s = Synapses(GEN, %s, on_pre='emit_spike+=1')" \
-                 % (SGsyn_name, NG_name) in globals(), locals()  # connecting the SpikeGeneratorGroup() and relay group.
+                 % (SGsyn_name, _dyn_neurongroup_name) in globals(), locals()  # connecting the SpikeGeneratorGroup() and relay group.
             eval(SGsyn_name).connect(j='i')
-            setattr(self.main_module, NG_name, eval(NG_name))
+            setattr(self.main_module, _dyn_neurongroup_name, eval(_dyn_neurongroup_name))
             setattr(self.main_module, SGsyn_name, eval(SGsyn_name))
             try:
-                setattr(self.CX_module, NG_name, eval(NG_name))
+                setattr(self.CX_module, _dyn_neurongroup_name, eval(_dyn_neurongroup_name))
                 setattr(self.CX_module, SGsyn_name, eval(SGsyn_name))
             except AttributeError:
                 pass
             # taking care of the monitors:
-            self.monitors(mons.split(' '), NG_name,self.customized_neurons_list[-1]['equation'])
+            self.monitors(mons.split(' '), _dyn_neurongroup_name,self.customized_neurons_list[-1]['equation'])
 
         assert self.sys_mode != '', "Error: System mode not defined."
         assert any(self.current_parameters_list.str.contains('type')), 'The type of the input is not defined in the configuration file.'
