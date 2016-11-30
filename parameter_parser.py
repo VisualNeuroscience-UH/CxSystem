@@ -7,7 +7,7 @@ import pandas
 
 __author__ = 'V_AD'
 
-calcium_concentration = 1.0  # Change calcium concentration here or with _change_calcium()
+
 
 class synapse_parser(object):
     '''
@@ -43,6 +43,7 @@ class synapse_parser(object):
         '''
         self.output_synapse = output_synapse
         self.physio_config_df = physio_config_df
+
         synapse_parser.type_ref = array (['STDP', 'Fixed'])
         assert output_synapse['type'] in synapse_parser.type_ref, "Cell type '%s' is not defined." % output_synapse['type']
         self.output_namespace = {}
@@ -50,14 +51,12 @@ class synapse_parser(object):
         self.output_namespace['Cd'] = self.value_extractor(self.physio_config_df,'Cd')
         self.sparseness = self.value_extractor(self.physio_config_df,'sp_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
         self.ilam = self.value_extractor(self.physio_config_df,'ilam_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
-
+        self.calcium_concentration = self.value_extractor(self.physio_config_df, 'calcium_concentration' )   # Change calcium concentration here or with _change_calcium()
 
         # Set dissociation constant for Hill equation (see change_calcium)
-        if output_synapse['pre_group_type'] in self._excitatory_groups and output_synapse[
-            'post_group_type'] in self._steep_post:
+        if output_synapse['pre_group_type'] in self._excitatory_groups and output_synapse['post_group_type'] in self._steep_post:
             self._K12 = 2.79
-        elif output_synapse['pre_group_type'] in self._excitatory_groups and output_synapse[
-            'post_group_type'] in self._shallow_post:
+        elif output_synapse['pre_group_type'] in self._excitatory_groups and output_synapse['post_group_type'] in self._shallow_post:
             self._K12 = 1.09
         else:
             self._K12 = np.average([2.79, 1.09])
@@ -129,9 +128,9 @@ class synapse_parser(object):
         std_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
         mu_wght = std_wght / 2.
 
-        if calcium_concentration > 0: # For change_calcium()
+        if self.calcium_concentration > 0: # For change_calcium()
             self.cw_baseline_calcium = std_wght
-            std_wght = self._change_calcium(calcium_concentration)
+            std_wght = self._change_calcium(self.calcium_concentration)
 
         self.output_namespace['wght0'] = '(%f * rand() + %f) * nS' % (std_wght , mu_wght)
         std_delay = self.value_extractor(self.physio_config_df,'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
@@ -231,17 +230,18 @@ class neuron_parser (object):
             return self.value_extractor(df,new_key)
 
 
-if __name__ == '__main__':
-    output_synapse = {'type':'Fixed', 'pre_group_type': 'PC', 'post_group_type': 'BC'}
-    syns = synapse_parser(output_synapse)
-
-    ca = np.arange(0.7, 5, 0.1)
-    rfss = syns._change_calcium(ca)
-
-    # Testing
-    pyplot.plot(ca,rfss, color='blue', lw=2)
-    pyplot.xscale('log')
-    pyplot.yscale('log')
-    pyplot.xlim([0.7, 5])
-    pyplot.ylim([0.03, 10])
-    pyplot.show()
+# if __name__ == '__main__':
+#     output_synapse = {'type':'Fixed', 'pre_group_type': 'PC', 'post_group_type': 'BC'}
+#
+#     syns = synapse_parser(output_synapse)
+#
+#     ca = np.arange(0.7, 5, 0.1)
+#     rfss = syns._change_calcium(ca)
+#
+#     # Testing
+#     pyplot.plot(ca,rfss, color='blue', lw=2)
+#     pyplot.xscale('log')
+#     pyplot.yscale('log')
+#     pyplot.xlim([0.7, 5])
+#     pyplot.ylim([0.03, 10])
+#     pyplot.show()

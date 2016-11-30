@@ -41,8 +41,8 @@ class array_run(object):
             ## initializing the metadata :
             meta_columns = []
             for meta_col_idx in range(1,1+len(arrays_idx_anatomy) + len(arrays_idx_physio)):
-                meta_columns.append('Level-%d Parameter'%meta_col_idx)
-                meta_columns.append('Level-%d Value' % meta_col_idx)
+                meta_columns.append('Dimension-%d Parameter'%meta_col_idx)
+                meta_columns.append('Dimension-%d Value' % meta_col_idx)
             meta_columns.extend(['Full path'])
             self.array_run_metadata = pd.DataFrame(index=[0],columns=meta_columns)
             if arrays_idx_anatomy:
@@ -63,12 +63,13 @@ class array_run(object):
             elif arrays_idx_physio:
                 for physio_idx, physio_df in enumerate(physio_variations):
                     self.df_phys_final_array.append(physio_df)
+                    self.df_anat_final_array.append(anatomy_default)
                     self.final_messages.append(physio_messages[physio_idx])
 
         else:
             ## initializing the metadata :
             meta_columns = []
-            meta_columns.extend(['Level-1 Parameter','Level-1 Value','Full path'])
+            meta_columns.extend(['Dimension-1 Parameter','Dimension-1 Value','Full path'])
             self.array_run_metadata = pd.DataFrame(index=[0],columns=meta_columns)
             if arrays_idx_anatomy:
                 df_anat_array, anat_messages = self.df_builder_for_array_run(anatomy_df, arrays_idx_anatomy)
@@ -189,20 +190,20 @@ class array_run(object):
             temp_df.ix[index_of_array_variable[0][0]][index_of_array_variable[0][1]] = var
             if self.multidimension_array_run and len(index_of_array_variable)>1:
                 tmp_title,tmp_value,tmp_message = self.message_finder(temp_df, index_of_array_variable)
-                self.array_run_metadata['Level-%d Parameter' % recursion_counter].iloc[-1] = tmp_title
-                self.array_run_metadata['Level-%d Value' % recursion_counter].iloc[-1] = tmp_value
+                self.array_run_metadata['Dimension-%d Parameter' % recursion_counter].iloc[-1] = tmp_title
+                self.array_run_metadata['Dimension-%d Value' % recursion_counter].iloc[-1] = tmp_value
                 temp_df, messages = self.df_builder_for_array_run(temp_df, index_of_array_variable[1:],tmp_message,recursion_counter=recursion_counter+1)
             else:
                 temp_df = [self.df_default_finder(temp_df)]
                 tmp_title, tmp_value, tmp_message = self.message_finder(temp_df[0], index_of_array_variable)
-                self.array_run_metadata['Level-%d Parameter' % recursion_counter].iloc[-1] = tmp_title
-                self.array_run_metadata['Level-%d Value' % recursion_counter].iloc[-1] = tmp_value
+                self.array_run_metadata['Dimension-%d Parameter' % recursion_counter].iloc[-1] = tmp_title
+                self.array_run_metadata['Dimension-%d Value' % recursion_counter].iloc[-1] = tmp_value
                 messages = [message+tmp_message]
             if recursion_counter >= 2 or not self.multidimension_array_run:
                 self.array_run_metadata = self.array_run_metadata.append(pd.DataFrame(index=[0],columns=self.array_run_metadata.columns)).reset_index(drop=True)
                 for recur_idx in range(1,recursion_counter):
-                    self.array_run_metadata['Level-%d Parameter' % recur_idx].iloc[-1] =self.array_run_metadata['Level-%d Parameter' % recur_idx].iloc[-2]
-                    self.array_run_metadata['Level-%d Value' % recur_idx].iloc[-1] =self.array_run_metadata['Level-%d Value' % recur_idx].iloc[-2]
+                    self.array_run_metadata['Dimension-%d Parameter' % recur_idx].iloc[-1] =self.array_run_metadata['Dimension-%d Parameter' % recur_idx].iloc[-2]
+                    self.array_run_metadata['Dimension-%d Value' % recur_idx].iloc[-1] =self.array_run_metadata['Dimension-%d Value' % recur_idx].iloc[-2]
             array_of_dfs.extend(temp_df)
             run_messages.extend(messages)
 
