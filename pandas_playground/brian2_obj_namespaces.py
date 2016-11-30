@@ -1,5 +1,5 @@
 __author__ = 'V_AD'
-from brian2  import *
+from brian_genn_version  import *
 import sys
 class synapse_namespaces(object):
     '''

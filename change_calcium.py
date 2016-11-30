@@ -1,6 +1,7 @@
 from __future__ import division
 import numpy as np
 from matplotlib import pyplot
+import seaborn as sns; sns.set()
 import pandas as pd
 
 
@@ -85,13 +86,17 @@ if __name__ == '__main__':
     Ca = np.arange(0.7, 5, 0.1)
 
     Ca, fss, rfss = Ca_obj.GetSynapseStrength(0.11e-9,'L23_PC:L23_BC',Ca)
+    Ca2, fss2, rfss2 = Ca_obj.GetSynapseStrength(0.11e-9,'L23_PC:L23_PC',Ca)
     # Units are nano Siemens (nS), and range is 0.11 to 1.5 nS (Markram 2015 Cell, Figure 10)
     # Total conductance about 1 microS, 3/4 excitatory, 1/4 inhibitory
 
     # Testing
     pyplot.plot(Ca,rfss, color='blue', lw=2)
-    pyplot.xscale('log')
+    pyplot.plot(Ca2, rfss2, color='red', lw=2)
+    #pyplot.xscale('log')
     pyplot.yscale('log')
     pyplot.xlim([0.7, 5])
     pyplot.ylim([0.03, 10])
-    pyplot.show()
+    pyplot.xlabel('$Ca^{2+}$ concentration (mM)')
+    pyplot.ylabel('Relative synapse strength')
+    pyplot.savefig('relative_strength.eps', dpi=600)

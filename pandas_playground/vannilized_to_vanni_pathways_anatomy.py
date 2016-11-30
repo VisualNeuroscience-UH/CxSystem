@@ -2,7 +2,9 @@
 # Henri Hokkanen 21 July 2016
 
 import pandas as pd
+import json
 import re
+
 
 file_pathways_anatomy_vannilized = 'pathways_anatomy_vannilized.json' # INPUT
 file_pathways_anatomy_vanni = 'pathways_anatomy_vanni.json' # OUTPUT
@@ -133,7 +135,7 @@ def get_vanni_connection_params(connection_index):
 		'is_inhibitory_post': celltype_post in inhibitory_types,
 		'connection_probability': po,
 		'mean_number_of_synapses_per_connection': weighted_spc, 
-		'total_synapse_count': tot_synapses
+		'total_synapse_count': tot_synapses,
 		})
 	
 	return conn_params
@@ -151,5 +153,15 @@ result = pd.concat(frames)
 sort_order = ['layer_pre', 'is_inhibitory_pre', 'celltype_pre', 'layer_post', 'is_inhibitory_post', 'celltype_post']
 result = result.sort_values(by=sort_order)
 
-# Save everything
-result.astype(str).to_json(file_pathways_anatomy_vanni, orient='index')
+# Next, save everything
+# The following works, but produces unindented/ugly output:
+#result.astype(str).to_json(file_pathways_anatomy_vanni, orient='index')
+
+# Unfortunately indented output is not yet implemented in pandas (0.18.1), so we need to use the json module.
+# json module does not accept dataframes so we need to feed it a dict.
+# DataFrame.to_dict however loses preferred ordering :-( TODO (order-preserving export)
+
+result_as_dict = result.to_dict(orient='index')
+fi = open(file_pathways_anatomy_vanni, 'w')
+json.dump(result_as_dict, fi, indent=4)
+fi.close()
