@@ -19,7 +19,7 @@ def data_loader(path):
     return loaded_data
 
 path = '/opt3/CxOutput'
-FileName = 'CxOutput_20161114_12430741_Python_1000ms.bz2'
+FileName = 'CxOutput_20161130_10421270_calcium_concentration3.0_GeNN_100ms.gz'
 ThisTrial = data_loader(os.path.join(path,FileName))
 
 # SS = ThisTrial['spikes_all'][ 'NG7_SS_L4']

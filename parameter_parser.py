@@ -1,7 +1,13 @@
-__author__ = 'V_AD'
+from __future__ import division
 from brian2  import *
+import numpy as np
+from matplotlib import pyplot
 import sys
 import pandas
+
+__author__ = 'V_AD'
+
+
 
 class synapse_parser(object):
     '''
@@ -22,6 +28,13 @@ class synapse_parser(object):
 
     '''
 
+    # For _change_calcium()
+    _excitatory_groups = ['PC', 'SS']
+    _steep_post_inhibitory_groups = ['MC']
+    _shallow_post_inhibitory_groups = ['BC']
+    _steep_post = _excitatory_groups + _steep_post_inhibitory_groups
+    _shallow_post = _shallow_post_inhibitory_groups
+
     def __init__(self,output_synapse,physio_config_df):
         '''
         The initialization method for namespaces() object.
@@ -30,6 +43,7 @@ class synapse_parser(object):
         '''
         self.output_synapse = output_synapse
         self.physio_config_df = physio_config_df
+
         synapse_parser.type_ref = array (['STDP', 'Fixed'])
         assert output_synapse['type'] in synapse_parser.type_ref, "Cell type '%s' is not defined." % output_synapse['type']
         self.output_namespace = {}
@@ -37,6 +51,17 @@ class synapse_parser(object):
         self.output_namespace['Cd'] = self.value_extractor(self.physio_config_df,'Cd')
         self.sparseness = self.value_extractor(self.physio_config_df,'sp_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
         self.ilam = self.value_extractor(self.physio_config_df,'ilam_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
+        self.calcium_concentration = self.value_extractor(self.physio_config_df, 'calcium_concentration' )   # Change calcium concentration here or with _change_calcium()
+
+        # Set dissociation constant for Hill equation (see change_calcium)
+        if output_synapse['pre_group_type'] in self._excitatory_groups and output_synapse['post_group_type'] in self._steep_post:
+            self._K12 = 2.79
+        elif output_synapse['pre_group_type'] in self._excitatory_groups and output_synapse['post_group_type'] in self._shallow_post:
+            self._K12 = 1.09
+        else:
+            self._K12 = np.average([2.79, 1.09])
+
+        # Set (initial) weights for chosen synapse type
         getattr(synapse_parser, output_synapse['type'])(self)
 
     def value_extractor(self, df, key_name):
@@ -62,6 +87,19 @@ class synapse_parser(object):
         except NameError:
             new_key = df['Value'][df['Key'] == key_name].item().replace("']", "").split("['")
             return self.value_extractor(df,new_key)
+        except ValueError:
+            raise ValueError("Parameter %s not found in the configuration file."%key_name)
+
+
+    def _change_calcium(self, ca):
+
+        original_synapse_strength = self.cw_baseline_calcium
+        ca0 = 2.0  # The Ca concentration in which cw_baseline_calcium is given
+
+        calcium_factor = (pow(ca,4)/(pow(self._K12,4) + pow(ca,4))) / (pow(ca0,4)/(pow(self._K12,4) + pow(ca0,4)))
+        final_synapse_strength = original_synapse_strength * calcium_factor
+
+        return final_synapse_strength
 
     def STDP(self):
         '''
@@ -92,6 +130,11 @@ class synapse_parser(object):
         self.output_namespace['wght_max'] = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type']))* stdp_max_strength_coefficient
         std_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
         mu_wght = std_wght / 2.
+
+        if self.calcium_concentration > 0: # For change_calcium()
+            self.cw_baseline_calcium = std_wght
+            std_wght = self._change_calcium(self.calcium_concentration)
+
         self.output_namespace['wght0'] = '(%f * rand() + %f) * nS' % (std_wght , mu_wght)
         std_delay = self.value_extractor(self.physio_config_df,'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
         min_delay = std_delay / 2.
@@ -188,3 +231,20 @@ class neuron_parser (object):
         except NameError:
             new_key = df['Value'][df['Key'] == key_name].item().replace("']", "").split("['")
             return self.value_extractor(df,new_key)
+
+
+# if __name__ == '__main__':
+#     output_synapse = {'type':'Fixed', 'pre_group_type': 'PC', 'post_group_type': 'BC'}
+#
+#     syns = synapse_parser(output_synapse)
+#
+#     ca = np.arange(0.7, 5, 0.1)
+#     rfss = syns._change_calcium(ca)
+#
+#     # Testing
+#     pyplot.plot(ca,rfss, color='blue', lw=2)
+#     pyplot.xscale('log')
+#     pyplot.yscale('log')
+#     pyplot.xlim([0.7, 5])
+#     pyplot.ylim([0.03, 10])
+#     pyplot.show()

@@ -1,8 +1,9 @@
 Variable,Key,Value,Comment
 "# From Markram et al Cell 2015, Table S6. Prescribed Parameters for Synaptic Transmission, Related to Figures 9 and 10.",,,
-EE_weights_gain,,0.5,
-EI_weights_gain,,0.5,
-_weights,w_TC_E-E_connections,(0.7 * EE_weights_gain) * nS,"#Cruikshank et al 2007, nature neuroscience"
+calcium_concentration,,1,
+EE_weights_gain,,0.4,
+EI_weights_gain,,1,
+_weights,w_TC_E-E_connections,( 0.7 * EE_weights_gain) * nS,"#Cruikshank et al 2007, nature neuroscience"
 ,w_TC_E-I_connections,(3 * EI_weights_gain) * nS,
 ,w_L23PC-L23PC,0.68 * nS,# Not used in the current model
 ,w_L4Exc-L4Exc,0.68* nS,# Not used in the current model
@@ -17,8 +18,8 @@ _weights,w_TC_E-E_connections,(0.7 * EE_weights_gain) * nS,"#Cruikshank et al 20
 ,"w_L23(NBC,LBC)/L23ChC-23PC",0.91 * nS,# Not used in the current model
 ,w_All_other_I-E_connections,0.83 * nS,
 ,w_All_I-I_connections,0.83 * nS,
-Cp,,0.001,"# Synaptic potentiation coefficient according to van Rossum J Neurosci 2000, here relative to initial value"
-Cd,,0.003,# Synaptic depression coefficient according to van Rossum J Neurosci 2000
+Cp,,1,"# 0.001 Synaptic potentiation coefficient according to van Rossum J Neurosci 2000, here relative to initial value"
+Cd,,0,# 0.003 Synaptic depression coefficient according to van Rossum J Neurosci 2000
 conn_prob_gain,,1,# This is used for compensation of small number of neurons and thus incoming synapses
 cw,cw_in_SS,_weights['w_TC_E-E_connections'],
 ,cw_in_PC,_weights['w_TC_E-E_connections'],
@@ -107,13 +108,13 @@ stdp,stdp_in_SS_soma,"[20, -21.5, 5.4 * ms, 124.7 * ms]",# instead of inf 2^32 -
 ,stdp_SS_L1i_soma,"[-46,-56,39.9 * ms,39.1 * ms]",
 ,,,
 ,stdp_PC_SS_soma,"[76, -48, 15.9 * ms, 19.3 * ms]",
-,stdp_PC_PC_a4,"[-21, 42, 15 * ms, 103.4 * ms]",
-,stdp_PC_PC_a3,"[7.50, 7.00, 15.00 * ms, 103.4 * ms]",
-,stdp_PC_PC_a2,"[36, -28, 12.5 * ms, 103.4 * ms]",
-,stdp_PC_PC_a1,"[76, -48, 15.9 * ms, 19.3 * ms]",
-,stdp_PC_PC_a0,"[76, -48, 15.9 * ms, 19.3 * ms]",
-,stdp_PC_PC_soma,"[76, -48, 15.9 * ms, 19.3 * ms]",
-,stdp_PC_PC_basal,"[76, -48, 15.9 * ms, 19.3 * ms]",
+,stdp_PC_PC_a4," [-21, 42, 15 * ms, 103.4 * ms]","# [-21, 42, 15 * ms, 103.4 * ms]"
+,stdp_PC_PC_a3," [7.50, 7.00, 15.00 * ms, 103.4 * ms]","# [7.50, 7.00, 15.00 * ms, 103.4 * ms]"
+,stdp_PC_PC_a2," [36, -28, 12.5 * ms, 103.4 * ms]","# [36, -28, 12.5 * ms, 103.4 * ms]"
+,stdp_PC_PC_a1," [76, -48, 15.9 * ms, 19.3 * ms]","# [76, -48, 15.9 * ms, 19.3 * ms]"
+,stdp_PC_PC_a0," [76, -48, 15.9 * ms, 19.3 * ms]","# [76, -48, 15.9 * ms, 19.3 * ms]"
+,stdp_PC_PC_soma," [76, -48, 15.9 * ms, 19.3 * ms]","# [76, -48, 15.9 * ms, 19.3 * ms]"
+,stdp_PC_PC_basal," [76, -48, 15.9 * ms, 19.3 * ms]","# [76, -48, 15.9 * ms, 19.3 * ms]"
 ,stdp_PC_BC_soma,"[-46,-56,39.9 * ms,39.1 * ms]",
 ,stdp_PC_MC_soma,"[240,-50, 7.1 * ms,39.1 * ms]",
 ,stdp_PC_L1i_soma,"[-46, -56, 39.9 * ms, 39.1 * ms]",

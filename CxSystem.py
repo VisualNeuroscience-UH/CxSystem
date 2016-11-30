@@ -1397,15 +1397,11 @@ class CxSystem(object):
 
 
 if __name__ == '__main__' :
-    # CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device = 'Python' , runtime=1000* ms)
-    # CM.run()
-    # CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/LightConfigForTesting.csv', device='Cpp',runtime=1000 * ms)
-    # CM.run()
-    CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/Burbank_config.csv', \
-                  os.path.dirname(os.path.realpath(__file__)) + '/Physiological_Parameters.csv', ) # runtime and device are now set in configuration file
+    CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/Burbank_config.csv', \
+                  os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_Burbank.csv', )
     CM.run()
 
-    from data_visualization import DataVisualization
+    from .data_visualizers.data_visualization import DataVisualization
 
     dv = DataVisualization()
     dv.make_figure()
