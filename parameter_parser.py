@@ -87,6 +87,9 @@ class synapse_parser(object):
         except NameError:
             new_key = df['Value'][df['Key'] == key_name].item().replace("']", "").split("['")
             return self.value_extractor(df,new_key)
+        except ValueError:
+            raise ValueError("Parameter %s not found in the configuration file."%key_name)
+
 
     def _change_calcium(self, ca):
 
