@@ -12,7 +12,7 @@ dt = 0.1 * ms
 plot_dt = 0.1 * ms
 # state_variable_to_monitor = 'vm_all'
 state_variable_to_monitor = 'wght_all'
-# state_variable_to_monitor = 'Apre_all'
+# state_variable_to_monitor = 'apre_all'
 
 # data_file_name = '../CX_OUTPUT/CX_Output_20161108_11000084_Python_1000ms.gz'
 directory = '/opt/Laskenta/Output/CX_Output'
@@ -84,6 +84,7 @@ class DataVisualization:
                 plt.xlim([time_for_visualization[0], time_for_visualization[1]])
                 plt.title('%s spikes' % neuron_group)
 
+
                 if neuron_group in stvar_of_interest.keys():
                     stvar_value = stvar_of_interest[neuron_group]
                     plt.subplot(len(neuron_groups), n_columns, plot_index * n_columns + 3)
@@ -97,9 +98,10 @@ class DataVisualization:
                     plt.plot(time_vector, subsampled_data_epoch_for_plot.T, '-')
                     plt.title('%s vm' % neuron_group)
 
-                elif any(['S%d_Fixed' % plot_index in syn_name for syn_name in stvar_of_interest.keys()]) or \
-                     any(['S%d_STDP' % plot_index in syn_name for syn_name in stvar_of_interest.keys()]):
-                    stvar = stvar_of_interest.keys()[plot_index]
+                elif any([(neuron_group+'__') in syn_name for syn_name in stvar_of_interest.keys()]) or \
+                     any([(neuron_group+'__') in syn_name for syn_name in stvar_of_interest.keys()]):
+                    target_syn_idx = [syn_idx for syn_idx,syn_name in enumerate(stvar_of_interest.keys()) if (neuron_group+'__') in syn_name][0]
+                    stvar = stvar_of_interest.keys()[target_syn_idx]
                     stvar_value = stvar_of_interest[stvar]
                     plt.subplot(len(neuron_groups), n_columns, plot_index * n_columns + 3)
                     # N_time_points = len(stvar_value[0])
@@ -111,7 +113,7 @@ class DataVisualization:
                     time_vector = np.arange(time_for_visualization[0], time_for_visualization[1],
                                             plot_dt / (1 * second))
                     plt.plot(time_vector, subsampled_data_epoch_for_plot.T, '-')
-                    plt.title('%s wght' % stvar_of_interest.keys()[plot_index])
+                    plt.title('%s wght' % stvar_of_interest.keys()[target_syn_idx])
                 else:
                     pass
 
