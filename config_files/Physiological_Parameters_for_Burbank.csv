@@ -1,7 +1,7 @@
 Variable,Key,Value,Comment
 "# From Markram et al Cell 2015, Table S6. Prescribed Parameters for Synaptic Transmission, Related to Figures 9 and 10.",,,
 calcium_concentration,,1,
-EE_weights_gain,,0.4,
+EE_weights_gain,,{0.2|0.41|0.05},
 EI_weights_gain,,1,
 _weights,w_TC_E-E_connections,( 0.7 * EE_weights_gain) * nS,"#Cruikshank et al 2007, nature neuroscience"
 ,w_TC_E-I_connections,(3 * EI_weights_gain) * nS,
@@ -18,8 +18,8 @@ _weights,w_TC_E-E_connections,( 0.7 * EE_weights_gain) * nS,"#Cruikshank et al 2
 ,"w_L23(NBC,LBC)/L23ChC-23PC",0.91 * nS,# Not used in the current model
 ,w_All_other_I-E_connections,0.83 * nS,
 ,w_All_I-I_connections,0.83 * nS,
-Cp,,0.003,"# 0.001 Synaptic potentiation coefficient according to van Rossum J Neurosci 2000, here relative to initial value"
-Cd,,0.001,# 0.003 Synaptic depression coefficient according to van Rossum J Neurosci 2000
+Cp,,0.001,"# 0.001 Synaptic potentiation coefficient according to van Rossum J Neurosci 2000, here relative to initial value"
+Cd,,0.003,# 0.003 Synaptic depression coefficient according to van Rossum J Neurosci 2000
 conn_prob_gain,,1,# This is used for compensation of small number of neurons and thus incoming synapses
 cw,cw_in_SS,_weights['w_TC_E-E_connections'],
 ,cw_in_PC,_weights['w_TC_E-E_connections'],
