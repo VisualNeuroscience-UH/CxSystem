@@ -12,7 +12,9 @@ dt = 0.1 * ms
 plot_dt = 0.1 * ms
 # state_variable_to_monitor = 'vm_all'
 state_variable_to_monitor = 'wght_all'
+# state_variable_to_monitor = 'wght0_all'
 # state_variable_to_monitor = 'apre_all'
+# state_variable_to_monitor = 'apost_all'
 
 # data_file_name = '../CX_OUTPUT/CX_Output_20161108_11000084_Python_1000ms.gz'
 directory = '/opt/Laskenta/Output/CX_Output'
@@ -70,9 +72,15 @@ class DataVisualization:
 
             fig.suptitle(figure_title, fontsize=12)
 
+            col_max = 1
+            for group_index, neuron_group in enumerate(neuron_groups):
+                repeat = sum([1 for pp in stvar_of_interest.keys() if (neuron_group+'__') in pp])
+                col_max = repeat if repeat > col_max else col_max
+
+
             for plot_index, neuron_group in enumerate(neuron_groups):
 
-                n_columns = 3
+                n_columns = 2 + col_max
                 plt.subplot(len(neuron_groups), n_columns, plot_index * n_columns + 1)
                 plt.plot(np.real(positions['w_coord'][neuron_group]), np.imag(positions['w_coord'][neuron_group]), '.')
                 plt.title('%s positions' % neuron_group)
@@ -100,20 +108,22 @@ class DataVisualization:
 
                 elif any([(neuron_group+'__') in syn_name for syn_name in stvar_of_interest.keys()]) or \
                      any([(neuron_group+'__') in syn_name for syn_name in stvar_of_interest.keys()]):
-                    target_syn_idx = [syn_idx for syn_idx,syn_name in enumerate(stvar_of_interest.keys()) if (neuron_group+'__') in syn_name][0]
-                    stvar = stvar_of_interest.keys()[target_syn_idx]
-                    stvar_value = stvar_of_interest[stvar]
-                    plt.subplot(len(neuron_groups), n_columns, plot_index * n_columns + 3)
-                    # N_time_points = len(stvar_value[0])
-                    data_indices_for_plot = np.array([time_for_visualization[0] * (1 * second)
-                                                      / dt, time_for_visualization[1] * (1 * second) / dt], dtype=int)
-                    subsample_step = int(plot_dt / dt)
-                    subsampled_data_epoch_for_plot = stvar_value[:, data_indices_for_plot[0]:data_indices_for_plot[1]:
-                                                                 subsample_step]
-                    time_vector = np.arange(time_for_visualization[0], time_for_visualization[1],
-                                            plot_dt / (1 * second))
-                    plt.plot(time_vector, subsampled_data_epoch_for_plot.T, '-')
-                    plt.title('%s wght' % stvar_of_interest.keys()[target_syn_idx])
+                    target_syn_idx = [syn_idx for syn_idx,syn_name in enumerate(stvar_of_interest.keys()) if (neuron_group+'__') in syn_name]
+                    for index_of_syn_idx,syn_idx in enumerate(target_syn_idx) :
+                        stvar = stvar_of_interest.keys()[syn_idx]
+                        stvar_value = stvar_of_interest[stvar]
+                        plt.subplot(len(neuron_groups), n_columns, plot_index * n_columns + 3 + index_of_syn_idx)
+                        # N_time_points = len(stvar_value[0])
+                        data_indices_for_plot = np.array([time_for_visualization[0] * (1 * second)
+                                                          / dt, time_for_visualization[1] * (1 * second) / dt], dtype=int)
+                        subsample_step = int(plot_dt / dt)
+                        subsampled_data_epoch_for_plot = stvar_value[:, data_indices_for_plot[0]:data_indices_for_plot[1]:
+                                                                     subsample_step]
+                        time_vector = np.arange(time_for_visualization[0], time_for_visualization[1],
+                                                plot_dt / (1 * second))
+                        plt.plot(time_vector, subsampled_data_epoch_for_plot.T, '-')
+                        plt.title('%s %s' % (stvar_of_interest.keys()[syn_idx],state_variable_to_monitor[
+                                                                                :state_variable_to_monitor.index('_')]))
                 else:
                     pass
 

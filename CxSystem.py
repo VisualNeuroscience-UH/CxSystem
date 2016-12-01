@@ -944,7 +944,9 @@ class CxSystem(object):
                 except ValueError:
                     syn_con_str += ')'
                 exec syn_con_str
-            exec "%s.wght=%s['wght0']" % (_dyn_syn_name, _dyn_syn_namespace_name)  # set the weights
+            exec "%s.wght=%s['init_wght']" % (_dyn_syn_name, _dyn_syn_namespace_name)  # set the weights
+            if syn_type == 'STDP': # A more sophisticated if: 'wght0' in self.customized_synapses_list[-1]['equation']
+                exec "%s.wght0=%s['init_wght']" % (_dyn_syn_name, _dyn_syn_namespace_name)  # set the weights
             exec "%s.delay=%s['delay']" % (_dyn_syn_name, _dyn_syn_namespace_name)  # set the delays
             setattr(self.main_module, _dyn_syn_name, eval(_dyn_syn_name))
             try:
