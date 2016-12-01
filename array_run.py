@@ -168,9 +168,9 @@ class array_run(object):
             j.join()
 
         for idx in range(len(paths)):
-            self.array_run_metadata['Full path'][idx] = paths[idx]
-        self.data_saver(os.path.join(os.path.dirname(paths[0]),'array_run_metadata.gz'),self.array_run_metadata)
-        print "Array run metadata saved at: %s"%os.path.join(os.path.dirname(paths[0]),'array_run_metadata.gz')
+            self.final_metadata_df['Full path'][idx] = paths[idx]
+        self.data_saver(os.path.join(os.path.dirname(paths[0]),'final_metadata_df.gz'),self.final_metadata_df)
+        print "Array run metadata saved at: %s"%os.path.join(os.path.dirname(paths[0]),'final_metadata_df.gz')
 
     def parameter_finder(self,df,keyword):
         location = where(df.values == keyword)
