@@ -65,8 +65,8 @@ class DataVisualization:
             fig = plt.figure()
 
             if type(metadata) is not dict:
-                figure_title = '%s = %s' % (metadata.iloc[row_index]['Level-1 Parameter'],
-                                            str(metadata.iloc[row_index]['Level-1 Value']))
+                figure_title = '%s = %s' % (metadata.iloc[row_index]['Dimension-1 Parameter'],
+                                            str(metadata.iloc[row_index]['Dimension-1 Value']))
             elif type(metadata) is dict:
                 figure_title = 'A nice figure'
 
