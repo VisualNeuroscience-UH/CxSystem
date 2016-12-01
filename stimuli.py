@@ -71,7 +71,7 @@ class stimuli(object):
             print 'One video stimulus found in file ' + self.input_mat_path[slash_indices[-1]+1:]
 
     def calculate_input_seqs(self):
-        set_device('cpp_standalone', directory=os.path.join(self.output_folder,'Input_cpp_run'))
+        set_device('cpp_standalone', directory=os.path.join(self.output_folder,'Input_cpp_run'+ self.output_file_suffix ))
         inputdt = defaultclock.dt
         spikemons = []
         N0 = len(self.i_patterns[0].T)
@@ -89,7 +89,7 @@ class stimuli(object):
             tmp_network.run(self.BaseLine)
             tmp_network.run(self.duration - self.BaseLine)
         self.save_input_sequence(spikemons,os.path.join(self.output_folder,'input'+self.output_file_suffix ))
-        shutil.rmtree(os.path.join(self.output_folder,'Input_cpp_run'))
+        shutil.rmtree(os.path.join(self.output_folder,'Input_cpp_run'+ self.output_file_suffix))
 
     def save_input_sequence(self,spike_mons, save_path):
         print "Saving the generated video input..."
