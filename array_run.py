@@ -9,6 +9,7 @@ import zlib
 import bz2
 import cPickle as pickle
 import sys
+import itertools
 
 class array_run(object):
 
@@ -37,6 +38,9 @@ class array_run(object):
             anatomy_default = anatomy_df
             physio_default = physiology_df
         ## creating the array of dataframes for array run
+        self.anat_titles = []
+        self.physio_titles = []
+        self.metadata_dict = {}
         if self.multidimension_array_run:
             ## initializing the metadata :
             meta_columns = []
@@ -44,11 +48,11 @@ class array_run(object):
                 meta_columns.append('Dimension-%d Parameter'%meta_col_idx)
                 meta_columns.append('Dimension-%d Value' % meta_col_idx)
             meta_columns.extend(['Full path'])
-            self.array_run_metadata = pd.DataFrame(index=[0],columns=meta_columns)
+            self.final_metadata_df = pd.DataFrame(index=[0],columns=meta_columns)
             if arrays_idx_anatomy:
-                anat_variations, anat_messages = self.df_builder_for_array_run( anatomy_df, arrays_idx_anatomy)
+                anat_variations, anat_messages = self.df_builder_for_array_run( anatomy_df, arrays_idx_anatomy,df_type='anatomy')
             if arrays_idx_physio:
-                physio_variations, physio_messages = self.df_builder_for_array_run( physiology_df, arrays_idx_physio)
+                physio_variations, physio_messages = self.df_builder_for_array_run( physiology_df, arrays_idx_physio,df_type='physiology')
             if arrays_idx_anatomy and arrays_idx_physio:
                 for anat_idx, anat_df in enumerate(anat_variations):
                     for physio_idx, physio_df in enumerate(physio_variations):
@@ -70,18 +74,37 @@ class array_run(object):
             ## initializing the metadata :
             meta_columns = []
             meta_columns.extend(['Dimension-1 Parameter','Dimension-1 Value','Full path'])
-            self.array_run_metadata = pd.DataFrame(index=[0],columns=meta_columns)
+            self.final_metadata_df = pd.DataFrame(index=[0], columns=meta_columns)
             if arrays_idx_anatomy:
-                df_anat_array, anat_messages = self.df_builder_for_array_run(anatomy_df, arrays_idx_anatomy)
+                df_anat_array, anat_messages = self.df_builder_for_array_run(anatomy_df, arrays_idx_anatomy,df_type='anatomy')
                 self.df_anat_final_array.extend(df_anat_array)
                 self.df_phys_final_array.extend([physio_default for _ in range(len(self.df_anat_final_array))])
                 self.final_messages.extend(anat_messages)
             if arrays_idx_physio:
-                df_phys_array, physio_messages = self.df_builder_for_array_run(physiology_df, arrays_idx_physio)
+                df_phys_array, physio_messages = self.df_builder_for_array_run(physiology_df, arrays_idx_physio,df_type='physiology')
                 self.df_phys_final_array.extend(df_phys_array)
                 self.df_anat_final_array.extend([anatomy_default for _ in range(len(self.df_phys_final_array))])
                 self.final_messages.extend(physio_messages)
-        self.array_run_metadata = self.array_run_metadata.drop(self.array_run_metadata.index.tolist()[-1]) # droping the last line
+
+        self.all_titles = self.anat_titles + self.physio_titles
+        if self.multidimension_array_run :
+            self.tmp_df  = pd.DataFrame(list(itertools.product(*self.metadata_dict.values())), columns=self.metadata_dict.keys())
+            self.tmp_df = self.tmp_df[self.all_titles]
+            self.tmp_df = self.tmp_df.sort_values(by=self.all_titles).reset_index(drop=True)
+            self.final_metadata_df = self.final_metadata_df.reindex(self.tmp_df.index)
+            for col_idx,col_title in enumerate(self.all_titles):
+                self.final_metadata_df['Dimension-%d Parameter'%(col_idx+1)] = col_title
+                self.final_metadata_df['Dimension-%d Value' % (col_idx + 1)] = self.tmp_df[col_title]
+        else :
+            index_len = len([item for sublist in self.metadata_dict.values() for item in sublist])
+            self.final_metadata_df= self.final_metadata_df.reindex(range(index_len))
+            counter = 0
+            for par_idx,parameter in enumerate(self.all_titles):
+                for val in self.metadata_dict[parameter]:
+                    self.final_metadata_df['Dimension-1 Parameter'][counter] = parameter
+                    self.final_metadata_df['Dimension-1 Value'][counter] = val
+                    counter+=1
+
         print "Info: array of Dataframes for anatomical and physiological configuration are ready"
         self.spawner()
 
@@ -161,7 +184,7 @@ class array_run(object):
                     counter+=1
             return value
 
-    def df_builder_for_array_run(self, original_df, index_of_array_variable,message='',recursion_counter = 1):
+    def df_builder_for_array_run(self, original_df, index_of_array_variable,df_type,message='',recursion_counter = 1 ):
         array_of_dfs = []
         run_messages = []
         array_variable = original_df.ix[index_of_array_variable[0][0]][index_of_array_variable[0][1]]
@@ -183,32 +206,23 @@ class array_run(object):
         elif '&' in array_variable:
             variables_to_iterate = eval('["' + array_variable[opening_braket_idx + 1:closing_braket_idx].replace('&', '","') + '"]')
         variables_to_iterate = [template_of_variable.replace('^^^', str(vv)) for vv in variables_to_iterate]
-        for var in variables_to_iterate:
+        for var_idx,var in enumerate(variables_to_iterate):
             if type(var) == str :
                 var = var.strip()
             temp_df = original_df.copy()
             temp_df.ix[index_of_array_variable[0][0]][index_of_array_variable[0][1]] = var
             if self.multidimension_array_run and len(index_of_array_variable)>1:
-                tmp_title,tmp_value,tmp_message = self.message_finder(temp_df, index_of_array_variable)
-                self.array_run_metadata['Dimension-%d Parameter' % recursion_counter].iloc[-1] = tmp_title
-                self.array_run_metadata['Dimension-%d Value' % recursion_counter].iloc[-1] = tmp_value
-                temp_df, messages = self.df_builder_for_array_run(temp_df, index_of_array_variable[1:],tmp_message,recursion_counter=recursion_counter+1)
+                tmp_title,tmp_value,tmp_message = self.message_finder(temp_df, index_of_array_variable,df_type)
+                temp_df, messages = self.df_builder_for_array_run(temp_df, index_of_array_variable[1:],df_type,tmp_message,recursion_counter=recursion_counter+1)
             else:
                 temp_df = [self.df_default_finder(temp_df)]
-                tmp_title, tmp_value, tmp_message = self.message_finder(temp_df[0], index_of_array_variable)
-                self.array_run_metadata['Dimension-%d Parameter' % recursion_counter].iloc[-1] = tmp_title
-                self.array_run_metadata['Dimension-%d Value' % recursion_counter].iloc[-1] = tmp_value
+                tmp_title, tmp_value, tmp_message = self.message_finder(temp_df[0], index_of_array_variable,df_type)
                 messages = [message+tmp_message]
-            if recursion_counter >= 2 or not self.multidimension_array_run:
-                self.array_run_metadata = self.array_run_metadata.append(pd.DataFrame(index=[0],columns=self.array_run_metadata.columns)).reset_index(drop=True)
-                for recur_idx in range(1,recursion_counter):
-                    self.array_run_metadata['Dimension-%d Parameter' % recur_idx].iloc[-1] =self.array_run_metadata['Dimension-%d Parameter' % recur_idx].iloc[-2]
-                    self.array_run_metadata['Dimension-%d Value' % recur_idx].iloc[-1] =self.array_run_metadata['Dimension-%d Value' % recur_idx].iloc[-2]
             array_of_dfs.extend(temp_df)
             run_messages.extend(messages)
 
         if not self.multidimension_array_run and len(index_of_array_variable)>1:
-            temp_df, messages = self.df_builder_for_array_run(original_df, index_of_array_variable[1:],message='')
+            temp_df, messages = self.df_builder_for_array_run(original_df, index_of_array_variable[1:],df_type,message='')
             array_of_dfs.extend(temp_df)
             run_messages.extend(messages)
         return array_of_dfs, run_messages
@@ -225,7 +239,7 @@ class array_run(object):
             df.ix[to_default_idx[0]][to_default_idx[1]] = df.ix[to_default_idx[0]][to_default_idx[1]].replace(value_to_default[value_to_default.index('{'):value_to_default.index('}')+1],default)
         return df
 
-    def message_finder(self,df, idx):
+    def message_finder(self,df, idx,df_type):
         idx = idx[0]
         whitelist = set('abcdefghijklmnopqrstuvwxyABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890._-')
         try:
@@ -248,6 +262,18 @@ class array_run(object):
                     title = str(df['Key'][idx[0]])
                     value = str(df.ix[idx[0]][idx[1]])
                 message = '_' + title + ''.join(filter(whitelist.__contains__, value))
+        finally: # for metadata
+            if df_type == 'anatomy':
+                if title not in self.anat_titles :
+                    self.anat_titles.append(title)
+            elif df_type == 'physiology':
+                if title not in self.physio_titles:
+                    self.physio_titles.append(title)
+            if title in self.metadata_dict.keys():
+                if value not in self.metadata_dict[title]:
+                    self.metadata_dict[title].append(value)
+            else:
+                self.metadata_dict[title] = [value]
         return title,value, message
 
     def data_saver(self, save_path, data):
