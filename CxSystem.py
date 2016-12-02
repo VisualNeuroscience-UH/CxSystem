@@ -84,15 +84,16 @@ class CxSystem(object):
             'grid_radius': [5,self._set_grid_radius],
             'min_distance': [6,self._set_min_distance],
             'do_init_vms': [7,self.do_init_vms],
-            'output_path_and_filename': [8,self._set_output_path],
-            'connections_saving_path_and_filename': [9,self._set_save_brian_data_path],
-            'connections_loading_path_and_filename': [10,self._set_load_brian_data_path],
-            'load_positions_only': [11,self.load_positions_only],
-            'do_benchmark': [12,self.set_do_benchmark],
-            'multidimension_array_run': [13,self.passer],  # this parameter is used by array_run module, so here we just pass
-            'number_of_process': [14,self.passer],  # this parameter is used by array_run module, so here we just pass
-            'trials_per_config': [15,self.passer],
-            'default_clock': [16,self.set_default_clock],
+            'default_clock': [8, self.set_default_clock],
+            'output_path_and_filename': [9,self._set_output_path],
+            'connections_saving_path_and_filename': [10,self._set_save_brian_data_path],
+            'connections_loading_path_and_filename': [11,self._set_load_brian_data_path],
+            'load_positions_only': [12,self.load_positions_only],
+            'do_benchmark': [13,self.set_do_benchmark],
+            'multidimension_array_run': [14,self.passer],  # this parameter is used by array_run module, so here we just pass
+            'number_of_process': [15,self.passer],  # this parameter is used by array_run module, so here we just pass
+            'trials_per_config': [1,self.passer],
+
             ####
             #### Line definitions:
             'G': [nan,self.neuron_group],
