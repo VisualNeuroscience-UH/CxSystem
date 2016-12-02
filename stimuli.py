@@ -47,7 +47,7 @@ class stimuli(object):
         self.w_coord =_V1_mats['w_coord']
         self.z_coord = _V1_mats['z_coord']
         # Fill ISI with N-1 times frameduration of zeros
-        SOA = 90 # in ms
+        SOA = 60 # in ms
         stimulus_epoch_duration = 15 # in ms, duration of Burbank whole stimulus
         assert np.mod(SOA, stimulus_epoch_duration) == 0, 'Stimulus onset asynchrony (SOA) must be an integer times frameduration, aborting...'
         SOA_in_N_frames = int(SOA / stimulus_epoch_duration)

@@ -8,10 +8,10 @@ import bz2
 import pandas as pd
 
 time_for_visualization = np.array([0, 0.36]) + 0.000001  # To accept 0 as starting point. Rounding error for the end.
-dt = 0.1 * ms
+# dt = 0.1 * ms
 plot_dt = 0.1 * ms
-# state_variable_to_monitor = 'vm_all'
-state_variable_to_monitor = 'wght_all'
+state_variable_to_monitor = 'vm_all'
+# state_variable_to_monitor = 'wght_all'
 # state_variable_to_monitor = 'wght0_all'
 # state_variable_to_monitor = 'apre_all'
 # state_variable_to_monitor = 'apost_all'
@@ -61,6 +61,7 @@ class DataVisualization:
             positions = simulation_data['positions_all']
             spikes_all = simulation_data['spikes_all']
             stvar_of_interest = simulation_data[state_variable_to_monitor]
+            dt = simulation_data['time_vector'][1] - simulation_data['time_vector'][0]
 
             fig = plt.figure()
 
