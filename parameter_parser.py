@@ -114,7 +114,7 @@ class synapse_parser(object):
         self.output_namespace['wght_max'] = self.value_extractor(self.physio_config_df,'cw_%s_%s'% (self.output_synapse['pre_group_type'],self.output_synapse['post_group_type']))* stdp_max_strength_coefficient
         std_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
         mu_wght = std_wght / 2.
-        self.output_namespace['wght0'] = '(%f * rand() + %f) * nS' % (std_wght , mu_wght)
+        self.output_namespace['init_wght'] = '(%f * rand() + %f) * nS' % (std_wght , mu_wght)
         std_delay = self.value_extractor(self.physio_config_df,'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
         min_delay = std_delay / 2.
         self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, min_delay)
@@ -135,7 +135,7 @@ class synapse_parser(object):
             self.cw_baseline_calcium = std_wght
             std_wght = self._change_calcium(self.calcium_concentration)
 
-        self.output_namespace['wght0'] = '(%f * rand() + %f) * nS' % (std_wght , mu_wght)
+        self.output_namespace['init_wght'] = '(%f * rand() + %f) * nS' % (std_wght , mu_wght)
         std_delay = self.value_extractor(self.physio_config_df,'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
         min_delay = std_delay / 2.
         self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, min_delay)
