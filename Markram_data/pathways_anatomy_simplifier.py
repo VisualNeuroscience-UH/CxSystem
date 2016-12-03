@@ -3,11 +3,11 @@
 # Creates a json file similar to the original pathways_anatomy_factsheets_simplified.json from (*)
 #
 # Author Henri Hokkanen <henri.hokkanen@helsinki.fi>
-# Created 21 July 2016, last updated 16 October 2016
+# Created 21 July 2016, last updated 3 December 2016
 #
 # Refs:
 # (*) https://bbp.epfl.ch/nmc-portal/downloads, for explanations see Markram et al. (Cell 2015)
-# (**) ?? TODO Write a description of the simplified system
+# (**) Article on the simplified system
 
 
 from __future__ import division
@@ -19,7 +19,7 @@ from math import floor
 
 
 file_pathways_anatomy_markram = 'pathways_anatomy_factsheets_simplified.json'
-default_json_output_file = 'pathways_anatomy_vanni.json'
+default_json_output_file = 'pathways_anatomy_cxsystem.json'
 default_csv_output_file = 'generated_config_file_henri.csv'
 
 # Mapping from Markram cell groups to own/Vanni cell groups, see (**)
@@ -420,7 +420,7 @@ def _compute_postsynaptic_PC_target_compartment(layer_pre, celltype_pre, layer_p
 
     return str(target_compartment)
 
-def create_csv_config_file(filename=default_csv_output_file, update_json=False):
+def create_csv_config_file(filename=default_csv_output_file, update_json=False):  # OBSOLETE (3 Dec 2016)
 
     if update_json == True:
         create_simplified_json()
@@ -498,5 +498,3 @@ def create_csv_config_file(filename=default_csv_output_file, update_json=False):
 
     fi.close()
 
-
-create_csv_config_file()

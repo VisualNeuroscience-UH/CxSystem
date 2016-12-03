@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 import os
 
-simo_data = pd.read_json(os.path.abspath('./pathways_anatomy_vannilized.json'),  orient='index')
-henri_data = pd.read_json(os.path.abspath('./pathways_anatomy_vanni.json'), orient='index')
+simo_data = pd.read_json(os.path.abspath('./pathways_anatomy_preprocessed.json'),  orient='index')
+henri_data = pd.read_json(os.path.abspath('./pathways_anatomy_cxsystem.json'), orient='index')
 with open('./Markram_config_file.csv', 'w') as config_file:
     config_file.write('row_type,sys_mode,grid_radius, min_distance, do_init_vms,output_path, save_brian_data_path , #load_brian_data_path, #load_positions_only\n')
     config_file.write('params,local,210*um, 1*um,1,/opt3/CxOutput/CxOutput.gz,/opt3/CxOutput/brian_data.gz, /opt3/CxOutput/brian_data_20161028_142108.gz, 0\n')

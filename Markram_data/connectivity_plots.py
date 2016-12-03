@@ -3,9 +3,9 @@ import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
 
-vanni_local_connectivity_json = 'pathways_anatomy_vanni.json'
+vanni_local_connectivity_json = 'pathways_anatomy_cxsystem.json'
 markram_physiology_json = 'pathways_physiology_factsheets_simplified.json'
-preprocessed_markram_anatomy_json = 'pathways_anatomy_vannilized.json'
+preprocessed_markram_anatomy_json = 'pathways_anatomy_preprocessed.json'
 plot_directory = 'plots/'
 
 mycmap = 'jet'
