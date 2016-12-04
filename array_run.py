@@ -271,8 +271,8 @@ class array_run(object):
                 if title not in self.physio_titles:
                     self.physio_titles.append(title)
             if title in self.metadata_dict.keys():
-                # if value not in self.metadata_dict[title]:
-                self.metadata_dict[title].append(value)
+                if value not in self.metadata_dict[title]:
+                    self.metadata_dict[title].append(value)
             else:
                 self.metadata_dict[title] = [value]
         return title,value, message
