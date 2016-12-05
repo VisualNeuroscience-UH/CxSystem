@@ -150,7 +150,7 @@ class CxSystem(object):
         check_array_run_anatomy = self.anat_and_sys_conf_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)
         check_array_run_physiology = self.physio_config_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)
         if any(check_array_run_anatomy) or any(check_array_run_physiology):
-            array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df)
+            array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df,self.StartTime_str)
             self.array_run = 1
             return
         try:
