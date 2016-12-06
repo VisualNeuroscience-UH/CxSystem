@@ -47,7 +47,7 @@ class CxSystem(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self, anatomy_and_system_config,physiology_config, output_file_suffix = ''):
+    def __init__(self, anatomy_and_system_config,physiology_config, output_file_suffix = '',instanciated_from_array_run = 0):
         '''
         Initialize the cortical system by parsing the configuration file.
 
@@ -149,7 +149,7 @@ class CxSystem(object):
         self.array_run = 0
         check_array_run_anatomy = self.anat_and_sys_conf_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)
         check_array_run_physiology = self.physio_config_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)
-        if any(check_array_run_anatomy) or any(check_array_run_physiology):
+        if any(check_array_run_anatomy) or any(check_array_run_physiology) or (where(self.anat_and_sys_conf_df.values == 'trials_per_config')[0].size and not instanciated_from_array_run):
             array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df,self.StartTime_str)
             self.array_run = 1
             return
