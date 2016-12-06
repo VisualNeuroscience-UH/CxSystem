@@ -13,7 +13,8 @@ import itertools
 
 class array_run(object):
 
-    def __init__(self,anatomy_df,physiology_df):
+    def __init__(self,anatomy_df,physiology_df,metadata_file_suffx):
+        self.metadata_filename = 'metadata_' + metadata_file_suffx + '.gz'
         self.array_run_metadata = pd.DataFrame
         self.anatomy_df = anatomy_df
         self.physiology_df =physiology_df
@@ -109,7 +110,7 @@ class array_run(object):
         self.spawner()
 
     def arr_run(self,idx, working,paths):
-
+        orig_idx = idx
         working.value += 1
         np.random.seed(idx)
         tr = idx % self.trials_per_config
@@ -125,7 +126,7 @@ class array_run(object):
         print "################### Trial %d/%d started running for simulation number %d: %s ##########################" % (tr+1,self.trials_per_config,idx,self.final_messages[idx][1:])
         cm = CX.CxSystem(self.df_anat_final_array[idx], self.df_phys_final_array[idx], output_file_suffix = self.final_messages[idx])
         cm.run()
-        paths[idx] = cm.save_output_data.data['Full path']
+        paths[orig_idx] = cm.save_output_data.data['Full path']
 
 
         working.value -= 1
@@ -156,6 +157,7 @@ class array_run(object):
         working = manager.Value('i', 0)
         paths = manager.dict()
         number_of_runs = len(self.final_messages) * self.trials_per_config
+        self.final_metadata_df = self.final_metadata_df.loc[np.repeat(self.final_metadata_df.index.values, self.trials_per_config)].reset_index(drop=True)
         assert len(self.final_messages) < 1000 , 'The array run is trying to run more than 1000 simulations, this is not allowed unless you REALLY want it and if you REALLY want it you should konw what to do.'
         while len(jobs) < number_of_runs:
             time.sleep(1.5)
@@ -169,8 +171,8 @@ class array_run(object):
 
         for idx in range(len(paths)):
             self.final_metadata_df['Full path'][idx] = paths[idx]
-        self.data_saver(os.path.join(os.path.dirname(paths[0]),'final_metadata_df.gz'),self.final_metadata_df)
-        print "Array run metadata saved at: %s"%os.path.join(os.path.dirname(paths[0]),'final_metadata_df.gz')
+        self.data_saver(os.path.join(os.path.dirname(paths[0]),self.metadata_filename),self.final_metadata_df)
+        print "Array run metadata saved at: %s"%os.path.join(os.path.dirname(paths[0]),self.metadata_filename)
 
     def parameter_finder(self,df,keyword):
         location = where(df.values == keyword)
