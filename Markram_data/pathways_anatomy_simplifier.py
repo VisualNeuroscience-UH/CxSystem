@@ -586,5 +586,5 @@ def create_json_from_synapse_numbers(input_file = internal_synapse_numbers_markr
     print 'DONE!'
 
 
-#if __name__ == '__main__':
-#    create_json_from_synapse_numbers()
+if __name__ == '__main__':
+    create_json_from_synapse_numbers()
