@@ -22,6 +22,23 @@ class array_run(object):
             self.multidimension_array_run = int(self.parameter_finder(self.anatomy_df,'multidimension_array_run'))
         except TypeError:
             self.multidimension_array_run = 0
+        try:
+            self.number_of_process = int(self.parameter_finder(self.anatomy_df, 'number_of_process'))
+        except TypeError:
+            self.number_of_process = int(multiprocessing.cpu_count() * 3 / 4)
+            print "\nWarning: number_of_process is not defined in the configuration file, the default number of processes are 3/4*number of CPU cores: %d processes\n" % self.number_of_process
+        try:
+            self.do_benchmark = int(self.parameter_finder(self.anatomy_df,'do_benchmark'))
+        except TypeError:
+            self.do_benchmark = 0
+        try:
+            self.trials_per_config = int(self.parameter_finder(self.anatomy_df,'trials_per_config'))
+        except TypeError:
+            self.trials_per_config = 1
+        try:
+            self.device = self.parameter_finder(self.anatomy_df, 'device')
+        except TypeError:
+            self.device = 'Python'
         anatomy_array_search_result = anatomy_df[anatomy_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)]
         physio_array_search_result = physiology_df[physiology_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)]
         arrays_idx_anatomy = where(anatomy_array_search_result.isnull().values != True)
@@ -31,6 +48,7 @@ class array_run(object):
         self.df_anat_final_array = []
         self.df_phys_final_array = []
         self.final_messages = []
+
         self.sum_of_array_runs = len(arrays_idx_anatomy) + len(arrays_idx_physio)
         if self.sum_of_array_runs > 1 and not self.multidimension_array_run:
             anatomy_default = self.df_default_finder(anatomy_df)
@@ -88,6 +106,17 @@ class array_run(object):
                 self.final_messages.extend(physio_messages)
 
         self.all_titles = self.anat_titles + self.physio_titles
+
+        if not self.df_anat_final_array and not self.df_phys_final_array:
+            print "Info: no array_run variable found, the default configurations are going to be simulated %d times"%self.trials_per_config
+            # trial_per_conf_idx = where(anatomy_default.values == 'trials_per_config')
+            # anatomy_default[int(trial_per_conf_idx[1])][int(trial_per_conf_idx[0])] = ''
+            self.df_anat_final_array = [anatomy_default] * self.trials_per_config
+            self.df_phys_final_array = [physio_default] * self.trials_per_config
+            self.final_messages = ['_default_config']
+            self.metadata_dict['default_config'] = ['default_config']
+            self.all_titles = ['default_config']
+
         if self.multidimension_array_run :
             self.tmp_df  = pd.DataFrame(list(itertools.product(*self.metadata_dict.values())), columns=self.metadata_dict.keys())
             self.tmp_df = self.tmp_df[self.all_titles]
@@ -96,7 +125,7 @@ class array_run(object):
             for col_idx,col_title in enumerate(self.all_titles):
                 self.final_metadata_df['Dimension-%d Parameter'%(col_idx+1)] = col_title
                 self.final_metadata_df['Dimension-%d Value' % (col_idx + 1)] = self.tmp_df[col_title]
-        else :
+        else:
             index_len = len([item for sublist in self.metadata_dict.values() for item in sublist])
             self.final_metadata_df= self.final_metadata_df.reindex(range(index_len))
             counter = 0
@@ -105,6 +134,8 @@ class array_run(object):
                     self.final_metadata_df['Dimension-1 Parameter'][counter] = parameter
                     self.final_metadata_df['Dimension-1 Value'][counter] = val
                     counter+=1
+
+
 
         print "Info: array of Dataframes for anatomical and physiological configuration are ready"
         self.spawner()
@@ -116,7 +147,7 @@ class array_run(object):
         tr = idx % self.trials_per_config
         idx = idx/self.trials_per_config
         device = self.parameter_finder(self.df_anat_final_array[idx], 'device')
-        if self.number_of_process ==1 and self.do_benchmark == 1 and device == 'Python':
+        if self.number_of_process == 1 and self.do_benchmark == 1 and device == 'Python':
             # this should be used to clear the cache of weave for benchmarking. otherwise weave will mess it up
             if sys.platform == 'win32':
                 shutil.rmtree(os.path.join(os.environ['USERPROFILE'],'AppData','Local','Temp',os.environ['USERNAME'],'python27_compiled'))
@@ -124,32 +155,12 @@ class array_run(object):
                 shutil.rmtree(os.path.join(os.environ['HOME'],'.cache/scipy'))
             print "Info: scipy cache deleted to prevent benchmarking issues."
         print "################### Trial %d/%d started running for simulation number %d: %s ##########################" % (tr+1,self.trials_per_config,idx,self.final_messages[idx][1:])
-        cm = CX.CxSystem(self.df_anat_final_array[idx], self.df_phys_final_array[idx], output_file_suffix = self.final_messages[idx])
+        cm = CX.CxSystem(self.df_anat_final_array[idx], self.df_phys_final_array[idx], output_file_suffix = self.final_messages[idx],instanciated_from_array_run=1)
         cm.run()
         paths[orig_idx] = cm.save_output_data.data['Full path']
-
-
         working.value -= 1
 
     def spawner(self):
-        try:
-            self.number_of_process = int(self.parameter_finder(self.anatomy_df, 'number_of_process'))
-        except TypeError:
-            self.number_of_process = int(multiprocessing.cpu_count() * 3 / 4)
-            print "\nWarning: number_of_process is not defined in the configuration file, the default number of processes are 3/4*number of CPU cores: %d processes\n" % self.number_of_process
-        try:
-            self.do_benchmark = int(self.parameter_finder(self.anatomy_df,'do_benchmark'))
-        except TypeError:
-            self.do_benchmark = 0
-        try:
-            self.trials_per_config = int(self.parameter_finder(self.anatomy_df,'trials_per_config'))
-        except TypeError:
-            self.trials_per_config = 1
-        try:
-            self.device = self.parameter_finder(self.anatomy_df, 'device')
-        except TypeError:
-            self.device = 'Python'
-
         print "following configurations are going to be simulated with %d processes using %s device (printed only in letters and numbers): " \
               "\n %s"%(self.number_of_process,self.device,str(self.final_messages).replace('_',''))
         manager = multiprocessing.Manager()
