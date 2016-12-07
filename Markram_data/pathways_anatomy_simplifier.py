@@ -22,6 +22,9 @@ file_pathways_anatomy_markram = 'pathways_anatomy_factsheets_simplified.json'
 default_json_output_file = 'pathways_anatomy_cxsystem.json'
 default_csv_output_file = 'generated_config_file_henri.csv'
 
+internal_synapse_numbers_markram = 'internal_synapse_numbers.csv'
+internal_connectivity_output_file = 'pathways_single_microcircuit.json'
+
 # Mapping from Markram cell groups to own/Vanni cell groups, see (**)
 # Certain less meaningful inhibitory neuron-types in (*) are mapped to the UM_I group (unassigned Markram, inhibitory).
 # UM_I cells are later divided layer-by-layer between BC and MC groups, respecting their relative amounts.
@@ -38,6 +41,14 @@ cell_group_dict = {
     'L6_LBC': 'L6_BC', 'L6_MC': 'L6_MC', 'L6_NBC': 'L6_BC', 'L6_NGC': 'L6_UM_I', 'L6_SBC': 'L6_BC',
     'L6_TPC_L1': 'L6_PC2', 'L6_TPC_L4': 'L6_PC1', 'L6_UTPC': 'L6_PC1',
     }
+
+cell_group_order = [
+    'L1_DAC', 'L1_DLAC', 'L1_HAC', 'L1_NGC-DA', 'L1_NGC-SA', 'L1_SLAC', 'L23_BP', 'L23_BTC',
+    'L23_ChC', 'L23_DBC', 'L23_LBC', 'L23_MC', 'L23_NBC', 'L23_NGC', 'L23_PC', 'L23_SBC', 'L4_BP',
+    'L4_BTC', 'L4_ChC', 'L4_DBC', 'L4_LBC', 'L4_MC', 'L4_NBC', 'L4_NGC', 'L4_PC', 'L4_SBC', 'L4_SP',
+    'L4_SS', 'L5_BP', 'L5_BTC', 'L5_ChC', 'L5_DBC', 'L5_LBC', 'L5_MC', 'L5_NBC', 'L5_NGC', 'L5_SBC',
+    'L5_STPC', 'L5_TTPC1', 'L5_TTPC2', 'L5_UTPC', 'L6_BP', 'L6_BPC', 'L6_BTC', 'L6_ChC', 'L6_DBC',
+    'L6_IPC', 'L6_LBC', 'L6_MC', 'L6_NBC', 'L6_NGC', 'L6_SBC', 'L6_TPC_L1', 'L6_TPC_L4', 'L6_UTPC']
 
 # Inhibitory Vanni cell groups are defined here,
 # ie. anything with a suffix from the list here is considered inhibitory
@@ -57,6 +68,8 @@ cell_N_dict = {
     'L6_SBC': 67, 'L6_NGC': 17, 'L6_LBC': 463, 'L6_BTC': 54, 'L6_NBC': 198, 'L6_BPC': 3174, 'L6_IPC': 3476,
     'L6_TPC_L1': 1637, 'L6_DBC': 31, 'L6_TPC_L4': 1440, 'L6_UTPC': 1735, 'L6_BP': 7
     }
+
+
 
 # Default values for function create_csv_config_file
 # TODO - These should be modifiable in config file
@@ -305,7 +318,7 @@ def _compute_simplified_connections(preprocessed_data, with_UM_I = False):
 
     return result
 
-def create_simplified_json(filename=default_json_output_file):
+def create_simplified_json(filename=default_json_output_file, input_data=False):
     '''Create/update Vanni connectivity json file (similar to pathways_anatomy_simplified.json)
 
     Parameters
@@ -316,7 +329,10 @@ def create_simplified_json(filename=default_json_output_file):
     -------
     None
     '''
-    data = pd.read_json(file_pathways_anatomy_markram, orient='index')
+    if input_data is False:
+        data = pd.read_json(file_pathways_anatomy_markram, orient='index')
+    else:
+        data = input_data
     preprocessed_data = _preprocess_pathways_anatomy(data)
     simplified_data = _compute_simplified_connections(preprocessed_data)
 
@@ -329,7 +345,7 @@ def create_simplified_json(filename=default_json_output_file):
     json.dump(data_as_dict, fi, indent=3)
     fi.close()
 
-def read_simplified_json():
+def read_simplified_json(filename=default_json_output_file):
     '''Read simplified connectivity data from default output json file
 
     Returns
@@ -337,7 +353,7 @@ def read_simplified_json():
     pandas DataFrame
     '''
 
-    data = pd.read_json(default_json_output_file, orient='index')
+    data = pd.read_json(filename, orient='index')
     sort_order = ['layer_pre', 'is_inhibitory_pre', 'celltype_pre', 'layer_post', 'is_inhibitory_post', 'celltype_post']
     data = data.sort_values(by=sort_order)
 
@@ -498,3 +514,77 @@ def create_csv_config_file(filename=default_csv_output_file, update_json=False):
 
     fi.close()
 
+def create_json_from_synapse_numbers(input_file = internal_synapse_numbers_markram, output_file = internal_connectivity_output_file):
+
+
+    ### Part I: Create dataframe with total_synapse_count & mean_number_of_synapse_per_connection
+    syn_numbers_data = pd.read_csv(input_file, index_col=0, usecols=range(56))
+    syn_numbers_dict = dict()
+
+    mean_syns_per_conn_dict = dict()
+
+    markram_data = pd.read_json(file_pathways_anatomy_markram, orient='index')
+
+    print 'Taking an intersection of original pathways_anatomy and Reimann data...'
+
+    n_dropped_connections = 0
+    for row in syn_numbers_data.iterrows():
+        presynaptic_type = row[0]
+        postsynaptic_groups = row[1]
+
+        for post_group in postsynaptic_groups.iteritems():
+            connection_key = presynaptic_type + ':' + post_group[0]
+
+            syn_numbers_dict[connection_key] = post_group[1]
+            try:
+                mean_syns_per_conn_dict[connection_key] = \
+                    markram_data.ix[connection_key].mean_number_of_synapse_per_connection
+            except:
+                # We will drop all connections for which no data is provided in "original" JSON file
+                # print 'No data in old Markram json for ' + connection_key
+                mean_syns_per_conn_dict[connection_key] = 0
+                n_dropped_connections += 1
+
+
+    new_markram_data = pd.DataFrame.from_dict(syn_numbers_dict, orient='index')
+    new_markram_data.columns = ['total_synapse_count']
+
+    mean_syns_df = pd.DataFrame.from_dict(mean_syns_per_conn_dict, orient='index')
+    mean_syns_df.columns = ['mean_number_of_synapse_per_connection']
+
+    new_markram_data = new_markram_data.join(mean_syns_df)  # -> DF with 3025 rows x 2 columns
+    new_markram_data = new_markram_data[
+        (new_markram_data.total_synapse_count != 0) & (new_markram_data.mean_number_of_synapse_per_connection != 0)]
+        # -> DF with 1932 rows (1093 dropped)
+        # total_synapse_count.sum() = 35 346 785 (vs 36 401 589 in Reimann's data => 1 054 804 dropped out)
+
+    print 'Total synapse count is ' + str(new_markram_data.total_synapse_count.sum())
+    print 'Total connections dropped is ' + str(n_dropped_connections)
+
+
+    ### Part II: Calculate connection probabilities
+    conn_prob_dict = dict()
+
+    print 'Calculating connection probabilities...'
+    for row in new_markram_data.iterrows():
+        connection_key = row[0]
+        pre_group, post_group = connection_key.split(':')
+        N_total_connectivity = cell_N_dict[pre_group] * cell_N_dict[post_group]
+        syn_count = row[1][0]
+        mean_syns_per_conn = row[1][1]
+
+        connection_probability = syn_count / mean_syns_per_conn / N_total_connectivity
+        conn_prob_dict[connection_key] = connection_probability
+
+    conn_prob_df = pd.DataFrame.from_dict(conn_prob_dict, orient='index')
+    conn_prob_df.columns = ['connection_probability']
+    new_markram_data = new_markram_data.join(conn_prob_df)
+
+    print 'Feeding new data to create_simplified_json()'
+    create_simplified_json(filename = output_file, input_data = new_markram_data)
+
+    print 'DONE!'
+
+
+if __name__ == '__main__':
+    create_json_from_synapse_numbers()
