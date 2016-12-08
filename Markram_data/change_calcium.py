@@ -19,7 +19,7 @@ class ChangeCalcium:
     This class has one method for changing the synapse strength:
     GetSynapseStrength  (original_synapse_strength (scalar without units), own_connection (string),Ca=2.0)
 
-    Depends on pandas_playground/pathways_anatomy_vannilized.json
+    Depends on pandas_playground/pathways_anatomy_preprocessed.json
 
     Author Simo Vanni 7/2016
     """
@@ -41,7 +41,7 @@ class ChangeCalcium:
             'steep_post' : _excitatory_markram_groups + _steep_post_inhibitory_groups,
             'shallow_post' : _shallow_post_inhibitory_groups }
 
-        file_pathways_anatomy_vannilized = 'pandas_playground/pathways_anatomy_vannilized.json'  # OUTPUT FILE
+        file_pathways_anatomy_vannilized = 'pandas_playground/pathways_anatomy_preprocessed.json'  # OUTPUT FILE
 
         self._data = pd.read_json(file_pathways_anatomy_vannilized, orient='index')
 

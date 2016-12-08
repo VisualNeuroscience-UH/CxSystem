@@ -187,7 +187,7 @@ class array_run(object):
 
     def parameter_finder(self,df,keyword):
         location = where(df.values == keyword)
-        if location:
+        if location[0].size:
             counter = int(location[0])+1
             while counter < df.shape[0] :
                 if '#' not in str(df.ix[counter][int(location[1])]):
@@ -196,6 +196,8 @@ class array_run(object):
                 else:
                     counter+=1
             return value
+        else:
+            raise NameError('Variable %s not found in the configuration file.'%keyword)
 
     def df_builder_for_array_run(self, original_df, index_of_array_variable,df_type,message='',recursion_counter = 1 ):
         array_of_dfs = []
