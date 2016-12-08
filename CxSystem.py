@@ -143,6 +143,14 @@ class CxSystem(object):
             self.anat_and_sys_conf_df[0].str.contains('#') == True].index.tolist()]).reset_index(drop=True)
         self.physio_config_df = self.physio_config_df.drop(self.physio_config_df['Variable'].index[self.physio_config_df['Variable'][
             self.physio_config_df['Variable'].str.contains('#') == True].index.tolist()]).reset_index(drop=True)
+        # merging the params lines into one row:
+        params_indices = where(self.anat_and_sys_conf_df.values == 'params')
+        if params_indices[0].size > 1 :
+            for row_idx in params_indices[0][1:]:
+                self.anat_and_sys_conf_df.iloc[params_indices[0][0]-1] = self.anat_and_sys_conf_df.iloc[params_indices[0][0]-1].dropna().append(self.anat_and_sys_conf_df.iloc[row_idx-1][1:]).dropna().reset_index(drop=True)
+                self.anat_and_sys_conf_df.iloc[params_indices[0][0]] = self.anat_and_sys_conf_df.iloc[params_indices[0][0]].dropna().append(self.anat_and_sys_conf_df.iloc[row_idx][1:]).dropna().reset_index(drop=True)
+            self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.drop(params_indices[0][1:]).reset_index(drop=True)
+            self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.drop(params_indices[0][1:]-1).reset_index(drop=True)
 
         self.conf_df_to_save = self.anat_and_sys_conf_df
         self.physio_df_to_save =  self.physio_config_df
