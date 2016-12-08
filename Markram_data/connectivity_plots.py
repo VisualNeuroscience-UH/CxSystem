@@ -3,9 +3,9 @@ import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
 
-vanni_local_connectivity_json = 'pathways_anatomy_vanni.json'
+vanni_local_connectivity_json = 'pathways_anatomy_cxsystem.json'
 markram_physiology_json = 'pathways_physiology_factsheets_simplified.json'
-preprocessed_markram_anatomy_json = 'pathways_anatomy_vannilized.json'
+preprocessed_markram_anatomy_json = 'pathways_anatomy_preprocessed.json'
 plot_directory = 'plots/'
 
 mycmap = 'jet'
@@ -30,7 +30,8 @@ def plot_local_connectivity(vanni_json = vanni_local_connectivity_json):
                                                           index='neurongroup_pre', columns='neurongroup_post',
                                                           aggfunc=sum)*100
 
-    plot_these = ['vanni_mean_synapses', 'vanni_conn_probability']
+    #plot_these = ['vanni_mean_synapses', 'vanni_conn_probability']
+    plot_these = ['vanni_conn_probability']
 
     # Plot it
     plt.close() # In case something is open
@@ -51,7 +52,8 @@ def plot_local_connectivity(vanni_json = vanni_local_connectivity_json):
         cbar = plotobj[p].collections[0].colorbar
         cbar.set_label('Connection probability')
         plt.tight_layout()
-        plt.savefig(plot_directory + p + '.eps', dpi=600)
+        #plt.savefig(plot_directory + p + '.eps', dpi=600)
+        plt.show()
         plt.close()
 
 def plot_markram_connectivity(markram_json = preprocessed_markram_anatomy_json):
@@ -115,6 +117,5 @@ def plot_mean_epsp(markram_json = markram_physiology_json):
     plt.savefig(plot_directory + 'markram_epsp_mean' + '.png', dpi=100)
     plt.close()
 
-plot_local_connectivity()
-plot_markram_connectivity()
-#plot_mean_epsp()
+
+plot_local_connectivity('pathways_single_microcircuit.json')

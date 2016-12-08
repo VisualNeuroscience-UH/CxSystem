@@ -143,13 +143,25 @@ class CxSystem(object):
             self.anat_and_sys_conf_df[0].str.contains('#') == True].index.tolist()]).reset_index(drop=True)
         self.physio_config_df = self.physio_config_df.drop(self.physio_config_df['Variable'].index[self.physio_config_df['Variable'][
             self.physio_config_df['Variable'].str.contains('#') == True].index.tolist()]).reset_index(drop=True)
+        # merging the params lines into one row:
+        params_indices = where(self.anat_and_sys_conf_df.values == 'params')
+        if params_indices[0].size > 1 :
+            for row_idx in params_indices[0][1:]:
+                self.anat_and_sys_conf_df.iloc[params_indices[0][0]-1] = self.anat_and_sys_conf_df.iloc[params_indices[0][0]-1].dropna().append(self.anat_and_sys_conf_df.iloc[row_idx-1][1:]).dropna().reset_index(drop=True)
+                self.anat_and_sys_conf_df.iloc[params_indices[0][0]] = self.anat_and_sys_conf_df.iloc[params_indices[0][0]].dropna().append(self.anat_and_sys_conf_df.iloc[row_idx][1:]).dropna().reset_index(drop=True)
+            self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.drop(params_indices[0][1:]).reset_index(drop=True)
+            self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.drop(params_indices[0][1:]-1).reset_index(drop=True)
 
         self.conf_df_to_save = self.anat_and_sys_conf_df
         self.physio_df_to_save =  self.physio_config_df
         self.array_run = 0
         check_array_run_anatomy = self.anat_and_sys_conf_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)
         check_array_run_physiology = self.physio_config_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)
-        if any(check_array_run_anatomy) or any(check_array_run_physiology) or (where(self.anat_and_sys_conf_df.values == 'trials_per_config')[0].size and not instanciated_from_array_run):
+        try:
+            trials_per_config = int(self.parameter_finder(self.anat_and_sys_conf_df,'trials_per_config'))
+        except NameError:
+            trials_per_config = 0
+        if any(check_array_run_anatomy) or any(check_array_run_physiology) or (trials_per_config > 1 and not instanciated_from_array_run):
             array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df,self.StartTime_str)
             self.array_run = 1
             return
@@ -189,6 +201,20 @@ class CxSystem(object):
                                 self.current_values_list = self.anat_and_sys_conf_df.ix[self.value_line_idx,self.current_parameters_list.index].dropna()
                                 self.parameter_to_method_mapping[self.anat_and_sys_conf_df.ix[self.value_line_idx, 0]][1]()
                     break
+
+    def parameter_finder(self,df,keyword):
+        location = where(df.values == keyword)
+        if location[0].size:
+            counter = int(location[0])+1
+            while counter < df.shape[0] :
+                if '#' not in str(df.ix[counter][int(location[1])]):
+                    value = df.ix[counter][int(location[1])]
+                    break
+                else:
+                    counter+=1
+            return value
+        else:
+            raise NameError('Variable %s not found in the configuration file.'%keyword)
 
     def set_default_clock(self,*args):
         defaultclock.dt = eval(args[0])
