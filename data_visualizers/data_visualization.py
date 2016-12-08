@@ -7,7 +7,7 @@ from brian2 import *
 import bz2
 import pandas as pd
 
-time_for_visualization = np.array([0, 0.36]) + 10 + 0.000001  # To accept 0 as starting point. Rounding error for the
+time_for_visualization = np.array([0, 11.900]) + 0.000001  # To accept 0 as starting point. Rounding error for the
 # end.
 # dt = 0.1 * ms
 plot_dt = 0.1 * ms
@@ -124,10 +124,17 @@ class DataVisualization:
                         time_vector = np.arange(time_for_visualization[0], time_for_visualization[1],
                                                 plot_dt / (1 * second))
                         plt.plot(time_vector, subsampled_data_epoch_for_plot.T, '-')
-                        plt.title('%s %s' % (stvar_of_interest.keys()[syn_idx],state_variable_to_monitor[
-                                                                                :state_variable_to_monitor.index('_')]))
+                        title_text = '%s %s' % (stvar_of_interest.keys()[syn_idx],state_variable_to_monitor[
+                                                                                :state_variable_to_monitor.index('_')])
+                        if len(title_text) > 26:
+                            title_font = {'fontname': 'Arial', 'size': '8', 'color': 'black', 'weight': 'normal',
+                                          'verticalalignment': 'bottom'}  # Bottom vertical alignment for more space
+
+                        plt.title(title_text,**title_font)
                 else:
                     pass
+
+                plt.subplots_adjust(hspace=0.3)
 
         plt.show()
 
