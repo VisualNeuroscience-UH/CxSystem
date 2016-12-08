@@ -388,7 +388,7 @@ class synapse_reference(object):
         * _name_space: An instance of brian2_obj_namespaces() object which contains all the constant parameters for this synaptic equation.
 
         '''
-        synapse_reference.syntypes = array(['STDP', 'Fixed'])
+        synapse_reference.syntypes = array(['STDP', 'STDP_with_scaling', 'Fixed'])
         assert syn_type in synapse_reference.syntypes, "Cell type '%s' is not defined" % syn_type
         self.output_synapse = {}
         self.output_synapse['type'] = syn_type
@@ -413,10 +413,45 @@ class synapse_reference(object):
         The method for implementing the STDP synaptic connection.
 
         '''
+
         self.output_synapse['equation'] = Equations('''
             wght : siemens
             wght0 : siemens
-            tau_synaptic_scaling = 100 : second
+            dapre/dt = -apre/taupre : siemens (event-driven)
+            dapost/dt = -apost/taupost : siemens (event-driven)
+            ''')
+
+        if self.output_synapse['namespace']['Apre'] >= 0:
+            self.output_synapse['pre_eq'] = '''
+                        %s+=wght
+                        apre += Apre * wght0 * Cp
+                        wght = clip(wght + apost, 0, wght_max)
+                        ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
+        else:
+            self.output_synapse['pre_eq'] = '''
+                        %s+=wght
+                        apre += Apre * wght * Cd
+                        wght = clip(wght + apost, 0, wght_max)
+                        ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
+        if self.output_synapse['namespace']['Apost'] <= 0:
+            self.output_synapse['post_eq'] = '''
+                        apost += Apost * wght * Cd
+                        wght = clip(wght + apre, 0, wght_max)
+                        '''
+        else:
+            self.output_synapse['post_eq'] = '''
+                        apost += Apost * wght0 * Cp
+                        wght = clip(wght + apre, 0, wght_max)
+                        '''
+    def STDP_with_scaling(self):
+        '''
+        The method for implementing the STDP synaptic connection.
+
+        '''
+
+        self.output_synapse['equation'] = Equations('''
+            wght : siemens
+            wght0 : siemens
             dapre/dt = -apre/taupre : siemens (event-driven)
             dapost/dt = -apost/taupost : siemens (event-driven)
             dspike_sensor/dt = -spike_sensor/tau_synaptic_scaling : 1 (event-driven)

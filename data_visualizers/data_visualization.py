@@ -12,8 +12,8 @@ time_for_visualization = np.array([0, 0.9]) + 0.000001  # To accept 0 as startin
 # dt = 0.1 * ms
 plot_dt = 0.1 * ms
 # state_variable_to_monitor = 'vm_all'
-# state_variable_to_monitor = 'wght_all'
-state_variable_to_monitor = 'synaptic_sensor_all'
+state_variable_to_monitor = 'wght_all'
+# state_variable_to_monitor = 'spike_sensor_all'
 # state_variable_to_monitor = 'apre_all'
 # state_variable_to_monitor = 'apost_all'
 
