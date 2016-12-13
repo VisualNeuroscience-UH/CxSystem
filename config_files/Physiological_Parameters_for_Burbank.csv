@@ -20,7 +20,7 @@ _weights,w_TC_E-E_connections,( 0.7 * EE_weights_gain) * nS,"#Cruikshank et al 2
 ,w_All_I-I_connections,0.83 * nS,
 Cp,,0.001,"# 0.001 Synaptic potentiation coefficient according to van Rossum J Neurosci 2000, here relative to initial value"
 Cd,,0.003,# 0.003 Synaptic depression coefficient according to van Rossum J Neurosci 2000
-tau_synaptic_scaling,,0.1*second,
+tau_synaptic_scaling,,100*second,
 conn_prob_gain,,1,# This is used for compensation of small number of neurons and thus incoming synapses
 cw,cw_in_SS,_weights['w_TC_E-E_connections'],
 ,cw_in_PC,_weights['w_TC_E-E_connections'],

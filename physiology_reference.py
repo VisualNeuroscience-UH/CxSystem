@@ -450,11 +450,13 @@ class synapse_reference(object):
         '''
 
         self.output_synapse['equation'] = Equations('''
-            wght : siemens
+            scaling_speed = 0.1 : 1
+            ap_target_frequency = 8 : hertz
+            dwght/dt = scaling_speed * wght * (ap_target_frequency - spike_sensor)  : siemens (event-driven)
             wght0 : siemens
             dapre/dt = -apre/taupre : siemens (event-driven)
             dapost/dt = -apost/taupost : siemens (event-driven)
-            dspike_sensor/dt = -spike_sensor/tau_synaptic_scaling : 1 (event-driven)
+            dspike_sensor/dt = -spike_sensor/tau_synaptic_scaling : hertz (event-driven)
             ''')
 
         if self.output_synapse['namespace']['Apre'] >= 0:
@@ -473,13 +475,13 @@ class synapse_reference(object):
             self.output_synapse['post_eq'] = '''
                         apost += Apost * wght * Cd
                         wght = clip(wght + apre, 0, wght_max)
-                        spike_sensor += 1
+                        spike_sensor += 1 * hertz
                         '''
         else:
             self.output_synapse['post_eq'] = '''
                         apost += Apost * wght0 * Cp
                         wght = clip(wght + apre, 0, wght_max)
-                        spike_sensor += 1
+                        spike_sensor += 1 * hertz
                         '''
 
     def Fixed(self):

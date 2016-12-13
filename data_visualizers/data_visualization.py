@@ -1,3 +1,4 @@
+from __future__ import division
 import numpy as np
 import matplotlib.pyplot as plt
 import cPickle as pickle
@@ -11,8 +12,8 @@ time_for_visualization = np.array([0, 0.9]) + 0.000001  # To accept 0 as startin
 # end.
 # dt = 0.1 * ms
 plot_dt = 0.1 * ms
-# state_variable_to_monitor = 'vm_all'
-state_variable_to_monitor = 'wght_all'
+state_variable_to_monitor = 'vm_all'
+# state_variable_to_monitor = 'wght_all'
 # state_variable_to_monitor = 'spike_sensor_all'
 # state_variable_to_monitor = 'apre_all'
 # state_variable_to_monitor = 'apost_all'
@@ -23,6 +24,10 @@ directory = '/opt/Laskenta/Output/CX_Output'
 
 
 class DataVisualization:
+
+    def __init__(self):
+        self.neuron_groups = ['NG0_relay_video', 'NG1_PC_L4toL2', 'NG3_BC_L4', 'NG2_PC_L2toL1', 'NG4_BC_L2']
+
 
     def data_loader(self, input_path):
         if '.gz' in input_path:
@@ -37,11 +42,45 @@ class DataVisualization:
                 loaded_data = pickle.load(fb)
         return loaded_data
 
+    def overview_figure(self, simulation_data):
+        spikes_all = simulation_data['spikes_all']
+        total_time = simulation_data['time_vector'][-1]
+
+        fig = plt.figure()
+        figure_title = 'Firing rates for neuron groups'
+        fig.suptitle(figure_title, fontsize=12)
+        n_rows = len(spikes_all)
+        n_columns = 2  # The two plots side-by-side
+        title_font = {'fontname': 'Arial', 'size': '12', 'color': 'black', 'weight': 'normal',
+                      'verticalalignment': 'bottom'}  # Bottom vertical alignment for more space
+
+        for subplot_index, neuron_group in enumerate(self.neuron_groups):
+            number_of_neurons = simulation_data['number_of_neurons'][neuron_group]
+
+            spike_indices = spikes_all[neuron_group][0]
+            spike_counts, bin_edges = np.histogram(spike_indices, bins=np.arange(number_of_neurons+1))
+            frequencies = spike_counts / total_time
+
+            # the histogram of the data
+            plt.subplot(n_rows, n_columns, subplot_index * n_columns + 1)
+            plt.bar(np.arange(number_of_neurons), frequencies)
+            plt.title('%s spike frequencies' % neuron_group, **title_font)
+            if subplot_index == n_rows - 1:
+                plt.ylabel('Firing rate (Hz)')
+                plt.xlabel('Neuron index')
+            plt.subplot(n_rows, n_columns, subplot_index * n_columns + 2)
+            plt.hist(frequencies, facecolor='green', alpha=0.75)
+            if subplot_index == n_rows - 1:
+                plt.ylabel('Number of neurons')
+                plt.xlabel('Firing rate (Hz)')
+            #plt.show()
+        plt.subplots_adjust(hspace = 0.4)
+
     def make_figure(self):
         extensions = ['.gz', '.bz2', '.pickle']
         most_recent_data_file_name = max([os.path.join(directory, files) for files in os.listdir(directory)
                                           if files.endswith(tuple(extensions))], key=os.path.getmtime)
-        neuron_groups = ['NG0_relay_video', 'NG1_PC_L4toL2', 'NG3_BC_L4', 'NG2_PC_L2toL1', 'NG4_BC_L2']
+        neuron_groups = self.neuron_groups
 
         metadata = self.data_loader(most_recent_data_file_name)
 
@@ -63,6 +102,9 @@ class DataVisualization:
             spikes_all = simulation_data['spikes_all']
             stvar_of_interest = simulation_data[state_variable_to_monitor]
             dt = simulation_data['time_vector'][1] - simulation_data['time_vector'][0]
+
+            self.overview_figure(simulation_data)
+
 
             fig = plt.figure()
 
