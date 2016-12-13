@@ -42,13 +42,13 @@ class DataVisualization:
                 loaded_data = pickle.load(fb)
         return loaded_data
 
-    def overview_figure(self, simulation_data):
+    def firing_rate_histograms(self, simulation_data, figure_title):
         spikes_all = simulation_data['spikes_all']
         total_time = simulation_data['time_vector'][-1]
 
         fig = plt.figure()
-        figure_title = 'Firing rates for neuron groups'
-        fig.suptitle(figure_title, fontsize=12)
+        figure_title_overview = 'Firing rates for neuron groups; %s' % figure_title
+        fig.suptitle(figure_title_overview, fontsize=12)
         n_rows = len(spikes_all)
         n_columns = 2  # The two plots side-by-side
         title_font = {'fontname': 'Arial', 'size': '12', 'color': 'black', 'weight': 'normal',
@@ -103,16 +103,15 @@ class DataVisualization:
             stvar_of_interest = simulation_data[state_variable_to_monitor]
             dt = simulation_data['time_vector'][1] - simulation_data['time_vector'][0]
 
-            self.overview_figure(simulation_data)
-
-
-            fig = plt.figure()
-
             if type(metadata) is not dict:
                 figure_title = '%s = %s' % (metadata.iloc[row_index]['Dimension-1 Parameter'],
                                             str(metadata.iloc[row_index]['Dimension-1 Value']))
             elif type(metadata) is dict:
                 figure_title = 'A nice figure'
+
+            self.firing_rate_histograms(simulation_data, figure_title)
+
+            fig = plt.figure()
 
             fig.suptitle(figure_title, fontsize=12)
 
