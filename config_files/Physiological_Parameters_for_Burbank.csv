@@ -22,7 +22,7 @@ Cp,,0.001,"# 0.001 Synaptic potentiation coefficient according to van Rossum J N
 Cd,,0.003,# 0.003 Synaptic depression coefficient according to van Rossum J Neurosci 2000
 tau_synaptic_scaling,,100*second,
 scaling_speed,,0.1,
-ap_target_frequency,,{1|25.1|4} * hertz,
+ap_target_frequency,,4 * hertz,
 conn_prob_gain,,1,# This is used for compensation of small number of neurons and thus incoming synapses
 cw,cw_in_SS,_weights['w_TC_E-E_connections'],
 ,cw_in_PC,_weights['w_TC_E-E_connections'],
@@ -114,10 +114,10 @@ stdp,stdp_in_SS_soma,"[20, -21.5, 5.4 * ms, 124.7 * ms]",# instead of inf 2^32 -
 ,stdp_PC_PC_a4," [-21, 42, 15 * ms, 103.4 * ms]","# [-21, 42, 15 * ms, 103.4 * ms]"
 ,stdp_PC_PC_a3," [-21, 42, 15 * ms, 103.4 * ms]","# [7.50, 7.00, 15.00 * ms, 103.4 * ms]"
 ,stdp_PC_PC_a2," [-21, 42, 15 * ms, 103.4 * ms]","# [36, -28, 12.5 * ms, 103.4 * ms]"
-,stdp_PC_PC_a1," [-76, 48, 15.9 * ms, 19.3 * ms]","# [76, -48, 15.9 * ms, 19.3 * ms]"
-,stdp_PC_PC_a0," [76, -48, 15.9 * ms, 19.3 * ms]","# [76, -48, 15.9 * ms, 19.3 * ms]"
+,stdp_PC_PC_a1," [-50, 50 ,20 * ms, 20 * ms]","# [76, -48, 15.9 * ms, 19.3 * ms]"
+,stdp_PC_PC_a0," [50, -50 ,20 * ms, 20 * ms]","# [76, -48, 15.9 * ms, 19.3 * ms]"
 ,stdp_PC_PC_soma," [76, -48, 15.9 * ms, 19.3 * ms]","# [76, -48, 15.9 * ms, 19.3 * ms]"
-,stdp_PC_PC_basal," [76, -48, 15.9 * ms, 19.3 * ms]","# [76, -48, 15.9 * ms, 19.3 * ms]"
+,stdp_PC_PC_basal," [50, -50 ,20 * ms, 20 * ms]","# [76, -48, 15.9 * ms, 19.3 * ms]"
 ,stdp_PC_BC_soma,"[-46,-56,39.9 * ms,39.1 * ms]",
 ,stdp_PC_MC_soma,"[240,-50, 7.1 * ms,39.1 * ms]",
 ,stdp_PC_L1i_soma,"[-46, -56, 39.9 * ms, 39.1 * ms]",
