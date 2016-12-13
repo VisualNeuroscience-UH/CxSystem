@@ -130,6 +130,10 @@ class synapse_parser(object):
             self.output_synapse['post_group_type'] + self.output_synapse['post_comp_name']))
         self.output_namespace['tau_synaptic_scaling'] = self.value_extractor(self.physio_config_df,
                                                                              'tau_synaptic_scaling')
+        self.output_namespace['ap_target_frequency'] = self.value_extractor(self.physio_config_df,
+                                                                             'ap_target_frequency')
+        self.output_namespace['scaling_speed'] = self.value_extractor(self.physio_config_df,
+                                                                             'scaling_speed')
         stdp_max_strength_coefficient = self.value_extractor(self.physio_config_df,'stdp_max_strength_coefficient')
         self.output_namespace['wght_max'] = self.value_extractor(self.physio_config_df,'cw_%s_%s'% (self.output_synapse['pre_group_type'],self.output_synapse['post_group_type']))* stdp_max_strength_coefficient
         std_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS

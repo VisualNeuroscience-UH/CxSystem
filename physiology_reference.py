@@ -450,10 +450,8 @@ class synapse_reference(object):
         '''
 
         self.output_synapse['equation'] = Equations('''
-            scaling_speed = 0.1 : 1
-            ap_target_frequency = 8 : hertz
-            dwght/dt = scaling_speed * wght * (ap_target_frequency - spike_sensor)  : siemens (event-driven)
             wght0 : siemens
+            dwght/dt = scaling_speed * wght * (ap_target_frequency - spike_sensor)  : siemens (event-driven)
             dapre/dt = -apre/taupre : siemens (event-driven)
             dapost/dt = -apost/taupost : siemens (event-driven)
             dspike_sensor/dt = -spike_sensor/tau_synaptic_scaling : hertz (event-driven)
