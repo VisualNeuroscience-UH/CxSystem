@@ -22,7 +22,7 @@ Cp,,0.001,"# 0.001 Synaptic potentiation coefficient according to van Rossum J N
 Cd,,0.003,# 0.003 Synaptic depression coefficient according to van Rossum J Neurosci 2000
 tau_synaptic_scaling,,100*second,
 scaling_speed,,0.1,
-ap_target_frequency,,4 * hertz,
+ap_target_frequency,,{1|4|1} * hertz,
 conn_prob_gain,,1,# This is used for compensation of small number of neurons and thus incoming synapses
 cw,cw_in_SS,_weights['w_TC_E-E_connections'],
 ,cw_in_PC,_weights['w_TC_E-E_connections'],

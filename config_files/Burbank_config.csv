@@ -1,5 +1,5 @@
 row_type,runtime,device,sys_mode,scale,grid_radius, min_distance, do_init_vms,output_path_and_filename,
-params,4000*ms,Cpp,local,1,1000*um, 1*um,1,/opt/Laskenta/Output/CX_Output/output.gz,
+params,1000*ms,Cpp,local,1,1000*um, 1*um,1,/opt/Laskenta/Output/CX_Output/output.gz,
 ,,,,,,,,,
 row_type,#save_brian_data_path , #load_brian_data_path, #load_positions_only, do_benchmark,save_generated_video_input_flag,multidimension_array_run,number_of_process,default_clock,trials_per_config
 params,/opt3/CX_Output/brian_data.gz,/opt3/CX_Output/sivanni/brian_data_20161028_142108.gz,1,0,1,0,20,0.01 * ms,2
