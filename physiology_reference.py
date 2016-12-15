@@ -448,7 +448,8 @@ class synapse_reference(object):
         The method for implementing the STDP synaptic connection.
 
         '''
-        #TODO scaling to all synapses in a cell. Check hertz for spike monitor, From one to other synapses.
+        #TODO scaling to all synapses in a cell. Invert for inhibitory synapses. Check hertz for spike monitor,
+        # TODO check scaling factors with simulations.
         self.output_synapse['equation'] = Equations('''
             wght0 : siemens
             dwght/dt = scaling_speed * wght * (ap_target_frequency - spike_sensor)  : siemens (event-driven)
