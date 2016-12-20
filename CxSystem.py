@@ -147,8 +147,24 @@ class CxSystem(object):
         params_indices = where(self.anat_and_sys_conf_df.values == 'params')
         if params_indices[0].size > 1 :
             for row_idx in params_indices[0][1:]:
-                self.anat_and_sys_conf_df.iloc[params_indices[0][0]-1] = self.anat_and_sys_conf_df.iloc[params_indices[0][0]-1].dropna().append(self.anat_and_sys_conf_df.iloc[row_idx-1][1:]).dropna().reset_index(drop=True)
-                self.anat_and_sys_conf_df.iloc[params_indices[0][0]] = self.anat_and_sys_conf_df.iloc[params_indices[0][0]].dropna().append(self.anat_and_sys_conf_df.iloc[row_idx][1:]).dropna().reset_index(drop=True)
+                number_of_new_columns = len(self.anat_and_sys_conf_df.columns)
+                number_of_rows = len(self.anat_and_sys_conf_df.index)
+                existing_rows = self.anat_and_sys_conf_df.index
+                new_columns = list(np.arange(number_of_new_columns, number_of_new_columns * 2))
+                empty_dataframe = pandas.DataFrame(index=existing_rows, columns=new_columns)
+                new_anat_and_sys_conf_df = pandas.concat([self.anat_and_sys_conf_df, empty_dataframe], axis=1)
+
+                new_anat_and_sys_conf_df.iloc[params_indices[0][0] - 1] = self.anat_and_sys_conf_df.iloc[
+                    params_indices[0][0] - 1].dropna().append(
+                    self.anat_and_sys_conf_df.iloc[row_idx - 1][1:]).dropna().reset_index(drop=True)
+                new_anat_and_sys_conf_df.iloc[params_indices[0][0]] = self.anat_and_sys_conf_df.iloc[
+                    params_indices[0][0]].dropna().append(
+                    self.anat_and_sys_conf_df.iloc[row_idx][1:]).dropna().reset_index(drop=True)
+                self.anat_and_sys_conf_df = new_anat_and_sys_conf_df
+                # create new df OR append to existing df with NaNs of columns, where N columns = N significant
+                # columns in row_idx-1:row_idx
+                # self.anat_and_sys_conf_df.iloc[params_indices[0][0]-1] = self.anat_and_sys_conf_df.iloc[params_indices[0][0]-1].dropna().append(self.anat_and_sys_conf_df.iloc[row_idx-1][1:]).dropna().reset_index(drop=True)
+                # self.anat_and_sys_conf_df.iloc[params_indices[0][0]] = self.anat_and_sys_conf_df.iloc[params_indices[0][0]].dropna().append(self.anat_and_sys_conf_df.iloc[row_idx][1:]).dropna().reset_index(drop=True)
             self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.drop(params_indices[0][1:]).reset_index(drop=True)
             self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.drop(params_indices[0][1:]-1).reset_index(drop=True)
 
@@ -1426,6 +1442,11 @@ class CxSystem(object):
 
 
 if __name__ == '__main__' :
-    CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/Markram_config_file.csv', \
-                  os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters.csv', )
+    CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/Burbank_config.csv', \
+                  os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_Burbank.csv', )
     CM.run()
+
+    from data_visualizers.data_visualization import DataVisualization
+
+    dv = DataVisualization()
+    dv.make_figure()
