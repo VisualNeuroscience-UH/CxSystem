@@ -18,7 +18,7 @@ class SimulationData(object):
 
     #default_data_file = '/home/henri/PycharmProjects/CX_Output/'
     default_data_file = '/opt3/CX_Output/calcium/calcium21_2s.gz'
-    default_data_file_path = '/opt3/CX_Output/calcium/with_noise/'
+    default_data_file_path = '/opt3/tmp/arraytest/'
     default_sampling_frequency = 1000
 
     group_numbering = {1: 'NG1_L1i_L1', 2: 'NG2_PC_L2toL1', 3: 'NG3_BC_L2', 4: 'NG4_MC_L2', 5: 'NG5_PC_L4toL2',
@@ -265,7 +265,8 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20):
     [ax[i].set_title(sim_titles[i]) for i in range(sim_n)]
 
     #plt.tight_layout()
-    plt.savefig('calciumplot.eps', dpi=600)
+    #plt.savefig('calciumplot.eps', dpi=600)
+    plt.savefig('calciumplot.png')
     #plt.show()
 
 
@@ -273,9 +274,9 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20):
 
 if __name__ == '__main__':
 
-    simulations = ['calcium21.bz2', 'calcium20.bz2', 'calcium15.bz2', 'calcium12.bz2']
-    sim_title = ['2.1', '2.0', '1.5', '1.2']
+    simulations = ['Reimann_20161217_calcium50.bz2', 'Reimann_20161217_calcium35.bz2', 'Reimann_20161217_calcium25.bz2', 'Reimann_20161216_clockchange.bz2']
+    sim_title = ['5.0', '3.5', '2.5', '2.0']
 
-    calciumplot(sim_files=simulations, sim_titles=sim_title, neurons_per_group=40, runtime=3.0)
+    calciumplot(sim_files=simulations, sim_titles=sim_title, neurons_per_group=40, runtime=1.0)
 
 
