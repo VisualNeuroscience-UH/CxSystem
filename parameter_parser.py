@@ -1,3 +1,9 @@
+
+'''
+The program is distributed under the terms of the GNU General Public License
+Copyright 2017 Vafa Andalibi, Simo Vanni, Henri Hokkanen.
+'''
+
 from __future__ import division
 from brian2  import *
 import numpy as np
