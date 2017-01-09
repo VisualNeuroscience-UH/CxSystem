@@ -1,3 +1,9 @@
+
+'''
+The program is distributed under the terms of the GNU General Public License
+Copyright 2017 Vafa Andalibi, Simo Vanni, Henri Hokkanen.
+'''
+
 from networkx.drawing import layout
 
 __author__ = 'V_AD'
