@@ -1,3 +1,9 @@
+
+'''
+The program is distributed under the terms of the GNU General Public License
+Copyright 2017 Vafa Andalibi, Simo Vanni, Henri Hokkanen.
+'''
+
 __author__ = 'V_AD'
 from brian2  import *
 from numpy import *
