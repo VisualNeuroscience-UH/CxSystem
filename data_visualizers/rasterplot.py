@@ -18,7 +18,7 @@ class SimulationData(object):
 
     #default_data_file = '/home/henri/PycharmProjects/CX_Output/'
     default_data_file = '/opt3/CX_Output/calcium/calcium21_2s.gz'
-    default_data_file_path = '/opt3/tmp/arraytest/'
+    default_data_file_path = '/opt3/tmp/'
     default_sampling_frequency = 1000
 
     group_numbering = {1: 'NG1_L1i_L1', 2: 'NG2_PC_L2toL1', 3: 'NG3_BC_L2', 4: 'NG4_MC_L2', 5: 'NG5_PC_L4toL2',
@@ -243,7 +243,7 @@ class SimulationData(object):
             return scatplot
 
 
-def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20):
+def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='$Ca^{2+}$ concentration (mM)'):
 
     sim_n = len(sim_files)
     q = neurons_per_group
@@ -254,7 +254,7 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20):
     plt.style.use('seaborn-whitegrid')
 
 
-    fig.suptitle('$Ca^{2+}$ concentration (mM)', fontsize=16)
+    fig.suptitle(suptitle, fontsize=16)
     fig.subplots_adjust(top=0.85, bottom=0.1, left=0.03, right=0.97)
     plt.setp(ax, xticks=np.arange(runtime + 0.1, step=1),
              yticks=[4 * q, 7 * q, 12 * q, 15 * q, 16 * q], yticklabels=ticklabels, xlim=[0, runtime],
