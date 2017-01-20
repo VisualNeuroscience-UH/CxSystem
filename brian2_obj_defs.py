@@ -141,21 +141,17 @@ class customized_neuron(object):
         # eq_template_dend = self.value_extractor(self.cropped_df_for_current_type,'eq_template_dend')
 
         eq_template_soma = '''
-        dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr) / C) +  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
-        dge/dt = -ge/tau_e : siemens
+        dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr) / C) : volt (unless refractory)
+        dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
         dgealpha/dt = (ge-gealpha)/tau_e : siemens
-        dgeX/dt = -geX/tau_eX : siemens
-        dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
-        dgi/dt = -gi/tau_i : siemens
+        dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2 : siemens
         dgialpha/dt = (gi-gialpha)/tau_i : siemens
         '''
         #: The template for the dendritic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
         eq_template_dend = '''
-        dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gealphaX * (Ee-vm) + gialpha * (Ei-vm) +I_dendr) / C : volt
+        dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) + I_dendr) / C : volt
         dge/dt = -ge/tau_e : siemens
         dgealpha/dt = (ge-gealpha)/tau_e : siemens
-        dgeX/dt = -geX/tau_eX : siemens
-        dgealphaX/dt = (geX-gealphaX)/tau_eX : siemens
         dgi/dt = -gi/tau_i : siemens
         dgialpha/dt = (gi-gialpha)/tau_i : siemens
         '''

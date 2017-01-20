@@ -400,7 +400,7 @@ class cortical_system(object):
         '''
         assert self.sys_mode != '', "System mode is not defined."
         _all_columns = ['idx', 'number_of_neurons', 'neuron_type', 'layer_idx', 'threshold',
-                        'reset', 'refractory', 'net_center','monitors','noise_sigma']
+                        'reset', 'refractory', 'net_center','monitors','noise_sigma','gemean','gestd','gimean','gistd']
         _obligatory_params = [0, 1, 2, 3]
         assert len(self.current_values_list) <= len(_all_columns), 'One or more of of the columns for NeuronGroups definition \
         is missing. Following obligatory columns should be defined:\n%s\n ' \
@@ -416,6 +416,10 @@ class cortical_system(object):
         net_center = 0 + 0j
         number_of_neurons = 0
         noise_sigma = ''
+        gemean = ''
+        gestd = ''
+        gimean = ''
+        gistd = ''
         neuron_type = ''
         layer_idx = 0
         threshold = ''
@@ -436,10 +440,22 @@ class cortical_system(object):
             # description can be found in configuration file tutorial.
         net_center = complex(net_center)
         current_idx = len(self.customized_neurons_list)
+
+        # Somewhat clumsy (rushed) implementation here, will fix later
         if noise_sigma == '--':
             noise_sigma = '0*mV'
         noise_sigma = eval(noise_sigma)
         assert 'V' in str(noise_sigma._get_best_unit()), 'The unit of noise_sigma should be volt'
+
+        if gemean == '--':
+            gemean = '0*nS'
+        if gestd == '--':
+            gestd = '0*nS'
+        if gimean == '--':
+            gimean = '0*nS'
+        if gistd == '--':
+            gistd = '0*nS'
+
         if neuron_type == 'PC':  # extract the layer index of PC neurons separately
             exec 'layer_idx = array(' + layer_idx.replace('->', ',') + ')'
         try:
@@ -480,6 +496,12 @@ class cortical_system(object):
         exec "%s=self.customized_neurons_list[%d]['namespace']" % (NNS_name, current_idx)
         # Adding the noise sigma to the namespace
         self.customized_neurons_list[current_idx]['namespace']['noise_sigma'] = noise_sigma
+        # Adding ge/gi mean/std to the namespace
+        self.customized_neurons_list[current_idx]['namespace']['gemean'] = eval(gemean)
+        self.customized_neurons_list[current_idx]['namespace']['gestd'] = eval(gestd)
+        self.customized_neurons_list[current_idx]['namespace']['gimean'] = eval(gimean)
+        self.customized_neurons_list[current_idx]['namespace']['gistd'] = eval(gistd)
+
         # Creating the actual NeuronGroup() using the variables in the previous 6 lines
         exec "%s= NeuronGroup(%s, model=%s, method='%s', threshold=%s, reset=%s,refractory = %s, namespace = %s)" \
              % (NG_name, NN_name, NE_name,self.numerical_integration_method ,NT_name, NRes_name, NRef_name, NNS_name)
