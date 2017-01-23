@@ -11,8 +11,11 @@ import os.path
 import zlib
 import cPickle as pickle
 import bz2
+from brian2 import *
+import random
 
 
+mycmap = 'jet'
 
 class SimulationData(object):
 
@@ -20,6 +23,7 @@ class SimulationData(object):
     default_data_file = '/opt3/CX_Output/calcium/calcium21_2s.gz'
     default_data_file_path = '/opt3/tmp/'
     default_sampling_frequency = 1000
+    defaultclock_dt = 0.1 * ms
 
     group_numbering = {1: 'NG1_L1i_L1', 2: 'NG2_PC_L2toL1', 3: 'NG3_BC_L2', 4: 'NG4_MC_L2', 5: 'NG5_PC_L4toL2',
                        6: 'NG6_PC_L4toL1', 7: 'NG7_SS_L4', 8: 'NG8_BC_L4', 9: 'NG9_MC_L4', 10: 'NG10_PC_L5toL1',
@@ -120,6 +124,7 @@ class SimulationData(object):
                 pass
 
         plt.show()
+
 
     def spikes_spectrum_group(self, neuron_group):
 
@@ -243,6 +248,106 @@ class SimulationData(object):
             return scatplot
 
 
+    def voltage_rasterplot(self, max_per_group=50, dt_downsampling_factor=10):
+
+        tmp_group = self.data['vm_all'].keys()[0]
+        t_samples = len(self.data['vm_all'][tmp_group][0])
+        samplepoints = np.arange(0, t_samples, dt_downsampling_factor)
+        T = len(samplepoints)
+        print 'Experiment duration ' + str(self.defaultclock_dt*t_samples)
+        print 'Experiment sampling rate ' + str(self.defaultclock_dt)
+        print 'Downsampling by a factor of ' + str(dt_downsampling_factor)
+
+        N_groups = len(self.group_numbering)
+
+        group_start_ix = [0]*(N_groups+2)
+
+        combined_neurons_vm = []
+
+        for i in np.arange(1, N_groups+1):
+            group_name = self.group_numbering[i]
+            print 'Processing group ' + group_name + ', start index is ' + str(group_start_ix[i])
+
+            group_neurons_vm = self.data['vm_all'][group_name]
+            N_neurons_in_group = len(group_neurons_vm)
+            print '# of neurons sampled is ' + str(N_neurons_in_group)
+
+            if N_neurons_in_group > max_per_group:
+                N_neurons_in_group = max_per_group  # Ie. make N_neurons_in_group the amount of neurons to *sample*
+
+            # TODO - Downsampling HERE!!
+
+            group_start_ix[i+1] = group_start_ix[i] + N_neurons_in_group
+            combined_neurons_vm.extend(group_neurons_vm[0:N_neurons_in_group])  # Selection should be randomized
+
+
+        plt.style.use('seaborn-whitegrid')
+        plotobj = sns.heatmap(combined_neurons_vm, cmap=mycmap, vmin=-0.07, vmax=-0.04)
+        plt.yticks(group_start_ix[1:N_groups], self.group_numbering.values(), rotation=0)
+        plt.gca().invert_yaxis()
+
+        plt.show()
+
+
+    # def voltage_rasterplot(self, group='', max_per_group=50, dt_downsampling_factor=10):
+    #
+    #     tmp_group = self.data['vm_all'].keys()[0]
+    #     t_samples = len(self.data['vm_all'][tmp_group][0])
+    #     samplepoints = np.arange(0, t_samples, dt_downsampling_factor)
+    #     T = len(samplepoints)
+    #
+    #     group_neuron_vm_dict = dict()
+    #
+    #     if isinstance(group, int):
+    #         group_to_show = self.group_numbering[group]
+    #         data_to_parse = {group_to_show: self.data['vm_all'][group_to_show]}
+    #         data_to_parse = data_to_parse.items()
+    #         flag_single_group = True
+    #     else:
+    #         data_to_parse = self.data['vm_all'].items()
+    #         flag_single_group = False
+    #
+    #     group_name_list = []
+    #     group_ending_ix = []
+    #     running_ix = 0
+    #     for group, neurons_vm in data_to_parse:
+    #         print 'Processing ' + group
+    #         group_name_list.append(group)
+    #         N = len(neurons_vm)
+    #         if N > max_per_group:  # Should rather be random I suppose
+    #             N = max_per_group
+    #
+    #         group_ending_ix.append(running_ix)
+    #
+    #         group_neuron_vm_dict[group] = range(N)
+    #         for n in range(N):
+    #             group_neuron_vm_dict[group][n] = []
+    #             for t in range(T):
+    #                 group_neuron_vm_dict[group][n].append(neurons_vm[n][t * dt_downsampling_factor])
+    #
+    #
+    #
+    #     if flag_single_group == True:
+    #         plotobj = sns.heatmap(group_neuron_vm_dict[group_to_show], cmap=mycmap)
+    #
+    #     else:
+    #         combined_neurons_vm = []
+    #         for i in range(1,16+1):
+    #             combined_neurons_vm.extend(group_neuron_vm_dict[self.group_numbering[i]])
+    #             print len(combined_neurons_vm)
+    #
+    #
+    #         plotobj = sns.heatmap(combined_neurons_vm, cmap=mycmap, vmin=-0.07, vmax=-0.04)
+    #
+    #
+    #     plt.show()
+
+
+
+
+
+### END of class SimulationData
+
 def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='$Ca^{2+}$ concentration (mM)'):
 
     sim_n = len(sim_files)
@@ -270,13 +375,19 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
     #plt.show()
 
 
+
+
+
 # MAIN
 
 if __name__ == '__main__':
 
-    simulations = ['Reimann_20161217_calcium50.bz2', 'Reimann_20161217_calcium35.bz2', 'Reimann_20161217_calcium25.bz2', 'Reimann_20161216_clockchange.bz2']
-    sim_title = ['5.0', '3.5', '2.5', '2.0']
+    # simulations = ['Reimann_20161217_calcium50.bz2', 'Reimann_20161217_calcium35.bz2', 'Reimann_20161217_calcium25.bz2', 'Reimann_20161216_clockchange.bz2']
+    # sim_title = ['5.0', '3.5', '2.5', '2.0']
+    #
+    # calciumplot(sim_files=simulations, sim_titles=sim_title, neurons_per_group=40, runtime=1.0)
 
-    calciumplot(sim_files=simulations, sim_titles=sim_title, neurons_per_group=40, runtime=1.0)
+    sim = SimulationData('donatello_calcium_concentration2.5_Cpp_1000ms.bz2')
+    sim.voltage_rasterplot(max_per_group=10)
 
 
