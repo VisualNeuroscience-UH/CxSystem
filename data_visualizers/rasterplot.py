@@ -250,20 +250,25 @@ class SimulationData(object):
 
     def voltage_rasterplot(self, max_per_group=50, dt_downsampling_factor=10):
 
+        divider_height = 1
+
         tmp_group = self.data['vm_all'].keys()[0]
         t_samples = len(self.data['vm_all'][tmp_group][0])
         samplepoints = np.arange(0, t_samples, dt_downsampling_factor)
         T = len(samplepoints)
-        print 'Experiment duration ' + str(self.defaultclock_dt*t_samples)
-        print 'Experiment sampling rate ' + str(self.defaultclock_dt)
-        print 'Downsampling by a factor of ' + str(dt_downsampling_factor)
+
+        # print 'Experiment duration ' + str(self.defaultclock_dt*t_samples)
+        # print 'Experiment sampling rate ' + str(self.defaultclock_dt)
+        # print 'Downsampling by a factor of ' + str(dt_downsampling_factor)
 
         N_groups = len(self.group_numbering)
 
         group_start_ix = [0]*(N_groups+2)
+        yticklocations = [0]*(N_groups+1)
 
         combined_neurons_vm = []
 
+        # Run through groups to downsample and to select which neurons to show (if too many sampled)
         for i in np.arange(1, N_groups+1):
             group_name = self.group_numbering[i]
             print 'Processing group ' + group_name + ', start index is ' + str(group_start_ix[i])
@@ -275,16 +280,46 @@ class SimulationData(object):
             if N_neurons_in_group > max_per_group:
                 N_neurons_in_group = max_per_group  # Ie. make N_neurons_in_group the amount of neurons to *sample*
 
-            # TODO - Downsampling HERE!!
+            print '# of neurons to show is ' + str(N_neurons_in_group)
+            group_start_ix[i + 1] = group_start_ix[i] + N_neurons_in_group + divider_height
+            yticklocations[i] = int((group_start_ix[i+1]-group_start_ix[i])/2 + group_start_ix[i])
 
-            group_start_ix[i+1] = group_start_ix[i] + N_neurons_in_group
-            combined_neurons_vm.extend(group_neurons_vm[0:N_neurons_in_group])  # Selection should be randomized
+            # Time-downsampling
+            downsampled_neurons_vm = ['-']*N_neurons_in_group
+            for n in range(0,N_neurons_in_group):
+                downsampled_neurons_vm[n] = [group_neurons_vm[n][t] for t in samplepoints]
+
+            # Add v_m series of N_neurons_in_group/max_per_group (randomly selected) neurons
+            combined_neurons_vm.extend(downsampled_neurons_vm[0:N_neurons_in_group])  # Selection should be randomized
+
+            # After the data, add const series (one or many) as a divider between groups
+            divider = [[0] * T for k in range(0, divider_height)]
+            combined_neurons_vm.extend(divider)
 
 
-        plt.style.use('seaborn-whitegrid')
-        plotobj = sns.heatmap(combined_neurons_vm, cmap=mycmap, vmin=-0.07, vmax=-0.04)
-        plt.yticks(group_start_ix[1:N_groups], self.group_numbering.values(), rotation=0)
-        plt.gca().invert_yaxis()
+
+        # Plot a heatmap
+        # Annoying labeling issue: sns.heatmap has indices increasing from top-left, matplotlib from bottom-left
+        # plt.style.use('seaborn-whitegrid')
+
+        plt.figure()
+        ax = sns.heatmap(combined_neurons_vm, cmap=mycmap, vmin=-0.07, vmax=-0.04)
+
+        ax.xaxis.set_major_locator(plt.MaxNLocator(10))
+        ax.set_xticklabels([self.defaultclock_dt/ms*dt_downsampling_factor*i for i in range(0,11)])
+        ax.set_xlabel('Time (ms)')
+
+        y_limit = ax.get_ylim()[1]
+        yticklocs = [y_limit - yticklocations[i] for i in range(1,N_groups+1)]
+
+        ax.yaxis.set_major_locator(plt.FixedLocator(yticklocs))
+        ax.yaxis.set_major_formatter(plt.FixedFormatter(self.group_numbering.values()))
+        plt.yticks(rotation=0)
+        #plt.gca().invert_yaxis()
+
+        # plt.yticks(yticklocations, self.group_numbering.values(), rotation=0) # TODO Fix tick locations
+        #plt.yticks(group_start_ix[1:N_groups + 1], group_start_ix[1:N_groups + 1], rotation=0)
+
 
         plt.show()
 
@@ -343,9 +378,6 @@ class SimulationData(object):
     #     plt.show()
 
 
-
-
-
 ### END of class SimulationData
 
 def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='$Ca^{2+}$ concentration (mM)'):
@@ -375,9 +407,6 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
     #plt.show()
 
 
-
-
-
 # MAIN
 
 if __name__ == '__main__':
@@ -388,6 +417,6 @@ if __name__ == '__main__':
     # calciumplot(sim_files=simulations, sim_titles=sim_title, neurons_per_group=40, runtime=1.0)
 
     sim = SimulationData('donatello_calcium_concentration2.5_Cpp_1000ms.bz2')
-    sim.voltage_rasterplot(max_per_group=10)
+    sim.voltage_rasterplot(max_per_group=20)
 
 
