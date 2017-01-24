@@ -248,7 +248,7 @@ class SimulationData(object):
             return scatplot
 
 
-    def voltage_rasterplot(self, max_per_group=50, dt_downsampling_factor=10):
+    def voltage_rasterplot(self, max_per_group=20, dt_downsampling_factor=10):
 
         divider_height = 1
 
@@ -271,16 +271,16 @@ class SimulationData(object):
         # Run through groups to downsample and to select which neurons to show (if too many sampled)
         for i in np.arange(1, N_groups+1):
             group_name = self.group_numbering[i]
-            print 'Processing group ' + group_name + ', start index is ' + str(group_start_ix[i])
+            # print 'Processing group ' + group_name + ', start index is ' + str(group_start_ix[i])
 
             group_neurons_vm = self.data['vm_all'][group_name]
             N_neurons_in_group = len(group_neurons_vm)
-            print '# of neurons sampled is ' + str(N_neurons_in_group)
+            # print '# of neurons sampled is ' + str(N_neurons_in_group)
 
             if N_neurons_in_group > max_per_group:
                 N_neurons_in_group = max_per_group  # Ie. make N_neurons_in_group the amount of neurons to *sample*
 
-            print '# of neurons to show is ' + str(N_neurons_in_group)
+            # print '# of neurons to show is ' + str(N_neurons_in_group)
             group_start_ix[i + 1] = group_start_ix[i] + N_neurons_in_group + divider_height
             yticklocations[i] = int((group_start_ix[i+1]-group_start_ix[i])/2 + group_start_ix[i])
 
@@ -300,9 +300,11 @@ class SimulationData(object):
 
         # Plot a heatmap
         # Annoying labeling issue: sns.heatmap has indices increasing from top-left, matplotlib from bottom-left
+        # That's why label locations are inversed (but not the whole y axis)
         # plt.style.use('seaborn-whitegrid')
 
-        plt.figure()
+        fig = plt.figure()
+        fig.suptitle(self.datafile)
         ax = sns.heatmap(combined_neurons_vm, cmap=mycmap, vmin=-0.07, vmax=-0.04)
 
         ax.xaxis.set_major_locator(plt.MaxNLocator(10))
@@ -315,7 +317,7 @@ class SimulationData(object):
         ax.yaxis.set_major_locator(plt.FixedLocator(yticklocs))
         ax.yaxis.set_major_formatter(plt.FixedFormatter(self.group_numbering.values()))
         plt.yticks(rotation=0)
-        #plt.gca().invert_yaxis()
+
 
         # plt.yticks(yticklocations, self.group_numbering.values(), rotation=0) # TODO Fix tick locations
         #plt.yticks(group_start_ix[1:N_groups + 1], group_start_ix[1:N_groups + 1], rotation=0)
