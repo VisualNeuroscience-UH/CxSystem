@@ -1,7 +1,7 @@
 from __future__ import division
 import matplotlib.pyplot as plt
 import matplotlib
-#import seaborn as sns  #; sns.set()
+import seaborn as sns
 import scipy.io as spio
 from collections import OrderedDict
 import numpy as np
@@ -30,7 +30,7 @@ class SimulationData(object):
                        11: 'NG11_BC_L5', 12: 'NG12_MC_L5', 13: 'NG13_PC_L6toL4', 14: 'NG14_PC_L6toL1',
                        15: 'NG15_BC_L6', 16: 'NG16_MC_L6'}
 
-    group_number_to_type = {1: 'L1i', 2: 'PC', 3: 'PC', 4:'BC', 5: 'PC', 6:'PC', 7:'SS', 8:'BC', 9:'MC', 10: 'PC',
+    group_number_to_type = {1: 'L1i', 2: 'PC', 3: 'BC', 4:'MC', 5: 'PC', 6:'PC', 7:'SS', 8:'BC', 9:'MC', 10: 'PC',
                             11: 'BC', 12: 'MC', 13: 'PC', 14: 'PC', 15:'BC', 16:'MC'}
 
     def __init__(self, data_file=default_data_file, data_path=default_data_file_path):
@@ -328,19 +328,34 @@ class SimulationData(object):
 
         plt.show()
 
-    def _get_group_params(self, group_id):
+    # Could be used to obtain all parameters...
+    def _get_group_leak(self, group_id):
 
         physio_config = self.data['Physiology_configuration']
+        number_of_rows = len(physio_config['Variable'])
 
         # Find in self.data['Physiology_configuration'] the line where group_id config starts
-        begin_ix = physio_config['Variable'].index(self.group_number_to_type[group_id])
-        end_ix = physio_config['Variable'][begin_ix:].index(True)
+        begin_ix = list(physio_config['Variable']).index(self.group_number_to_type[group_id])  # list() so that we can use index()
 
-        print begin_ix
-        print end_ix
+        # Find where the next group's config starts (or the config file ends)
+        end_ix = 0
+        try:
+            end_ix = (i for i in range(begin_ix+1, number_of_rows)
+                      if type(physio_config['Variable'][i]) == str).next()  # Empty rows are floats, non-empty are strings
+        except StopIteration:
+            end_ix = number_of_rows
 
-        # Find where the next group's config starts
         # Take data from lines between those -> dict
+        # params = dict()
+        # for i in range(begin_ix, end_ix):
+        #     params[physio_config['Key'][i]] = physio_config['Value'][i]
+
+        if self.group_number_to_type[group_id] == 'PC':
+            gL_index = list(physio_config['Key'][begin_ix:end_ix]).index('gL_soma')
+        else:
+            gL_index = list(physio_config['Key'][begin_ix:end_ix]).index('gL')
+
+        return eval(physio_config['Value'][begin_ix + gL_index])
 
 
     def conductanceplot(self, group_id):
@@ -355,12 +370,20 @@ class SimulationData(object):
         vm = self.data['vm_all'][group][neuron_ix]
         ge = self.data['ge_soma_all'][group][neuron_ix]
         gi = self.data['gi_soma_all'][group][neuron_ix]
+        if self.group_number_to_type[group_id] == 'PC':
+            Idendr = self.data['Idendr_soma_all'][group][neuron_ix]
+            N_columns = 4
+        else:
+            N_columns = 3
+
         runtime = len(vm)*self.defaultclock_dt
         t = np.arange(0, runtime, self.defaultclock_dt)
 
         # Get spikes for cell HERE
         # spikes_t = self.data['spikes_all'][group][neuron_ix] doesn't work unfortunately
         # self.spikedata[0] -> indices, [1] -> spike times
+
+        # TODO - spikedata have real indices, status monitors don't!!!
 
         spiking_neuron_ix = self.spikedata[group][0]
         spiking_neuron_t = self.spikedata[group][1]
@@ -369,53 +392,64 @@ class SimulationData(object):
         for i in range(len(spiking_neuron_ix)):
             if spiking_neuron_ix[i] == neuron_ix: spikes_t.append(spiking_neuron_t[i]*1000*ms)  # Unit in saved data is second
 
-        # Get cell parameters here
         #C =
         #tau_m =
-        gL = 0.47 * nS
+        gL = self._get_group_leak(group_id)
         Ee = 0*mV
         VT = -45*mV
         EL = -70*mV
         Ei = -75*mV
 
         ### PLOTTING BEGINS
-        plt.subplots(1, 3)
+        plt.subplots(1, N_columns)
+        plt.suptitle(self.group_numbering[group_id])
 
         ### Membrane voltage plot
-        plt.subplot(1, 3, 1)
+        plt.subplot(1, N_columns, 1)
         plt.title('$V_m$ with spikes')
-        plt.plot(t / ms, vm)
+        plt.plot(t / ms, vm*pow(10,3), c='blue')
         plt.plot(spikes_t/ms, [0 * mV] * len(spikes_t), '.')
         xlabel('Time (ms)')
-        ylabel('$V_m$ (V)')
-        ylim([-0.075, 0.02])
+        ylabel('$V_m$ (mV)')
+        ylim([-75, 20])
 
         ### Conductance plot
-        plt.subplot(1, 3, 2)
+        plt.subplot(1, N_columns, 2)
         plt.title('Conductance')
-        plt.plot(t / ms, ge, label='ge')
-        plt.plot(t / ms, gi, label='gi')
+        plt.plot(t / ms, ge*pow(10,9), label='ge', c='green')
+        plt.plot(t / ms, gi*pow(10,9), label='gi', c='red')
         xlabel('Time (ms)')
-        ylabel('Conductance (S)')
+        ylabel('Conductance (nS)')
         # ylim([0, 50e-9])
         plt.legend()
 
+        if self.group_number_to_type[group_id] == 'PC':
+            plt.title('Dendritic current in soma')
+            plt.subplot(1, N_columns, 3)
+            plt.plot(t/ms, Idendr*pow(10,12), label='Idendr', c='blue')
+            xlabel('Time (ms)')
+            ylabel('Current (pA)')
+            plt.legend()
+
+            plt.subplot(1,N_columns,4)
+        else:
+            plt.subplot(1,N_columns,3)
+
         ### ge/gi plot with AP threshold line
-        plt.subplot(1, 3, 3)
-        plt.title('Excitatory vs. inhibitory conductance')
+        plt.title('Exc vs inh conductance')
 
         def gi_line(x): return (-x * (Ee - VT) - gL * (EL - VT)) / (Ei - VT)
 
         x_values = np.arange(0 * nS, 50 * nS, 1 * nS)
-        plt.plot(x_values, [gi_line(x) for x in x_values], label='$dV_m/dt = 0$')
+        plt.plot(x_values*pow(10,9), [gi_line(x)*pow(10,9) for x in x_values], label='$dV_m/dt = 0$')
 
         for spike_time in spikes_t/self.defaultclock_dt:
-             plt.plot(ge[spike_time], gi[spike_time], 'g.')
+             plt.plot(ge[spike_time]*pow(10,9), gi[spike_time]*pow(10,9), 'g.')
 
-        plt.plot(ge, gi, 'y.', alpha=0.02)
+        plt.plot(ge*pow(10,9), gi*pow(10,9), 'y.', alpha=0.02)
         plt.axis('equal')
-        plt.xlabel('ge (S)')
-        plt.ylabel('gi (S)')
+        plt.xlabel('ge (nS)')
+        plt.ylabel('gi (nS)')
         plt.legend()
 
         plt.show()
@@ -431,7 +465,7 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
     ticklabels = ['VI', 'V', 'IV', 'II/III', 'I']
     w, h = matplotlib.figure.figaspect(1 / sim_n)
     fig, ax = plt.subplots(ncols=sim_n, figsize=(w, h), dpi=600)
-    plt.style.use('seaborn-whitegrid')
+    #plt.style.use('seaborn-whitegrid')
 
 
     fig.suptitle(suptitle, fontsize=16)
@@ -459,9 +493,14 @@ if __name__ == '__main__':
     #
     # calciumplot(sim_files=simulations, sim_titles=sim_title, neurons_per_group=40, runtime=1.0)
 
-    sim = SimulationData('constudy_01_calcium_concentration2.0_Cpp_1000ms.bz2')
-    #sim._get_group_params(7)
+    sim = SimulationData('constudy_02_calcium_concentration2.0_Cpp_1000ms.bz2')
+    # sim._get_group_leak(1)
+    # for i in range (1,16+1):
+    #     print 'Group '+ sim.group_numbering[i]
+    #     print sim._get_group_leak(i)
     #sim.rasterplot()
-    sim.conductanceplot(5)
+
+    sim.conductanceplot(11)
+
 
 

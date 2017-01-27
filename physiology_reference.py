@@ -229,9 +229,9 @@ class neuron_reference(object):
         # eq_template = self.value_extractor(self.cropped_df_for_current_type,'eq_template')
         # self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
         self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) +  noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
-            dge/dt = -ge/tau_e : siemens
-            dgi/dt = -gi/tau_i : siemens
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) : volt (unless refractory)
+            dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
+            dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_e)*xi_2: siemens
             ''', ge='ge_soma', gi='gi_soma')
 
         self.output_neuron['equation'] += Equations('''x : meter

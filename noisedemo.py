@@ -25,9 +25,12 @@ import matplotlib.pyplot as plt
 
 ### BC cell
 # Biophysical parameters
-C = 64*pF
-tau_m = 8*ms
-gL = C/tau_m
+#C = 64*pF
+#tau_m = 8*ms
+#gL = C/tau_m
+C = 180*pF
+gL = 1.2*nS
+tau_m = C/gL
 EL = -70*mV
 Ee = 0*mV
 Ei = -75*mV
@@ -40,16 +43,16 @@ tau_i = 8*ms
 refr_time = 3*ms
 
 # Example with fluctuating conductances
-gemean = 10*nS
-gestd = 0.4*nS
-gimean = 40*nS
-gistd = 12.5*nS
+# gemean = 10*nS
+# gestd = 0.4*nS
+# gimean = 40*nS
+# gistd = 12.5*nS
 
 # Config with no noise
-# gemean = 0*nS
-# gestd = 0*nS
-# gimean = 0*nS
-# gistd = 0*nS
+gemean = 0*nS
+gestd = 0*nS
+gimean = 0*nS
+gistd = 0*nS
 
 defaultclock_dt = 0.1*ms
 
@@ -75,7 +78,7 @@ M_spikes = SpikeMonitor(G)
 
 ### Constant current
 run(50 * ms)
-G.I = 0*nA
+G.I = 60*pA
 run(1900 * ms)
 G.I = 0*nA
 run(50 * ms)
