@@ -39,14 +39,21 @@ tau_e = 3*ms
 tau_i = 8*ms
 refr_time = 3*ms
 
+# Example with fluctuating conductances
 gemean = 10*nS
 gestd = 0.4*nS
 gimean = 40*nS
 gistd = 12.5*nS
 
+# Config with no noise
+# gemean = 0*nS
+# gestd = 0*nS
+# gimean = 0*nS
+# gistd = 0*nS
+
 defaultclock_dt = 0.1*ms
 
-# Stochastic equation with fluctuating synaptic conductances
+# Stochastic equation with fluctuating synaptic conductances (set ge/gi mean/std to zero if you don't want stochasticity)
 eq_PC_soma = '''
  dvm/dt = ((gL*(EL-vm) + ge * (Ee-vm) + gi * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I) / C) : volt
  dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
@@ -55,16 +62,6 @@ eq_PC_soma = '''
  #dgialpha/dt = (gi-gialpha)/tau_i : siemens
  I: amp
  '''
-
-# Non-stochastic equation
-# eq_PC_soma = '''
-#  dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + I) / C) : volt
-#  dge/dt = -ge/tau_e : siemens
-#  dgealpha/dt = (ge-gealpha)/tau_e : siemens
-#  dgi/dt = -gi/tau_i : siemens
-#  dgialpha/dt = (gi-gialpha)/tau_i : siemens
-#  I: amp
-#  '''
 
 
 # Main

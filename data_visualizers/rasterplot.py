@@ -1,7 +1,7 @@
 from __future__ import division
 import matplotlib.pyplot as plt
 import matplotlib
-import seaborn as sns; sns.set()
+#import seaborn as sns  #; sns.set()
 import scipy.io as spio
 from collections import OrderedDict
 import numpy as np
@@ -30,6 +30,9 @@ class SimulationData(object):
                        11: 'NG11_BC_L5', 12: 'NG12_MC_L5', 13: 'NG13_PC_L6toL4', 14: 'NG14_PC_L6toL1',
                        15: 'NG15_BC_L6', 16: 'NG16_MC_L6'}
 
+    group_number_to_type = {1: 'L1i', 2: 'PC', 3: 'PC', 4:'BC', 5: 'PC', 6:'PC', 7:'SS', 8:'BC', 9:'MC', 10: 'PC',
+                            11: 'BC', 12: 'MC', 13: 'PC', 14: 'PC', 15:'BC', 16:'MC'}
+
     def __init__(self, data_file=default_data_file, data_path=default_data_file_path):
 
         basename = os.path.basename(data_file)
@@ -45,7 +48,7 @@ class SimulationData(object):
 
         self.datafile = data_file
 
-        self.spikedata = self.data['spikes_all']  # [0] -> neuron indices inside group, [1] -> spike times
+        self.spikedata = self.data['spikes_all']  # [group][0] -> neuron indices inside group, [group][1] -> spike times
         self.spikedata = OrderedDict(sorted(self.spikedata.items(), key=self._group_name_for_ordering ))  # TODO Order nicely
         self.runtime = self.data['runtime']
         self.neuron_groups = [row[0] for row in self.spikedata.items()[1:]]
@@ -325,59 +328,97 @@ class SimulationData(object):
 
         plt.show()
 
+    def _get_group_params(self, group_id):
 
-    # def voltage_rasterplot(self, group='', max_per_group=50, dt_downsampling_factor=10):
-    #
-    #     tmp_group = self.data['vm_all'].keys()[0]
-    #     t_samples = len(self.data['vm_all'][tmp_group][0])
-    #     samplepoints = np.arange(0, t_samples, dt_downsampling_factor)
-    #     T = len(samplepoints)
-    #
-    #     group_neuron_vm_dict = dict()
-    #
-    #     if isinstance(group, int):
-    #         group_to_show = self.group_numbering[group]
-    #         data_to_parse = {group_to_show: self.data['vm_all'][group_to_show]}
-    #         data_to_parse = data_to_parse.items()
-    #         flag_single_group = True
-    #     else:
-    #         data_to_parse = self.data['vm_all'].items()
-    #         flag_single_group = False
-    #
-    #     group_name_list = []
-    #     group_ending_ix = []
-    #     running_ix = 0
-    #     for group, neurons_vm in data_to_parse:
-    #         print 'Processing ' + group
-    #         group_name_list.append(group)
-    #         N = len(neurons_vm)
-    #         if N > max_per_group:  # Should rather be random I suppose
-    #             N = max_per_group
-    #
-    #         group_ending_ix.append(running_ix)
-    #
-    #         group_neuron_vm_dict[group] = range(N)
-    #         for n in range(N):
-    #             group_neuron_vm_dict[group][n] = []
-    #             for t in range(T):
-    #                 group_neuron_vm_dict[group][n].append(neurons_vm[n][t * dt_downsampling_factor])
-    #
-    #
-    #
-    #     if flag_single_group == True:
-    #         plotobj = sns.heatmap(group_neuron_vm_dict[group_to_show], cmap=mycmap)
-    #
-    #     else:
-    #         combined_neurons_vm = []
-    #         for i in range(1,16+1):
-    #             combined_neurons_vm.extend(group_neuron_vm_dict[self.group_numbering[i]])
-    #             print len(combined_neurons_vm)
-    #
-    #
-    #         plotobj = sns.heatmap(combined_neurons_vm, cmap=mycmap, vmin=-0.07, vmax=-0.04)
-    #
-    #
-    #     plt.show()
+        physio_config = self.data['Physiology_configuration']
+
+        # Find in self.data['Physiology_configuration'] the line where group_id config starts
+        begin_ix = physio_config['Variable'].index(self.group_number_to_type[group_id])
+        end_ix = physio_config['Variable'][begin_ix:].index(True)
+
+        print begin_ix
+        print end_ix
+
+        # Find where the next group's config starts
+        # Take data from lines between those -> dict
+
+
+    def conductanceplot(self, group_id):
+
+        group = self.group_numbering[group_id]
+        # Pick random neuron from group (assuming neuron indexing inside vm_all, ge_soma_all, gi_soma_all is the same
+        # ie. that neurons have been sampled with same density for each status monitor)
+        neuron_ix = np.random.randint(len(self.data['vm_all'][group]))
+
+        # Deal with time range here
+
+        vm = self.data['vm_all'][group][neuron_ix]
+        ge = self.data['ge_soma_all'][group][neuron_ix]
+        gi = self.data['gi_soma_all'][group][neuron_ix]
+        runtime = len(vm)*self.defaultclock_dt
+        t = np.arange(0, runtime, self.defaultclock_dt)
+
+        # Get spikes for cell HERE
+        # spikes_t = self.data['spikes_all'][group][neuron_ix] doesn't work unfortunately
+        # self.spikedata[0] -> indices, [1] -> spike times
+
+        spiking_neuron_ix = self.spikedata[group][0]
+        spiking_neuron_t = self.spikedata[group][1]
+        spikes_t = []
+
+        for i in range(len(spiking_neuron_ix)):
+            if spiking_neuron_ix[i] == neuron_ix: spikes_t.append(spiking_neuron_t[i]*1000*ms)  # Unit in saved data is second
+
+        # Get cell parameters here
+        #C =
+        #tau_m =
+        gL = 0.47 * nS
+        Ee = 0*mV
+        VT = -45*mV
+        EL = -70*mV
+        Ei = -75*mV
+
+        ### PLOTTING BEGINS
+        plt.subplots(1, 3)
+
+        ### Membrane voltage plot
+        plt.subplot(1, 3, 1)
+        plt.title('$V_m$ with spikes')
+        plt.plot(t / ms, vm)
+        plt.plot(spikes_t/ms, [0 * mV] * len(spikes_t), '.')
+        xlabel('Time (ms)')
+        ylabel('$V_m$ (V)')
+        ylim([-0.075, 0.02])
+
+        ### Conductance plot
+        plt.subplot(1, 3, 2)
+        plt.title('Conductance')
+        plt.plot(t / ms, ge, label='ge')
+        plt.plot(t / ms, gi, label='gi')
+        xlabel('Time (ms)')
+        ylabel('Conductance (S)')
+        # ylim([0, 50e-9])
+        plt.legend()
+
+        ### ge/gi plot with AP threshold line
+        plt.subplot(1, 3, 3)
+        plt.title('Excitatory vs. inhibitory conductance')
+
+        def gi_line(x): return (-x * (Ee - VT) - gL * (EL - VT)) / (Ei - VT)
+
+        x_values = np.arange(0 * nS, 50 * nS, 1 * nS)
+        plt.plot(x_values, [gi_line(x) for x in x_values], label='$dV_m/dt = 0$')
+
+        for spike_time in spikes_t/self.defaultclock_dt:
+             plt.plot(ge[spike_time], gi[spike_time], 'g.')
+
+        plt.plot(ge, gi, 'y.', alpha=0.02)
+        plt.axis('equal')
+        plt.xlabel('ge (S)')
+        plt.ylabel('gi (S)')
+        plt.legend()
+
+        plt.show()
 
 
 ### END of class SimulationData
@@ -418,7 +459,9 @@ if __name__ == '__main__':
     #
     # calciumplot(sim_files=simulations, sim_titles=sim_title, neurons_per_group=40, runtime=1.0)
 
-    sim = SimulationData('donatello_calcium_concentration2.5_Cpp_1000ms.bz2')
-    sim.voltage_rasterplot(max_per_group=20)
+    sim = SimulationData('constudy_01_calcium_concentration2.0_Cpp_1000ms.bz2')
+    #sim._get_group_params(7)
+    #sim.rasterplot()
+    sim.conductanceplot(5)
 
 
