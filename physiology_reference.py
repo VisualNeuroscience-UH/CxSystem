@@ -148,9 +148,9 @@ class neuron_reference(object):
 
         eq_template_soma = '''
         dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr) / C) : volt (unless refractory)
-        dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
+        dge/dt = -ge/tau_e : siemens
         dgealpha/dt = (ge-gealpha)/tau_e : siemens
-        dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2 : siemens
+        dgi/dt = -gi/tau_i : siemens
         dgialpha/dt = (gi-gialpha)/tau_i : siemens
         '''
         #: The template for the dendritic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
@@ -161,8 +161,16 @@ class neuron_reference(object):
         dgi/dt = -gi/tau_i : siemens
         dgialpha/dt = (gi-gialpha)/tau_i : siemens
         '''
+        eq_template_dend_basal = '''
+        dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) +I_dendr) / C : volt
+        dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
+        dgealpha/dt = (ge-gealpha)/tau_e : siemens
+        dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2: siemens
+        dgialpha/dt = (gi-gialpha)/tau_i : siemens
+        '''
 
-        self.output_neuron['equation'] = Equations(eq_template_dend, vm="vm_basal", ge="ge_basal",
+        # Setting Vm equations for soma and dendrite compartments
+        self.output_neuron['equation'] = Equations(eq_template_dend_basal, vm="vm_basal", ge="ge_basal",
                                                    gealpha="gealpha_basal",
                                                    C=self.output_neuron['namespace']['C'][0],
                                                    gL=self.output_neuron['namespace']['gL'][0],
@@ -182,7 +190,7 @@ class neuron_reference(object):
                                                         gealpha="gealpha_a%d" % _ii, gialpha="gialpha_a%d" % _ii,
                                                         gealphaX="gealphaX_a%d" % _ii, I_dendr="Idendr_a%d" % _ii)
 
-        # basal self connection
+        # Defining decay between soma and basal dendrite & apical dendrites
         self.output_neuron['equation'] += Equations('I_dendr = gapre*(vmpre-vmself)  : amp',
                                                     gapre=1 / (self.output_neuron['namespace']['Ra'][0]),
                                                     I_dendr="Idendr_basal", vmself="vm_basal", vmpre="vm")
@@ -196,6 +204,7 @@ class neuron_reference(object):
                                                     gapost=1 / (self.output_neuron['namespace']['Ra'][1]),
                                                     I_dendr="Idendr_a0", vmself="vm_a0", vmpre="vm_a1", vmpost="vm")
 
+        # Defining decay between apical dendrite compartments
         for _ii in arange(1, self.output_neuron['dend_comp_num']):
             self.output_neuron['equation'] += Equations('I_dendr = gapre*(vmpre-vmself) + gapost*(vmpost-vmself) : amp',
                                                         gapre=1 / (self.output_neuron['namespace']['Ra'][_ii]),
@@ -254,9 +263,9 @@ class neuron_reference(object):
         # eq_template = self.value_extractor(self.cropped_df_for_current_type, 'eq_template')
         # self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
         self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) +  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
-            dge/dt = -ge/tau_e : siemens
-            dgi/dt = -gi/tau_i : siemens
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) : volt (unless refractory)
+            dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
+            dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2: siemens
             ''', ge='ge_soma', gi='gi_soma')
 
         self.output_neuron['equation'] += Equations('''x : meter
@@ -281,9 +290,9 @@ class neuron_reference(object):
         # self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
 
         self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C)+  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
-            dge/dt = -ge/tau_e : siemens
-            dgi/dt = -gi/tau_i : siemens
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) : volt (unless refractory)
+            dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
+            dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2: siemens
             ''', ge='ge_soma', gi='gi_soma')
 
         self.output_neuron['equation'] += Equations('''x : meter
@@ -308,9 +317,9 @@ class neuron_reference(object):
         # self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
 
         self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C)+  noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
-            dge/dt = -ge/tau_e : siemens
-            dgi/dt = -gi/tau_i : siemens
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) : volt (unless refractory)
+            dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
+            dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2: siemens
             ''', ge='ge_soma', gi='gi_soma')
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')

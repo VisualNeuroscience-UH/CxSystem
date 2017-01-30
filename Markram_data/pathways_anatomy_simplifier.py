@@ -516,7 +516,6 @@ def create_csv_config_file(filename=default_csv_output_file, update_json=False):
 
 def create_json_from_synapse_numbers(input_file = internal_synapse_numbers_markram, output_file = internal_connectivity_output_file):
 
-
     ### Part I: Create dataframe with total_synapse_count & mean_number_of_synapse_per_connection
     syn_numbers_data = pd.read_csv(input_file, index_col=0, usecols=range(56))
     syn_numbers_dict = dict()

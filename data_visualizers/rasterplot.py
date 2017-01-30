@@ -17,6 +17,7 @@ import random
 
 mycmap = 'jet'
 
+
 class SimulationData(object):
 
     #default_data_file = '/home/henri/PycharmProjects/CX_Output/'
@@ -482,6 +483,7 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
     #plt.savefig('calciumplot.eps', dpi=600)
     plt.savefig('calciumplot.png')
     #plt.show()
+
 
 
 # MAIN

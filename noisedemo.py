@@ -1,35 +1,23 @@
 from brian2 import *
 import matplotlib.pyplot as plt
 
-### PC cell
-# Biophysical parameters
-# Cm = 1*ufarad*cm**-2
-# area_total = 25000 * um**2
-# gL = (4.2e-5*siemens*cm**-2) * area_total
-# EL = -70*mV
-# Ee = 0*mV
-# Ei = -75*mV
-# DeltaT = 2*mV
-# VT = -45*mV
-# Vr = -70*mV
-# C = Cm * area_total
-# tau_e = 3*ms
-# tau_i = 8*ms
-# refr_time = 3*ms
-#
-#
-# gemean = 30*nS
-# gestd = 4*nS
-# gimean = 150*nS
-# gistd = 10*nS
 
-### BC cell
-# Biophysical parameters
-#C = 64*pF
-#tau_m = 8*ms
-#gL = C/tau_m
-C = 180*pF
-gL = 1.2*nS
+# Spiny stellate cell
+# C = 179*pF
+# gL = 4.6*nS
+
+# PC basal dendrite
+# C = 37.5*pF
+# gL = 4*nS
+
+# BC cell
+# C = 58*pF
+# gL = 10*nS
+
+# MC cell
+C=63*pF
+gL = 3.2*nS
+
 tau_m = C/gL
 EL = -70*mV
 Ee = 0*mV
@@ -42,17 +30,12 @@ tau_e = 3*ms
 tau_i = 8*ms
 refr_time = 3*ms
 
-# Example with fluctuating conductances
-# gemean = 10*nS
-# gestd = 0.4*nS
-# gimean = 40*nS
-# gistd = 12.5*nS
 
-# Config with no noise
-gemean = 0*nS
-gestd = 0*nS
-gimean = 0*nS
-gistd = 0*nS
+# Noise parameters
+gemean = 4*nS
+gestd = 1*nS
+gimean = 16*nS
+gistd = 8*nS
 
 defaultclock_dt = 0.1*ms
 
@@ -77,11 +60,11 @@ M = StateMonitor(G, ('vm','ge','gi'), record=True)
 M_spikes = SpikeMonitor(G)
 
 ### Constant current
-run(50 * ms)
-G.I = 60*pA
-run(1900 * ms)
+run(500 * ms)
+G.I = 0*pA
+run(40 * ms)
 G.I = 0*nA
-run(50 * ms)
+run(500 * ms)
 
 ### Poisson-noise
 # H = PoissonGroup(1, 0*Hz)
