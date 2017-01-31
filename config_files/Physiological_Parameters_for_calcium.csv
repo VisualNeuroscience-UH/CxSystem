@@ -1,9 +1,9 @@
 Variable,Key,Value,Comment
 "# From Markram et al Cell 2015, Table S6. Prescribed Parameters for Synaptic Transmission, Related to Figures 9 and 10.",,,
-calcium_concentration,,{1.5 & 2.0 & 2.5},
+calcium_concentration,,2.0,
 EE_weights_gain,,0.5,
 EI_weights_gain,,0.5,
-_weights,w_TC_E-E_connections,(1 * EE_weights_gain) * nS,"#Cruikshank et al 2007, nature neuroscience"
+_weights,w_TC_E-E_connections,{0.3 | 0.8 | 0.1} * EE_weights_gain * nS,"#Cruikshank et al 2007, nature neuroscience"
 ,w_TC_E-I_connections,(1 * EI_weights_gain) * nS,
 ,w_All_other_E-E_connections,(0.72*EE_weights_gain) * nS ,"# See Markram et al 2015, Table S6"
 ,w_All_other_E-I_connections,(0.43*EI_weights_gain) * nS,
@@ -244,7 +244,7 @@ PC,Cm,(1*ufarad*cm**-2),
 ,gL_soma,0.24 * nS,# Redundant – calculated here just for visualization purposes
 ,,,
 ,,,
-BC,C,58 * pF,"# Somatosensory cortex, Beierlein 2000 - Badel et al., 2008: 90 pF self.output_namespace['C']; 58 * pF   neuroelectro portal"
+BC,C,100 * pF,"# Somatosensory cortex, Beierlein 2000 - Badel et al., 2008: 90 pF self.output_namespace['C']; 58 * pF   neuroelectro portal"
 ,gL,10 * nS,# Beierlein 2000 -  Badel et al -> 10 nS (calculated from tau_m)
 ,Vr,-67.66 * mV,
 ,EL,-67.66 * mV  ,# mean of neuro-electro portal#-64 * mV # Badel et al. 2008
@@ -275,7 +275,7 @@ L1i,gL,3.2 * nS  ,"# 3.2 nsiemens mean of cell types in L1, Muralidhar 2014 Fron
 ,,,
 ,,,
 ,,,
-MC,C,71 * pF,"# 92.1 +- 8.4, Paluszkiewicz 2011 J Neurophysiol, 71 pF Neuroelectro"
+MC,C,92.1 * pF,"# 92.1 +- 8.4, Paluszkiewicz 2011 J Neurophysiol, 71 pF Neuroelectro"
 ,taum_soma,21.22 * ms,# self.output_namespace['C'] = 60 * pF  # neuroelectro portal
 ,EL,-60.38 * mV,
 ,VT,-42.29 * mV,
@@ -290,9 +290,9 @@ MC,C,71 * pF,"# 92.1 +- 8.4, Paluszkiewicz 2011 J Neurophysiol, 71 pF Neuroelect
 ,Vcut,VT+ 5*DeltaT,
 ,,,
 ,,,
-SS,taum_soma,39 * ms,# me-type fact sheet – L4_SS_cADpyr
-,gL,4.6 * nS,# - ” -; gL = 1/Rin
-,C,179 * pF,"# - "" -"
+SS,taum_soma,23.81 * ms,# me-type fact sheet – L4_SS_cADpyr
+,gL,0.4725 * nS,# - ” -; gL = 1/Rin
+,C,11.25 * pF,"# - "" -"
 ,Vr,-70 * mV,
 ,EL,-70 * mV,
 ,VT,-45 * mV,
