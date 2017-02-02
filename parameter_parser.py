@@ -35,7 +35,7 @@ class synapse_parser(object):
     '''
 
     # For _change_calcium()
-    _excitatory_groups = ['PC', 'SS']
+    _excitatory_groups = ['PC', 'SS', 'VPM']
     _steep_post_inhibitory_groups = ['MC']
     _shallow_post_inhibitory_groups = ['BC']
     _steep_post = _excitatory_groups + _steep_post_inhibitory_groups
