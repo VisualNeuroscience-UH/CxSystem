@@ -1,6 +1,6 @@
 Variable,Key,Value,Comment
 "# From Markram et al Cell 2015, Table S6. Prescribed Parameters for Synaptic Transmission, Related to Figures 9 and 10.",,,
-calcium_concentration,,{1.0|2.6|0.1},
+calcium_concentration,,{1.0 & 1.5 & 2.0},
 EE_weights_gain,,0.5,
 EI_weights_gain,,0.5,
 _weights,w_TC_E-E_connections,0.7 * EE_weights_gain * nS,"#Cruikshank et al 2007, nature neuroscience"
@@ -231,7 +231,7 @@ PC,Cm,(1*ufarad*cm**-2),
 ,Vr,-70.11 * mV,
 ,EL,-70.11 * mV,
 ,VT,-41.61 * mV,
-,V_res,-70.11 * mV,
+,V_res,-55 * mV,
 ,DeltaT,2*mV,
 ,Vcut,-25 * mV,
 ,Ee,0*mV,

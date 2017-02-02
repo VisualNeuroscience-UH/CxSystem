@@ -147,7 +147,7 @@ class neuron_reference(object):
         # eq_template_dend = self.value_extractor(self.cropped_df_for_current_type,'eq_template_dend')
 
         eq_template_soma = '''
-        dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+        dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
         dge/dt = -ge/tau_e : siemens
         dgealpha/dt = (ge-gealpha)/tau_e : siemens
         dgi/dt = -gi/tau_i : siemens
@@ -242,7 +242,7 @@ class neuron_reference(object):
 
         # Diffusive noise model
         self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
             dge/dt = -ge/tau_e : siemens
             dgi/dt = -gi/tau_i : siemens
             ''', ge='ge_soma', gi='gi_soma')
@@ -276,7 +276,7 @@ class neuron_reference(object):
 
         # Diffusive noise model
         self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
             dge/dt = -ge/tau_e : siemens
             dgi/dt = -gi/tau_i : siemens
             ''', ge='ge_soma', gi='gi_soma')
@@ -311,7 +311,7 @@ class neuron_reference(object):
 
         # Diffusive noise model
         self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
             dge/dt = -ge/tau_e : siemens
             dgi/dt = -gi/tau_i : siemens
             ''', ge='ge_soma', gi='gi_soma')
@@ -346,7 +346,7 @@ class neuron_reference(object):
 
         # Diffusive noise model
         self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm)) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
             dge/dt = -ge/tau_e : siemens
             dgi/dt = -gi/tau_i : siemens
             ''', ge='ge_soma', gi='gi_soma')

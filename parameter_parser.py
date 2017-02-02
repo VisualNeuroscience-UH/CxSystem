@@ -206,8 +206,8 @@ class neuron_parser (object):
 
         # total capacitance in compartments. The *2 comes from Markram et al Cell 2015: corrects for the dendritic spine area
         self.output_namespace['C']= self.output_namespace['fract_areas'][output_neuron['dend_comp_num']] * self.output_namespace['Cm'] * self.output_namespace['Area_tot_pyram'] *2
-        if output_neuron['soma_layer'] in [6]: # neuroelectro portal layer5/6 capacitance
-            self.output_namespace['C'] = self.output_namespace['fract_areas'][output_neuron['dend_comp_num']] * self.output_namespace['Cm'] * self.output_namespace['Area_tot_pyram']
+        # if output_neuron['soma_layer'] in [6]: # neuroelectro portal layer5/6 capacitance ??????
+        #     self.output_namespace['C'] = self.output_namespace['fract_areas'][output_neuron['dend_comp_num']] * self.output_namespace['Cm'] * self.output_namespace['Area_tot_pyram']
         # total g_leak in compartments
         self.output_namespace['gL']= self.output_namespace['fract_areas'][output_neuron['dend_comp_num']] * self.output_namespace['gL'] * self.output_namespace['Area_tot_pyram']
         self.output_namespace['taum_soma'] = self.output_namespace['C'][1] / self.output_namespace['gL'][1]

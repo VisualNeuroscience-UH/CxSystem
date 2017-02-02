@@ -463,7 +463,7 @@ class CxSystem(object):
         '''
         assert self.sys_mode != '', "System mode is not defined."
         _all_columns = ['idx', 'number_of_neurons', 'neuron_type', 'layer_idx', 'threshold',
-                        'reset', 'refractory', 'net_center','monitors','noise_sigma','gemean','gestd','gimean','gistd']
+                        'reset', 'refractory', 'net_center','monitors', 'tonic_current', 'noise_sigma','gemean','gestd','gimean','gistd']
         _obligatory_params = [0, 1, 2, 3]
         assert len(self.current_values_list) <= len(_all_columns), 'One or more of of the columns for NeuronGroups definition \
         is missing. Following obligatory columns should be defined:\n%s\n ' \
@@ -478,6 +478,7 @@ class CxSystem(object):
         idx = -1
         net_center = 0 + 0j
         number_of_neurons = 0
+        tonic_current = ''
         noise_sigma = ''
         gemean = ''
         gestd = ''
@@ -503,6 +504,9 @@ class CxSystem(object):
             # description can be found in configuration file tutorial.
         net_center = complex(net_center)
         current_idx = len(self.customized_neurons_list)
+
+        if tonic_current == '--':
+            tonic_current = '0*pA'
 
         if noise_sigma == '--':
             noise_sigma = '0*mV'
@@ -556,9 +560,11 @@ class CxSystem(object):
         exec "%s=self.customized_neurons_list[%d]['reset']" % (_dyn_neuron_reset_name, current_idx)
         exec "%s=self.customized_neurons_list[%d]['refractory']" % (_dyn_neuron_refra_name, current_idx)
         exec "%s=self.customized_neurons_list[%d]['namespace']" % (_dyn_neuron_namespace_name, current_idx)
-        # Adding the noise sigma to the namespace
+        # Adding tonic current to namespace
+        self.customized_neurons_list[current_idx]['namespace']['tonic_current'] = eval(tonic_current)
+        # Adding the noise sigma to namespace
         self.customized_neurons_list[current_idx]['namespace']['noise_sigma'] = noise_sigma
-        # Adding ge/gi mean/std to the namespace
+        # Adding ge/gi mean/std to namespace
         self.customized_neurons_list[current_idx]['namespace']['gemean'] = eval(gemean)
         self.customized_neurons_list[current_idx]['namespace']['gestd'] = eval(gestd)
         self.customized_neurons_list[current_idx]['namespace']['gimean'] = eval(gimean)
