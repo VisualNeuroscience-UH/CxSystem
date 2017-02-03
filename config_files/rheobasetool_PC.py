@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 
 dendritic_extent = 1
-test_current = 102*pA
+test_current = 103*pA
 
 refr_time = 4*ms
 defaultclock_dt = 0.1*ms  # Just for visualization! Changing this doesn't change the clock.
@@ -13,8 +13,6 @@ DeltaT = 2*mV
 Cm = 1*uF*cm**-2
 gl = 4.2e-5*siemens*cm**-2
 Area_tot_pyram = 25000 * 0.75 * um**2
-#C = 5.625*pF  # soma
-#gL = 0.24*nS  # soma
 VT = -41.61*mV
 Vcut = -25*mV
 V_res = -55*mV
