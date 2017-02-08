@@ -2,20 +2,29 @@ from brian2 import *
 import matplotlib.pyplot as plt
 
 
+tonic_current = 80*pA
+
+refr_time = 4*ms
+defaultclock_dt = 0.1*ms  # Just for visualization! Changing this doesn't change the clock.
 DeltaT = 2*mV
 
-# PC soma
-Cm = 1*uF*cm**-2
-gl = 4.2e-5*siemens*cm**-2
-area_total = 25000 * 0.75 * um**2
-C = Cm*area_total
-gL = gl*area_total
-VT = -41.61*mV
-Vcut = -25*mV
-V_res = -55*mV
-EL = -70.11*mV
+######################################################
+#  NEURON TYPES -- uncomment appropriate parameters  #
+######################################################
 
-# PC dendritic parameters
+# PC cell
+# PC_flag = True
+# Cm = 1*uF*cm**-2
+# gl = 4.2e-5*siemens*cm**-2
+# area_total = 25000 * 0.75 * um**2
+# C = 5.625*pF  # soma
+# gL = 0.24*nS  # soma
+# VT = -41.61*mV
+# Vcut = -25*mV
+# V_res = -55*mV
+# EL = -70.11*mV
+#
+# # Dendritic parameters (simplified 3 compartment model)
 # dendritic_extent = 1
 # fract_areas = {1: array([0.2,  0.03,  0.15,  0.2]),
 #                 2: array([0.2,  0.03,  0.15,  0.15,  0.2]),
@@ -39,7 +48,6 @@ EL = -70.11*mV
 # gL_apical = gl*area_apical
 # C_basal = Cm*area_basal*2  # x2 to account for spine area
 # C_apical = Cm*area_apical*2  # x2 to account for spine area
-
 
 
 # BC cell
@@ -66,7 +74,7 @@ EL = -70.11*mV
 # V_res = VT - 4*mV
 # EL = -60.38*mV
 
-# SS cell
+# SS cell (variant no2)
 # C = 35*pF
 # gL = 1.0*nS
 # VT = -45*mV
@@ -74,25 +82,32 @@ EL = -70.11*mV
 # V_res = -70*mV
 # EL = -70*mV
 
+# SS cell (variant no3; params wanted within physiological range)
+C = 110*pF
+gL = 3.1*nS
+VT = -45*mV
+Vcut = -25*mV
+V_res = -70*mV
+EL = -70*mV
+
+# Synaptic parameters; redundant in this tool as there are no synaptic conductances
 tau_e = 3*ms  # Depends on neuron type
 tau_i = 8*ms  # Depends on neuron type
-tau_m = C/gL
 Ee = 0*mV
 Ei = -75*mV
-refr_time = 4*ms
+tau_m = C/gL
 
 
 # Noise parameters
-gemean = 1.0*nS
-gestd = 0.5*nS
+gemean = 0*nS
+gestd = 0*nS
 gimean = 0*nS
 gistd = 0*nS
 
-defaultclock_dt = 0.1*ms  # Just for visualization! Changing this doesn't change the clock.
 
 # Stochastic equation with fluctuating synaptic conductances (set ge/gi mean/std to zero if you don't want stochasticity)
 eq_PC_soma = '''
- dvm/dt = ((gL*(EL-vm) + ge * (Ee-vm) + gi * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I) / C) : volt
+ dvm/dt = ((gL*(EL-vm) + ge * (Ee-vm) + gi * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + tonic_current) / C) : volt
  dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
  #dgealpha/dt = (ge-gealpha)/tau_e : siemens
  dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2 : siemens
@@ -106,27 +121,20 @@ eq_PC_soma = '''
 #  dv_basal/dt = (gL_basal*(EL-v_basal) + (1/R_apical)*(vm-v_basal))/C_basal : volt
 #  I: amp
 #  '''
+# G.v_apical = EL
+# G.v_basal = EL
 
 # Main
 G = NeuronGroup(1,eq_PC_soma, threshold='vm > '+repr(Vcut), reset = 'vm = '+repr(V_res), refractory = refr_time, method='euler')
 G.vm = EL
-# G.v_apical = EL
-# G.v_basal = EL
 G.gi = gimean
 G.ge = gemean
 
 M = StateMonitor(G, ('vm','ge','gi'), record=True)
 M_spikes = SpikeMonitor(G)
-# M = StateMonitor(G, ('vm'), record=True)
-# M_spikes = SpikeMonitor(G)
 
-
-### Constant current
-run(20 * ms)
-G.I = 199*pA
 run(1000 * ms)
-G.I = 0*nA
-run(50 * ms)
+
 
 ### Poisson-noise
 # H = PoissonGroup(1, 0*Hz)
@@ -171,9 +179,9 @@ plt.legend()
 plt.subplot(1,3,3)
 plt.title('Excitatory vs. inhibitory conductance')
 
-def gi_line(x): return (-x*(Ee-VT) - gL*(EL-VT))/(Ei-VT)
+def gi_line(x): return (-x*(Ee-VT) - gL*(EL-VT) - tonic_current)/(Ei-VT)
 
-x_values = np.arange(0*nS,50*nS,1*nS)
+x_values = np.arange(0*nS,20*nS,1*nS)
 plt.plot(x_values, [gi_line(x) for x in x_values], label='$dV_m/dt = 0$')
 
 for spike_time in M_spikes.t/defaultclock_dt:

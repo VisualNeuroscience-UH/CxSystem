@@ -458,7 +458,7 @@ class SimulationData(object):
 
 ### END of class SimulationData
 
-def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='$Ca^{2+}$ concentration (mM)'):
+def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='Effect of increased $Ca^{2+}$ concentration (mM)'):
 
     sim_n = len(sim_files)
     q = neurons_per_group
@@ -479,9 +479,10 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
     [SimulationData(sim_files[i]).rasterplot_compressed(40, ax[i]) for i in range(sim_n)]
     [ax[i].set_title(sim_titles[i]) for i in range(sim_n)]
 
-    #plt.tight_layout()
-    #plt.savefig('calciumplot.eps', dpi=600)
-    plt.savefig('calciumplot.png')
+    plt.tight_layout()
+    fig.subplots_adjust(top=0.80, bottom=0.20, left=0.03, right=0.97)
+    plt.savefig('calciumplot.eps', dpi=600)
+    # plt.savefig('calciumplot.png')
     #plt.show()
 
 
@@ -490,19 +491,20 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
 
 if __name__ == '__main__':
 
-    # simulations = ['Reimann_20161217_calcium50.bz2', 'Reimann_20161217_calcium35.bz2', 'Reimann_20161217_calcium25.bz2', 'Reimann_20161216_clockchange.bz2']
-    # sim_title = ['5.0', '3.5', '2.5', '2.0']
-    #
-    # calciumplot(sim_files=simulations, sim_titles=sim_title, neurons_per_group=40, runtime=1.0)
+    simulations = ['depol_37_calcium_concentration1.0_Cpp_3000ms.bz2', 'depol_37_calcium_concentration1.4_Cpp_3000ms.bz2',
+                   'depol_37_calcium_concentration2.0_Cpp_3000ms.bz2']
+    sim_title = ['1.0', '1.4', '2.0']
 
-    sim = SimulationData('constudy_02_calcium_concentration2.0_Cpp_1000ms.bz2')
+    calciumplot(sim_files=simulations, sim_titles=sim_title, neurons_per_group=40, runtime=3.0)
+
+    # sim = SimulationData('constudy_02_calcium_concentration2.0_Cpp_1000ms.bz2')
     # sim._get_group_leak(1)
     # for i in range (1,16+1):
     #     print 'Group '+ sim.group_numbering[i]
     #     print sim._get_group_leak(i)
     #sim.rasterplot()
 
-    sim.conductanceplot(11)
+    # sim.conductanceplot(11)
 
 
 
