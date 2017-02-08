@@ -1,8 +1,8 @@
 Variable,Key,Value,Comment
 "# From Markram et al Cell 2015, Table S6. Prescribed Parameters for Synaptic Transmission, Related to Figures 9 and 10.",,,
-calcium_concentration,,{1.0 & 1.5 & 2.0},
+calcium_concentration,,{1.0|2.1|0.1},
 EE_weights_gain,,0.5,
-EI_weights_gain,,0.5,
+EI_weights_gain,,0.6,
 _weights,w_TC_E-E_connections,0.7 * EE_weights_gain * nS,"#Cruikshank et al 2007, nature neuroscience"
 ,w_TC_E-I_connections,(3 * EI_weights_gain) * nS,
 ,w_All_other_E-E_connections,(0.72*EE_weights_gain) * nS ,"# See Markram et al 2015, Table S6"
@@ -290,9 +290,9 @@ MC,C,92.1 * pF,"# 92.1 +- 8.4, Paluszkiewicz 2011 J Neurophysiol, 71 pF Neuroele
 ,Vcut,VT+ 5*DeltaT,
 ,,,
 ,,,
-SS,taum_soma,35 * ms,# Top of the hat estimate
-,gL,1.0 * nS,# Top of the hat estimate
-,C,taum_soma * gL,# Top of the hat estimate
+SS,C,110*pF,# Top of the hat estimate
+,gL,3.1 * nS,# Top of the hat estimate
+,taum_soma,C/gL,# Top of the hat estimate
 ,Vr,-70 * mV,
 ,EL,-70 * mV,
 ,VT,-45 * mV,

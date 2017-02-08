@@ -2,7 +2,7 @@ from brian2 import *
 import matplotlib.pyplot as plt
 
 
-test_current = 159*pA
+test_current = 72*pA
 
 refr_time = 4*ms
 defaultclock_dt = 0.1*ms  # Just for visualization! Changing this doesn't change the clock.
@@ -13,41 +13,41 @@ DeltaT = 2*mV
 ######################################################
 
 # PC cell
-PC_flag = True
-Cm = 1*uF*cm**-2
-gl = 4.2e-5*siemens*cm**-2
-area_total = 25000 * 0.75 * um**2
-C = 5.625*pF  # soma
-gL = 0.24*nS  # soma
-VT = -41.61*mV
-Vcut = -25*mV
-V_res = -55*mV
-EL = -70.11*mV
-
-# Dendritic parameters (simplified 3 compartment model)
-dendritic_extent = 1
-fract_areas = {1: array([0.2,  0.03,  0.15,  0.2]),
-                2: array([0.2,  0.03,  0.15,  0.15,  0.2]),
-                3: array([0.2,  0.03,  0.15,  0.09,  0.15,  0.2]),
-                4: array([0.2,  0.03,  0.15,  0.15,  0.09,  0.15,  0.2])}
-
-Ra = [100, 80, 150, 150, 200] * Mohm
-fract_area_fixed = fract_areas[dendritic_extent]
-
-area_basal = 0.2 * area_total
-area_apical = 0*um**2
-for i in range(0, dendritic_extent+1):
-    area_apical += fract_area_fixed[2+i] * area_total
-
-R_basal = Ra[0]
-R_apical = Ra[-1]  # last compartment always with Ra[-1] resistance
-for i in range(0, dendritic_extent):
-    R_apical += Ra[i+1]
-
-gL_basal = gl*area_basal
-gL_apical = gl*area_apical
-C_basal = Cm*area_basal*2  # x2 to account for spine area
-C_apical = Cm*area_apical*2  # x2 to account for spine area
+# PC_flag = True
+# Cm = 1*uF*cm**-2
+# gl = 4.2e-5*siemens*cm**-2
+# area_total = 25000 * 0.75 * um**2
+# C = 5.625*pF  # soma
+# gL = 0.24*nS  # soma
+# VT = -41.61*mV
+# Vcut = -25*mV
+# V_res = -55*mV
+# EL = -70.11*mV
+#
+# # Dendritic parameters (simplified 3 compartment model)
+# dendritic_extent = 1
+# fract_areas = {1: array([0.2,  0.03,  0.15,  0.2]),
+#                 2: array([0.2,  0.03,  0.15,  0.15,  0.2]),
+#                 3: array([0.2,  0.03,  0.15,  0.09,  0.15,  0.2]),
+#                 4: array([0.2,  0.03,  0.15,  0.15,  0.09,  0.15,  0.2])}
+#
+# Ra = [100, 80, 150, 150, 200] * Mohm
+# fract_area_fixed = fract_areas[dendritic_extent]
+#
+# area_basal = 0.2 * area_total
+# area_apical = 0*um**2
+# for i in range(0, dendritic_extent+1):
+#     area_apical += fract_area_fixed[2+i] * area_total
+#
+# R_basal = Ra[0]
+# R_apical = Ra[-1]  # last compartment always with Ra[-1] resistance
+# for i in range(0, dendritic_extent):
+#     R_apical += Ra[i+1]
+#
+# gL_basal = gl*area_basal
+# gL_apical = gl*area_apical
+# C_basal = Cm*area_basal*2  # x2 to account for spine area
+# C_apical = Cm*area_apical*2  # x2 to account for spine area
 
 
 # BC cell
@@ -82,6 +82,13 @@ C_apical = Cm*area_apical*2  # x2 to account for spine area
 # V_res = -70*mV
 # EL = -70*mV
 
+# SS cell (alternative; params wanted within physiological range)
+C = 110*pF
+gL = 3.1*nS
+VT = -45*mV
+Vcut = -25*mV
+V_res = -70*mV
+EL = -70*mV
 
 # Synaptic parameters; redundant in this tool as there are no synaptic conductances
 tau_e = 3*ms  # Depends on neuron type
@@ -95,7 +102,7 @@ tau_m = C/gL
 # EQUATIONS & RUNNING the SIM #
 ###############################
 
-if PC_flag not in locals():
+if 'PC_flag' not in locals():
     eq_soma = '''
      dvm/dt = ((gL*(EL-vm) + ge * (Ee-vm) + gi * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I) / C) : volt
      dge/dt = -ge/tau_e : siemens
@@ -113,10 +120,8 @@ else:
 # Main
 G = NeuronGroup(1,eq_soma, threshold='vm > '+repr(Vcut), reset = 'vm = '+repr(V_res), refractory = refr_time, method='euler')
 G.vm = EL
-G.v_apical = EL
-G.v_basal = EL
-# G.gi = gimean
-# G.ge = gemean
+# G.v_apical = EL
+# G.v_basal = EL
 
 # M = StateMonitor(G, ('vm','ge','gi'), record=True)
 # M_spikes = SpikeMonitor(G)
