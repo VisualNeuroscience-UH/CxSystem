@@ -53,7 +53,7 @@ class CxSystem(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self, anatomy_and_system_config,physiology_config, output_file_suffix = '',instanciated_from_array_run = 0):
+    def __init__(self, anatomy_and_system_config, physiology_config, output_file_suffix = '',instanciated_from_array_run = 0):
         '''
         Initialize the cortical system by parsing the configuration file.
 
@@ -463,7 +463,8 @@ class CxSystem(object):
         '''
         assert self.sys_mode != '', "System mode is not defined."
         _all_columns = ['idx', 'number_of_neurons', 'neuron_type', 'layer_idx', 'threshold',
-                        'reset', 'refractory', 'net_center','monitors', 'tonic_current', 'noise_sigma','gemean','gestd','gimean','gistd']
+                        'reset', 'refractory', 'net_center','monitors', 'tonic_current', 'n_background_inputs',
+                        'noise_sigma', 'gemean', 'gestd', 'gimean', 'gistd']
         _obligatory_params = [0, 1, 2, 3]
         assert len(self.current_values_list) <= len(_all_columns), 'One or more of of the columns for NeuronGroups definition \
         is missing. Following obligatory columns should be defined:\n%s\n ' \
@@ -479,6 +480,7 @@ class CxSystem(object):
         net_center = 0 + 0j
         number_of_neurons = 0
         tonic_current = ''
+        n_background_inputs = ''
         noise_sigma = ''
         gemean = ''
         gestd = ''
@@ -520,6 +522,9 @@ class CxSystem(object):
             gimean = '0*nS'
         if gistd == '--':
             gistd = '0*nS'
+
+        if n_background_inputs == '--':
+            n_background_inputs = '0'
 
         assert 'V' in str(noise_sigma._get_best_unit()), 'The unit of noise_sigma should be volt'
         if neuron_type == 'PC':  # extract the layer index of PC neurons separately
@@ -573,6 +578,33 @@ class CxSystem(object):
         # Creating the actual NeuronGroup() using the variables in the previous 6 lines
         exec "%s= NeuronGroup(%s, model=%s, method='%s', threshold=%s, reset=%s,refractory = %s, namespace = %s)" \
              % (_dyn_neurongroup_name, _dyn_neuronnumber_name, _dyn_neuron_eq_name,self.numerical_integration_method ,_dyn_neuron_thres_name, _dyn_neuron_reset_name, _dyn_neuron_refra_name, _dyn_neuron_namespace_name)
+
+
+        # Add Poisson-distributed background input
+        background_rate = self.physio_config_df.ix[where(self.physio_config_df.values == 'background_rate')[0]]['Value'].item()
+        if neuron_type in ['L1i', 'BC', 'MC']:
+            background_weight = \
+            self.physio_config_df.ix[where(self.physio_config_df.values == 'background_E_I_weight')[0]]['Value'].item()
+        else:
+            background_weight = \
+            self.physio_config_df.ix[where(self.physio_config_df.values == 'background_E_E_weight')[0]]['Value'].item()
+
+        # print 'Adding Poisson background input with params: '+n_background_inputs+', '+background_rate+', '+background_weight
+        if neuron_type != 'PC':
+            exec "bg_%s = PoissonInput(target=%s, target_var='ge_soma', N=%s, rate=%s, weight=%s)" \
+                 % (_dyn_neurongroup_name, _dyn_neurongroup_name, n_background_inputs,
+                    background_rate, background_weight)
+        else:
+            n_target_compartments = int(self.customized_neurons_list[-1]['total_comp_num']) -1  # No excitatory input to soma
+            n_inputs_to_each_comp = int(int(n_background_inputs) / n_target_compartments)
+            target_comp_list = ['basal', 'a0']
+            target_comp_list.extend(['a'+str(i) for i in range(1, n_target_compartments-2+1)])
+            for target_comp in target_comp_list:
+                exec "bg_%s_%s = PoissonInput(target=%s, target_var='ge_%s', N=%s, rate=%s, weight=%s)" \
+                 % (_dyn_neurongroup_name, target_comp, _dyn_neurongroup_name, target_comp, n_inputs_to_each_comp,
+                    background_rate, background_weight)
+
+
         # trying to load the positions in the groups
         if hasattr(self,'loaded_brian_data'):
             # in case the NG index are different.
@@ -1475,11 +1507,16 @@ class CxSystem(object):
 
 
 if __name__ == '__main__' :
-    CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/Burbank_config.csv', \
-                  os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_Burbank.csv', )
-    CM.run()
+    # CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/Burbank_config.csv', \
+    #               os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_Burbank.csv', )
+    # CM.run()
+    #
+    # from data_visualizers.data_visualization import DataVisualization
+    #
+    # dv = DataVisualization()
+    # dv.make_figure()
 
-    from data_visualizers.data_visualization import DataVisualization
-
-    dv = DataVisualization()
-    dv.make_figure()
+    CM = CxSystem(
+        anatomy_and_system_config=os.path.dirname(os.path.realpath(__file__)) + '/config_files/calcium_config_file.csv',
+        physiology_config=os.path.dirname(
+            os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_calcium.csv')

@@ -1,15 +1,20 @@
 Variable,Key,Value,Comment
 "# From Markram et al Cell 2015, Table S6. Prescribed Parameters for Synaptic Transmission, Related to Figures 9 and 10.",,,
-calcium_concentration,,1.25,
+calcium_concentration,,1.2,
+background_rate,,{1 & 2 & 4 & 8}*Hz,
+excitatory_strength,,0.72*nS,
+inhibitory_synapse_factor,,1.15,# 1.15 x 0.72nS = 0.83nS
 EE_weights_gain,,0.5,
-EI_weights_gain,,0.6,
+EI_weights_gain,,0.36,# 0.43nS x 0.6 / 0.72nS
 _weights,w_TC_E-E_connections,0.7 * EE_weights_gain * nS,"#Cruikshank et al 2007, nature neuroscience"
 ,w_TC_E-I_connections,(3 * EI_weights_gain) * nS,
-,w_All_other_E-E_connections,(0.72*EE_weights_gain) * nS ,"# See Markram et al 2015, Table S6"
-,w_All_other_E-I_connections,(0.43*EI_weights_gain) * nS,
-,w_All_other_I-E_connections,0.83 * nS,
-,w_All_I-I_connections,0.83 * nS,
+,w_All_other_E-E_connections,excitatory_strength*EE_weights_gain,"# See Markram et al 2015, Table S6"
+,w_All_other_E-I_connections,excitatory_strength*EI_weights_gain,# was: (0.43*EI_weights_gain) * nS
+,w_All_other_I-E_connections,inhibitory_synapse_factor * excitatory_strength,# was: 0.83*nS
+,w_All_I-I_connections,inhibitory_synapse_factor * excitatory_strength,# was: 0.83*nS
 ,,,
+background_E_E_weight,,0.36*nS,# Fixed value because of technical issues TODO!
+background_E_I_weight,,0.26*nS,# Fixed value because of technical issues TODO!
 Cp,,0.001,"# Synaptic potentiation coefficient according to van Rossum J Neurosci 2000, here relative to initial value"
 Cd,,0.003,# Synaptic depression coefficient according to van Rossum J Neurosci 2000
 conn_prob_gain,,1,# This is used for compensation of small number of neurons and thus incoming synapses
@@ -272,7 +277,6 @@ L1i,gL,3.2 * nS  ,"# 3.2 nsiemens mean of cell types in L1, Muralidhar 2014 Fron
 ,C,taum_soma * gL,
 ,V_res,VT- 4 * mV,
 ,Vcut,VT+ 5*DeltaT,
-,,,
 ,,,
 ,,,
 MC,C,92.1 * pF,"# 92.1 +- 8.4, Paluszkiewicz 2011 J Neurophysiol, 71 pF Neuroelectro"

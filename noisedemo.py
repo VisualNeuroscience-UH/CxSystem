@@ -2,7 +2,8 @@ from brian2 import *
 import matplotlib.pyplot as plt
 
 
-tonic_current = 80*pA
+tonic_current = 0.95*72*pA
+
 
 refr_time = 4*ms
 defaultclock_dt = 0.1*ms  # Just for visualization! Changing this doesn't change the clock.
@@ -106,8 +107,8 @@ gistd = 0*nS
 
 
 # Stochastic equation with fluctuating synaptic conductances (set ge/gi mean/std to zero if you don't want stochasticity)
-eq_PC_soma = '''
- dvm/dt = ((gL*(EL-vm) + ge * (Ee-vm) + gi * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + tonic_current) / C) : volt
+eq_soma = '''
+ dvm/dt = ((gL*(EL-vm) + ge*(Ee-vm) + gi*(Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + tonic_current) / C) : volt
  dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
  #dgealpha/dt = (ge-gealpha)/tau_e : siemens
  dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2 : siemens
@@ -125,25 +126,26 @@ eq_PC_soma = '''
 # G.v_basal = EL
 
 # Main
-G = NeuronGroup(1,eq_PC_soma, threshold='vm > '+repr(Vcut), reset = 'vm = '+repr(V_res), refractory = refr_time, method='euler')
+G = NeuronGroup(2,eq_soma, threshold='vm > '+repr(Vcut), reset='vm = '+repr(V_res), refractory=refr_time, method='euler')
 G.vm = EL
 G.gi = gimean
 G.ge = gemean
 
-M = StateMonitor(G, ('vm','ge','gi'), record=True)
+M = StateMonitor(G, ('vm', 'ge', 'gi'), record=True)
 M_spikes = SpikeMonitor(G)
-
-run(1000 * ms)
 
 
 ### Poisson-noise
-# H = PoissonGroup(1, 0*Hz)
-# S = Synapses(H,G,on_pre='ge_post += 0.85*nS')
+# H = PoissonGroup(1, 6*Hz)
+# S = Synapses(H,G,on_pre='ge_post += 0.125*nS')
 # S.connect(i=0, j=0)
 #
-# I = PoissonGroup(1,10*Hz)
-# S2 = Synapses(I,G,on_pre='gi_post = 0.85*nS')
+# I = PoissonGroup(1,13*Hz)
+# S2 = Synapses(I,G,on_pre='gi_post = 0.625*nS')
 # S2.connect(i=0,j=0)
+
+### Alternative Poisson
+P = PoissonInput(G, 'ge', 200, 0.1*Hz, weight=0.3*nS)
 
 ### Timed spikes
 # times = array([100, 200])*ms
@@ -153,6 +155,8 @@ run(1000 * ms)
 # S.connect(i=0, j=0)
 # run(1000*ms)
 
+run(1000 * ms)
+
 
 plt.subplots(1,3)
 
@@ -160,6 +164,7 @@ plt.subplots(1,3)
 plt.subplot(1,3,1)
 plt.title('$V_m$ with spikes')
 plt.plot(M.t/ms, M.vm[0])
+plt.plot(M.t/ms, M.vm[1])
 plt.plot(M_spikes.t/ms, [0*mV] * len(M_spikes.t), '.')
 xlabel('Time (ms)')
 ylabel('V_m (V)')
