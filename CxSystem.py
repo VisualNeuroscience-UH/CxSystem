@@ -591,18 +591,28 @@ class CxSystem(object):
 
         # print 'Adding Poisson background input with params: '+n_background_inputs+', '+background_rate+', '+background_weight
         if neuron_type != 'PC':
-            exec "bg_%s = PoissonInput(target=%s, target_var='ge_soma', N=%s, rate=%s, weight=%s)" \
-                 % (_dyn_neurongroup_name, _dyn_neurongroup_name, n_background_inputs,
+            poisson_target = 'bg_%s' % _dyn_neurongroup_name
+            exec "%s = PoissonInput(target=%s, target_var='ge_soma', N=%s, rate=%s, weight=%s)" \
+                 % (poisson_target, _dyn_neurongroup_name, n_background_inputs,
                     background_rate, background_weight)
+            try:
+                setattr(self.Cxmodule, poisson_target, eval(poisson_target))
+            except AttributeError:
+                print 'Error in generating PoissonInput'
         else:
             n_target_compartments = int(self.customized_neurons_list[-1]['total_comp_num']) -1  # No excitatory input to soma
             n_inputs_to_each_comp = int(int(n_background_inputs) / n_target_compartments)
             target_comp_list = ['basal', 'a0']
             target_comp_list.extend(['a'+str(i) for i in range(1, n_target_compartments-2+1)])
             for target_comp in target_comp_list:
+                poisson_target = 'bg_%s_%s' % (_dyn_neurongroup_name, target_comp)
                 exec "bg_%s_%s = PoissonInput(target=%s, target_var='ge_%s', N=%s, rate=%s, weight=%s)" \
                  % (_dyn_neurongroup_name, target_comp, _dyn_neurongroup_name, target_comp, n_inputs_to_each_comp,
                     background_rate, background_weight)
+                try:
+                    setattr(self.Cxmodule, poisson_target, eval(poisson_target))
+                except AttributeError:
+                    print 'Error in generating PoissonInput'
 
 
         # trying to load the positions in the groups

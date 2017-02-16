@@ -1,8 +1,9 @@
 from brian2 import *
 import matplotlib.pyplot as plt
 
+# set_device('cpp_standalone', directory='cpptest')
 
-tonic_current = 0.95*72*pA
+tonic_current = 0.0*72*pA
 
 
 refr_time = 4*ms
@@ -145,7 +146,11 @@ M_spikes = SpikeMonitor(G)
 # S2.connect(i=0,j=0)
 
 ### Alternative Poisson
-P = PoissonInput(G, 'ge', 200, 0.1*Hz, weight=0.3*nS)
+bg_rate = 4*Hz
+exc_weight = 0.3*nS
+inh_scaling = 4
+Pe = PoissonInput(target=G, target_var='ge', N=3600, rate=bg_rate, weight=exc_weight)
+Pi = PoissonInput(G, 'gi', 500, bg_rate, inh_scaling*exc_weight)
 
 ### Timed spikes
 # times = array([100, 200])*ms
@@ -155,10 +160,11 @@ P = PoissonInput(G, 'ge', 200, 0.1*Hz, weight=0.3*nS)
 # S.connect(i=0, j=0)
 # run(1000*ms)
 
-run(1000 * ms)
+run(3000 * ms)
 
 
 plt.subplots(1,3)
+plt.suptitle('Bg rate: '+repr(bg_rate))
 
 ### Membrane voltage plot
 plt.subplot(1,3,1)
@@ -173,8 +179,8 @@ ylim([-0.075, 0.02])
 ### Conductance plot
 plt.subplot(1,3,2)
 plt.title('Conductance')
-plt.plot(M.t/ms, M.ge[0], label='ge')
-plt.plot(M.t/ms, M.gi[0], label='gi')
+plt.plot(M.t/ms, M.ge[0], label='ge', c='g')
+plt.plot(M.t/ms, M.gi[0], label='gi', c='r')
 xlabel('Time (ms)')
 ylabel('Conductance (S)')
 #ylim([0, 50e-9])

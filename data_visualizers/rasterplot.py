@@ -455,6 +455,143 @@ class SimulationData(object):
 
         plt.show()
 
+    def group_interspikeintervals(self, group_id):
+        # Get the group spikes. Remember: [0]->indices, [1]->spike times
+        spikes = self.spikedata[self.group_numbering[group_id]]
+
+        # Get indices of the neurons that are spiking
+        spiking_neurons = unique(spikes[0])
+
+        # Pick each neuron and go through the times it has spiked
+        spikeintervals = dict()
+        spiking_neurons_2 = []  # Those with at least 2 spikes
+        for neuron in spiking_neurons:
+            spike_idx = sort(where(spikes[0] == neuron)[0])
+
+            if len(spike_idx) >= 2:
+                spikeintervals[neuron] = []
+                spiking_neurons_2.append(neuron)
+                # Begin counting from 2nd spike and for each step calculate the duration between jth - (j-1)th spike time
+                for j in range(1, len(spike_idx)):
+                    interval = (spikes[1][spike_idx[j]] - spikes[1][spike_idx[j-1]]) * 1000  # x1000 s->ms
+                    spikeintervals[neuron].append(interval)
+
+        return spikeintervals, spiking_neurons_2
+
+    def group_isi_histogram(self, group_id, ax=None):
+
+        # Collection of spike times for each neuron in the group - let's just flatten it now
+        spikeintervals, spiking_neurons = self.group_interspikeintervals(group_id)
+        group_spikeintervals = []
+        [group_spikeintervals.extend(spikeintervals[neuron]) for neuron in spiking_neurons]
+
+        # Show a histogram of the interspike intervals (ISIs)
+        if ax is None:
+            plt.hist(group_spikeintervals, bins='auto')
+            plt.xlabel('Time (ms)')
+            plt.ylabel('Count')
+            plt.show()
+        else:
+            ax.hist(group_spikeintervals, bins=40)
+
+    # TODO - Begin analysis from certain point in time
+    def isi_histograms(self):
+        fig, ax = plt.subplots(4, 4)
+        fig.suptitle(self.datafile)
+
+        for group_id in range(1,16+1):
+            plt.subplot(4, 4, group_id)
+            plt.title(self.group_numbering[group_id])
+            self.group_isi_histogram(group_id, plt.gca() )
+            plt.xlabel('ISI (ms)')
+            plt.ylabel('Count')
+
+        plt.show()
+
+    # For now, only prints out mean firing rates for each group
+    # TODO - Begin analysis from certain point in time
+    def rate_boxplot(self):
+
+        # Get interspike intervals for all neuron groups and all their neurons
+        spikeintervals = dict()
+        spiking_neurons = dict()
+        for group_id in range(1,16+1):
+            spikeintervals[group_id], spiking_neurons[group_id] = self.group_interspikeintervals(group_id)
+
+        # For each neuron group, calculate the mean firing rates of neurons
+        firing_rates = dict()
+        for group_id in range(1,16+1):
+            firing_rates[group_id] = []
+            for neuron in spiking_neurons[group_id]:
+                # Mean firing rate is spikes/runtime, which is the same as number of interspike intervals +1 / runtime
+                # Runtime below is in seconds, so the firing_rate unit is hertz
+                firing_rates[group_id].append((len(spikeintervals[group_id][neuron])+1) / self.runtime)
+
+
+
+        # Draw horizontally group/line the mean and individual firing rates
+        for group_id in range(1, 16+1):
+            print self.group_numbering[group_id]
+            print nanmean(firing_rates[group_id])
+
+
+    # Calculation of single-neuron coefficient of variation of interspike intervals, see eg. Sterratt book p209
+    def neuron_isi_cv(self, isi_list):
+        return std(isi_list)/mean(isi_list)
+
+    # TODO - Begin analysis from certain point in time
+    def group_isi_cv(self, group_id):
+        spikeintervals, spiking_neurons = self.group_interspikeintervals(group_id)
+
+        neuron_cv_list = []
+        for neuron in spiking_neurons:
+            neuron_cv = self.neuron_isi_cv(spikeintervals[neuron])
+            neuron_cv_list.append(neuron_cv)
+
+        return mean(neuron_cv_list)
+
+    # TODO - Begin analysis from certain point in time
+    def isi_cv_all(self):
+        for group_id in range(1,16+1):
+            print self.group_numbering[group_id] + ', mean of 1-neuron CoV of ISIs (irregularity): ' + str(self.group_isi_cv(group_id))
+
+    def group_spike_count_histogram(self, group_id, bin_size=3*ms, ax=None):
+
+        # Collect spike counts (of the group) into runtime divided by (time-)bin_size many bins
+        timebin = bin_size/second
+        spikes = self.data['spikes_all'][self.group_numbering[group_id]]
+        n_bins = int(self.runtime/timebin)
+        spike_counts, bin_edges = np.histogram(spikes[1], bins=n_bins)
+        # Spike count divided by bin size could be called the "population firing rate", but we don't really need that
+
+        # Count how many time-bins with each firing rate/spike count -> spike count histogram
+        if ax is None:
+            plt.hist(spike_counts, bins='auto')
+            plt.xlabel('Spike count')
+            plt.ylabel('Frequency (# of timebins)')
+            plt.show()
+        else:
+            ax.hist(spike_counts, bins='auto')
+
+        # Print Fano factors (spike_counts variance/mean) to stdout
+        sp_mean = mean(spike_counts)
+        sp_var = np.var(spike_counts)
+        print self.group_numbering[group_id] + ': mean '+str(sp_mean)+', variance '+str(sp_var)
+        print 'Fano factor (population synchrony): '+ str(sp_var/sp_mean)
+
+
+    def spike_count_histograms(self):
+        fig, ax = plt.subplots(4, 4)
+        fig.suptitle(self.datafile)
+
+        for group_id in range(1, 16 + 1):
+            plt.subplot(4, 4, group_id)
+            plt.title(self.group_numbering[group_id])
+            self.group_spike_count_histogram(group_id, ax=plt.gca())
+            plt.xlabel('Spike count')
+            plt.ylabel('Frequency (timebins)')
+
+        plt.show()
 
 ### END of class SimulationData
 
@@ -491,11 +628,21 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
 
 if __name__ == '__main__':
 
-    simulations = ['depol_37_calcium_concentration1.0_Cpp_3000ms.bz2', 'depol_37_calcium_concentration1.4_Cpp_3000ms.bz2',
-                   'depol_37_calcium_concentration2.0_Cpp_3000ms.bz2']
-    sim_title = ['1.0', '1.4', '2.0']
+    sim = SimulationData('extrinsic_14_calcium_concentration1.2_background_E_I_weight0.26nS_Cpp_2000ms.bz2')
+    sim.isi_cv_all()
+    sim.spike_count_histograms()
+    # sim.group_spike_count_histogram(5)
+    # sim.isi_cv_all()
+    # sim.isi_histograms()
+    # sim.rasterplot()
+    # sim.rate_boxplot()
 
-    calciumplot(sim_files=simulations, sim_titles=sim_title, neurons_per_group=40, runtime=3.0)
+
+    # simulations = ['depol_37_calcium_concentration1.0_Cpp_3000ms.bz2', 'depol_37_calcium_concentration1.4_Cpp_3000ms.bz2',
+    #                'depol_37_calcium_concentration2.0_Cpp_3000ms.bz2']
+    # sim_title = ['1.0', '1.4', '2.0']
+    #
+    # calciumplot(sim_files=simulations, sim_titles=sim_title, neurons_per_group=40, runtime=3.0)
 
     # sim = SimulationData('constudy_02_calcium_concentration2.0_Cpp_1000ms.bz2')
     # sim._get_group_leak(1)
