@@ -464,7 +464,7 @@ class CxSystem(object):
         assert self.sys_mode != '', "System mode is not defined."
         _all_columns = ['idx', 'number_of_neurons', 'neuron_type', 'layer_idx', 'threshold',
                         'reset', 'refractory', 'net_center','monitors', 'tonic_current', 'n_background_inputs',
-                        'noise_sigma', 'gemean', 'gestd', 'gimean', 'gistd']
+                        'n_background_inhibition', 'noise_sigma', 'gemean', 'gestd', 'gimean', 'gistd']
         _obligatory_params = [0, 1, 2, 3]
         assert len(self.current_values_list) <= len(_all_columns), 'One or more of of the columns for NeuronGroups definition \
         is missing. Following obligatory columns should be defined:\n%s\n ' \
@@ -481,6 +481,7 @@ class CxSystem(object):
         number_of_neurons = 0
         tonic_current = ''
         n_background_inputs = ''
+        n_background_inhibition = ''
         noise_sigma = ''
         gemean = ''
         gestd = ''
@@ -525,6 +526,8 @@ class CxSystem(object):
 
         if n_background_inputs == '--':
             n_background_inputs = '0'
+        if n_background_inhibition == '--':
+            n_background_inhibition = '0'
 
         assert 'V' in str(noise_sigma._get_best_unit()), 'The unit of noise_sigma should be volt'
         if neuron_type == 'PC':  # extract the layer index of PC neurons separately
@@ -582,15 +585,22 @@ class CxSystem(object):
 
         # Add Poisson-distributed background input
         background_rate = self.physio_config_df.ix[where(self.physio_config_df.values == 'background_rate')[0]]['Value'].item()
+        background_rate_inhibition = self.physio_config_df.ix[where(self.physio_config_df.values == 'background_rate_inhibition')[0]]['Value'].item()
+
         if neuron_type in ['L1i', 'BC', 'MC']:
             background_weight = \
             self.physio_config_df.ix[where(self.physio_config_df.values == 'background_E_I_weight')[0]]['Value'].item()
+            background_weight_inhibition = \
+            self.physio_config_df.ix[where(self.physio_config_df.values == 'background_I_I_weight')[0]]['Value'].item()
         else:
             background_weight = \
             self.physio_config_df.ix[where(self.physio_config_df.values == 'background_E_E_weight')[0]]['Value'].item()
+            background_weight_inhibition = \
+            self.physio_config_df.ix[where(self.physio_config_df.values == 'background_I_E_weight')[0]]['Value'].item()
 
         # print 'Adding Poisson background input with params: '+n_background_inputs+', '+background_rate+', '+background_weight
         if neuron_type != 'PC':
+            # Background excitation for non-PC neurons
             poisson_target = 'bg_%s' % _dyn_neurongroup_name
             exec "%s = PoissonInput(target=%s, target_var='ge_soma', N=%s, rate=%s, weight=%s)" \
                  % (poisson_target, _dyn_neurongroup_name, n_background_inputs,
@@ -599,7 +609,19 @@ class CxSystem(object):
                 setattr(self.Cxmodule, poisson_target, eval(poisson_target))
             except AttributeError:
                 print 'Error in generating PoissonInput'
+
+            # Background inhibition for non-PC neurons
+            poisson_target_inh = 'bg_inh_%s' % _dyn_neurongroup_name
+            exec "%s = PoissonInput(target=%s, target_var='gi_soma', N=%s, rate=%s, weight=%s)" \
+                 % (poisson_target_inh, _dyn_neurongroup_name, n_background_inhibition,
+                    background_rate_inhibition, background_weight_inhibition)
+            try:
+                setattr(self.Cxmodule, poisson_target_inh, eval(poisson_target_inh))
+            except AttributeError:
+                print 'Error in generating PoissonInput'
+
         else:
+            # Background excitation for PC neurons (targeting all dendrites equally)
             n_target_compartments = int(self.customized_neurons_list[-1]['total_comp_num']) -1  # No excitatory input to soma
             n_inputs_to_each_comp = int(int(n_background_inputs) / n_target_compartments)
             target_comp_list = ['basal', 'a0']
@@ -613,6 +635,16 @@ class CxSystem(object):
                     setattr(self.Cxmodule, poisson_target, eval(poisson_target))
                 except AttributeError:
                     print 'Error in generating PoissonInput'
+
+            # Background inhibition for PC neurons (targeting soma)
+            poisson_target_inh = 'bg_inh_%s' % _dyn_neurongroup_name
+            exec "%s = PoissonInput(target=%s, target_var='gi_soma', N=%s, rate=%s, weight=%s)" \
+                 % (poisson_target_inh, _dyn_neurongroup_name, n_background_inhibition,
+                    background_rate_inhibition, background_weight_inhibition)
+            try:
+                setattr(self.Cxmodule, poisson_target_inh, eval(poisson_target_inh))
+            except AttributeError:
+                print 'Error in generating PoissonInput'
 
 
         # trying to load the positions in the groups

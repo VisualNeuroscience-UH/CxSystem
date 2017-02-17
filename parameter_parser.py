@@ -36,10 +36,10 @@ class synapse_parser(object):
 
     # For _change_calcium()
     _excitatory_groups = ['PC', 'SS', 'VPM']
-    _steep_post_inhibitory_groups = ['MC']
-    _shallow_post_inhibitory_groups = ['BC']
-    _steep_post = _excitatory_groups + _steep_post_inhibitory_groups
-    _shallow_post = _shallow_post_inhibitory_groups
+    _steep_inhibitory_groups = ['MC']
+    _shallow_inhibitory_groups = ['BC']
+    _steep_post = _excitatory_groups + _steep_inhibitory_groups
+    _shallow_post = _shallow_inhibitory_groups
 
     def __init__(self,output_synapse,physio_config_df):
         '''
@@ -60,9 +60,14 @@ class synapse_parser(object):
         self.calcium_concentration = self.value_extractor(self.physio_config_df, 'calcium_concentration' )   # Change calcium concentration here or with _change_calcium()
 
         # Set dissociation constant for Hill equation (see change_calcium)
+        # Update 2017-02-17: It's not only E->E and E->I connections that get scaled. Goes both ways. See Markram suppl p16.
         if output_synapse['pre_group_type'] in self._excitatory_groups and output_synapse['post_group_type'] in self._steep_post:
             self._K12 = 2.79
+        elif output_synapse['pre_group_type'] in self._steep_inhibitory_groups and output_synapse['post_group_type'] in self._excitatory_groups:
+            self._K12 = 2.79
         elif output_synapse['pre_group_type'] in self._excitatory_groups and output_synapse['post_group_type'] in self._shallow_post:
+            self._K12 = 1.09
+        elif output_synapse['pre_group_type'] in self._shallow_inhibitory_groups and output_synapse['post_group_type'] in self._excitatory_groups:
             self._K12 = 1.09
         else:
             self._K12 = np.average([2.79, 1.09])

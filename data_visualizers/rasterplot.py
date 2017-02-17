@@ -553,7 +553,7 @@ class SimulationData(object):
     # TODO - Begin analysis from certain point in time
     def isi_cv_all(self):
         for group_id in range(1,16+1):
-            print self.group_numbering[group_id] + ', mean of 1-neuron CoV of ISIs (irregularity): ' + str(self.group_isi_cv(group_id))
+            print self.group_numbering[group_id] + ', mean of 1-neuron CoV of ISIs (rp.Sirregularity): ' + str(self.group_isi_cv(group_id))
 
     def group_spike_count_histogram(self, group_id, bin_size=3*ms, ax=None):
 
@@ -628,12 +628,14 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
 
 if __name__ == '__main__':
 
-    sim = SimulationData('extrinsic_14_calcium_concentration1.2_background_E_I_weight0.26nS_Cpp_2000ms.bz2')
-    sim.isi_cv_all()
-    sim.spike_count_histograms()
+    sim = SimulationData('extrinsic_16a_calcium_concentration1.2_Cpp_2000ms.bz2')
+    # sim.rate_boxplot()
+    # sim.isi_cv_all()
+    # sim.spike_count_histograms()
+
     # sim.group_spike_count_histogram(5)
     # sim.isi_cv_all()
-    # sim.isi_histograms()
+    sim.isi_histograms()
     # sim.rasterplot()
     # sim.rate_boxplot()
 
