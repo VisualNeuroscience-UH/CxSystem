@@ -31,8 +31,16 @@ class SimulationData(object):
                        11: 'NG11_BC_L5', 12: 'NG12_MC_L5', 13: 'NG13_PC_L6toL4', 14: 'NG14_PC_L6toL1',
                        15: 'NG15_BC_L6', 16: 'NG16_MC_L6'}
 
+    neurons_in_group = {1: 338, 2: 5877, 3: 1198, 4: 425, 5: 2674, 6: 1098, 7: 406, 8: 329, 9: 137, 10: 5050,
+                        11: 558, 12: 491,  13: 9825, 14: 1637, 15: 813, 16: 372}
+
     group_number_to_type = {1: 'L1i', 2: 'PC', 3: 'BC', 4:'MC', 5: 'PC', 6:'PC', 7:'SS', 8:'BC', 9:'MC', 10: 'PC',
                             11: 'BC', 12: 'MC', 13: 'PC', 14: 'PC', 15:'BC', 16:'MC'}
+
+    layers = [2, 4, 5, 6]
+
+    # Per group returns an array of [[excitatory] and [inhibitory]] groups
+    groups_of_layer = {1: [[], [1]], 2: [[2], [3, 4]], 4: [[5, 6, 7], [8,9]], 5: [[10], [11,12]], 6:[[13, 14], [15, 16]]}
 
     def __init__(self, data_file=default_data_file, data_path=default_data_file_path):
 
@@ -455,6 +463,62 @@ class SimulationData(object):
 
         plt.show()
 
+    def currentplot(self, group_id):
+
+        group = self.group_numbering[group_id]
+
+
+        ### Random neuron data
+        # Pick random neuron from group (assuming neuron indexing inside vm_all, ge_soma_all, gi_soma_all is the same
+        # ie. that neurons have been sampled with same density for each status monitor)
+        neuron_ix = np.random.randint(len(self.data['vm_all'][group]))
+
+        vm = self.data['vm_all'][group][neuron_ix]
+        ge = self.data['ge_soma_all'][group][neuron_ix]
+        gi = self.data['gi_soma_all'][group][neuron_ix]
+        if self.group_number_to_type[group_id] == 'PC':
+            Idendr = self.data['Idendr_soma_all'][group][neuron_ix]
+        else:
+            Idendr = [0.0]*len(vm)
+
+        ### Mean of all sampled neurons
+        vm_mean = np.mean(self.data['vm_all'][group], axis=0)
+        ge_mean = np.mean(self.data['ge_soma_all'][group], axis=0)
+        gi_mean = np.mean(self.data['gi_soma_all'][group], axis=0)
+        if self.group_number_to_type[group_id] == 'PC':
+            Idendr_mean = np.mean(self.data['Idendr_soma_all'][group], axis=0)
+        else:
+            Idendr_mean = [0.0]*len(vm)
+
+
+        ### Plotting
+        n_samples = len(vm)
+        runtime = n_samples * self.defaultclock_dt
+        plotting_density = 10
+        t = np.arange(0, runtime, self.defaultclock_dt)
+
+        gL = self._get_group_leak(group_id)
+        Ee = 0*mV
+        VT = -45*mV
+        EL = -70*mV
+        Ei = -75*mV
+
+        exc_current = [ge[i]*siemens * (Ee-vm[i]*volt)+max(0,Idendr[i])*amp for i in np.arange(0, n_samples, plotting_density)]
+        inh_current = [-(gi[i]*siemens * (Ei - vm[i]*volt) + min(0, Idendr[i])*amp) for i in np.arange(0, n_samples, plotting_density)]
+
+        exc_current_mean = [ge_mean[i]*siemens * (Ee-vm_mean[i]*volt)+max(0,Idendr_mean[i])*amp for i in np.arange(0, n_samples, plotting_density)]
+        inh_current_mean = [-(gi_mean[i]*siemens * (Ei - vm_mean[i]*volt) + min(0, Idendr_mean[i])*amp) for i in np.arange(0, n_samples, plotting_density)]
+
+        plt.suptitle(self.group_numbering[group_id])
+        plt.title('Mean E/I current (trace of E/I of a random neuron)')
+        plt.plot(exc_current/pA, inh_current/pA, c='g', alpha=0.1)
+        plt.plot(exc_current_mean/pA, inh_current_mean/pA, c='black', lw=1)
+        plt.axis('equal')
+        plt.xlabel('Excitatory current (pA)')
+        plt.ylabel('Inhibitory current (pA)')
+        plt.legend()
+        plt.show()
+
     def group_interspikeintervals(self, group_id):
         # Get the group spikes. Remember: [0]->indices, [1]->spike times
         spikes = self.spikedata[self.group_numbering[group_id]]
@@ -510,7 +574,7 @@ class SimulationData(object):
 
     # For now, only prints out mean firing rates for each group
     # TODO - Begin analysis from certain point in time
-    def rate_boxplot(self):
+    def mean_firing_rates_by_group(self):
 
         # Get interspike intervals for all neuron groups and all their neurons
         spikeintervals = dict()
@@ -553,7 +617,7 @@ class SimulationData(object):
     # TODO - Begin analysis from certain point in time
     def isi_cv_all(self):
         for group_id in range(1,16+1):
-            print self.group_numbering[group_id] + ', mean of 1-neuron CoV of ISIs (rp.Sirregularity): ' + str(self.group_isi_cv(group_id))
+            print self.group_numbering[group_id] + ', mean of 1-neuron CoV of ISIs (irregularity): ' + str(self.group_isi_cv(group_id))
 
     def group_spike_count_histogram(self, group_id, bin_size=3*ms, ax=None):
 
@@ -562,7 +626,7 @@ class SimulationData(object):
         spikes = self.data['spikes_all'][self.group_numbering[group_id]]
         n_bins = int(self.runtime/timebin)
         spike_counts, bin_edges = np.histogram(spikes[1], bins=n_bins)
-        # Spike count divided by bin size could be called the "population firing rate", but we don't really need that
+        # Spike count divided by bin size could be called the "population firing rate", but we don't really need that here
 
         # Count how many time-bins with each firing rate/spike count -> spike count histogram
         if ax is None:
@@ -591,6 +655,105 @@ class SimulationData(object):
             plt.xlabel('Spike count')
             plt.ylabel('Frequency (timebins)')
 
+        plt.show()
+
+
+    def group_firing_rates(self, group_id, bin_size=3*ms):
+        # Collect spike counts (of the group) into runtime divided by (time-)bin_size many bins
+        timebin = bin_size/second
+        spikes = self.data['spikes_all'][self.group_numbering[group_id]]
+        n_bins = int(self.runtime/timebin)
+        spike_counts, bin_edges = np.histogram(spikes[1], bins=n_bins)
+
+        # Count instantaneous firing rates in spikes/s
+        group_firing_rates = [count/timebin for count in spike_counts]
+
+        return group_firing_rates, bin_edges  # bin_edges is of length len(group_firing_rates)+1
+
+
+    def layer_firing_rates(self, layer_number):
+        flatten = lambda l: [item for sublist in l for item in sublist]
+        groups = flatten(self.groups_of_layer[layer_number])
+
+        bin_size = 3*ms
+        plt.title('Layer ' + str(layer_number))
+        plt.xlabel('Time (s)')
+        plt.ylabel('Group firing rate (spikes/s)')
+        for group_id in groups:
+            firing_rates, bin_edges = self.group_firing_rates(group_id, bin_size)
+            plt.plot(bin_edges[:-1], firing_rates, label=self.group_numbering[group_id])
+
+        plt.legend()
+        plt.show()
+
+    def layer_ei_firing_rates(self, layer_number, ax=None):
+        groups = self.groups_of_layer[layer_number]
+        e_groups = groups[0]
+        i_groups = groups[1]
+        bin_size = 3*ms
+
+        e_firing_rates = [self.group_firing_rates(e_group, bin_size)[0] for e_group in e_groups]
+        i_firing_rates = [self.group_firing_rates(i_group, bin_size)[0] for i_group in i_groups]
+        bin_edges = self.group_firing_rates(1, bin_size)[1]
+
+        e_rates_sum = np.sum(e_firing_rates, axis=0)
+        i_rates_sum = np.sum(i_firing_rates, axis=0)
+
+        if ax is None:
+            plt.title('Layer '+ str(layer_number))
+            plt.plot(bin_edges[:-1], e_rates_sum, label='Excitatory', c='g')
+            plt.plot(bin_edges[:-1], i_rates_sum, label='Inhibitory', c='r')
+            plt.xlabel('Time (s)')
+            plt.ylabel('Population firing rate (spikes/s)')
+
+            plt.legend()
+            plt.show()
+
+        else:
+            ax.plot(bin_edges[:-1], e_rates_sum, label='Excitatory', c='g')
+            ax.plot(bin_edges[:-1], i_rates_sum, label='Inhibitory', c='r')
+            ax.legend()
+
+
+    def ei_firing_rates(self):
+        n_layers = len(self.layers)
+
+        fig, ax = plt.subplots(n_layers, 1)
+        fig.suptitle('E/I population firing rates (spikes/s)')
+
+        for i in range(0, n_layers):
+            plt.subplot(n_layers, 1, i+1)
+            plt.title('Layer '+str(self.layers[i]))
+            self.layer_ei_firing_rates(self.layers[i], ax=plt.gca())
+
+        plt.show()
+
+
+    def layer_ei_plot(self, layer_number):
+        groups = self.groups_of_layer[layer_number]
+        e_groups = groups[0]
+        i_groups = groups[1]
+        bin_size = 3*ms  # Refractory time is 3ms so a single neuron can fire only once in time bin
+
+        e_pop_size = np.sum([self.neurons_in_group[e_group] for e_group in e_groups])
+        i_pop_size = np.sum([self.neurons_in_group[i_group] for i_group in i_groups])
+
+
+        e_firing_counts = [self.group_firing_rates(e_group, bin_size)[0]*bin_size for e_group in e_groups]
+        i_firing_counts = [self.group_firing_rates(i_group, bin_size)[0]*bin_size for i_group in i_groups]
+        bin_edges = self.group_firing_rates(1, bin_size)[1]
+
+        e_counts_sum = np.sum(e_firing_counts, axis=0)
+        i_counts_sum = np.sum(i_firing_counts, axis=0)
+
+        e_activity = [100*e_t/e_pop_size for e_t in e_counts_sum]
+        i_activity = [100*i_t/i_pop_size for i_t in i_counts_sum]
+
+        plt.plot(e_activity, i_activity, '.')
+        plt.xlabel('Excitatory population activity')
+        plt.ylabel('Inhibitory population activity')
+
+        # plt.legend()
         plt.show()
 
 ### END of class SimulationData
@@ -628,14 +791,31 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
 
 if __name__ == '__main__':
 
-    sim = SimulationData('extrinsic_16a_calcium_concentration1.2_Cpp_2000ms.bz2')
+    # sim = SimulationData('extrinsic_16a_calcium_concentration1.2_Cpp_2000ms.bz2')
+    sim = SimulationData('extrinsic_23_calcium_concentration2.0_background_rate_inhibition0.2H_Cpp_2000ms.bz2')
+    sim.currentplot(10)
+    # sim.layer_ei_plot(5)
+    # sim.ei_firing_rates()
+    # sim.isi_cv_all()
+    # sim.mean_firing_rates_by_group()
+    # sim.voltage_rasterplot()
+    # sim.ei_firing_rates()
+
+    # sim.layer_firing_rates(4)
+    # sim.ei_firing_rates()
+    # sim.layer_ei_plot(4)
+    # firing_rates, bin_edges = sim.group_firing_rates(7)
+    # plt.plot(bin_edges[:-1], firing_rates)
+    # firing_rates, bin_edges = sim.group_firing_rates(8)
+    # plt.plot(bin_edges[:-1], firing_rates)
+    # plt.show()
     # sim.rate_boxplot()
     # sim.isi_cv_all()
     # sim.spike_count_histograms()
 
     # sim.group_spike_count_histogram(5)
     # sim.isi_cv_all()
-    sim.isi_histograms()
+    # sim.isi_histograms()
     # sim.rasterplot()
     # sim.rate_boxplot()
 
