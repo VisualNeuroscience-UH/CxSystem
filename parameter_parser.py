@@ -161,8 +161,8 @@ class synapse_parser(object):
 
         :param output_synapse: This is the dictionary created in neuron_reference() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: wght_max, wght0.
         '''
-        stdp_max_strength_coefficient = self.value_extractor(self.physio_config_df,'stdp_max_strength_coefficient')
-        self.output_namespace['wght_max'] = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type']))* stdp_max_strength_coefficient
+        stdp_max_strength_coefficient = self.value_extractor(self.physio_config_df, 'stdp_max_strength_coefficient')
+        self.output_namespace['wght_max'] = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type']))* stdp_max_strength_coefficient
         std_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
         mu_wght = std_wght / 2.
 

@@ -1,8 +1,8 @@
 Variable,Key,Value,Comment
 "# From Markram et al Cell 2015, Table S6. Prescribed Parameters for Synaptic Transmission, Related to Figures 9 and 10.",,,
-calcium_concentration,,{1.2 & 2.0},
-background_rate,,0.2*Hz,
-background_rate_inhibition,,{0.2 & 0.4 & 0.8}*Hz,
+calcium_concentration,,2.0,
+background_rate,,8.0*Hz,
+background_rate_inhibition,,4.0*Hz,
 excitatory_strength,,0.72*nS,
 inhibitory_synapse_factor,,1.15,# *1.15* x 0.72nS = 0.83nS
 EE_weights_gain,,0.5,
@@ -14,10 +14,10 @@ _weights,w_TC_E-E_connections,0.7 * EE_weights_gain * nS,"#Cruikshank et al 2007
 ,w_All_other_I-E_connections,inhibitory_synapse_factor * excitatory_strength,# was: 0.83*nS
 ,w_All_I-I_connections,inhibitory_synapse_factor * excitatory_strength,# was: 0.83*nS
 ,,,
-background_E_E_weight,,0.36*nS,# Fixed value because of technical issues TODO!
-background_E_I_weight,,0.26*nS,# Scaled down 0.26->0.20 to allow oscillations; Fixed value because of technical issues TODO!
-background_I_E_weight,,0.83*nS,
-background_I_I_weight,,0.83*nS,
+background_E_E_weight,,EE_weights_gain * excitatory_strength,# Fixed value because of technical issues TODO!
+background_E_I_weight,,EE_weights_gain * excitatory_strength,# Scaled down 0.26->0.20 to allow oscillations; Fixed value because of technical issues TODO!
+background_I_E_weight,,inhibitory_synapse_factor * excitatory_strength,
+background_I_I_weight,,inhibitory_synapse_factor * excitatory_strength,
 Cp,,0.001,"# Synaptic potentiation coefficient according to van Rossum J Neurosci 2000, here relative to initial value"
 Cd,,0.003,# Synaptic depression coefficient according to van Rossum J Neurosci 2000
 conn_prob_gain,,1,# This is used for compensation of small number of neurons and thus incoming synapses

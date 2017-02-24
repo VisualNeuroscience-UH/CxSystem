@@ -238,6 +238,33 @@ class CxSystem(object):
         else:
             raise NameError('Variable %s not found in the configuration file.'%keyword)
 
+    # TODO - Make a class that has "value_extractor" method
+    def value_extractor(self, df, key_name):
+        non_dict_indices = df['Variable'].dropna()[df['Key'].isnull()].index.tolist()
+        for non_dict_idx in non_dict_indices:
+            exec "%s=%s" % (df['Variable'][non_dict_idx], df['Value'][non_dict_idx])
+        try:
+            return eval(key_name)
+        except (NameError, TypeError):
+            pass
+        try:
+            if type(key_name) == list:
+                variable_start_idx = df['Variable'][df['Variable'] == key_name[0]].index[0]
+                try:
+                    variable_end_idx = df['Variable'].dropna().index.tolist()[
+                        df['Variable'].dropna().index.tolist().index(variable_start_idx) + 1]
+                    cropped_df = df.loc[variable_start_idx:variable_end_idx-1]
+                except IndexError:
+                    cropped_df = df.loc[variable_start_idx:]
+                return eval(cropped_df['Value'][cropped_df['Key'] == key_name[1]].item())
+            else:
+                return eval(df['Value'][df['Key'] == key_name].item())
+        except NameError:
+            new_key = df['Value'][df['Key'] == key_name].item().replace("']", "").split("['")
+            return self.value_extractor(df,new_key)
+        except ValueError:
+            raise ValueError("Parameter %s not found in the configuration file."%key_name)
+
     def set_default_clock(self,*args):
         defaultclock.dt = eval(args[0])
         if defaultclock.dt/second != 1e-4:
@@ -589,14 +616,18 @@ class CxSystem(object):
 
         if neuron_type in ['L1i', 'BC', 'MC']:
             background_weight = \
-            self.physio_config_df.ix[where(self.physio_config_df.values == 'background_E_I_weight')[0]]['Value'].item()
+            repr(self.value_extractor(self.physio_config_df, 'background_E_I_weight'))
+            #self.physio_config_df.ix[where(self.physio_config_df.values == 'background_E_I_weight')[0]]['Value'].item()
             background_weight_inhibition = \
-            self.physio_config_df.ix[where(self.physio_config_df.values == 'background_I_I_weight')[0]]['Value'].item()
+            repr(self.value_extractor(self.physio_config_df, 'background_I_I_weight'))
+            # self.physio_config_df.ix[where(self.physio_config_df.values == 'background_I_I_weight')[0]]['Value'].item()
         else:
             background_weight = \
-            self.physio_config_df.ix[where(self.physio_config_df.values == 'background_E_E_weight')[0]]['Value'].item()
+            repr(self.value_extractor(self.physio_config_df, 'background_E_E_weight'))
+            #self.physio_config_df.ix[where(self.physio_config_df.values == 'background_E_E_weight')[0]]['Value'].item()
             background_weight_inhibition = \
-            self.physio_config_df.ix[where(self.physio_config_df.values == 'background_I_E_weight')[0]]['Value'].item()
+            repr(self.value_extractor(self.physio_config_df, 'background_I_E_weight'))
+            # self.physio_config_df.ix[where(self.physio_config_df.values == 'background_I_E_weight')[0]]['Value'].item()
 
         # print 'Adding Poisson background input with params: '+n_background_inputs+', '+background_rate+', '+background_weight
         if neuron_type != 'PC':

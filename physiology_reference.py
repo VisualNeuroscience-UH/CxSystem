@@ -241,18 +241,18 @@ class neuron_reference(object):
         # self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
 
         # Diffusive noise model
-        # self.output_neuron['equation'] = Equations('''
-        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
-        #     dge/dt = -ge/tau_e : siemens
-        #     dgi/dt = -gi/tau_i : siemens
-        #     ''', ge='ge_soma', gi='gi_soma')
+        self.output_neuron['equation'] = Equations('''
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+            dge/dt = -ge/tau_e : siemens
+            dgi/dt = -gi/tau_i : siemens
+            ''', ge='ge_soma', gi='gi_soma')
 
         # Conductance noise model
-        self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) : volt (unless refractory)
-            dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
-            dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_e)*xi_2: siemens
-            ''', ge='ge_soma', gi='gi_soma')
+        # self.output_neuron['equation'] = Equations('''
+        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) : volt (unless refractory)
+        #     dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
+        #     dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_e)*xi_2: siemens
+        #     ''', ge='ge_soma', gi='gi_soma')
 
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
@@ -275,18 +275,18 @@ class neuron_reference(object):
         # self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
 
         # Diffusive noise model
-        # self.output_neuron['equation'] = Equations('''
-        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
-        #     dge/dt = -ge/tau_e : siemens
-        #     dgi/dt = -gi/tau_i : siemens
-        #     ''', ge='ge_soma', gi='gi_soma')
+        self.output_neuron['equation'] = Equations('''
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+            dge/dt = -ge/tau_e : siemens
+            dgi/dt = -gi/tau_i : siemens
+            ''', ge='ge_soma', gi='gi_soma')
 
         # Conductance noise model
-        self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) : volt (unless refractory)
-            dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
-            dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2: siemens
-            ''', ge='ge_soma', gi='gi_soma')
+        # self.output_neuron['equation'] = Equations('''
+        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) : volt (unless refractory)
+        #     dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
+        #     dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2: siemens
+        #     ''', ge='ge_soma', gi='gi_soma')
 
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
@@ -310,18 +310,18 @@ class neuron_reference(object):
         # self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
 
         # Diffusive noise model
-        # self.output_neuron['equation'] = Equations('''
-        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
-        #     dge/dt = -ge/tau_e : siemens
-        #     dgi/dt = -gi/tau_i : siemens
-        #     ''', ge='ge_soma', gi='gi_soma')
+        self.output_neuron['equation'] = Equations('''
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+            dge/dt = -ge/tau_e : siemens
+            dgi/dt = -gi/tau_i : siemens
+            ''', ge='ge_soma', gi='gi_soma')
 
         # Conductance noise model
-        self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) : volt (unless refractory)
-            dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
-            dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2: siemens
-            ''', ge='ge_soma', gi='gi_soma')
+        # self.output_neuron['equation'] = Equations('''
+        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) : volt (unless refractory)
+        #     dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
+        #     dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2: siemens
+        #     ''', ge='ge_soma', gi='gi_soma')
 
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
@@ -345,18 +345,18 @@ class neuron_reference(object):
         # self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
 
         # Diffusive noise model
-        # self.output_neuron['equation'] = Equations('''
-        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
-        #     dge/dt = -ge/tau_e : siemens
-        #     dgi/dt = -gi/tau_i : siemens
-        #     ''', ge='ge_soma', gi='gi_soma')
+        self.output_neuron['equation'] = Equations('''
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+            dge/dt = -ge/tau_e : siemens
+            dgi/dt = -gi/tau_i : siemens
+            ''', ge='ge_soma', gi='gi_soma')
 
         # Conductance noise model
-        self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) : volt (unless refractory)
-            dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
-            dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2: siemens
-            ''', ge='ge_soma', gi='gi_soma')
+        # self.output_neuron['equation'] = Equations('''
+        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) : volt (unless refractory)
+        #     dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
+        #     dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2: siemens
+        #     ''', ge='ge_soma', gi='gi_soma')
 
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
