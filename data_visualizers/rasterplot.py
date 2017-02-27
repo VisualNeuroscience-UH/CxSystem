@@ -574,7 +574,7 @@ class SimulationData(object):
         return std(isi_list)/mean(isi_list)
 
     # TODO - Begin analysis from certain point in time
-    def _isi_cv_group(self, group_id):
+    def _isi_cv_group(self, group_id, return_list=False):
         spikeintervals, spiking_neurons = self._interspikeintervals_group(group_id)
 
         neuron_cv_list = []
@@ -582,7 +582,10 @@ class SimulationData(object):
             neuron_cv = self._isi_cv_neuron(spikeintervals[neuron])
             neuron_cv_list.append(neuron_cv)
 
-        return mean(neuron_cv_list)
+        if return_list is False:
+            return mean(neuron_cv_list)
+        else:
+            return neuron_cv_list
 
     # TODO - Begin analysis from certain point in time
     def isicov(self):
@@ -600,18 +603,13 @@ class SimulationData(object):
 
         # Count how many time-bins with each firing rate/spike count -> spike count histogram
         if ax is None:
-            plt.hist(spike_counts, bins='auto')
-            plt.xlabel('Spike count')
-            plt.ylabel('Frequency (# of timebins)')
-            plt.show()
+            # Print Fano factors (spike_counts variance/mean) to stdout
+            sp_mean = mean(spike_counts)
+            sp_var = np.var(spike_counts)
+            return sp_var/sp_mean
         else:
             ax.hist(spike_counts, bins='auto')
 
-        # Print Fano factors (spike_counts variance/mean) to stdout
-        sp_mean = mean(spike_counts)
-        sp_var = np.var(spike_counts)
-        print self.group_numbering[group_id] + ': mean '+str(sp_mean)+', variance '+str(sp_var)
-        print 'Fano factor (population synchrony): '+ str(sp_var/sp_mean)
 
     def spikecount_hist(self):
         fig, ax = plt.subplots(4, 4)
@@ -747,6 +745,171 @@ class SimulationData(object):
         # plt.legend()
         plt.show()
 
+    # # Gives you the % of neurons not spiking at all
+    # def pop_notspiking(self, time_to_drop):
+    #
+    #     total_spiking = 0
+    #     total_neurons = sum(self.neurons_in_group.values())
+    #
+    #     for group_id in self.group_numbering.keys():
+    #         groupspikes = self.spikedata[self.group_numbering[group_id]]  # [0]->indices, [1]->times
+    #         spikecount = len(groupspikes[0])
+    #         spiking_neurons = [groupspikes[0][i] for i in range(0, spikecount) if groupspikes[1][i] > time_to_drop/second]
+    #         total_spiking += len(unique(spiking_neurons))
+    #         # print self.group_numbering[group_id]
+    #         # print total_spiking
+    #
+    #     return 100*(total_neurons - total_spiking)/total_neurons
+    #
+    # # Gives you the % of neurons with set rate
+    # def pop_firing_rate(self, rate_min, rate_max, time_to_drop):
+    #
+    #     true_runtime = self.runtime*second - time_to_drop
+    #     n_qualifying_neurons = 0
+    #     total_neurons = sum(self.neurons_in_group.values())
+    #
+    #     # For each group, get the group spikes. Remember: [0]->indices, [1]->spike times
+    #     for group_id in self.group_numbering.keys():
+    #         print self.group_numbering[group_id]
+    #         groupspikes = self.spikedata[self.group_numbering[group_id]]  # [0]->indices, [1]->times
+    #         spikecount = len(groupspikes[0])
+    #         # Drop out those that don't have spikes past time_to_drop (they are deemed to have rate =0 Hz)
+    #         spiking_neurons = [groupspikes[0][i] for i in range(0, spikecount) if
+    #                            groupspikes[1][i] > time_to_drop / second]
+    #         spiking_neurons = unique(spiking_neurons)
+    #         print 'Total spiking neurons in group: ' + str(len(spiking_neurons))
+    #         # Calculate firing rate for each neuron
+    #         # VERY SLOW
+    #         for neuron in spiking_neurons:
+    #             neuronspikes = [groupspikes[1][i] for i in range(0, spikecount) if
+    #                             groupspikes[1][i] > time_to_drop / second and groupspikes[0][i] == neuron]
+    #             rate = len(neuronspikes)/true_runtime
+    #
+    #             # Count in those neurons that match rate criteria
+    #             if rate_min < rate < rate_max:
+    #                 n_qualifying_neurons += 1
+    #             else:
+    #                 n_qualifying_neurons += 0
+    #
+    #     return 100*(n_qualifying_neurons/total_neurons)
+    #
+    # # Gives you the % of neurons meeting set regularity criteria
+    # def pop_irregularity(self, isicov_min, isicov_max, time_to_drop):
+    #
+    #     for group_id in self.group_numbering.keys():
+    #         isi_list = self._isi_cv_group(group_id, return_list=True)
+    #
+    #
+    # def pop_synchrony(self, sync_limit, time_to_drop):
+    #     pass
+    #     # Gives you the number of groups behaving synchronously (Fano factor > sync_limit)
+
+    def pop_measures_group(self, group_id, time_to_drop):
+        # Set important params
+        true_runtime = self.runtime * second - time_to_drop
+
+        # Get spikes of the corresponding group with the beginning removed
+        spikes = self.spikedata[self.group_numbering[group_id]]  # [0]->indices, [1]->times
+        try:
+            # We can do this because indexing is chronological
+            true_begin_idx = min(where(spikes[1] > time_to_drop/second)[0])
+        except ValueError:
+            # print 'No spikes in ' + self.group_numbering[group_id]
+            return [0, [], [], -1]
+
+        spikes_new = []
+        spikes_new.append(spikes[0][true_begin_idx:])
+        spikes_new.append(spikes[1][true_begin_idx:])
+
+        # Count how many neurons are spiking
+        spiking_neurons = unique(spikes_new[0])
+        n_spiking = len(spiking_neurons)
+
+        # For every neuron with at least 2 spikes, calculate ISIs & mean firing rates.
+        mean_firing_rates = []
+        isicovs = []
+
+        for neuron in spiking_neurons:
+            spike_idx = sort(where(spikes_new[0] == neuron)[0])
+
+            if len(spike_idx) >= 2:
+                spikeintervals = []
+                # Begin counting from 2nd spike and for each step calculate the duration between jth - (j-1)th spike time
+                for j in range(1, len(spike_idx)):
+                    interval = (spikes_new[1][spike_idx[j]] - spikes_new[1][spike_idx[j-1]]) * second
+                    spikeintervals.append(interval)
+
+                # Calculate coeff of variation for these neurons (+mean firing rates)
+                isicovs.append(std(spikeintervals)/mean(spikeintervals))
+                mean_firing_rates.append((len(spikeintervals)+1)/true_runtime)
+
+        # Still, make spikecount histogram and calculate pop synchrony measure
+        fanofactor = self._spikecounthistogram_group(group_id)
+
+        return n_spiking, mean_firing_rates, isicovs, fanofactor
+
+    def pop_measures(self, time_to_drop):
+
+        n_spiking = dict()
+        mean_firing_rates = dict()
+        isicovs = dict()
+        fanofactors = dict()
+
+        for group_id in self.group_numbering.keys():
+            print '   ' + self.group_numbering[group_id]
+            n_spiking_gp, mean_firing_rates_gp, isicovs_gp, fanofactor_gp = self.pop_measures_group(group_id, time_to_drop)
+            n_spiking[group_id] = n_spiking_gp
+            mean_firing_rates[group_id] = mean_firing_rates_gp
+            isicovs[group_id] = isicovs_gp
+            fanofactors[group_id] = fanofactor_gp
+
+        return n_spiking, mean_firing_rates, isicovs, fanofactors
+
+
+class ExperimentData(object):
+
+    def __init__(self, experiment_path, experiment_name):
+
+        self.experiment_path = experiment_path
+        self.experiment_name = experiment_name
+        self.simulation_files = [sim_file for sim_file in os.listdir(experiment_path) if experiment_name in sim_file]
+
+
+    def computestats(self, time_to_drop=500*ms, output_filename='stats.csv'):
+        rate_min = 0*Hz
+        rate_max = 30*Hz
+        isicov_min = 0.5
+        isicov_max = 1.5
+        fanofactor_max = 10
+
+        flatten = lambda l: [item for sublist in l for item in sublist]
+        stats_to_compute = ['duration', 'n_spiking', 'n_firing_rate_normal', 'n_irregular', 'n_asynchronous']
+        stats = pd.DataFrame(index=self.simulation_files, columns=stats_to_compute)
+
+        for sim_file in self.simulation_files:
+            print sim_file
+            try:
+                sim = SimulationData(sim_file, data_path=self.experiment_path)
+                duration = (sim.runtime*second - time_to_drop)/second
+
+                n_spiking, mean_firing_rates, isicovs, fanofactors = sim.pop_measures(time_to_drop)
+
+                # Calculate aggregate measures
+                n_spiking_total = sum(n_spiking.values())
+                n_firing_rate_normal = len([rate for rate in flatten(mean_firing_rates.values())
+                                            if rate_min < rate < rate_max])
+                n_irregular = len([isicov for isicov in flatten(isicovs.values())
+                                   if isicov_min < isicov < isicov_max])
+                n_asynchronous = len([fanofactor for fanofactor in fanofactors.values()
+                                      if 0 < fanofactor < fanofactor_max])
+                stats.loc[sim_file] = [duration, n_spiking_total, n_firing_rate_normal, n_irregular, n_asynchronous]
+            except KeyError:
+                print 'Skipping...'
+
+        stats.to_csv(self.experiment_path + output_filename)
+
+
+
 ### END of class SimulationData
 
 def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='Effect of increased $Ca^{2+}$ concentration (mM)'):
@@ -782,8 +945,14 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
 
 if __name__ == '__main__':
 
-    sim = SimulationData('extrinsic_24_calcium_concentration1.2_background_rate_inhibition0.2H_Cpp_2000ms.bz2')
-    sim.currentplot()
+    exp = ExperimentData('/opt3/tmp/bigrun/', 'adolfo')
+    exp.computestats(500*ms, 'adolfo_stats.csv')
+
+    # sim = SimulationData('newcastle_04_background_rate_inhibition3.0H_Cpp_2000ms.bz2')
+    # n_spiking, mean_firing_rates, isicovs, fanofactors = sim.pop_measures(500*ms)
+    # print 'helou'
+    # print sim.pop_firing_rate(0*Hz, 30*Hz, 500*ms)
+    # sim.currentplot()
     # sim.firingrates_ei()
 
 
