@@ -1084,11 +1084,18 @@ class CxSystem(object):
                     hasattr(self,'loaded_brian_data') and not self.load_positions_only:
                 assert _syn_ref_name in self.loaded_brian_data.keys(), \
                     "The data for the following connection was not found in the loaded brian data: %s" % _syn_ref_name
-                eval(_dyn_syn_name).connect(i=self.loaded_brian_data[_syn_ref_name]['data'][0][0].tocoo().row, \
-                                     j=self.loaded_brian_data[_syn_ref_name]['data'][0][0].tocoo().col,\
-                                     n = int(self.loaded_brian_data[_syn_ref_name]['n']))
-                eval(_dyn_syn_name).wght = repeat(self.loaded_brian_data[_syn_ref_name]['data'][0][0].data/int(self.\
-                    loaded_brian_data[_syn_ref_name]['n']),int(self.loaded_brian_data[_syn_ref_name]['n'])) * siemens
+                #eval(_dyn_syn_name).connect(i=self.loaded_brian_data[_syn_ref_name]['data'][0][0].tocoo().row, \
+                 #                    j=self.loaded_brian_data[_syn_ref_name]['data'][0][0].tocoo().col,\
+                  #                   n = int(self.loaded_brian_data[_syn_ref_name]['n']))
+               # eval(_dyn_syn_name).wght = repeat(self.loaded_brian_data[_syn_ref_name]['data'][0][0].data/int(self.\
+                #    loaded_brian_data[_syn_ref_name]['n']),int(self.loaded_brian_data[_syn_ref_name]['n'])) * siemens
+
+                eval(_dyn_syn_name).connect(i=self.loaded_brian_data[_syn_ref_name]['data'].tocoo().row, \
+                                            j=self.loaded_brian_data[_syn_ref_name]['data'].tocoo().col, \
+                                            n=int(self.loaded_brian_data[_syn_ref_name]['n']))
+                eval(_dyn_syn_name).wght = repeat(self.loaded_brian_data[_syn_ref_name]['data'].data / int(self.loaded_brian_data[_syn_ref_name]['n']),
+                                                  int(self.loaded_brian_data[_syn_ref_name]['n'])) * siemens
+
                 _load_str = 'Connection loaded from '
 
             elif (self.default_load_flag==1 or (self.default_load_flag==-1 and _do_load == 1 )) and not \
