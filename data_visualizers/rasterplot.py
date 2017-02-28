@@ -62,6 +62,9 @@ class SimulationData(object):
         self.runtime = self.data['runtime']
         self.neuron_groups = [row[0] for row in self.spikedata.items()[1:]]
 
+        self.anatomy_df = self.data['Anatomy_configuration']
+        self.physio_df = self.data['Physiology_configuration']
+
     def _loadgz(self, filename):
         with open(filename, 'rb') as fb:
             d_pickle = zlib.decompress(fb.read())
@@ -107,6 +110,32 @@ class SimulationData(object):
             else:
                 dict[strg] = elem
         return dict
+
+    def value_extractor(self, df, key_name):
+        non_dict_indices = df['Variable'].dropna()[df['Key'].isnull()].index.tolist()
+        for non_dict_idx in non_dict_indices:
+            exec "%s=%s" % (df['Variable'][non_dict_idx], df['Value'][non_dict_idx])
+        try:
+            return eval(key_name)
+        except (NameError, TypeError):
+            pass
+        try:
+            if type(key_name) == list:
+                variable_start_idx = df['Variable'][df['Variable'] == key_name[0]].index[0]
+                try:
+                    variable_end_idx = df['Variable'].dropna().index.tolist()[
+                        df['Variable'].dropna().index.tolist().index(variable_start_idx) + 1]
+                    cropped_df = df.loc[variable_start_idx:variable_end_idx-1]
+                except IndexError:
+                    cropped_df = df.loc[variable_start_idx:]
+                return eval(cropped_df['Value'][cropped_df['Key'] == key_name[1]].item())
+            else:
+                return eval(df['Value'][df['Key'] == key_name].item())
+        except NameError:
+            new_key = df['Value'][df['Key'] == key_name].item().replace("']", "").split("['")
+            return self.value_extractor(df,new_key)
+        except ValueError:
+            raise ValueError("Parameter %s not found in the configuration file."%key_name)
 
     def _group_name_for_ordering(self, spikedata):
         corrected_name = re.sub(r'NG(\w{1})_', r'NG0\1_', spikedata[0])
@@ -856,7 +885,7 @@ class SimulationData(object):
         fanofactors = dict()
 
         for group_id in self.group_numbering.keys():
-            print '   ' + self.group_numbering[group_id]
+            print self.group_numbering[group_id]
             n_spiking_gp, mean_firing_rates_gp, isicovs_gp, fanofactor_gp = self.pop_measures_group(group_id, time_to_drop)
             n_spiking[group_id] = n_spiking_gp
             mean_firing_rates[group_id] = mean_firing_rates_gp
@@ -864,6 +893,18 @@ class SimulationData(object):
             fanofactors[group_id] = fanofactor_gp
 
         return n_spiking, mean_firing_rates, isicovs, fanofactors
+
+    def get_sim_parameter(self, param_name):
+
+        try:
+            return self.value_extractor(self.physio_df, param_name)
+        except:
+            try:
+                return self.value_extractor(self.anatomy_df, param_name)
+            except:
+                print 'Parameter ' + param_name + ' not found, ignoring...'
+                return 'xxx'
+
 
 
 class ExperimentData(object):
@@ -875,38 +916,79 @@ class ExperimentData(object):
         self.simulation_files = [sim_file for sim_file in os.listdir(experiment_path) if experiment_name in sim_file]
 
 
-    def computestats(self, time_to_drop=500*ms, output_filename='stats.csv'):
+    def computestats(self, time_to_drop=500*ms, output_filename='stats.csv', parameters_to_extract=[]):
+        # Cutoff values for normal mean firing rate, regularity etc.
         rate_min = 0*Hz
         rate_max = 30*Hz
         isicov_min = 0.5
         isicov_max = 1.5
         fanofactor_max = 10
+        active_group_min = 0.5
 
+        dec_places = 3
+
+        # Dataframe for collecting everything
+        stats_to_compute = ['duration', 'n_spiking', 'p_spiking', 'n_firing_rate_normal', 'p_firing_rate_normal',
+                            'n_irregular', 'p_irregular', 'n_groups_active', 'n_groups_asynchronous', 'p_asynchronous']
+        stats = pd.DataFrame(index=self.simulation_files, columns=parameters_to_extract+stats_to_compute)
+
+        # Go through simulation files
         flatten = lambda l: [item for sublist in l for item in sublist]
-        stats_to_compute = ['duration', 'n_spiking', 'n_firing_rate_normal', 'n_irregular', 'n_asynchronous']
-        stats = pd.DataFrame(index=self.simulation_files, columns=stats_to_compute)
-
+        n_files = len(self.simulation_files)
+        n_analysed = 0
+        print 'Beginning analysis of ' + str(n_files) + ' files'
         for sim_file in self.simulation_files:
-            print sim_file
+            print 'Analysing ' + sim_file + '...'
             try:
                 sim = SimulationData(sim_file, data_path=self.experiment_path)
                 duration = (sim.runtime*second - time_to_drop)/second
 
-                n_spiking, mean_firing_rates, isicovs, fanofactors = sim.pop_measures(time_to_drop)
+                # Extract specified simulation parameters
+                extracted_params = []
+                for param_name in parameters_to_extract:
+                    extracted_params.append(sim.get_sim_parameter(param_name))
 
                 # Calculate aggregate measures
+                n_spiking, mean_firing_rates, isicovs, fanofactors = sim.pop_measures(time_to_drop)
+
                 n_spiking_total = sum(n_spiking.values())
                 n_firing_rate_normal = len([rate for rate in flatten(mean_firing_rates.values())
                                             if rate_min < rate < rate_max])
                 n_irregular = len([isicov for isicov in flatten(isicovs.values())
                                    if isicov_min < isicov < isicov_max])
-                n_asynchronous = len([fanofactor for fanofactor in fanofactors.values()
+                n_groups_asynchronous = len([fanofactor for fanofactor in fanofactors.values()
                                       if 0 < fanofactor < fanofactor_max])
-                stats.loc[sim_file] = [duration, n_spiking_total, n_firing_rate_normal, n_irregular, n_asynchronous]
+                n_groups_active = len([group_id for group_id, ng_spiking in n_spiking.items()
+                                       if ng_spiking/sim.neurons_in_group[group_id] > active_group_min])
+
+                n_total_neurons = sum(sim.neurons_in_group.values())
+                p_spiking = round(n_spiking_total/n_total_neurons, dec_places)
+                try:
+                    p_firing_rate_normal = round(n_firing_rate_normal/n_spiking_total, dec_places)
+                    p_irregular = round(n_irregular/n_spiking_total, dec_places)
+                except ZeroDivisionError:
+                    p_firing_rate_normal = '--'
+                    p_irregular = '--'
+                try:
+                    p_asynchronous = round(n_groups_asynchronous/n_groups_active, dec_places)
+                except ZeroDivisionError:
+                    p_asynchronous = '--'
+
+                # Add everything to the dataframe
+                stats.loc[sim_file] = extracted_params + \
+                                      [duration, n_spiking_total, p_spiking, n_firing_rate_normal, p_firing_rate_normal,
+                                       n_irregular, p_irregular, n_groups_active, n_groups_asynchronous, p_asynchronous]
             except KeyError:
                 print 'Skipping...'
 
+            finally:
+                n_analysed += 1
+                progress = (n_analysed/n_files)*100
+                print '%.0f%% done...' % progress
+
         stats.to_csv(self.experiment_path + output_filename)
+        print 'Done!'
+
 
 
 
@@ -945,8 +1027,12 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
 
 if __name__ == '__main__':
 
-    exp = ExperimentData('/opt3/tmp/bigrun/', 'adolfo')
-    exp.computestats(500*ms, 'adolfo_stats.csv')
+    # exp = ExperimentData('/opt3/tmp/bigrun/', 'adolfo')
+    # exp.computestats(500*ms, 'stats_new.csv', ['calcium_concentration', 'background_rate', 'background_rate_inhibition'])
+
+    exp = ExperimentData('/opt3/tmp/', 'newcastle_04')
+    exp.computestats(500*ms, 'stats.csv', ['calcium_concentration', 'biibaa'])
+
 
     # sim = SimulationData('newcastle_04_background_rate_inhibition3.0H_Cpp_2000ms.bz2')
     # n_spiking, mean_firing_rates, isicovs, fanofactors = sim.pop_measures(500*ms)
