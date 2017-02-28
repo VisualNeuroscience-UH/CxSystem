@@ -915,7 +915,7 @@ class ExperimentData(object):
         self.experiment_name = experiment_name
         self.simulation_files = [sim_file for sim_file in os.listdir(experiment_path) if experiment_name in sim_file]
 
-
+    # Would be easy to do in parallel...
     def computestats(self, time_to_drop=500*ms, output_filename='stats.csv', parameters_to_extract=[]):
         # Cutoff values for normal mean firing rate, regularity etc.
         rate_min = 0*Hz
@@ -923,14 +923,15 @@ class ExperimentData(object):
         isicov_min = 0.5
         isicov_max = 1.5
         fanofactor_max = 10
-        active_group_min = 0.5
+        active_group_min = 0.2  # min.percentage of neurons spiking for the group to be considered "active"
 
         dec_places = 3
 
         # Dataframe for collecting everything
+        group_measures = ['p_'+group_name for group_name in SimulationData.group_numbering.values()]
         stats_to_compute = ['duration', 'n_spiking', 'p_spiking', 'n_firing_rate_normal', 'p_firing_rate_normal',
-                            'n_irregular', 'p_irregular', 'n_groups_active', 'n_groups_asynchronous', 'p_asynchronous']
-        stats = pd.DataFrame(index=self.simulation_files, columns=parameters_to_extract+stats_to_compute)
+                            'n_irregular', 'p_irregular', 'n_groups_active', 'n_groups_asynchronous', 'n_groups_synchronous']
+        stats = pd.DataFrame(index=self.simulation_files, columns=parameters_to_extract + stats_to_compute + group_measures)
 
         # Go through simulation files
         flatten = lambda l: [item for sublist in l for item in sublist]
@@ -946,40 +947,57 @@ class ExperimentData(object):
                 # Extract specified simulation parameters
                 extracted_params = []
                 for param_name in parameters_to_extract:
-                    extracted_params.append(sim.get_sim_parameter(param_name))
+                    param_value = sim.get_sim_parameter(param_name)
+                    try:
+                        param_value = round(array([param_value])[0], dec_places)  # Get rid of unit
+                    except TypeError:
+                        pass
 
-                # Calculate aggregate measures
+                    extracted_params.append(param_value)
+
+                # Calculate aggregate measures (n-measures)
                 n_spiking, mean_firing_rates, isicovs, fanofactors = sim.pop_measures(time_to_drop)
 
                 n_spiking_total = sum(n_spiking.values())
+
+                group_activities = []
+                for group_id in SimulationData.group_numbering.keys():
+                    activity = round(n_spiking[group_id]/SimulationData.neurons_in_group[group_id], dec_places)
+                    group_activities.append(activity)
+
+
                 n_firing_rate_normal = len([rate for rate in flatten(mean_firing_rates.values())
                                             if rate_min < rate < rate_max])
                 n_irregular = len([isicov for isicov in flatten(isicovs.values())
                                    if isicov_min < isicov < isicov_max])
-                n_groups_asynchronous = len([fanofactor for fanofactor in fanofactors.values()
-                                      if 0 < fanofactor < fanofactor_max])
-                n_groups_active = len([group_id for group_id, ng_spiking in n_spiking.items()
-                                       if ng_spiking/sim.neurons_in_group[group_id] > active_group_min])
 
+                # Calculating the synchrony measure makes sense only if the group is active enough
+                # So, first calculate n_groups_active and count asynchronous groups from those
+                active_groups = [group_id for group_id, ng_spiking in n_spiking.items()
+                                 if ng_spiking / sim.neurons_in_group[group_id] > active_group_min]
+                n_groups_active = len(active_groups)
+                n_groups_asynchronous = len([group_id for group_id, fanofactor in fanofactors.items()
+                                             if 0 < fanofactor < fanofactor_max and group_id in active_groups])
+                n_groups_synchronous = n_groups_active - n_groups_asynchronous
+
+                # Calculate p-measures (Percentage of neurons)
                 n_total_neurons = sum(sim.neurons_in_group.values())
                 p_spiking = round(n_spiking_total/n_total_neurons, dec_places)
                 try:
                     p_firing_rate_normal = round(n_firing_rate_normal/n_spiking_total, dec_places)
                     p_irregular = round(n_irregular/n_spiking_total, dec_places)
                 except ZeroDivisionError:
-                    p_firing_rate_normal = '--'
-                    p_irregular = '--'
-                try:
-                    p_asynchronous = round(n_groups_asynchronous/n_groups_active, dec_places)
-                except ZeroDivisionError:
-                    p_asynchronous = '--'
+                    p_firing_rate_normal = ''
+                    p_irregular = ''
+
 
                 # Add everything to the dataframe
                 stats.loc[sim_file] = extracted_params + \
                                       [duration, n_spiking_total, p_spiking, n_firing_rate_normal, p_firing_rate_normal,
-                                       n_irregular, p_irregular, n_groups_active, n_groups_asynchronous, p_asynchronous]
+                                       n_irregular, p_irregular, n_groups_active, n_groups_asynchronous, n_groups_synchronous] + \
+                                      group_activities
             except KeyError:
-                print 'Skipping...'
+                print 'Not a simulation file, skipping...'
 
             finally:
                 n_analysed += 1
@@ -987,7 +1005,7 @@ class ExperimentData(object):
                 print '%.0f%% done...' % progress
 
         stats.to_csv(self.experiment_path + output_filename)
-        print 'Done!'
+        print 'Finished!'
 
 
 
@@ -1027,11 +1045,11 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
 
 if __name__ == '__main__':
 
-    # exp = ExperimentData('/opt3/tmp/bigrun/', 'adolfo')
-    # exp.computestats(500*ms, 'stats_new.csv', ['calcium_concentration', 'background_rate', 'background_rate_inhibition'])
+    exp = ExperimentData('/opt3/tmp/bigrun/', 'adolfo')
+    exp.computestats(500*ms, 'stats_new.csv', ['calcium_concentration', 'background_rate', 'background_rate_inhibition'])
 
-    exp = ExperimentData('/opt3/tmp/', 'newcastle_04')
-    exp.computestats(500*ms, 'stats.csv', ['calcium_concentration', 'biibaa'])
+    # exp = ExperimentData('/opt3/tmp/', 'newcastle_04')
+    # exp.computestats(500*ms, 'stats.csv', ['calcium_concentration', 'background_rate'])
 
 
     # sim = SimulationData('newcastle_04_background_rate_inhibition3.0H_Cpp_2000ms.bz2')

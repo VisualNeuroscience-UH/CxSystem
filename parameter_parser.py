@@ -101,10 +101,13 @@ class synapse_parser(object):
         except ValueError:
             raise ValueError("Parameter %s not found in the configuration file."%key_name)
 
+    def _change_calcium(self, ca, cw=None):
 
-    def _change_calcium(self, ca):
+        if cw is None:
+            original_synapse_strength = self.cw_baseline_calcium
+        else:
+            original_synapse_strength = cw
 
-        original_synapse_strength = self.cw_baseline_calcium
         ca0 = 2.0  # The Ca concentration in which cw_baseline_calcium is given
 
         calcium_factor = (pow(ca,4)/(pow(self._K12,4) + pow(ca,4))) / (pow(ca0,4)/(pow(self._K12,4) + pow(ca0,4)))

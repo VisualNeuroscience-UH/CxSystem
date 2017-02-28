@@ -10,6 +10,7 @@ import brian2genn
 import os
 import sys
 from physiology_reference import *
+from parameter_parser import synapse_parser
 from matplotlib.pyplot import  *
 from save_data import *
 from stimuli import *
@@ -614,22 +615,30 @@ class CxSystem(object):
         background_rate = self.physio_config_df.ix[where(self.physio_config_df.values == 'background_rate')[0]]['Value'].item()
         background_rate_inhibition = self.physio_config_df.ix[where(self.physio_config_df.values == 'background_rate_inhibition')[0]]['Value'].item()
 
+        # For changing connection weight of bg input according to calcium level
+        ca = self.value_extractor(self.physio_config_df, 'calcium_concentration')
+        bg_synapse = synapse_parser({'type': 'Fixed', 'pre_group_type': 'PC', 'post_group_type': neuron_type},
+                                    self.physio_config_df)
+        bg_synapse_inh = synapse_parser({'type': 'Fixed', 'pre_group_type': 'BC', 'post_group_type': neuron_type},
+                                        self.physio_config_df)
+
         if neuron_type in ['L1i', 'BC', 'MC']:
             background_weight = \
-            repr(self.value_extractor(self.physio_config_df, 'background_E_I_weight'))
-            #self.physio_config_df.ix[where(self.physio_config_df.values == 'background_E_I_weight')[0]]['Value'].item()
+            repr(bg_synapse._change_calcium(ca, self.value_extractor(self.physio_config_df, 'background_E_I_weight')))
+
             background_weight_inhibition = \
-            repr(self.value_extractor(self.physio_config_df, 'background_I_I_weight'))
-            # self.physio_config_df.ix[where(self.physio_config_df.values == 'background_I_I_weight')[0]]['Value'].item()
+            repr(bg_synapse_inh._change_calcium(ca, self.value_extractor(self.physio_config_df, 'background_I_I_weight')))
+
         else:
             background_weight = \
-            repr(self.value_extractor(self.physio_config_df, 'background_E_E_weight'))
-            #self.physio_config_df.ix[where(self.physio_config_df.values == 'background_E_E_weight')[0]]['Value'].item()
+            repr(bg_synapse._change_calcium(ca, self.value_extractor(self.physio_config_df, 'background_E_E_weight')))
+
             background_weight_inhibition = \
-            repr(self.value_extractor(self.physio_config_df, 'background_I_E_weight'))
-            # self.physio_config_df.ix[where(self.physio_config_df.values == 'background_I_E_weight')[0]]['Value'].item()
+            repr(bg_synapse_inh._change_calcium(ca, self.value_extractor(self.physio_config_df, 'background_I_E_weight')))
+
 
         # print 'Adding Poisson background input with params: '+n_background_inputs+', '+background_rate+', '+background_weight
+        # print 'Poisson bg input with weights (exc/inh): %s / %s' % (background_weight, background_weight_inhibition)
         if neuron_type != 'PC':
             # Background excitation for non-PC neurons
             poisson_target = 'bg_%s' % _dyn_neurongroup_name
