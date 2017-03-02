@@ -13,15 +13,25 @@ import cPickle as pickle
 import bz2
 from brian2 import *
 import random
+import pathos.multiprocessing as mp
+from multiprocess import Manager
+import datetime
+from tqdm import *
 
 
 mycmap = 'jet'
 
 
 class SimulationData(object):
+    """
+    Class for holding data from a single simulation with methods for visualizing the results
 
-    #default_data_file = '/home/henri/PycharmProjects/CX_Output/'
-    default_data_file = '/opt3/CX_Output/calcium/calcium21_2s.gz'
+    Certain constants related to the Markram model which are necessary for visualising results
+    are stored here (group numbering, numbers of neurons etc). The constants are fixed,
+    so the class is NOT agnostic about network structure.
+    """
+    # TODO - Make class agnostic about network structure, ie extract following constants from datafile
+
     default_data_file_path = '/opt3/tmp/'
     default_sampling_frequency = 1000
     defaultclock_dt = 0.1 * ms
@@ -42,8 +52,11 @@ class SimulationData(object):
     # Per group returns an array of [[excitatory] and [inhibitory]] groups
     groups_of_layer = {1: [[], [1]], 2: [[2], [3, 4]], 4: [[5, 6, 7], [8,9]], 5: [[10], [11,12]], 6:[[13, 14], [15, 16]]}
 
-    def __init__(self, data_file=default_data_file, data_path=default_data_file_path):
-
+    def __init__(self, data_file, data_path=default_data_file_path):
+        """
+        :param data_file: filename to open from data_path (or default data path set in class constants)
+        :param data_path: path where data_file is located (with trailing / included), optional
+        """
         basename = os.path.basename(data_file)
         data_loc = data_path + data_file
         if basename[-2:] == 'gz':
@@ -53,19 +66,38 @@ class SimulationData(object):
         elif basename[-3:] == 'bz2':
             self.data = self._loadbz2(data_loc)
         else:
-            print 'Format not supported so no file was loaded.'
+            pass
 
         self.datafile = data_file
 
-        self.spikedata = self.data['spikes_all']  # [group][0] -> neuron indices inside group, [group][1] -> spike times
-        self.spikedata = OrderedDict(sorted(self.spikedata.items(), key=self._group_name_for_ordering ))  # TODO Order nicely
-        self.runtime = self.data['runtime']
-        self.neuron_groups = [row[0] for row in self.spikedata.items()[1:]]
+        try:
+            self.spikedata = self.data['spikes_all']  # [group][0] -> neuron indices inside group, [group][1] -> spike times
+            self.spikedata = OrderedDict(sorted(self.spikedata.items(), key=self._group_name_for_ordering ))
+            self.runtime = self.data['runtime']
+            self.neuron_groups = [row[0] for row in self.spikedata.items()[1:]]
 
-        self.anatomy_df = self.data['Anatomy_configuration']
-        self.physio_df = self.data['Physiology_configuration']
+            self.anatomy_df = self.data['Anatomy_configuration']
+            self.physio_df = self.data['Physiology_configuration']
+        except:
+            raise
+
+    def _group_name_for_ordering(self, spikedata):
+        """
+        Internal dummy function used in arranging groups in correct order in __init__
+
+        :param spikedata:
+        :return: corrected name, eg. NG7 -> NG07
+        """
+        corrected_name = re.sub(r'NG(\w{1})_', r'NG0\1_', spikedata[0])
+        return str(corrected_name)
 
     def _loadgz(self, filename):
+        """
+        Method for opening gz-packed simulation files (not used in CxSystem anymore)
+
+        :param filename:
+        :return: data
+        """
         with open(filename, 'rb') as fb:
             d_pickle = zlib.decompress(fb.read())
             data = pickle.loads(d_pickle)
@@ -73,45 +105,28 @@ class SimulationData(object):
         return data
 
     def _loadbz2(self, filename):
+        """
+        Method for opening bz2-packed simulation files. This is the current way of packing in CxSystem.
+
+        :param filename:
+        :return: data
+        """
         with bz2.BZ2File(filename, 'rb') as fb:
             data = pickle.load(fb)
 
         return data
 
-    def _loadmat(self, filename):
-        '''
-        this function should be called instead of direct spio.loadmat
-        as it cures the problem of not properly recovering python dictionaries
-        from mat files. It calls the function check keys to cure all entries
-        which are still mat-objects
-        '''
-        data = spio.loadmat(filename, struct_as_record=False, squeeze_me=True)
-        return self._check_keys(data)
-
-    def _check_keys(self, dict):
-        '''
-        checks if entries in dictionary are mat-objects. If yes
-        todict is called to change them to nested dictionaries
-        '''
-        for key in dict:
-            if isinstance(dict[key], spio.matlab.mio5_params.mat_struct):
-                dict[key] = self._todict(dict[key])
-        return dict
-
-    def _todict(self, matobj):
-        '''
-        A recursive function which constructs from matobjects nested dictionaries
-        '''
-        dict = {}
-        for strg in matobj._fieldnames:
-            elem = matobj.__dict__[strg]
-            if isinstance(elem, spio.matlab.mio5_params.mat_struct):
-                dict[strg] = self._todict(elem)
-            else:
-                dict[strg] = elem
-        return dict
-
     def value_extractor(self, df, key_name):
+        """
+        Method for extracting simulation parameters from anatomy and physiology configurations inside data files.
+        This method coexists in several classes - a Configuration class is needed?
+
+        :param df: dataframe to go through (now either self.anatomy_df or self.physio_df)
+        :param key_name: simulation parameter to extract
+        :return: value of the specified simulation parameter
+        """
+        # TODO - separate class Configuration for anatomy/physiology configs
+
         non_dict_indices = df['Variable'].dropna()[df['Key'].isnull()].index.tolist()
         for non_dict_idx in non_dict_indices:
             exec "%s=%s" % (df['Variable'][non_dict_idx], df['Value'][non_dict_idx])
@@ -137,17 +152,25 @@ class SimulationData(object):
         except ValueError:
             raise ValueError("Parameter %s not found in the configuration file."%key_name)
 
-    def _group_name_for_ordering(self, spikedata):
-        corrected_name = re.sub(r'NG(\w{1})_', r'NG0\1_', spikedata[0])
-        return str(corrected_name)
-
     def _check_group_name(self, group):
+        """
+        Internal function used to convert group identifier (integer) to group name (string) if necessary.
+
+        :param group: str or int, group identifier
+        :return: str, group name
+        """
         if isinstance(group, int):
             return SimulationData.group_numbering[group]
         else:
             return group
 
     def _get_group_leak(self, group_id):
+        """
+        Internal function to extract the gL value of a specified group from physiology configuration
+
+        :param group_id:
+        :return:
+        """
 
         physio_config = self.data['Physiology_configuration']
         number_of_rows = len(physio_config['Variable'])
@@ -176,6 +199,10 @@ class SimulationData(object):
         return eval(physio_config['Value'][begin_ix + gL_index])
 
     def rasterplot(self):
+        """
+        Plots all spikes, subplot per neuron group
+
+        """
 
         runtime = self.runtime
         fig = plt.figure()
@@ -195,6 +222,12 @@ class SimulationData(object):
         plt.show()
 
     def _spikes_spectrum_group(self, neuron_group):
+        """
+        Computes spectral power with FFT for a given neuron group
+
+        :param neuron_group: int/str, group id or group name
+        :return: list of frequencies, list of corresponding powers
+        """
 
         neuron_group = self._check_group_name(neuron_group)
 
@@ -221,7 +254,10 @@ class SimulationData(object):
         return freqs, pow_spectrum
 
     def spectrumplot(self):
+        """
+        Plots spectral power for all neuron groups
 
+        """
         fig = plt.figure()
 
         for index, group in enumerate(self.neuron_groups, start=1):
@@ -239,6 +275,13 @@ class SimulationData(object):
         plt.show()
 
     def rasterplot_compressed(self, neurons_per_group=20, ax=None):
+        """
+        Plots a simplified rasterplot with only layers labeled, not neuron groups. Possibly useful for publications.
+
+        :param neurons_per_group: int, used to avoid the plot becoming too busy (default=20)
+        :param ax: matplotlib Axes-object to draw plot on, optional
+        :return: nothing
+        """
         print 'Working on ' + self.datafile
         spike_dict = dict()
         indices_dict = dict()
@@ -283,10 +326,17 @@ class SimulationData(object):
             plt.show()
 
         else:
-            scatplot = ax.scatter(spike_df.time, spike_df.neuron_index, s=0.6, c='gray')
-            return scatplot
+            ax.scatter(spike_df.time, spike_df.neuron_index, s=0.6, c='gray')
+
 
     def voltage_rasterplot(self, max_per_group=20, dt_downsampling_factor=10):
+        """
+        Plots voltage of neurons with membrane voltage represented with a continuous colour scale.
+
+        :param max_per_group: int, maximum number of neurons per group to include in plotting (default=20)
+        :param dt_downsampling_factor: int, factor by which to reduce time-sampling (default=10)
+        :return:
+        """
 
         divider_height = 1
 
@@ -364,7 +414,15 @@ class SimulationData(object):
         plt.show()
 
     def conductanceplot(self, group_id):
+        """
+        Plots v_m and, in particular, g_e and g_i conductance fluctuations. For pyramidal cell groups also
+        dendritic current is shown. On the (g_e, g_i) plot the 'AP threshold line' is drawn, representing the line
+        where dv_m/dt at VT is 0 (>0 is a necessary condition for spiking).
+        For motivation, see eg. Piwkowska et al. (2008). J Neurosci Met 169: 302-22.
 
+        :param group_id: int, group identifier
+
+        """
         group = self.group_numbering[group_id]
         # Pick random neuron from group (assuming neuron indexing inside vm_all, ge_soma_all, gi_soma_all is the same
         # ie. that neurons have been sampled with same density for each status monitor)
@@ -460,6 +518,13 @@ class SimulationData(object):
         plt.show()
 
     def _currentplot_group(self, group_id, ax=None):
+        """
+        Plots excitatory and inhibitory currents of a given group. Mean of sampled neurons is shown in black and
+        trace of a randomly picked neuron is shown in gray.
+
+        :param group_id: int, group identifier
+        :param ax: matplotlib Axes-object, optional
+        """
 
         ### Basic parameters
         group = self.group_numbering[group_id]
@@ -535,6 +600,10 @@ class SimulationData(object):
             ax.set_ylabel('Inhibitory current (pA)')
 
     def currentplot(self):
+        """
+        Plots excitatory and inhibitory currents of all groups. See _currentplot_group() for details.
+
+        """
         fig, ax = plt.subplots(4, 4)
         fig.suptitle(self.datafile)
 
@@ -774,67 +843,9 @@ class SimulationData(object):
         # plt.legend()
         plt.show()
 
-    # # Gives you the % of neurons not spiking at all
-    # def pop_notspiking(self, time_to_drop):
-    #
-    #     total_spiking = 0
-    #     total_neurons = sum(self.neurons_in_group.values())
-    #
-    #     for group_id in self.group_numbering.keys():
-    #         groupspikes = self.spikedata[self.group_numbering[group_id]]  # [0]->indices, [1]->times
-    #         spikecount = len(groupspikes[0])
-    #         spiking_neurons = [groupspikes[0][i] for i in range(0, spikecount) if groupspikes[1][i] > time_to_drop/second]
-    #         total_spiking += len(unique(spiking_neurons))
-    #         # print self.group_numbering[group_id]
-    #         # print total_spiking
-    #
-    #     return 100*(total_neurons - total_spiking)/total_neurons
-    #
-    # # Gives you the % of neurons with set rate
-    # def pop_firing_rate(self, rate_min, rate_max, time_to_drop):
-    #
-    #     true_runtime = self.runtime*second - time_to_drop
-    #     n_qualifying_neurons = 0
-    #     total_neurons = sum(self.neurons_in_group.values())
-    #
-    #     # For each group, get the group spikes. Remember: [0]->indices, [1]->spike times
-    #     for group_id in self.group_numbering.keys():
-    #         print self.group_numbering[group_id]
-    #         groupspikes = self.spikedata[self.group_numbering[group_id]]  # [0]->indices, [1]->times
-    #         spikecount = len(groupspikes[0])
-    #         # Drop out those that don't have spikes past time_to_drop (they are deemed to have rate =0 Hz)
-    #         spiking_neurons = [groupspikes[0][i] for i in range(0, spikecount) if
-    #                            groupspikes[1][i] > time_to_drop / second]
-    #         spiking_neurons = unique(spiking_neurons)
-    #         print 'Total spiking neurons in group: ' + str(len(spiking_neurons))
-    #         # Calculate firing rate for each neuron
-    #         # VERY SLOW
-    #         for neuron in spiking_neurons:
-    #             neuronspikes = [groupspikes[1][i] for i in range(0, spikecount) if
-    #                             groupspikes[1][i] > time_to_drop / second and groupspikes[0][i] == neuron]
-    #             rate = len(neuronspikes)/true_runtime
-    #
-    #             # Count in those neurons that match rate criteria
-    #             if rate_min < rate < rate_max:
-    #                 n_qualifying_neurons += 1
-    #             else:
-    #                 n_qualifying_neurons += 0
-    #
-    #     return 100*(n_qualifying_neurons/total_neurons)
-    #
-    # # Gives you the % of neurons meeting set regularity criteria
-    # def pop_irregularity(self, isicov_min, isicov_max, time_to_drop):
-    #
-    #     for group_id in self.group_numbering.keys():
-    #         isi_list = self._isi_cv_group(group_id, return_list=True)
-    #
-    #
-    # def pop_synchrony(self, sync_limit, time_to_drop):
-    #     pass
-    #     # Gives you the number of groups behaving synchronously (Fano factor > sync_limit)
 
     def pop_measures_group(self, group_id, time_to_drop):
-        # Set important params
+
         true_runtime = self.runtime * second - time_to_drop
 
         # Get spikes of the corresponding group with the beginning removed
@@ -885,7 +896,7 @@ class SimulationData(object):
         fanofactors = dict()
 
         for group_id in self.group_numbering.keys():
-            print self.group_numbering[group_id]
+            # print self.group_numbering[group_id]
             n_spiking_gp, mean_firing_rates_gp, isicovs_gp, fanofactor_gp = self.pop_measures_group(group_id, time_to_drop)
             n_spiking[group_id] = n_spiking_gp
             mean_firing_rates[group_id] = mean_firing_rates_gp
@@ -902,8 +913,7 @@ class SimulationData(object):
             try:
                 return self.value_extractor(self.anatomy_df, param_name)
             except:
-                print 'Parameter ' + param_name + ' not found, ignoring...'
-                return 'xxx'
+                return '???'
 
 
 
@@ -913,101 +923,112 @@ class ExperimentData(object):
 
         self.experiment_path = experiment_path
         self.experiment_name = experiment_name
-        self.simulation_files = [sim_file for sim_file in os.listdir(experiment_path) if experiment_name in sim_file]
+        self.simulation_files = [sim_file for sim_file in os.listdir(experiment_path)
+                                 if experiment_name in sim_file and os.path.splitext(sim_file)[1] == '.bz2']
 
-    # Would be easy to do in parallel...
-    def computestats(self, time_to_drop=500*ms, output_filename='stats.csv', parameters_to_extract=[]):
-        # Cutoff values for normal mean firing rate, regularity etc.
-        rate_min = 0*Hz
-        rate_max = 30*Hz
-        isicov_min = 0.5
-        isicov_max = 1.5
-        fanofactor_max = 10
-        active_group_min = 0.2  # min.percentage of neurons spiking for the group to be considered "active"
-
-        dec_places = 3
+    def computestats_single_sim(self, sim_file, settings, parameters_to_extract):
 
         # Dataframe for collecting everything
         group_measures = ['p_'+group_name for group_name in SimulationData.group_numbering.values()]
         stats_to_compute = ['duration', 'n_spiking', 'p_spiking', 'n_firing_rate_normal', 'p_firing_rate_normal',
                             'n_irregular', 'p_irregular', 'n_groups_active', 'n_groups_asynchronous', 'n_groups_synchronous']
-        stats = pd.DataFrame(index=self.simulation_files, columns=parameters_to_extract + stats_to_compute + group_measures)
+        stats = pd.DataFrame(index=[sim_file], columns=parameters_to_extract + stats_to_compute + group_measures)
+
+        flatten = lambda l: [item for sublist in l for item in sublist]
+
+        # print 'Analysing ' + sim_file + '...'
+        try:
+            sim = SimulationData(sim_file, data_path=self.experiment_path)
+            duration = (sim.runtime * second - settings['time_to_drop']) / second
+
+            # Extract specified simulation parameters
+            extracted_params = []
+            for param_name in parameters_to_extract:
+                param_value = sim.get_sim_parameter(param_name)
+                try:
+                    param_value = round(array([param_value])[0], settings['dec_places'])  # Get rid of unit
+                except TypeError:
+                    pass
+
+                extracted_params.append(param_value)
+
+            # Calculate aggregate measures (n-measures)
+            n_spiking, mean_firing_rates, isicovs, fanofactors = sim.pop_measures(settings['time_to_drop'])
+
+            n_spiking_total = sum(n_spiking.values())
+
+            group_activities = []
+            for group_id in SimulationData.group_numbering.keys():
+                activity = round(n_spiking[group_id] / SimulationData.neurons_in_group[group_id], settings['dec_places'])
+                group_activities.append(activity)
+
+            n_firing_rate_normal = len([rate for rate in flatten(mean_firing_rates.values())
+                                        if settings['rate_min'] < rate < settings['rate_max']])
+            n_irregular = len([isicov for isicov in flatten(isicovs.values())
+                               if settings['isicov_min'] < isicov < settings['isicov_max']])
+            n_firing_rate_normal = np.int32(n_firing_rate_normal)
+            n_irregular = np.int32(n_irregular)
+
+            # Calculating the synchrony measure makes sense only if the group is active enough
+            # So, first calculate n_groups_active and count asynchronous groups from those
+            active_groups = [group_id for group_id, ng_spiking in n_spiking.items()
+                             if ng_spiking / sim.neurons_in_group[group_id] > settings['active_group_min']]
+            n_groups_active = len(active_groups)
+            n_groups_asynchronous = len([group_id for group_id, fanofactor in fanofactors.items()
+                                         if 0 < fanofactor < settings['fanofactor_max'] and group_id in active_groups])
+            n_groups_synchronous = n_groups_active - n_groups_asynchronous
+
+            # Calculate p-measures (Percentage of neurons)
+            n_total_neurons = sum(sim.neurons_in_group.values())
+            p_spiking = round(n_spiking_total / n_total_neurons, settings['dec_places'])
+            if n_spiking_total > 0:
+                p_firing_rate_normal = round(n_firing_rate_normal / n_spiking_total, settings['dec_places'])
+                p_irregular = round(n_irregular / n_spiking_total, settings['dec_places'])
+            else:
+                p_firing_rate_normal = ''
+                p_irregular = ''
+
+            # Add everything to the dataframe
+            stats.loc[sim_file] = extracted_params + \
+                                        [duration, n_spiking_total, p_spiking, n_firing_rate_normal, p_firing_rate_normal,
+                                         n_irregular, p_irregular, n_groups_active, n_groups_asynchronous,
+                                         n_groups_synchronous] + \
+                                         group_activities
+            return stats
+
+        except KeyError:
+            pass
+
+    def computestats(self, output_filename='stats.csv', parameters_to_extract=[], settings=None):
+
+        # Set default analysis parameters here
+        if settings is None:
+            settings = {'time_to_drop': 500*ms, 'rate_min': 0*Hz, 'rate_max': 30*Hz, 'isicov_min': 0.5,
+                        'isicov_max': 1.5, 'fanofactor_max': 10, 'active_group_min': 0.2, 'dec_places': 3}
 
         # Go through simulation files
-        flatten = lambda l: [item for sublist in l for item in sublist]
         n_files = len(self.simulation_files)
-        n_analysed = 0
         print 'Beginning analysis of ' + str(n_files) + ' files'
-        for sim_file in self.simulation_files:
-            print 'Analysing ' + sim_file + '...'
-            try:
-                sim = SimulationData(sim_file, data_path=self.experiment_path)
-                duration = (sim.runtime*second - time_to_drop)/second
 
-                # Extract specified simulation parameters
-                extracted_params = []
-                for param_name in parameters_to_extract:
-                    param_value = sim.get_sim_parameter(param_name)
-                    try:
-                        param_value = round(array([param_value])[0], dec_places)  # Get rid of unit
-                    except TypeError:
-                        pass
+        # Takes forever unless parallel-processed
+        pool = mp.ProcessingPool(processes=int(mp.cpu_count()*0.75))
+        results = []
 
-                    extracted_params.append(param_value)
+        with tqdm(total=n_files, desc='Analysing simulations') as progress:
+            for res in pool.uimap(self.computestats_single_sim, self.simulation_files,
+                            [settings for i in range(n_files)], [parameters_to_extract for i in range(n_files)]):
+                results.append(res)
+                progress.update()
 
-                # Calculate aggregate measures (n-measures)
-                n_spiking, mean_firing_rates, isicovs, fanofactors = sim.pop_measures(time_to_drop)
+        progress.close()
+        pool.close()
+        pool.join()
 
-                n_spiking_total = sum(n_spiking.values())
-
-                group_activities = []
-                for group_id in SimulationData.group_numbering.keys():
-                    activity = round(n_spiking[group_id]/SimulationData.neurons_in_group[group_id], dec_places)
-                    group_activities.append(activity)
-
-
-                n_firing_rate_normal = len([rate for rate in flatten(mean_firing_rates.values())
-                                            if rate_min < rate < rate_max])
-                n_irregular = len([isicov for isicov in flatten(isicovs.values())
-                                   if isicov_min < isicov < isicov_max])
-
-                # Calculating the synchrony measure makes sense only if the group is active enough
-                # So, first calculate n_groups_active and count asynchronous groups from those
-                active_groups = [group_id for group_id, ng_spiking in n_spiking.items()
-                                 if ng_spiking / sim.neurons_in_group[group_id] > active_group_min]
-                n_groups_active = len(active_groups)
-                n_groups_asynchronous = len([group_id for group_id, fanofactor in fanofactors.items()
-                                             if 0 < fanofactor < fanofactor_max and group_id in active_groups])
-                n_groups_synchronous = n_groups_active - n_groups_asynchronous
-
-                # Calculate p-measures (Percentage of neurons)
-                n_total_neurons = sum(sim.neurons_in_group.values())
-                p_spiking = round(n_spiking_total/n_total_neurons, dec_places)
-                try:
-                    p_firing_rate_normal = round(n_firing_rate_normal/n_spiking_total, dec_places)
-                    p_irregular = round(n_irregular/n_spiking_total, dec_places)
-                except ZeroDivisionError:
-                    p_firing_rate_normal = ''
-                    p_irregular = ''
-
-
-                # Add everything to the dataframe
-                stats.loc[sim_file] = extracted_params + \
-                                      [duration, n_spiking_total, p_spiking, n_firing_rate_normal, p_firing_rate_normal,
-                                       n_irregular, p_irregular, n_groups_active, n_groups_asynchronous, n_groups_synchronous] + \
-                                      group_activities
-            except KeyError:
-                print 'Not a simulation file, skipping...'
-
-            finally:
-                n_analysed += 1
-                progress = (n_analysed/n_files)*100
-                print '%.0f%% done...' % progress
-
-        stats.to_csv(self.experiment_path + output_filename)
-        print 'Finished!'
-
-
+        try:
+            stats = pd.concat(list(results))
+            stats.to_csv(self.experiment_path + output_filename)
+        except:
+            print 'Nothing to analyse!'
 
 
 ### END of class SimulationData
@@ -1045,11 +1066,11 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
 
 if __name__ == '__main__':
 
-    exp = ExperimentData('/opt3/tmp/bigrun/', 'adolfo')
-    exp.computestats(500*ms, 'stats_new.csv', ['calcium_concentration', 'background_rate', 'background_rate_inhibition'])
+    exp = ExperimentData('/opt3/tmp/bigrun/', 'boris')
+    exp.computestats('stats_boris2.csv', ['calcium_concentration', 'background_rate', 'background_rate_inhibition'])
 
     # exp = ExperimentData('/opt3/tmp/', 'newcastle_04')
-    # exp.computestats(500*ms, 'stats.csv', ['calcium_concentration', 'background_rate'])
+    # exp.computestats('stats.csv', ['calcium_concentration', 'background_rate'])
 
 
     # sim = SimulationData('newcastle_04_background_rate_inhibition3.0H_Cpp_2000ms.bz2')
