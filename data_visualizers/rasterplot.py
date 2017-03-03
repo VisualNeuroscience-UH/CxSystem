@@ -1,3 +1,14 @@
+"""
+The program is distributed under the terms of the GNU General Public License
+Copyright 2017 Vafa Andalibi, Simo Vanni, Henri Hokkanen.
+
+Papers and books that are referenced in this file:
+    Piwkowska et al. (2008). J Neurosci Met 169: 302-22.
+    Potjans T. & Diesmann M. (2014) Cer Cor 24 (3): 785-806
+    Sterratt et al. (2011) Principles of Computational Modelling in Neuroscience. Cambridge University Press.
+
+"""
+
 from __future__ import division
 import matplotlib.pyplot as plt
 import matplotlib
@@ -151,6 +162,21 @@ class SimulationData(object):
             return self.value_extractor(df,new_key)
         except ValueError:
             raise ValueError("Parameter %s not found in the configuration file."%key_name)
+
+    def get_sim_parameter(self, param_name):
+        """
+        Get value of a given parameter from anatomy or physiology configuration (no need to specify which)
+
+        :param param_name: str, parameter name to search for
+        :return:
+        """
+        try:
+            return self.value_extractor(self.physio_df, param_name)
+        except:
+            try:
+                return self.value_extractor(self.anatomy_df, param_name)
+            except:
+                return '???'
 
     def _check_group_name(self, group):
         """
@@ -331,7 +357,7 @@ class SimulationData(object):
 
     def voltage_rasterplot(self, max_per_group=20, dt_downsampling_factor=10):
         """
-        Plots voltage of neurons with membrane voltage represented with a continuous colour scale.
+        Plots voltage of neurons with membrane voltage represented on continuous colour scale.
 
         :param max_per_group: int, maximum number of neurons per group to include in plotting (default=20)
         :param dt_downsampling_factor: int, factor by which to reduce time-sampling (default=10)
@@ -524,6 +550,7 @@ class SimulationData(object):
 
         :param group_id: int, group identifier
         :param ax: matplotlib Axes-object, optional
+
         """
 
         ### Basic parameters
@@ -615,6 +642,14 @@ class SimulationData(object):
         plt.show()
 
     def _interspikeintervals_group(self, group_id):
+        """
+        Computes the interspike intervals (ISIs) of the neurons in a given neuron group.
+
+        :param group_id: int, group identifier
+        :return:
+            dict of unitless ISIs in milliseconds (indexed by neuron id's)
+            indices of spiking neurons (with at least 2 spikes)
+        """
         # Get the group spikes. Remember: [0]->indices, [1]->spike times
         spikes = self.spikedata[self.group_numbering[group_id]]
 
@@ -638,7 +673,13 @@ class SimulationData(object):
         return spikeintervals, spiking_neurons_2
 
     def _isihistogram_group(self, group_id, ax=None):
+        """
+        Plots the histogram of interspike intervals of a given group.
 
+        :param group_id: int, group identifier
+        :param ax: matplotlib Axes-object (optional)
+
+        """
         # Collection of spike times for each neuron in the group - let's just flatten it now
         spikeintervals, spiking_neurons = self._interspikeintervals_group(group_id)
         group_spikeintervals = []
@@ -653,8 +694,11 @@ class SimulationData(object):
         else:
             ax.hist(group_spikeintervals, bins=40)
 
-    # TODO - Begin analysis from certain point in time
     def isi_hist(self):
+        """
+        Plots the histograms of interspike intervals of all neuron groups.
+
+        """
         fig, ax = plt.subplots(4, 4)
         fig.suptitle(self.datafile)
 
@@ -669,10 +713,25 @@ class SimulationData(object):
 
     # Calculation of single-neuron coefficient of variation of interspike intervals, see eg. Sterratt book p209
     def _isi_cv_neuron(self, isi_list):
+        """
+        Computes the coefficient of variation (CV; sd/mean) of interspike intervals of a single neuron.
+        CV of ISIs can be used as a measure of spiking regularity. For explanation, see eg.
+        the book by Sterratt et al. (2009).
+
+        :param isi_list: list of interspike intervals
+        :return: float
+        """
         return std(isi_list)/mean(isi_list)
 
-    # TODO - Begin analysis from certain point in time
     def _isi_cv_group(self, group_id, return_list=False):
+        """
+        Computes the coefficients of variation of ISIs of the neurons in a given neuron group.
+        By default, returns the mean of the CVs, but can be changed to return the list of CVs.
+
+        :param group_id: int, group identifier
+        :param return_list: bool, change this to True if you want a list of CVs (default=False)
+        :return: float (mean of CVs) or list of floats (list of CVs)
+        """
         spikeintervals, spiking_neurons = self._interspikeintervals_group(group_id)
 
         neuron_cv_list = []
@@ -685,12 +744,26 @@ class SimulationData(object):
         else:
             return neuron_cv_list
 
-    # TODO - Begin analysis from certain point in time
     def isicov(self):
+        """
+        Prints the means of CVs of ISIs of all groups to stdout.
+
+        """
         for group_id in range(1,16+1):
             print self.group_numbering[group_id] + ', mean of 1-neuron CoV of ISIs (irregularity): ' + str(self._isi_cv_group(group_id))
 
     def _spikecounthistogram_group(self, group_id, bin_size=3 * ms, ax=None):
+        """
+        Creates a spike count histogram for a given group with certain bin size.
+        If no Axes-object is given, Fano factor (variance/mean) of the spike count histogram is returned.
+        Fano factor of the spike count histogram can be used to assess population synchrony,
+        see Potjans T. & Diesmann M. (2014) Cer Cor 24 (3): 785-806.
+
+        :param group_id: int, group identifier
+        :param bin_size: millisecond, length of time-bin (default=3*ms)
+        :param ax: matplotlib Axes-object (optional)
+        :return: float, the Fano factor of given group (if no ax is given)
+        """
 
         # Collect spike counts (of the group) into runtime divided by (time-)bin_size many bins
         timebin = bin_size/second
@@ -701,7 +774,6 @@ class SimulationData(object):
 
         # Count how many time-bins with each firing rate/spike count -> spike count histogram
         if ax is None:
-            # Print Fano factors (spike_counts variance/mean) to stdout
             sp_mean = mean(spike_counts)
             sp_var = np.var(spike_counts)
             return sp_var/sp_mean
@@ -710,6 +782,10 @@ class SimulationData(object):
 
 
     def spikecount_hist(self):
+        """
+        Plots the spike count histogram of all groups
+
+        """
         fig, ax = plt.subplots(4, 4)
         fig.suptitle(self.datafile)
 
@@ -722,33 +798,17 @@ class SimulationData(object):
 
         plt.show()
 
-    # For now, only prints out mean firing rates for each group
-    # TODO - Begin analysis from certain point in time
-    def mean_firing_rates_by_group(self):
-
-        # Get interspike intervals for all neuron groups and all their neurons
-        spikeintervals = dict()
-        spiking_neurons = dict()
-        for group_id in range(1,16+1):
-            spikeintervals[group_id], spiking_neurons[group_id] = self._interspikeintervals_group(group_id)
-
-        # For each neuron group, calculate the mean firing rates of neurons
-        firing_rates = dict()
-        for group_id in range(1,16+1):
-            firing_rates[group_id] = []
-            for neuron in spiking_neurons[group_id]:
-                # Mean firing rate is spikes/runtime, which is the same as number of interspike intervals +1 / runtime
-                # Runtime below is in seconds, so the firing_rate unit is hertz
-                firing_rates[group_id].append((len(spikeintervals[group_id][neuron])+1) / self.runtime)
-
-
-
-        # Draw horizontally group/line the mean and individual firing rates
-        for group_id in range(1, 16+1):
-            print self.group_numbering[group_id]
-            print nanmean(firing_rates[group_id])
 
     def _firingrates_group(self, group_id, bin_size=3*ms):
+        """
+        Compute instantaneous firing rates of a given neuron group, "instantaneous" being defined by bin_size
+
+        :param group_id: int, group identifier
+        :param bin_size: millisecond, definition of "an instant" (default=3*ms)
+        :return:
+            list of firing rates (in spikes/s) corresponding to bins [t_0, t_1), [t_2, t_3), ..., [t_N-1, t_N]
+            list of bin edges (length +1 compared to list of firing rates)
+        """
         # Collect spike counts (of the group) into runtime divided by (time-)bin_size many bins
         timebin = bin_size/second
         spikes = self.data['spikes_all'][self.group_numbering[group_id]]
@@ -761,6 +821,13 @@ class SimulationData(object):
         return group_firing_rates, bin_edges  # bin_edges is of length len(group_firing_rates)+1
 
     def firingrates_layer(self, layer_number):
+        """
+        Plots the instantaneous firing rates of neuron groups in a given layer. Each neuron group is plotted
+        separately.
+
+        :param layer_number: int, layer number (L2/3 denoted by 2)
+
+        """
         flatten = lambda l: [item for sublist in l for item in sublist]
         groups = flatten(self.groups_of_layer[layer_number])
 
@@ -776,6 +843,13 @@ class SimulationData(object):
         plt.show()
 
     def _firingrates_ei_layer(self, layer_number, ax=None):
+        """
+        Plots the summed instantaneous firing rates of excitatory and inhibitory neuron groups in a given layer.
+
+        :param layer_number: int, layer number (L2/3 denoted by 2)
+        :param ax: matplotlib Axes-object
+
+        """
         groups = self.groups_of_layer[layer_number]
         e_groups = groups[0]
         i_groups = groups[1]
@@ -804,6 +878,10 @@ class SimulationData(object):
             ax.legend()
 
     def firingrates_ei(self):
+        """
+        Plots the summed firing rates of excitatory and inhibitory groups, subplot per layer
+
+        """
         n_layers = len(self.layers)
 
         fig, ax = plt.subplots(n_layers, 1)
@@ -817,6 +895,13 @@ class SimulationData(object):
         plt.show()
 
     def _eiplot_layer(self, layer_number):
+        """
+        Plots the percentage of activity in excitatory and inhibitory populations as (E_activity, I_activity)
+        for a given layer.
+
+        :param layer_number: int, layer number (L2/3 denoted by 2)
+
+        """
         groups = self.groups_of_layer[layer_number]
         e_groups = groups[0]
         i_groups = groups[1]
@@ -843,8 +928,18 @@ class SimulationData(object):
         # plt.legend()
         plt.show()
 
+    def _pop_measures_group(self, group_id, time_to_drop=500*ms):
+        """
+        Computes measures of activity for a given neuron group
 
-    def pop_measures_group(self, group_id, time_to_drop):
+        :param group_id: int, group identifier
+        :param time_to_drop: millisecond, amount of time to drop from the beginning of the simulation (default=500*ms)
+        :return:
+            int, number of neurons spiking
+            list of floats, mean firing rates of all those neurons
+            list of floats, coefficients of variation of ISIs for all spiking neurons
+            float, Fano factor of the given group
+        """
 
         true_runtime = self.runtime * second - time_to_drop
 
@@ -888,7 +983,14 @@ class SimulationData(object):
 
         return n_spiking, mean_firing_rates, isicovs, fanofactor
 
-    def pop_measures(self, time_to_drop):
+    def pop_measures(self, time_to_drop=500*ms):
+        """
+        Computes measures of activity for all neuron groups. See _pop_measures_group() for details.
+
+        :param time_to_drop: millisecond, amount of time to drop from the beginning of the simulation (default=500*ms)
+        :return: four dictionaries in the same order as in _pop_measures_group(), all indexed by group identifiers
+
+        """
 
         n_spiking = dict()
         mean_firing_rates = dict()
@@ -897,7 +999,7 @@ class SimulationData(object):
 
         for group_id in self.group_numbering.keys():
             # print self.group_numbering[group_id]
-            n_spiking_gp, mean_firing_rates_gp, isicovs_gp, fanofactor_gp = self.pop_measures_group(group_id, time_to_drop)
+            n_spiking_gp, mean_firing_rates_gp, isicovs_gp, fanofactor_gp = self._pop_measures_group(group_id, time_to_drop)
             n_spiking[group_id] = n_spiking_gp
             mean_firing_rates[group_id] = mean_firing_rates_gp
             isicovs[group_id] = isicovs_gp
@@ -905,28 +1007,36 @@ class SimulationData(object):
 
         return n_spiking, mean_firing_rates, isicovs, fanofactors
 
-    def get_sim_parameter(self, param_name):
-
-        try:
-            return self.value_extractor(self.physio_df, param_name)
-        except:
-            try:
-                return self.value_extractor(self.anatomy_df, param_name)
-            except:
-                return '???'
-
-
 
 class ExperimentData(object):
+    """
+    Class for managing and analysing data from multiple simulations (such as an experiment).
 
+    """
     def __init__(self, experiment_path, experiment_name):
-
+        """
+        :param experiment_path: str, path to simulation files (with trailing /)
+        :param experiment_name: str, identifier of the experiment, ie. string for identifying relevant simulation files
+        """
         self.experiment_path = experiment_path
         self.experiment_name = experiment_name
         self.simulation_files = [sim_file for sim_file in os.listdir(experiment_path)
                                  if experiment_name in sim_file and os.path.splitext(sim_file)[1] == '.bz2']
 
-    def computestats_single_sim(self, sim_file, settings, parameters_to_extract):
+    def _computestats_single_sim(self, sim_file, settings=None, parameters_to_extract=[]):
+        """
+        Computes activity measures for a single simulation and based on given cutoff values return frequency of
+        eg. neurons firing 'irregularly' or with 'normal' firing rate. Also parameters can be extracted
+        from configuration files.
+
+        :param sim_file: str, the simulation file to examine
+        :param settings: dict, analysis settings such as cutoff values for 'normalcy'
+        :param parameters_to_extract: list, parameters whose values should be extracted from configurations
+        :return: pandas DataFrame with sim_file as index
+        """
+        if settings is None:
+            settings = {'time_to_drop': 500*ms, 'rate_min': 0*Hz, 'rate_max': 30*Hz, 'isicov_min': 0.5,
+                        'isicov_max': 1.5, 'fanofactor_max': 10, 'active_group_min': 0.2, 'dec_places': 3}
 
         # Dataframe for collecting everything
         group_measures = ['p_'+group_name for group_name in SimulationData.group_numbering.values()]
@@ -1000,6 +1110,15 @@ class ExperimentData(object):
             pass
 
     def computestats(self, output_filename='stats.csv', parameters_to_extract=[], settings=None):
+        """
+        Computes activity measures of all simulations belonging to the experiment and
+        aggregates it to a single CSV file. Computation is done in parallel fashion.
+
+        :param output_filename: filename of the resulting csv file in experiment path (default=stats.csv)
+        :param parameters_to_extract: parameters to extract from configurations (default=[])
+        :param settings: dict, analysis settings such as cutoff values for 'normalcy'
+        :return: nothing (csv file is created automatically)
+        """
 
         # Set default analysis parameters here
         if settings is None:
@@ -1015,8 +1134,8 @@ class ExperimentData(object):
         results = []
 
         with tqdm(total=n_files, desc='Analysing simulations') as progress:
-            for res in pool.uimap(self.computestats_single_sim, self.simulation_files,
-                            [settings for i in range(n_files)], [parameters_to_extract for i in range(n_files)]):
+            for res in pool.uimap(self._computestats_single_sim, self.simulation_files,
+                                  [settings for i in range(n_files)], [parameters_to_extract for i in range(n_files)]):
                 results.append(res)
                 progress.update()
 
@@ -1031,10 +1150,17 @@ class ExperimentData(object):
             print 'Nothing to analyse!'
 
 
-### END of class SimulationData
-
 def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='Effect of increased $Ca^{2+}$ concentration (mM)'):
+    """
+    Plots simplified rasterplots of simulations next to each other. For publications.
 
+    :param sim_files: list of filenames, simulation files to include
+    :param sim_titles: list of strings, titles to show on top of each rasterplot
+    :param runtime: float, runtime in seconds
+    :param neurons_per_group: int, number of neurons per group to include (if less group will be discarded, if more a random selection will be made)
+    :param suptitle: str, title for the whole figure
+
+    """
     sim_n = len(sim_files)
     q = neurons_per_group
 
@@ -1056,9 +1182,9 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
 
     plt.tight_layout()
     fig.subplots_adjust(top=0.80, bottom=0.20, left=0.03, right=0.97)
-    plt.savefig('calciumplot.eps', dpi=600)
-    # plt.savefig('calciumplot.png')
-    #plt.show()
+    # plt.savefig('calciumplot.eps', dpi=600)
+    # #plt.savefig('calciumplot.png')
+    plt.show()
 
 
 

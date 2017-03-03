@@ -1,12 +1,12 @@
 Variable,Key,Value,Comment
 "# From Markram et al Cell 2015, Table S6. Prescribed Parameters for Synaptic Transmission, Related to Figures 9 and 10.",,,
 calcium_concentration,,2.0,
-background_rate,,{0.0|10.1|0.5}*Hz,
-background_rate_inhibition,,{0.0|10.1|0.5}*Hz,
+background_rate,,0.8*Hz,
+background_rate_inhibition,,0.8*Hz,
 excitatory_strength,,0.72*nS,
 inhibitory_synapse_factor,,1.15,# *1.15* x 0.72nS = 0.83nS
-EE_weights_gain,,0.5,
-EI_weights_gain,,0.36,# 0.43nS x 0.6 / 0.72nS = *0.36*
+EE_weights_gain,,{0.1|1.1|0.1},# 0.5
+EI_weights_gain,,{0.1|1.1|0.1},# 0.36 - 0.43nS x 0.6 / 0.72nS = *0.36*
 _weights,w_TC_E-E_connections,0.7 * EE_weights_gain * nS,"#Cruikshank et al 2007, nature neuroscience"
 ,w_TC_E-I_connections,(3 * EI_weights_gain) * nS,
 ,w_All_other_E-E_connections,excitatory_strength*EE_weights_gain,"# See Markram et al 2015, Table S6"
