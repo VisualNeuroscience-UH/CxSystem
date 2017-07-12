@@ -7,7 +7,7 @@ default_runtime = 500*ms
 
 time_start = datetime.datetime.now()
 CM = cxs.CxSystem(anatomy_and_system_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/calcium_config_file.csv',
-                        physiology_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_calcium.csv')
+                        physiology_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_calcium_June17.csv')
 
 time_before_run = datetime.datetime.now()
 CM.run()

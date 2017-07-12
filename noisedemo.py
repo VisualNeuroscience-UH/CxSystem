@@ -105,11 +105,12 @@ gemean = 0*nS
 gestd = 0*nS
 gimean = 0*nS
 gistd = 0*nS
+noise_sigma = 8*mV
 
 
 # Stochastic equation with fluctuating synaptic conductances (set ge/gi mean/std to zero if you don't want stochasticity)
 eq_soma = '''
- dvm/dt = ((gL*(EL-vm) + ge*(Ee-vm) + gi*(Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + tonic_current) / C) : volt
+ dvm/dt = ((gL*(EL-vm) + ge*(Ee-vm) + gi*(Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + tonic_current) / C) + noise_sigma*xi_3*tau_m**-0.5: volt
  dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
  #dgealpha/dt = (ge-gealpha)/tau_e : siemens
  dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2 : siemens
@@ -146,11 +147,11 @@ M_spikes = SpikeMonitor(G)
 # S2.connect(i=0,j=0)
 
 ### Alternative Poisson
-bg_rate = 4*Hz
-exc_weight = 0.3*nS
-inh_scaling = 4
-Pe = PoissonInput(target=G, target_var='ge', N=3600, rate=bg_rate, weight=exc_weight)
-Pi = PoissonInput(G, 'gi', 500, bg_rate, inh_scaling*exc_weight)
+# bg_rate = 4*Hz
+# exc_weight = 0.3*nS
+# inh_scaling = 4
+# Pe = PoissonInput(target=G, target_var='ge', N=3600, rate=bg_rate, weight=exc_weight)
+# Pi = PoissonInput(G, 'gi', 500, bg_rate, inh_scaling*exc_weight)
 
 ### Timed spikes
 # times = array([100, 200])*ms
@@ -160,11 +161,12 @@ Pi = PoissonInput(G, 'gi', 500, bg_rate, inh_scaling*exc_weight)
 # S.connect(i=0, j=0)
 # run(1000*ms)
 
-run(3000 * ms)
+run(10000 * ms)
 
 
 plt.subplots(1,3)
-plt.suptitle('Bg rate: '+repr(bg_rate))
+# plt.suptitle('Bg rate: '+repr(bg_rate))
+print std(M.vm[0])
 
 ### Membrane voltage plot
 plt.subplot(1,3,1)

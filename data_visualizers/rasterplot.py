@@ -355,6 +355,73 @@ class SimulationData(object):
             ax.scatter(spike_df.time, spike_df.neuron_index, s=0.6, c='gray')
 
 
+    def publicationplot(self, sampling_factor=30, ax=None):
+        """
+        Plots a simplified rasterplot with only layers labeled, not neuron groups. Takes relative amount of
+        neurons in each group into account. Possibly useful for publications.
+
+        :param sampling_factor: int, factor used to down-scale the amount of neurons to plot
+        :param ax: matplotlib Axes-object to draw plot on, optional
+        :return: nothing
+        """
+        print 'Working on ' + self.datafile
+        spike_dict = dict()
+        indices_dict = dict()
+        number_of_group = {value: key for (key,value) in SimulationData.group_numbering.items()}
+
+        max_neurons_per_group = [int(SimulationData.neurons_in_group[i]/sampling_factor) for i in range(1, 17)]
+
+        for group in self.neuron_groups:
+            print '   Processing ' + group
+            group_sp = self.spikedata[group]
+            N = len(group_sp[0])  # = len(group_sp[1])
+
+            if N > 0:  # ie. if the group spiked at all
+                spike_tuples = [(int(group_sp[0][i]), group_sp[1][i], group) for i in range(N)]
+                spikes = pd.DataFrame(spike_tuples)
+                spikes.columns = ['neuron_index', 'time', 'group']
+
+                neurons_per_group = max_neurons_per_group[number_of_group[group]-1]
+
+                if len(spikes.neuron_index.unique()) >= neurons_per_group:
+                    indices = np.random.choice(spikes.neuron_index.unique(), neurons_per_group, replace=False)
+                    spikes = spikes[spikes.neuron_index.isin(indices)]
+                    #start_index = (16 - number_of_group[group]) * neurons_per_group + 1
+                    start_index = int(sum(max_neurons_per_group[number_of_group[group]:16]) + 1)
+                    fixed_indices = range(start_index, start_index+neurons_per_group+1)
+                    fixed_ind_dict = {indices[i]: fixed_indices[i] for i in range(neurons_per_group)}
+                    spikes.neuron_index = spikes.neuron_index.map(fixed_ind_dict)
+
+                    spike_dict[group] = spikes
+                else:
+                    print '   Group ' + group + ' has too few spiking neurons (or sampling was sparse)! Skipping...'
+
+
+        spike_df = pd.concat(spike_dict)
+
+
+        plt.scatter(spike_df.time, spike_df.neuron_index, s=0.8)
+        #q = neurons_per_group
+        q1 = sum(max_neurons_per_group[13-1:16])
+        q2 = sum(max_neurons_per_group[10-1:16])
+        q3 = sum(max_neurons_per_group[5-1:16])
+        q4 = sum(max_neurons_per_group[2-1:16])
+        q5 = sum(max_neurons_per_group[0:16])
+
+        runtime = self.data['runtime']
+
+        ticklabels = ['VI', 'V', 'IV', 'II/III', 'I']
+        #plt.yticks([4 * q, 7 * q, 12 * q, 15 * q, 16 * q], ticklabels)
+        plt.yticks([q1, q2, q3, q4, q5], ticklabels, fontsize=16)
+        plt.xticks(np.arange(runtime + 0.1, step=1), fontsize=12)
+        plt.xlabel('Time (s)', fontsize=12)
+
+        plt.xlim([0, runtime])
+        plt.ylim([0, q5])
+
+        plt.show()
+
+
     def voltage_rasterplot(self, max_per_group=20, dt_downsampling_factor=10):
         """
         Plots voltage of neurons with membrane voltage represented on continuous colour scale.
@@ -877,6 +944,34 @@ class SimulationData(object):
             ax.plot(bin_edges[:-1], i_rates_sum, label='Inhibitory', c='r')
             ax.legend()
 
+    def global_osc_freq(self):
+
+        bin_size = 3*ms
+
+        e_groups = []
+        for layer in [1,2,4,5,6]:
+            e_groups.extend(self.groups_of_layer[layer][0])
+
+        e_firing_rates = [self._firingrates_group(e_group, bin_size)[0] for e_group in e_groups]
+        e_rates_sum = np.sum(e_firing_rates, axis=0)
+
+        corrs = np.correlate(e_rates_sum, e_rates_sum, mode='same')
+        N = len(corrs)
+        corrs = corrs[int(N/2):]
+
+        lag = corrs[10:].argmax() + 10
+        period = (bin_size/second)*lag
+        osc_freq = 1/period
+
+        print osc_freq
+
+        plt.figure()
+        plt.plot(e_rates_sum)
+        plt.show()
+
+        return osc_freq
+
+
     def firingrates_ei(self):
         """
         Plots the summed firing rates of excitatory and inhibitory groups, subplot per layer
@@ -1039,9 +1134,11 @@ class ExperimentData(object):
                         'isicov_max': 1.5, 'fanofactor_max': 10, 'active_group_min': 0.2, 'dec_places': 3}
 
         # Dataframe for collecting everything
+
         group_measures = ['p_'+group_name for group_name in SimulationData.group_numbering.values()]
+        group_measures.extend(['mfr_'+group_name for group_name in SimulationData.group_numbering.values()])
         stats_to_compute = ['duration', 'n_spiking', 'p_spiking', 'n_firing_rate_normal', 'p_firing_rate_normal',
-                            'n_irregular', 'p_irregular', 'n_groups_active', 'n_groups_asynchronous', 'n_groups_synchronous']
+                            'n_irregular', 'p_irregular', 'n_groups_active', 'n_groups_asynchronous', 'n_groups_synchronous', 'mfr_all', 'osc_freq']
         stats = pd.DataFrame(index=[sim_file], columns=parameters_to_extract + stats_to_compute + group_measures)
 
         flatten = lambda l: [item for sublist in l for item in sublist]
@@ -1072,12 +1169,33 @@ class ExperimentData(object):
                 activity = round(n_spiking[group_id] / SimulationData.neurons_in_group[group_id], settings['dec_places'])
                 group_activities.append(activity)
 
+            group_firing_rates = []
+            for group_id in SimulationData.group_numbering.keys():
+                with np.errstate(divide='raise'):
+                    try:
+                        firing_rate = round(mean(mean_firing_rates[group_id]), settings['dec_places'])
+                    except:
+                        firing_rate = 0
+                group_firing_rates.append(firing_rate)
+
             n_firing_rate_normal = len([rate for rate in flatten(mean_firing_rates.values())
                                         if settings['rate_min'] < rate < settings['rate_max']])
             n_irregular = len([isicov for isicov in flatten(isicovs.values())
                                if settings['isicov_min'] < isicov < settings['isicov_max']])
             n_firing_rate_normal = np.int32(n_firing_rate_normal)
             n_irregular = np.int32(n_irregular)
+
+            # Calculate mean firing rate
+            neuron_count = sum(SimulationData.neurons_in_group.values())
+            try:
+                rates_sum = sum(rate for rate in flatten(mean_firing_rates.values()))
+            except:
+                rates_sum = 0
+
+            mfr_all = round(rates_sum / neuron_count, settings['dec_places'])
+
+            # Get global oscillation frequency
+            osc_freq = sim.global_osc_freq()
 
             # Calculating the synchrony measure makes sense only if the group is active enough
             # So, first calculate n_groups_active and count asynchronous groups from those
@@ -1102,8 +1220,8 @@ class ExperimentData(object):
             stats.loc[sim_file] = extracted_params + \
                                         [duration, n_spiking_total, p_spiking, n_firing_rate_normal, p_firing_rate_normal,
                                          n_irregular, p_irregular, n_groups_active, n_groups_asynchronous,
-                                         n_groups_synchronous] + \
-                                         group_activities
+                                         n_groups_synchronous, mfr_all, osc_freq] + \
+                                         group_activities + group_firing_rates
             return stats
 
         except KeyError:
@@ -1150,6 +1268,9 @@ class ExperimentData(object):
             print 'Nothing to analyse!'
 
 
+
+
+
 def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='Effect of increased $Ca^{2+}$ concentration (mM)'):
     """
     Plots simplified rasterplots of simulations next to each other. For publications.
@@ -1192,8 +1313,14 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
 
 if __name__ == '__main__':
 
-    exp = ExperimentData('/opt3/tmp/bigrun/', 'boris')
-    exp.computestats('stats_boris2.csv', ['calcium_concentration', 'background_rate', 'background_rate_inhibition'])
+    sim = SimulationData('bigrun/ulrikb_20170712_14555557_calcium_concentration1.8_background_rate0.6H_Cpp_3500ms.bz2')
+    sim.global_osc_freq()
+
+    # exp = ExperimentData('/opt3/tmp/bigrun/', 'ulrikb')
+    # exp.computestats('stats_ulrikb.csv',
+    #                 ['calcium_concentration', 'background_rate', 'background_rate_inhibition', 'U_E', 'U_I'])
+    # exp.computestats('stats_olaf.csv', ['calcium_concentration', 'background_rate', 'background_rate_inhibition', 'EE_weights_gain', 'EI_weights_gain', 'inhibitory_synapse_factor'])
+
 
     # exp = ExperimentData('/opt3/tmp/', 'newcastle_04')
     # exp.computestats('stats.csv', ['calcium_concentration', 'background_rate'])
