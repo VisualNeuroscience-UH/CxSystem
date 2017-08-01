@@ -1,25 +1,25 @@
 Variable,Key,Value,Comment
 "# From Markram et al Cell 2015, Table S6. Prescribed Parameters for Synaptic Transmission, Related to Figures 9 and 10.",,,
-calcium_concentration,,{1.6 & 1.7 & 1.8 & 2.0},
-background_rate,,{0.1|0.7|0.1}*Hz,
+calcium_concentration,,2.0,
+background_rate,,{0.01 & 0.02 & 0.05 & 0.10 & 0.15 & 0.3 & 0.6 & 1.2 & 2.5 & 5 & 10}*Hz,
 background_rate_inhibition,,0*Hz,
-J_E,,0.72*nS,# E-E absolute synaptic efficacy
-J_I,,0.43*nS,# E-I absolute synaptic efficacy
-k_E,,1.15,# I-E efficacy with respect to E-E
-k_I,,1.93,# I-I efficacy with respect E-I
-U_E,,0.5,# Utilization fraction of excitatory connections
-U_I,,0.4,# Utilization fraction of inhibitory connections
-_weights,w_TC_E-E_connections,0.7 * J_E * nS,"#Cruikshank et al 2007, nature neuroscience"
-,w_TC_E-I_connections,3 * J_I * nS,
-,w_All_other_E-E_connections,U_E * J_E,"# See Markram et al 2015, Table S6"
-,w_All_other_E-I_connections,U_E * J_I,# was: (0.43*EI_weights_gain) * nS
-,w_All_other_I-E_connections,U_I * k_E * J_E,# was: 0.83*nS
-,w_All_I-I_connections,U_I * k_I * J_I,# was: 0.83*nS
+J,,{0.48 & 0.58 & 0.68 & 0.78}*nS,# E-E absolute synaptic efficacy (0.72 nS)
+J_I,,0*nS,# E-I absolute synaptic efficacy (0.43 nS)
+k,,{0.08 & 0.15 & 0.3 & 0.6 & 1.2 & 2.4 & 4.8 & 9.6},# I-E efficacy with respect to E-E
+k_I,,0.0,# I-I efficacy with respect E-I
+U_E,,1.0,# Utilization fraction of excitatory connections
+U_I,,1.0,# Utilization fraction of inhibitory connections
+_weights,w_TC_E-E_connections,0.7 * nS,"#Cruikshank et al 2007, nature neuroscience"
+,w_TC_E-I_connections,3.0 * nS,
+,w_All_other_E-E_connections,U_E * J,"# See Markram et al 2015, Table S6"
+,w_All_other_E-I_connections,U_E * J,# was: (0.43*EI_weights_gain) * nS
+,w_All_other_I-E_connections,U_I * k * J,# was: 0.83*nS
+,w_All_I-I_connections,U_I * k * J,# was: 0.83*nS
 ,,,
-background_E_E_weight,,U_E * J_E,
-background_E_I_weight,,U_E * J_I,
-background_I_E_weight,,U_I * k_E * J_E,
-background_I_I_weight,,U_I * k_I * J_I,
+background_E_E_weight,,U_E * J,
+background_E_I_weight,,U_E * J,
+background_I_E_weight,,U_I * k * J,
+background_I_I_weight,,U_I * k * J,
 Cp,,0.001,"# Synaptic potentiation coefficient according to van Rossum J Neurosci 2000, here relative to initial value"
 Cd,,0.003,# Synaptic depression coefficient according to van Rossum J Neurosci 2000
 conn_prob_gain,,1,# This is used for compensation of small number of neurons and thus incoming synapses
@@ -250,7 +250,7 @@ PC,Cm,(1*ufarad*cm**-2),
 ,Ra,"[100,80,150,150,200] * Mohm",
 ,tau_e,3 * ms,"# 1.7 ms from Markram Cell 2015. This however misses NMDA contribution (12% according to Markram Cell 2015). Given this proportion and AMPA tau 3 ms and NMDA tau 200 ms(NMDA fast decay; both from Spruston JPhysiol 1995), we get double exponential decay"
 ,tau_eX, 3 * ms,
-,tau_i,8.3 * ms,
+,tau_i,8.3*ms,
 ,gL_soma,0.24 * nS,# Redundant – calculated here just for visualization purposes
 ,,,
 ,,,
@@ -263,7 +263,7 @@ BC,C,100 * pF,"# Somatosensory cortex, Beierlein 2000 - Badel et al., 2008: 90 p
 ,Ee,0 * mV,
 ,Ei, -75 * mV,
 ,tau_e,3 * ms  ," # 1.7 ms from Markram Cell 2015. This however misses NMDA contribution (12% according to Markram Cell 2015). Given this proportion and AMPA tau 3 ms and NMDA tau 200 ms(NMDA fast decay; both from Spruston JPhysiol 1995), we get double exponential decay"
-,tau_i,8.3 * ms  ,"# Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5), also Salin 1996 JNeurophysiol gives 8.6 ms"
+,tau_i,8.3*ms,"# Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5), also Salin 1996 JNeurophysiol gives 8.6 ms"
 ,taum_soma,C/gL,
 ,V_res,VT- 4 * mV,
 ,Vcut,VT+ 5*DeltaT,
@@ -293,7 +293,7 @@ MC,C,92.1 * pF,"# 92.1 +- 8.4, Paluszkiewicz 2011 J Neurophysiol, 71 pF Neuroele
 ,Ee,0 * mV  ,# inherited from FS
 ,Ei,-75 * mV,
 ,tau_e,3 * ms  ,# Markram Cell 2015
-,tau_i, 8.3 * ms  ,"# Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5)"
+,tau_i,8.3*ms,"# Now from Markram Cell 2015 #7 * ms # Amatrudo et al, 2012 (rise time: 2.5)"
 ,gL,4.2 *nS,# C/taum_soma = 90 / 21.22 ~ 4.2
 ,V_res,VT- 4 * mV,
 ,Vcut,VT+ 5*DeltaT,
@@ -314,4 +314,4 @@ SS,C,110*pF,# Top of the hat estimate
 ,Ra,80 * Mohm,# Connection parameters between compartments
 ,tau_e,3 * ms,
 ,tau_eX,3 * ms,
-,tau_i,8.3 * ms,
+,tau_i,8.3*ms,

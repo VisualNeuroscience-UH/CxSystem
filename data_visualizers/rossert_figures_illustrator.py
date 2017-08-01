@@ -243,8 +243,8 @@ if __name__ == '__main__':
     # illus.ResponseLatency()
     # rossert_fig9C = illustrator('/opt3/CxOutput/Ouputs', 'Gain-EE1EI1', 'cell_type_response_latency',InputTime=0.5)
 
-    # Onset illustrations for Comp.Neurology 2017
-    illus = illustrator(mode='saving', CXOutputPath='/opt3/tmp/whiskplot/', FilePattern='whiskplot_',
+    # Onset illustrations for paper
+    illus = illustrator(mode='saving', CXOutputPath='/opt3/tmp/bigrun/onset-072017', FilePattern='experc_',
                         IllustratorOutputFile='/opt3/tmp/rossertfigs/Illus_out.gz', InputTime=0.5,
                         latency_threshold=0.03)
     illus.Responses(PlotStartTime=0.46, PlotEndTime=0.56, DoSkip=['PC_L6toL1', 'PC_L6toL4'])

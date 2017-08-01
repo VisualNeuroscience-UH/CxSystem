@@ -963,11 +963,11 @@ class SimulationData(object):
         period = (bin_size/second)*lag
         osc_freq = 1/period
 
-        print osc_freq
-
-        plt.figure()
-        plt.plot(e_rates_sum)
-        plt.show()
+        # print osc_freq
+        #
+        # plt.figure()
+        # plt.plot(e_rates_sum)
+        # plt.show()
 
         return osc_freq
 
@@ -1023,6 +1023,46 @@ class SimulationData(object):
         # plt.legend()
         plt.show()
 
+    def _pairwise_synchrony(self, sp1, sp2, bin_size=3*ms):
+        return 0
+
+    def _spiketrains_nogroups(self, fill_nonspiking=True):
+        spiketrains = []
+
+        # Go through every group
+        # for group, neurons_and_spikes in self.spikedata:
+        for group in self.group_numbering.values():
+            neurons_and_spikes = self.spikedata[group]
+            neuron_ids = unique(neurons_and_spikes[0])
+
+            # Add each sampled spike train as a separate array
+            for nid in neuron_ids:
+                single_train = neurons_and_spikes[1][np.where(neurons_and_spikes[0] == nid)]
+                spiketrains.append(single_train)
+
+        if fill_nonspiking:
+            n_neurons_total = sum(SimulationData.neurons_in_group.values())
+            n_nonspiking = n_neurons_total - len(spiketrains)
+            spiketrains.extend([[]]*n_nonspiking)
+
+        return spiketrains
+
+    def mean_synchrony(self, n_neuronpairs=250):
+
+        spiketrains_all = self._spiketrains_nogroups()
+        np.random.shuffle(spiketrains_all)
+        pairwise_coeffs = []
+
+        # Pick two neurons
+        # Calculate pairwise synchrony and add it to the list
+        # Do this until n_neuronpairs have been picked
+        for i in range(n_neuronpairs):
+            coeff = self._pairwise_synchrony(spiketrains_all[2*i], spiketrains_all[2*i+1])
+            pairwise_coeffs.append(coeff)
+
+        # Then calculate mean of pairwise synchronies
+        return mean(pairwise_coeffs)
+
     def _pop_measures_group(self, group_id, time_to_drop=500*ms):
         """
         Computes measures of activity for a given neuron group
@@ -1030,7 +1070,7 @@ class SimulationData(object):
         :param group_id: int, group identifier
         :param time_to_drop: millisecond, amount of time to drop from the beginning of the simulation (default=500*ms)
         :return:
-            int, number of neurons spiking
+            int, number of neurons spiking (at least two spikes during measurement)
             list of floats, mean firing rates of all those neurons
             list of floats, coefficients of variation of ISIs for all spiking neurons
             float, Fano factor of the given group
@@ -1131,14 +1171,14 @@ class ExperimentData(object):
         """
         if settings is None:
             settings = {'time_to_drop': 500*ms, 'rate_min': 0*Hz, 'rate_max': 30*Hz, 'isicov_min': 0.5,
-                        'isicov_max': 1.5, 'fanofactor_max': 10, 'active_group_min': 0.2, 'dec_places': 3}
+                        'isicov_max': 1.5, 'fanofactor_max': 10, 'active_group_min': 0.2, 'dec_places': 14}
 
         # Dataframe for collecting everything
 
         group_measures = ['p_'+group_name for group_name in SimulationData.group_numbering.values()]
         group_measures.extend(['mfr_'+group_name for group_name in SimulationData.group_numbering.values()])
         stats_to_compute = ['duration', 'n_spiking', 'p_spiking', 'n_firing_rate_normal', 'p_firing_rate_normal',
-                            'n_irregular', 'p_irregular', 'n_groups_active', 'n_groups_asynchronous', 'n_groups_synchronous', 'mfr_all', 'osc_freq']
+                            'n_irregular', 'p_irregular', 'irregularity_mean', 'n_groups_active', 'n_groups_asynchronous', 'n_groups_synchronous', 'mfr_all', 'osc_freq']
         stats = pd.DataFrame(index=[sim_file], columns=parameters_to_extract + stats_to_compute + group_measures)
 
         flatten = lambda l: [item for sublist in l for item in sublist]
@@ -1180,10 +1220,16 @@ class ExperimentData(object):
 
             n_firing_rate_normal = len([rate for rate in flatten(mean_firing_rates.values())
                                         if settings['rate_min'] < rate < settings['rate_max']])
-            n_irregular = len([isicov for isicov in flatten(isicovs.values())
+
+            isicovs_flat = flatten(isicovs.values())
+            n_irregular = len([isicov for isicov in isicovs_flat
                                if settings['isicov_min'] < isicov < settings['isicov_max']])
             n_firing_rate_normal = np.int32(n_firing_rate_normal)
             n_irregular = np.int32(n_irregular)
+            try:
+                irregularity_mean = round(mean(isicovs_flat), settings['dec_places'])
+            except:
+                irregularity_mean = 'N/A'
 
             # Calculate mean firing rate
             neuron_count = sum(SimulationData.neurons_in_group.values())
@@ -1219,7 +1265,7 @@ class ExperimentData(object):
             # Add everything to the dataframe
             stats.loc[sim_file] = extracted_params + \
                                         [duration, n_spiking_total, p_spiking, n_firing_rate_normal, p_firing_rate_normal,
-                                         n_irregular, p_irregular, n_groups_active, n_groups_asynchronous,
+                                         n_irregular, p_irregular, irregularity_mean, n_groups_active, n_groups_asynchronous,
                                          n_groups_synchronous, mfr_all, osc_freq] + \
                                          group_activities + group_firing_rates
             return stats
@@ -1241,7 +1287,7 @@ class ExperimentData(object):
         # Set default analysis parameters here
         if settings is None:
             settings = {'time_to_drop': 500*ms, 'rate_min': 0*Hz, 'rate_max': 30*Hz, 'isicov_min': 0.5,
-                        'isicov_max': 1.5, 'fanofactor_max': 10, 'active_group_min': 0.2, 'dec_places': 3}
+                        'isicov_max': 1.5, 'fanofactor_max': 10, 'active_group_min': 0.2, 'dec_places': 14}
 
         # Go through simulation files
         n_files = len(self.simulation_files)
@@ -1313,12 +1359,13 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
 
 if __name__ == '__main__':
 
-    sim = SimulationData('bigrun/ulrikb_20170712_14555557_calcium_concentration1.8_background_rate0.6H_Cpp_3500ms.bz2')
-    sim.global_osc_freq()
+    sim = SimulationData('kumar/aapeli_20170801_00540787_J_E0.68nS_k_E0.6_Cpp_3500ms.bz2')
+    # sim.global_osc_freq()
+    sim._spiketrains_nogroups()
 
-    # exp = ExperimentData('/opt3/tmp/bigrun/', 'ulrikb')
-    # exp.computestats('stats_ulrikb.csv',
-    #                 ['calcium_concentration', 'background_rate', 'background_rate_inhibition', 'U_E', 'U_I'])
+    # exp = ExperimentData('/opt3/tmp/kumar/', 'aapeli')
+    # exp.computestats('stats_aapeli.csv',
+    #                 ['calcium_concentration', 'background_rate', 'J_E', 'k_E'])
     # exp.computestats('stats_olaf.csv', ['calcium_concentration', 'background_rate', 'background_rate_inhibition', 'EE_weights_gain', 'EI_weights_gain', 'inhibitory_synapse_factor'])
 
 
