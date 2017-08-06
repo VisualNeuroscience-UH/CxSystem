@@ -1023,10 +1023,21 @@ class SimulationData(object):
         # plt.legend()
         plt.show()
 
-    def _pairwise_synchrony(self, sp1, sp2, bin_size=3*ms):
-        return 0
+    def _pairwise_synchrony(self, sp1, sp2, bin_size=3*ms, time_to_drop=500*ms):
 
-    def _spiketrains_nogroups(self, fill_nonspiking=True):
+        timebin = bin_size / second
+        custombins = np.arange(time_to_drop/second, self.runtime+timebin, timebin)
+        sp1_counts = np.histogram(sp1, bins=custombins)[0]  # [0] has spike counts, [1] has bin edges (custombins)
+        sp2_counts = np.histogram(sp2, bins=custombins)[0]
+
+        sp_covmatrix = np.cov([sp1_counts, sp2_counts])
+        cov12 = sp_covmatrix[0][1]  # covariance of sp1 and sp2; is equal to [1][0]
+        var1 = sp_covmatrix[0][0]  # variance of sp1
+        var2 = sp_covmatrix[1][1]  # variance of sp2
+
+        return cov12/np.sqrt(var1*var2)
+
+    def _spiketrains_nogroups(self, fill_nonspiking=False, time_to_drop=500*ms):
         spiketrains = []
 
         # Go through every group
@@ -1038,7 +1049,8 @@ class SimulationData(object):
             # Add each sampled spike train as a separate array
             for nid in neuron_ids:
                 single_train = neurons_and_spikes[1][np.where(neurons_and_spikes[0] == nid)]
-                spiketrains.append(single_train)
+                if len(np.where(single_train > time_to_drop/second)[0]) > 0:  # ...if there is at least 1 spike after time_to_drop
+                    spiketrains.append(single_train)
 
         if fill_nonspiking:
             n_neurons_total = sum(SimulationData.neurons_in_group.values())
@@ -1047,21 +1059,25 @@ class SimulationData(object):
 
         return spiketrains
 
-    def mean_synchrony(self, n_neuronpairs=250):
+    def mean_synchrony(self, n_neuronpairs=250, time_to_drop=500*ms):
 
-        spiketrains_all = self._spiketrains_nogroups()
+        spiketrains_all = self._spiketrains_nogroups(time_to_drop=time_to_drop)
         np.random.shuffle(spiketrains_all)
         pairwise_coeffs = []
 
         # Pick two neurons
         # Calculate pairwise synchrony and add it to the list
         # Do this until n_neuronpairs have been picked
-        for i in range(n_neuronpairs):
-            coeff = self._pairwise_synchrony(spiketrains_all[2*i], spiketrains_all[2*i+1])
-            pairwise_coeffs.append(coeff)
+        if len(spiketrains_all) >= n_neuronpairs*2:
+            for i in range(n_neuronpairs):
+                coeff = self._pairwise_synchrony(spiketrains_all[2*i], spiketrains_all[2*i+1])
+                pairwise_coeffs.append(coeff)
 
-        # Then calculate mean of pairwise synchronies
-        return mean(pairwise_coeffs)
+            # Then calculate mean of pairwise synchronies
+            return mean(pairwise_coeffs)
+        else:
+            return 'X'
+
 
     def _pop_measures_group(self, group_id, time_to_drop=500*ms):
         """
@@ -1178,7 +1194,7 @@ class ExperimentData(object):
         group_measures = ['p_'+group_name for group_name in SimulationData.group_numbering.values()]
         group_measures.extend(['mfr_'+group_name for group_name in SimulationData.group_numbering.values()])
         stats_to_compute = ['duration', 'n_spiking', 'p_spiking', 'n_firing_rate_normal', 'p_firing_rate_normal',
-                            'n_irregular', 'p_irregular', 'irregularity_mean', 'n_groups_active', 'n_groups_asynchronous', 'n_groups_synchronous', 'mfr_all', 'osc_freq']
+                            'n_irregular', 'p_irregular', 'irregularity_mean', 'n_groups_active', 'n_groups_asynchronous', 'n_groups_synchronous', 'mean_synchrony', 'mfr_all', 'osc_freq']
         stats = pd.DataFrame(index=[sim_file], columns=parameters_to_extract + stats_to_compute + group_measures)
 
         flatten = lambda l: [item for sublist in l for item in sublist]
@@ -1252,6 +1268,8 @@ class ExperimentData(object):
                                          if 0 < fanofactor < settings['fanofactor_max'] and group_id in active_groups])
             n_groups_synchronous = n_groups_active - n_groups_asynchronous
 
+            mean_synchrony = sim.mean_synchrony(time_to_drop=settings['time_to_drop'])
+
             # Calculate p-measures (Percentage of neurons)
             n_total_neurons = sum(sim.neurons_in_group.values())
             p_spiking = round(n_spiking_total / n_total_neurons, settings['dec_places'])
@@ -1266,7 +1284,7 @@ class ExperimentData(object):
             stats.loc[sim_file] = extracted_params + \
                                         [duration, n_spiking_total, p_spiking, n_firing_rate_normal, p_firing_rate_normal,
                                          n_irregular, p_irregular, irregularity_mean, n_groups_active, n_groups_asynchronous,
-                                         n_groups_synchronous, mfr_all, osc_freq] + \
+                                         n_groups_synchronous, mean_synchrony, mfr_all, osc_freq] + \
                                          group_activities + group_firing_rates
             return stats
 
@@ -1312,6 +1330,8 @@ class ExperimentData(object):
             stats.to_csv(self.experiment_path + output_filename)
         except:
             print 'Nothing to analyse!'
+
+    # TODO :: Function for automatic plotting of synchrony, irregularity & mean firing rate
 
 
 
@@ -1359,13 +1379,14 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
 
 if __name__ == '__main__':
 
-    sim = SimulationData('kumar/aapeli_20170801_00540787_J_E0.68nS_k_E0.6_Cpp_3500ms.bz2')
-    # sim.global_osc_freq()
-    sim._spiketrains_nogroups()
+    # sim = SimulationData('kumar/aapeli_20170801_00540787_J_E0.68nS_k_E0.6_Cpp_3500ms.bz2')
+    # print sim.mean_synchrony(250)
+    # # sim.global_osc_freq()
+    # sim._spiketrains_nogroups()
 
-    # exp = ExperimentData('/opt3/tmp/kumar/', 'aapeli')
-    # exp.computestats('stats_aapeli.csv',
-    #                 ['calcium_concentration', 'background_rate', 'J_E', 'k_E'])
+    exp = ExperimentData('/opt3/tmp/kumar/', 'bertta')
+    exp.computestats('stats_bertta.csv',
+                    ['calcium_concentration', 'J', 'k', 'background_rate'])
     # exp.computestats('stats_olaf.csv', ['calcium_concentration', 'background_rate', 'background_rate_inhibition', 'EE_weights_gain', 'EI_weights_gain', 'inhibitory_synapse_factor'])
 
 
