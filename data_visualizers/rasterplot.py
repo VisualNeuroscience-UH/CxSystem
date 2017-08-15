@@ -399,8 +399,6 @@ class SimulationData(object):
 
         spike_df = pd.concat(spike_dict)
 
-
-        plt.scatter(spike_df.time, spike_df.neuron_index, s=0.8)
         #q = neurons_per_group
         q1 = sum(max_neurons_per_group[13-1:16])
         q2 = sum(max_neurons_per_group[10-1:16])
@@ -411,15 +409,27 @@ class SimulationData(object):
         runtime = self.data['runtime']
 
         ticklabels = ['VI', 'V', 'IV', 'II/III', 'I']
-        #plt.yticks([4 * q, 7 * q, 12 * q, 15 * q, 16 * q], ticklabels)
-        plt.yticks([q1, q2, q3, q4, q5], ticklabels, fontsize=16)
-        plt.xticks(np.arange(runtime + 0.1, step=1), fontsize=12)
-        plt.xlabel('Time (s)', fontsize=12)
 
-        plt.xlim([0, runtime])
-        plt.ylim([0, q5])
+        if ax is None:
+            plt.scatter(spike_df.time, spike_df.neuron_index, s=0.8)
 
-        plt.show()
+            plt.yticks([q1, q2, q3, q4, q5], ticklabels, fontsize=16)
+            plt.xticks(np.arange(runtime + 0.1, step=1), fontsize=12)
+            plt.xlabel('Time (s)', fontsize=12)
+
+            plt.xlim([0, runtime])
+            plt.ylim([0, q5])
+
+            plt.show()
+        else:
+            ax.scatter(spike_df.time, spike_df.neuron_index, s=0.8)
+
+            ax.set_yticks([q1, q2, q3, q4, q5])
+            ax.set_yticklabels(ticklabels, fontsize=12, fontweight='bold')
+            ax.set_xticks(np.arange(runtime + 0.1, step=1))
+            ax.set_xlabel('Time [s]', fontsize=12, fontweight='bold')
+            # plt.xlim([0, runtime])
+            # plt.ylim([0, q5])
 
 
     def voltage_rasterplot(self, max_per_group=20, dt_downsampling_factor=10):
@@ -1335,8 +1345,6 @@ class ExperimentData(object):
 
 
 
-
-
 def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='Effect of increased $Ca^{2+}$ concentration (mM)'):
     """
     Plots simplified rasterplots of simulations next to each other. For publications.
@@ -1373,36 +1381,78 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
     # #plt.savefig('calciumplot.png')
     plt.show()
 
+def combined_metrics_plot():
+    """
+    For plotting mean firing rate, degree of synchrony & degree of irregularity for a set of simulations
+
+    :return:
+    """
+    ####### For figure 3 in the paper ######
+    stats = pd.read_csv('/opt3/tmp/kumar/stats_elijah_figs.csv')
+    stats = stats[stats.k < 3.5]
+    mfr_pivot = stats.pivot_table('mfr_all', index='k', columns='background_rate').T.sort_index(ascending=False)
+    sync_pivot = stats.pivot_table('mean_synchrony', index='k', columns='background_rate').T.sort_index(ascending=False)
+    irreg_pivot = stats.pivot_table('irregularity_mean', index='k', columns='background_rate').T.sort_index(ascending=False)
+
+    fig = plt.figure()
+    plt.style.use('seaborn-whitegrid')
+
+    ### LEFT PANEL
+    axa = fig.add_subplot(321)
+    g0 = sns.heatmap(mfr_pivot, vmin=0, vmax=15, ax=axa, cmap='binary',
+                     xticklabels=False, yticklabels=2, cbar_kws={"ticks":[0,15]})
+    axa.set_aspect(1)
+    g0.set_title('Mean firing rate', fontsize=16, fontweight='bold')
+    g0.set_ylabel('Background rate [Hz]', fontsize=12, fontweight='bold')
+    plt.setp(g0.get_yticklabels(), rotation=0)
+    g0.set_xlabel('')
+    g0.collections[0].colorbar.set_label('spikes/s')
+
+    axb = fig.add_subplot(323)
+    g1 = sns.heatmap(sync_pivot, vmin=0, vmax=0.05, ax=axb, cmap='binary',
+                     xticklabels=False, yticklabels=2, cbar_kws={"ticks":[0,0.05]})
+    axb.set_aspect(1)
+    g1.set_title('Synchrony', fontsize=16, fontweight='bold')
+    g1.set_ylabel('Background rate [Hz]', fontsize=12, fontweight='bold')
+    plt.setp(g1.get_yticklabels(), rotation=0)
+    g1.set_xlabel('')
+
+    axc = fig.add_subplot(325)
+    g2 = sns.heatmap(irreg_pivot, vmin=0, vmax=1.0, ax=axc, cmap='binary',
+                     xticklabels=2, yticklabels=2, cbar_kws={"ticks":[0,1]})
+    axc.set_aspect(1)
+    g2.set_title('Irregularity', fontsize=16, fontweight='bold')
+    g2.set_ylabel('Background rate [Hz]', fontsize=12, fontweight='bold')
+    plt.setp(g2.get_yticklabels(), rotation=0)
+    g2.set_xlabel('Relative strength of inhibition [1]', fontsize=12, fontweight='bold')
+
+    ### RIGHT PANEL
+
+    axd = fig.add_subplot(324)
+    sim_highca = SimulationData('kumar/cecilia_20170803_21521493_background_rate0.6H_k0.3_Cpp_3500ms.bz2')
+    sim_highca.publicationplot(ax=axd)
+    axd.set_title('High calcium', fontsize=16, fontweight='bold')
+
+    axf = fig.add_subplot(326)
+    sim_lowca = SimulationData('kumar/delia_20170808_10072677_background_rate0.6H_k0.3_Cpp_3500ms.bz2')
+    sim_lowca.publicationplot(ax=axf)
+    axf.set_title('Low calcium', fontsize=16, fontweight='bold')
+
+    # fig.subplots_adjust(top=0.90, bottom=0.10, left=0.10, right=0.90)
+
+    plt.tight_layout(pad=1)
+    plt.show()
 
 
-# MAIN
+    # MAIN
+    if __name__ == '__main__':
 
-if __name__ == '__main__':
-
-    # sim = SimulationData('kumar/aapeli_20170801_00540787_J_E0.68nS_k_E0.6_Cpp_3500ms.bz2')
-    # print sim.mean_synchrony(250)
-    # # sim.global_osc_freq()
-    # sim._spiketrains_nogroups()
-
-    exp = ExperimentData('/opt3/tmp/kumar/', 'bertta')
-    exp.computestats('stats_bertta.csv',
+    ###### For analysing a set of runs ######
+    exp = ExperimentData('/opt3/tmp/kumar/', 'elijah_20170815')
+    exp.computestats('stats_elijah_temp.csv',
                     ['calcium_concentration', 'J', 'k', 'background_rate'])
-    # exp.computestats('stats_olaf.csv', ['calcium_concentration', 'background_rate', 'background_rate_inhibition', 'EE_weights_gain', 'EI_weights_gain', 'inhibitory_synapse_factor'])
 
-
-    # exp = ExperimentData('/opt3/tmp/', 'newcastle_04')
-    # exp.computestats('stats.csv', ['calcium_concentration', 'background_rate'])
-
-
-    # sim = SimulationData('newcastle_04_background_rate_inhibition3.0H_Cpp_2000ms.bz2')
-    # n_spiking, mean_firing_rates, isicovs, fanofactors = sim.pop_measures(500*ms)
-    # print 'helou'
-    # print sim.pop_firing_rate(0*Hz, 30*Hz, 500*ms)
-    # sim.currentplot()
-    # sim.firingrates_ei()
-
-
-
+    ###### For creating side-by-side rasterplots ######
     # simulations = ['depol_37_calcium_concentration1.0_Cpp_3000ms.bz2', 'depol_37_calcium_concentration1.4_Cpp_3000ms.bz2',
     #                'depol_37_calcium_concentration2.0_Cpp_3000ms.bz2']
     # sim_title = ['1.0', '1.4', '2.0']

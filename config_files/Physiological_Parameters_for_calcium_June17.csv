@@ -1,11 +1,11 @@
 Variable,Key,Value,Comment
 "# From Markram et al Cell 2015, Table S6. Prescribed Parameters for Synaptic Transmission, Related to Figures 9 and 10.",,,
 calcium_concentration,,2.0,
-background_rate,,{0.02 & 0.05 & 0.10 & 0.15 & 0.3 & 0.6 & 1.2 & 2.5 & 5 & 10}*Hz,
+background_rate,,0.6*Hz,
 background_rate_inhibition,,0*Hz,
 J,,0.58*nS,# E-E absolute synaptic efficacy (0.72 nS)
 J_I,,0*nS,# E-I absolute synaptic efficacy (0.43 nS)
-k,,{0.08 & 0.15 & 0.3 & 0.6 & 1.2 & 2.4 & 4.8 & 9.6},# I-E efficacy with respect to E-E
+k,,{2.3 & 2.6},# I-E efficacy with respect to E-E
 k_I,,0.0,# I-I efficacy with respect E-I
 U_E,,1.0,# Utilization fraction of excitatory connections
 U_I,,1.0,# Utilization fraction of inhibitory connections
