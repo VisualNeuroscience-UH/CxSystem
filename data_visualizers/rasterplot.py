@@ -29,6 +29,8 @@ from multiprocess import Manager
 import datetime
 from tqdm import *
 
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
 
 mycmap = 'jet'
 
@@ -335,7 +337,11 @@ class SimulationData(object):
                     print '   Group ' + group + ' has too few spiking neurons (or sampling was too sparse)! Skipping...'
 
 
-        spike_df = pd.concat(spike_dict)
+        try:
+            spike_df = pd.concat(spike_dict)
+        except:
+            spike_df = pd.DataFrame(columns=['time', 'neuron_index'])  # if there's nothing to concat, create an empty df
+
         if ax is None:
             plt.scatter(spike_df.time, spike_df.neuron_index, s=0.8)
             q = neurons_per_group
@@ -355,7 +361,7 @@ class SimulationData(object):
             ax.scatter(spike_df.time, spike_df.neuron_index, s=0.6, c='gray')
 
 
-    def publicationplot(self, sampling_factor=30, ax=None):
+    def publicationplot(self, sampling_factor=30, time_limits=None, ax=None):
         """
         Plots a simplified rasterplot with only layers labeled, not neuron groups. Takes relative amount of
         neurons in each group into account. Possibly useful for publications.
@@ -367,6 +373,10 @@ class SimulationData(object):
         print 'Working on ' + self.datafile
         spike_dict = dict()
         indices_dict = dict()
+        runtime = self.data['runtime']
+        if time_limits is None:
+            time_limits = [0, runtime]
+
         number_of_group = {value: key for (key,value) in SimulationData.group_numbering.items()}
 
         max_neurons_per_group = [int(SimulationData.neurons_in_group[i]/sampling_factor) for i in range(1, 17)]
@@ -392,12 +402,19 @@ class SimulationData(object):
                     fixed_ind_dict = {indices[i]: fixed_indices[i] for i in range(neurons_per_group)}
                     spikes.neuron_index = spikes.neuron_index.map(fixed_ind_dict)
 
+                    # Just to make sure there is no extra data points floating around
+                    # (appearing later in eg. Illustrator):
+                    spikes = spikes[spikes.time <= time_limits[1]][spikes.time >= time_limits[0]]
                     spike_dict[group] = spikes
                 else:
                     print '   Group ' + group + ' has too few spiking neurons (or sampling was sparse)! Skipping...'
 
 
-        spike_df = pd.concat(spike_dict)
+        try:
+            spike_df = pd.concat(spike_dict)
+            spike_df.time = numpy.round(spike_df.time, 2)  # Decrease time-resolution here
+        except:
+            spike_df = pd.DataFrame(data={'time':[0], 'neuron_index':[0]})  # if there's nothing to concat, create an empty df
 
         #q = neurons_per_group
         q1 = sum(max_neurons_per_group[13-1:16])
@@ -406,30 +423,29 @@ class SimulationData(object):
         q4 = sum(max_neurons_per_group[2-1:16])
         q5 = sum(max_neurons_per_group[0:16])
 
-        runtime = self.data['runtime']
+
 
         ticklabels = ['VI', 'V', 'IV', 'II/III', 'I']
 
         if ax is None:
-            plt.scatter(spike_df.time, spike_df.neuron_index, s=0.8)
+
+            plt.scatter(spike_df.time, spike_df.neuron_index, color='k', s=0.5)
 
             plt.yticks([q1, q2, q3, q4, q5], ticklabels, fontsize=16)
             plt.xticks(np.arange(runtime + 0.1, step=1), fontsize=12)
             plt.xlabel('Time (s)', fontsize=12)
-
-            plt.xlim([0, runtime])
+            plt.xlim([time_limits[0], time_limits[1]])
             plt.ylim([0, q5])
-
             plt.show()
-        else:
-            ax.scatter(spike_df.time, spike_df.neuron_index, s=0.8)
 
+        else:
+            ax.scatter(spike_df.time, spike_df.neuron_index, color='k', s=0.5)
             ax.set_yticks([q1, q2, q3, q4, q5])
             ax.set_yticklabels(ticklabels, fontsize=12, fontweight='bold')
             ax.set_xticks(np.arange(runtime + 0.1, step=1))
             ax.set_xlabel('Time [s]', fontsize=12, fontweight='bold')
-            # plt.xlim([0, runtime])
-            # plt.ylim([0, q5])
+            ax.set_xlim([time_limits[0], time_limits[1]])
+            ax.set_ylim([0, q5])
 
 
     def voltage_rasterplot(self, max_per_group=20, dt_downsampling_factor=10):
@@ -1183,6 +1199,7 @@ class ExperimentData(object):
         self.experiment_name = experiment_name
         self.simulation_files = [sim_file for sim_file in os.listdir(experiment_path)
                                  if experiment_name in sim_file and os.path.splitext(sim_file)[1] == '.bz2']
+        self.simulation_files.sort()
 
     def _computestats_single_sim(self, sim_file, settings=None, parameters_to_extract=[]):
         """
@@ -1343,6 +1360,18 @@ class ExperimentData(object):
 
     # TODO :: Function for automatic plotting of synchrony, irregularity & mean firing rate
 
+    def rasterplot(self, n, sampling_factor=30, time_limits=None, ax=None):
+        """
+        Plots the n-th simulation of the experiment (as indexed in simulation_files)
+
+        :param n:
+        :return:
+        """
+
+        sim = SimulationData(self.simulation_files[n], data_path=self.experiment_path)
+        sim.publicationplot(sampling_factor=sampling_factor, time_limits=time_limits, ax=ax)
+
+
 
 
 def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='Effect of increased $Ca^{2+}$ concentration (mM)'):
@@ -1380,6 +1409,7 @@ def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='
     # plt.savefig('calciumplot.eps', dpi=600)
     # #plt.savefig('calciumplot.png')
     plt.show()
+
 
 def combined_metrics_plot():
     """
@@ -1430,12 +1460,12 @@ def combined_metrics_plot():
 
     axd = fig.add_subplot(324)
     sim_highca = SimulationData('kumar/cecilia_20170803_21521493_background_rate0.6H_k0.3_Cpp_3500ms.bz2')
-    sim_highca.publicationplot(ax=axd)
+    sim_highca.publicationplot(ax=axd, time_limits=[1,3])
     axd.set_title('High calcium', fontsize=16, fontweight='bold')
 
     axf = fig.add_subplot(326)
     sim_lowca = SimulationData('kumar/delia_20170808_10072677_background_rate0.6H_k0.3_Cpp_3500ms.bz2')
-    sim_lowca.publicationplot(ax=axf)
+    sim_lowca.publicationplot(ax=axf, time_limits=[1,3])
     axf.set_title('Low calcium', fontsize=16, fontweight='bold')
 
     # fig.subplots_adjust(top=0.90, bottom=0.10, left=0.10, right=0.90)
@@ -1444,13 +1474,38 @@ def combined_metrics_plot():
     plt.show()
 
 
-    # MAIN
-    if __name__ == '__main__':
+
+# MAIN
+if __name__ == '__main__':
+
+    ###### Depol x calcium plot ######
+    exp = ExperimentData('/opt3/tmp/bigrun/depolxcalcium/', 'fepol')
+    time_limits = [1,3]
+
+    fig = plt.figure()
+    plt.style.use('seaborn-whitegrid')
+
+    axes = []
+    n_rows = 5
+    n_cols = 6
+    for row in range(1, n_rows+1):
+        for col in range(1, n_cols+1):
+            subplot_index = (row-1) * n_cols + col
+            axes.append(fig.add_subplot(n_rows, n_cols, subplot_index))
+            exp.rasterplot(subplot_index-1, sampling_factor=100, time_limits=time_limits, ax=axes[subplot_index-1])
+
+    # ax12 = fig.add_subplot(152)
+    # exp.rasterplot(2, time_limits, ax=ax12)
+    #
+    # ax13 = fig.add_subplot(153)
+    # exp.rasterplot(3, time_limits, ax=ax13)
+
+    plt.show()
 
     ###### For analysing a set of runs ######
-    exp = ExperimentData('/opt3/tmp/kumar/', 'elijah_20170815')
-    exp.computestats('stats_elijah_temp.csv',
-                    ['calcium_concentration', 'J', 'k', 'background_rate'])
+    # exp = ExperimentData('/opt3/tmp/kumar/', 'irduk')
+    # exp.computestats('stats_irduk.csv',
+    #                 ['calcium_concentration', 'J', 'k', 'background_rate'])
 
     ###### For creating side-by-side rasterplots ######
     # simulations = ['depol_37_calcium_concentration1.0_Cpp_3000ms.bz2', 'depol_37_calcium_concentration1.4_Cpp_3000ms.bz2',
