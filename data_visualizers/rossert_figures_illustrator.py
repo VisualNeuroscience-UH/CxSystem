@@ -10,7 +10,9 @@ import cPickle as pickle
 import zlib
 import bz2
 
-
+# To have editable text in output pdfs:
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
 
 class illustrator:
     def __init__(self, mode,CXOutputPath,FilePattern,IllustratorOutputFile,InputTime,latency_threshold):

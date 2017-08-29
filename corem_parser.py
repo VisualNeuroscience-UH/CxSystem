@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 import sys,os,time
 import matplotlib.pyplot as plt
+import scipy.io as spio
 from brian2 import *  # Load brian2 last for unit-handling to work properly in Numpy
 
 
@@ -17,8 +18,10 @@ class Corem_retina(object):
 
     # Global constants
     COREM_ROOT_DIR = '/home/shohokka/PycharmProjects/COREM/COREM/'
-    COREM_RESULTS_DIR = 'results/'
-    COREM_RETINA_SCRIPTS_DIR = 'Retina_scripts/'
+    COREM_RESULTS_DIR = 'results/'  # directory relative to ROOT_DIR
+    COREM_RETINA_SCRIPTS_DIR = 'Retina_scripts/'  # directory relative to ROOT_DIR
+
+    CXSYSTEM_INPUT_DIR = '/home/shohokka/PycharmProjects/CXSystem_Git/video_input_files/'
 
     def __init__(self, retina_script_filename=None, result_ids=[], results_unit=1, custom_results_dir=None, retina_timestep=1*ms):
         '''
@@ -111,7 +114,6 @@ class Corem_retina(object):
         (*) Martinez-Canada, P., Morillas, C., Pelayo, F. (2017) A Conductance-Based
         Neuronal Network Model for Color Coding in the Primate Foveal Retina. In IWINAC 2017.
 
-        :return:
         '''
 
         number_cells = 25*25
@@ -177,12 +179,84 @@ class Corem_retina(object):
         plt.show()
 
 
+    def example_run_parafoveal(self):
+
+        r = 5  # eccentricity 5 degrees (nasal in visual field)
+        cone_density = 1000  # per degree^2, depends on r (here taken from Wassle et al 1990)
+
+        w_cones = 10  # width of visual field of interest
+        h_cones = 10 # height of visual field of interest
+
+        # Parameters for Schwartz's retinocortical mapping
+        k = 17
+        a = 1
+
+        # We want even numbers
+        if w_cones % 2 == 1:
+            w_cones -= 1
+        if h_cones % 2 == 1:
+            h_cones -= 1
+
+        ### Create ganglion cell mosaic -> "z coordinates" in CxSystem
+
+        # Assuming hexagonal lattice with horizontal rows and assuming 1:2 cone:ganglion cell ratio (ON and OFF)
+        grid_center = 5+0j  # in complex coordinates z=x+yj, x>0 and y representing location on retina in degrees
+        ganglion_spacing_adjacent = sqrt(2 / (sqrt(3) * cone_density))
+        ganglion_spacing_rows = sqrt(sqrt(3) / (2 * cone_density))
+
+        w_range = np.arange(-w_cones/2, w_cones/2 + 1) * ganglion_spacing_adjacent
+        h_range = np.arange(-h_cones / 2, h_cones / 2 + 1) * ganglion_spacing_rows
+        h_range = np.flipud(h_range)  # Vertical range needs to run in up->down direction
+
+        # Generate ON ganglion cell coordinates
+        z_coord_on = []
+        row_counter = 0
+        for y in h_range:
+            row_counter += 1
+            for x in w_range:
+                z = grid_center + complex(x,y)
+                if row_counter % 2 == 0:
+                    z -= complex(ganglion_spacing_adjacent/2)  # Shift every other row to have a hexagonal lattice
+
+                z_coord_on.append(z)
+
+        z_coord_on = np.array(z_coord_on)
+
+        # Generate OFF ganglion cell coordinates
+        z_coord_off = [z+np.random.rand()*ganglion_spacing_adjacent/3 for z in z_coord_on]
+        z_coord_off = np.array(z_coord_off)
+
+        ### Map mosaic to cortical coordinates -> "w coordinates" in CxSystem
+        cortical_map = lambda z: k * log(z + a)  # Schwartz's retina->cortex mapping
+        w_coord_on = cortical_map(z_coord_on)
+        w_coord_off = cortical_map(z_coord_off)
+
+        ### Plot it!
+        # plt.scatter(z_coord_on.real, z_coord_on.imag, c='green')
+        # plt.scatter(z_coord_off.real, z_coord_off.imag, c='red')
+        # plt.show()
+
+        ### Combine & save everything
+        output_dict = dict()
+
+        z_coord = np.concatenate([z_coord_on, z_coord_off])
+        z_coord_output = [[z] for z in z_coord]  # otherwise load-/savemat produces bad indexing
+        output_dict['z_coord'] = z_coord_output
+
+        w_coord = np.concatenate([w_coord_on, w_coord_off])
+        w_coord_output = [[w] for w in w_coord]  # otherwise load-/savemat produces bad indexing
+        output_dict['w_coord'] = w_coord_output
+
+        spio.savemat(self.CXSYSTEM_INPUT_DIR + 'corem_test.mat', output_dict)
+
+
 if __name__ == '__main__':
 
-    ret = Corem_retina('parvocustom.py', ['P_ganglion_L_ON_', 'P_ganglion_L_OFF_'], nsiemens)
+    #ret = Corem_retina('parvocustom.py', ['P_ganglion_L_ON_', 'P_ganglion_L_OFF_'], nsiemens)
+    #ret.example_run_primate_model()
 
-    #ret.simulate_retina()
-    ret.example_run_primate_model()
+    ret = Corem_retina('parafoveal_parvo.py', )
+    ret.example_run_parafoveal()
 
     #ret.read_results()
 

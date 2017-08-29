@@ -1479,33 +1479,27 @@ def combined_metrics_plot():
 if __name__ == '__main__':
 
     ###### Depol x calcium plot ######
-    exp = ExperimentData('/opt3/tmp/bigrun/depolxcalcium/', 'fepol')
-    time_limits = [1,3]
-
-    fig = plt.figure()
-    plt.style.use('seaborn-whitegrid')
-
-    axes = []
-    n_rows = 5
-    n_cols = 6
-    for row in range(1, n_rows+1):
-        for col in range(1, n_cols+1):
-            subplot_index = (row-1) * n_cols + col
-            axes.append(fig.add_subplot(n_rows, n_cols, subplot_index))
-            exp.rasterplot(subplot_index-1, sampling_factor=100, time_limits=time_limits, ax=axes[subplot_index-1])
-
-    # ax12 = fig.add_subplot(152)
-    # exp.rasterplot(2, time_limits, ax=ax12)
+    # exp = ExperimentData('/opt3/tmp/bigrun/depolxcalcium/', 'fepol')
+    # time_limits = [1,3]
     #
-    # ax13 = fig.add_subplot(153)
-    # exp.rasterplot(3, time_limits, ax=ax13)
-
-    plt.show()
+    # fig = plt.figure()
+    # plt.style.use('seaborn-whitegrid')
+    #
+    # axes = []
+    # n_rows = 5
+    # n_cols = 6
+    # for row in range(1, n_rows+1):
+    #     for col in range(1, n_cols+1):
+    #         subplot_index = (row-1) * n_cols + col
+    #         axes.append(fig.add_subplot(n_rows, n_cols, subplot_index))
+    #         exp.rasterplot(subplot_index-1, sampling_factor=100, time_limits=time_limits, ax=axes[subplot_index-1])
+    #
+    # plt.show()
 
     ###### For analysing a set of runs ######
-    # exp = ExperimentData('/opt3/tmp/kumar/', 'irduk')
-    # exp.computestats('stats_irduk.csv',
-    #                 ['calcium_concentration', 'J', 'k', 'background_rate'])
+    exp = ExperimentData('/opt3/tmp/kumar/', 'irduk')
+    exp.computestats('stats_irduk_new.csv',
+                    ['calcium_concentration', 'J', 'k', 'background_rate'])
 
     ###### For creating side-by-side rasterplots ######
     # simulations = ['depol_37_calcium_concentration1.0_Cpp_3000ms.bz2', 'depol_37_calcium_concentration1.4_Cpp_3000ms.bz2',
