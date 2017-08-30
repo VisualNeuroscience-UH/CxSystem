@@ -8,6 +8,10 @@ import numpy as np
 import sys,os,time
 import matplotlib.pyplot as plt
 import scipy.io as spio
+import re
+from string import Template
+import cPickle as pickle
+import bz2
 from brian2 import *  # Load brian2 last for unit-handling to work properly in Numpy
 
 
@@ -20,27 +24,70 @@ class Corem_retina(object):
     COREM_ROOT_DIR = '/home/shohokka/PycharmProjects/COREM/COREM/'
     COREM_RESULTS_DIR = 'results/'  # directory relative to ROOT_DIR
     COREM_RETINA_SCRIPTS_DIR = 'Retina_scripts/'  # directory relative to ROOT_DIR
+    SUFFIX_BUILT_FROM_TEMPLATE = '_runme'
 
     CXSYSTEM_INPUT_DIR = '/home/shohokka/PycharmProjects/CXSystem_Git/video_input_files/'
 
-    def __init__(self, retina_script_filename=None, result_ids=[], results_unit=1, custom_results_dir=None, retina_timestep=1*ms):
+    def __init__(self, retina_script_filename=None, result_ids=[], results_unit=1, script_is_template=False, custom_results_dir=None, retina_timestep=1*ms):
         '''
 
         :param retina_script_filename: str, file in COREM_RETINA_SCRIPTS_DIR to run
         :param retina_timestep: x*ms, timestep of COREM simulation (default 1*ms)
         '''
 
-        self.retina_script_filename = retina_script_filename
+        if script_is_template is False:
+            print 'Loaded a retina with all parameters in the script. Just simulate_retina() to get results.'
+            self.retina_script_filename = retina_script_filename
+        else:
+            self.retina_script_filename = ''
+            self.retina_script_template_filename = retina_script_filename
+            self.template_file_location = self.COREM_ROOT_DIR + self.COREM_RETINA_SCRIPTS_DIR + self.retina_script_template_filename
+            self.template_param_keys = self._which_parameters()
+            print 'Loaded a template retina. Please set_parameters() before you simulate_retina().'
+            print 'The parameters you need to give are:'
+            print self.template_param_keys
+
         self.result_ids = result_ids
         self.results_unit = results_unit
         self.custom_results_dir = custom_results_dir
         self.retina_timestep = retina_timestep
         self.results_data = dict()
 
+    def _which_parameters(self):
+
+        fi = open(self.template_file_location, 'r')
+        self.template_script = fi.read()
+        fi.close()
+        param_keys = re.findall('\$\w*', self.template_script)
+        param_keys = [key.lstrip('$') for key in param_keys]
+        return list(set(param_keys))
+
+    def set_parameters(self, param_keys_and_values):
+        '''
+        Replace parameter names in a retina template script with corresponding values.
+
+        :param keys_and_values: dict
+        :return:
+        '''
+
+        template_script = Template(self.template_script)
+        runnable_script = template_script.substitute(param_keys_and_values)
+
+        template_script_basename = os.path.basename(self.retina_script_template_filename)
+        template_script_basename = os.path.splitext(template_script_basename)[0]
+        runnable_script_filename = template_script_basename + self.SUFFIX_BUILT_FROM_TEMPLATE + '.py'
+        runnable_file_location = self.COREM_ROOT_DIR + self.COREM_RETINA_SCRIPTS_DIR + runnable_script_filename
+        fi = open(runnable_file_location, 'w')
+        fi.write(runnable_script)
+        fi.close()
+        self.retina_script_filename = runnable_script_filename
+
+        print 'Retina template parameters set. Retina ready for simulate_retina().'
+
     def simulate_retina(self):
         '''
         Run the retina script.
-        Note that this always deletes any previous data in the results directory.
+        Note that this always deletes any previous data in the results directory (COREM default behavior).
 
         :return: True if script could be run, otherwise False
         '''
@@ -96,7 +143,7 @@ class Corem_retina(object):
             self.results_data[id] = TimedArray(c, dt=self.retina_timestep)
 
 
-    def get_timedarray(self, id):
+    def _get_timedarray(self, id):
         if len(self.results_data) == 0:
             self.read_results()
         else:
@@ -143,7 +190,7 @@ class Corem_retina(object):
 
         # Create ON ganglion cells and
         # connect them to corresponding COREM nodes
-        corem_ge_on = self.get_timedarray('P_ganglion_L_ON_')
+        corem_ge_on = self._get_timedarray('P_ganglion_L_ON_')
         model_eq_on = Equations(model_eq, ge='corem_ge_on(t,i)')
 
         gc_on = NeuronGroup(number_cells, model=model_eq_on, namespace=gc_params,
@@ -152,7 +199,7 @@ class Corem_retina(object):
 
         # Create OFF ganglion cells and
         # connect them to corresponding COREM nodes
-        corem_ge_off = self.get_timedarray('P_ganglion_L_OFF_')
+        corem_ge_off = self._get_timedarray('P_ganglion_L_OFF_')
         model_eq_off = Equations(model_eq, ge='corem_ge_off(t,i)')
 
         gc_off = NeuronGroup(number_cells, model=model_eq_off, namespace=gc_params,
@@ -173,23 +220,31 @@ class Corem_retina(object):
         plt.title('Spikes')
         plt.scatter(spikes_on.t/ms, spikes_on.i, s=0.4, color='green', label='ON ganglion')
         plt.scatter(spikes_off.t/ms, spikes_off.i+number_cells, s=0.4, color='red', label='OFF ganglion')
-        plt.xlim([0,runtime/ms])
+        plt.xlim([0, runtime/ms])
         plt.legend()
 
         plt.show()
 
 
     def example_run_parafoveal(self):
+        '''
+        An attempt at integrating COREM to CxSystem and at simulating parafoveal retina of macaque monkey.
 
+        :return:
+        '''
+        ### Runtime parameters
         r = 5  # eccentricity 5 degrees (nasal in visual field)
         cone_density = 1000  # per degree^2, depends on r (here taken from Wassle et al 1990)
+        runtime = 900*ms
 
         w_cones = 10  # width of visual field of interest
-        h_cones = 10 # height of visual field of interest
+        h_cones = 10  # height of visual field of interest
 
         # Parameters for Schwartz's retinocortical mapping
         k = 17
         a = 1
+
+        ### User-defined parameters end here
 
         # We want even numbers
         if w_cones % 2 == 1:
@@ -199,7 +254,7 @@ class Corem_retina(object):
 
         ### Create ganglion cell mosaic -> "z coordinates" in CxSystem
 
-        # Assuming hexagonal lattice with horizontal rows and assuming 1:2 cone:ganglion cell ratio (ON and OFF)
+        # Assuming hexagonal lattice with horizontal rows and assuming 1:2 cone:PC ganglion cell ratio (ON and OFF)
         grid_center = 5+0j  # in complex coordinates z=x+yj, x>0 and y representing location on retina in degrees
         ganglion_spacing_adjacent = sqrt(2 / (sqrt(3) * cone_density))
         ganglion_spacing_rows = sqrt(sqrt(3) / (2 * cone_density))
@@ -231,23 +286,90 @@ class Corem_retina(object):
         w_coord_on = cortical_map(z_coord_on)
         w_coord_off = cortical_map(z_coord_off)
 
-        ### Plot it!
-        # plt.scatter(z_coord_on.real, z_coord_on.imag, c='green')
-        # plt.scatter(z_coord_off.real, z_coord_off.imag, c='red')
-        # plt.show()
-
-        ### Combine & save everything
+        ### Combine & save positions
         output_dict = dict()
 
         z_coord = np.concatenate([z_coord_on, z_coord_off])
-        z_coord_output = [[z] for z in z_coord]  # otherwise load-/savemat produces bad indexing
-        output_dict['z_coord'] = z_coord_output
+        output_dict['z_coord'] = z_coord
 
         w_coord = np.concatenate([w_coord_on, w_coord_off])
-        w_coord_output = [[w] for w in w_coord]  # otherwise load-/savemat produces bad indexing
-        output_dict['w_coord'] = w_coord_output
+        output_dict['w_coord'] = w_coord
 
-        spio.savemat(self.CXSYSTEM_INPUT_DIR + 'corem_test.mat', output_dict)
+        # For saving as MATLAB files, add the following lines:
+
+        # output_dict['z_coord'] = [[z] for z in z_coord]  # silly but otherwise load-/savemat produces bad indexing
+        # output_dict['w_coord'] = [[w] for w in w_coord]
+        # spio.savemat(self.CXSYSTEM_INPUT_DIR + 'corem_test.mat', output_dict)
+
+
+        ### Simulate ganglion cells (this could go inside a separate method later)
+
+        number_cells = w_cones * h_cones
+
+        # PC ganglion cell parameters
+        gc_params = {
+            "C_m": 100.0*pF,
+            "g_L": 10.0*nS,
+            "E_ex": 0.0*mV,
+            "E_in": -70.0*mV,
+            "E_L": -60.0*mV,
+            "V_th": -55.0*mV,
+            "V_reset": -60.0*mV,
+            "t_ref": 2.0*ms,
+            "rate": 0.0*Hz,         # not used
+            "tau_e": 3.0*ms,        # not used
+            "tau_i": 8.3*ms,        # not used
+            "tonic_current": 0*pA,
+            "noise": 0.1*mV,
+            "gi": 0*nS
+        }
+
+        gc_params['tau_m'] = gc_params['C_m'] / gc_params['g_L']
+
+        model_eq = 'dvm/dt = (((g_L*(E_L-vm) + ge*(E_ex-vm) + gi*(E_in-vm)) + tonic_current) / C_m) + noise*xi*tau_m**-0.5: volt'
+
+        # Create ON ganglion cells and connect them to corresponding COREM nodes
+        corem_ge_on = self._get_timedarray('P_ganglion_L_ON_')
+        model_eq_on = Equations(model_eq, ge='corem_ge_on(t,i)')
+
+        gc_on = NeuronGroup(number_cells, model=model_eq_on, namespace=gc_params,
+                            threshold='vm > '+repr(gc_params['V_th']), reset='vm = '+repr(gc_params['V_reset']),
+                            refractory=gc_params['t_ref'], method='euler')
+
+        # Create OFF ganglion cells and connect them to corresponding COREM nodes
+        corem_ge_off = self._get_timedarray('P_ganglion_L_OFF_')
+        model_eq_off = Equations(model_eq, ge='corem_ge_off(t,i)')
+
+        gc_off = NeuronGroup(number_cells, model=model_eq_off, namespace=gc_params,
+                            threshold='vm > ' + repr(gc_params['V_th']), reset='vm = ' + repr(gc_params['V_reset']),
+                            refractory=gc_params['t_ref'], method='euler')
+
+        # Spike detectors
+        spikes_on = SpikeMonitor(gc_on)
+        spikes_off = SpikeMonitor(gc_off)
+
+        # Run simulation
+        print 'Generating ganglion cell spike data'
+        run(runtime)
+
+        # CxSystem (CxSystem.py->method relay->submethod spikes) loads given spike/input file and
+        # expects spike data inside two arrays:
+        # SPK_GENERATOR_SP = spikes_data['spikes_0'][0] - index of neuron
+        # SPK_GENERATOR_TI = spikes_data['spikes_0'][1] - time of spike
+
+        plt.scatter(spikes_on.t/ms, spikes_on.i, s=0.4, color='green', label='ON ganglion')
+        plt.scatter(spikes_off.t/ms, spikes_off.i+number_cells, s=0.4, color='red', label='OFF ganglion')
+
+        output_dict['spikes_0'] = []
+        output_dict['spikes_0'].append(list(spikes_on.i))
+        output_dict['spikes_0'][0].extend([i+number_cells for i in spikes_off.i])
+        output_dict['spikes_0'].append(list(spikes_on.t))  # Needs to have unit (CxS bug)
+        output_dict['spikes_0'][1].extend(list(spikes_off.t))
+
+        # Vafa's savedata
+        save_path = self.CXSYSTEM_INPUT_DIR + 'parafov_output.bz2'
+        with bz2.BZ2File(save_path, 'wb') as fb:
+            pickle.dump(output_dict, fb, pickle.HIGHEST_PROTOCOL)
 
 
 if __name__ == '__main__':
@@ -255,13 +377,15 @@ if __name__ == '__main__':
     #ret = Corem_retina('parvocustom.py', ['P_ganglion_L_ON_', 'P_ganglion_L_OFF_'], nsiemens)
     #ret.example_run_primate_model()
 
-    ret = Corem_retina('parafoveal_parvo.py', )
+    ret = Corem_retina('parafoveal_parvo.py', ['P_ganglion_L_ON_', 'P_ganglion_L_OFF_'], nsiemens, script_is_template=True)
+    retina_params = {'SIM_TIME': 1200, 'REC_START_TIME': 100, 'PX_PER_DEG': 10, 'RF_CENTER_SIGMA': 0.03,
+                     'CONE_H1_SIGMA': 0.5, 'RF_SURROUND_SIGMA': 0.5, 'SHOW_SIM': 'False'}
+
+    retina_params['INPUT_LINE'] = "retina.Input('grating',{'type','0','step','0.001','length1','0.0','length2','4.0','length3','0.0','sizeX','20','sizeY','20','freq','2.5','period','20.0','Lum','100.0','Contr','0.5','phi_s','0.0','phi_t','0.0','orientation','0.0','red_weight','1.0','green_weight','1.0','blue_weight','1.0','red_phase','0.0','green_phase','0.0','blue_phase','0.0'})"
+
+    ret.set_parameters(retina_params)
+    ret.simulate_retina()
+
     ret.example_run_parafoveal()
 
-    #ret.read_results()
-
-    # ta = ret.get_timedarray('P_ganglion_L_ON_')
-    # plt.figure()
-    # plt.plot(ta(linspace(1,1200,1200)*ms, 4))
-    # plt.show()
     print 'Done.'

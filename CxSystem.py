@@ -1431,8 +1431,9 @@ class CxSystem(object):
             print "Info: Spike file loaded from: %s" %os.path.join(self.output_folder, input_spikes_filename)
             SPK_GENERATOR_SP = spikes_data['spikes_0'][0]
             SPK_GENERATOR_TI = spikes_data['spikes_0'][1]
-            number_of_neurons =  len(spikes_data['w_coord'])
+            number_of_neurons = len(spikes_data['w_coord'])
             SPK_GENERATOR = SpikeGeneratorGroup(number_of_neurons, SPK_GENERATOR_SP, SPK_GENERATOR_TI)
+
             setattr(self.main_module, 'SPK_GENERATOR', SPK_GENERATOR)
             try:
                 setattr(self.Cxmodule, 'SPK_GENERATOR', SPK_GENERATOR)
@@ -1464,8 +1465,7 @@ class CxSystem(object):
                 # index 3 as NG3_MC_L2 and now it's NG10_MC_L2 :
                 Group_type = NG_name[NG_name.index('_') + 1:]
                 GroupKeyName = \
-                    [kk for kk in self.loaded_brian_data['positions_all']['w_coord'].keys() if Group_type in kk][
-                        0]
+                    [kk for kk in self.loaded_brian_data['positions_all']['w_coord'].keys() if Group_type in kk][0]
                 self.customized_neurons_list[self.spike_input_group_idx]['w_positions'] = \
                     self.loaded_brian_data['positions_all']['w_coord'][GroupKeyName]
                 self.customized_neurons_list[self.spike_input_group_idx]['z_positions'] = \
