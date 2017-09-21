@@ -1,0 +1,10 @@
+Brief introduction to CxSystem
+==============================
+
+The CxSystem reuses components of earlier work (Heikkinen, Sharifian, Vigário & Vanni, 2015). The code was completely \
+rewritten to be dynamically compiled from configuration files, and to run on C++ and GeNN (Yavuz, Turner, & Nowotny, 2016) \
+devices. Implemented on the top of the Python-based Brian2 simulator (Goodman & Brette, 2009), CxSystem supports the \
+main goal of Brian, i.e. minimizing development time, by providing the user with a simplified interface.  \
+The two configuration files, easily modifiable with regular spreadsheet programs, have a biologically meaningful syntax \
+ and are appropriate for life scientists who are unaccustomed to computer programming. \
+ CxSystem is available at GitHub (https://github.com/sivanni/CXSystem_Git).

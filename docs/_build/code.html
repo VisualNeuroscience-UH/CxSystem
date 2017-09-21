@@ -1,0 +1,789 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Cortical System Package &#8212; CxSystem 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Configuration File Tutorial" href="configuration.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="configuration.html" title="Configuration File Tutorial"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">CxSystem 1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="cortical-system-package">
+<h1>Cortical System Package<a class="headerlink" href="#cortical-system-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-CxSystem">
+<span id="cortical-system-module"></span><h2>Cortical System module<a class="headerlink" href="#module-CxSystem" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="CxSystem.CxSystem">
+<em class="property">class </em><code class="descclassname">CxSystem.</code><code class="descname">CxSystem</code><span class="sig-paren">(</span><em>anatomy_and_system_config</em>, <em>physiology_config</em>, <em>output_file_suffix=''</em>, <em>instantiated_from_array_run=0</em><span class="sig-paren">)</span><a class="headerlink" href="#CxSystem.CxSystem" title="Permalink to this definition">¶</a></dt>
+<dd><p>The main object of cortical system module for building and running a customized model of cortical module based on     the configuration files.</p>
+<dl class="method">
+<dt id="CxSystem.CxSystem.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>anatomy_and_system_config</em>, <em>physiology_config</em>, <em>output_file_suffix=''</em>, <em>instantiated_from_array_run=0</em><span class="sig-paren">)</span><a class="headerlink" href="#CxSystem.CxSystem.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize the cortical system by parsing both of the configuration files.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>anatomy_and_system_config</strong> &#8211; could be either the path to the anatomy and system configuration file, or the dataframe containing the configuration data.</li>
+<li><strong>output_path</strong> &#8211; could be either the path to the physiology configuration file, or the dataframe containing the configuration data.</li>
+<li><strong>output_file_suffix</strong> &#8211; switch the GeNN mode on/off (1/0), by default GeNN is off</li>
+<li><strong>instantiated_from_array_run</strong> &#8211; this flag, 0 by default, determines whether this instance of CxSystem is instantiated from another instance of CxSystem which is running an array run.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Main internal variables:</p>
+<ul class="simple">
+<li>customized_neurons_list: This list contains the neuron_reference instances. So for each neuron group target line, there would be an element in this list which contains all the information for that particular neuron group.</li>
+<li>customized_synapses_list: This list contains the synapse_reference instances. Hence, for each synapse custom line, there would be an element in this list, containing all the necessary information.</li>
+<li>neurongroups_list: This list contains name of the NeuronGroup() instances that are placed in the Globals().</li>
+<li>synapses_name_list: This list contains name of the Synapses() instances that are placed in the Globals().</li>
+<li>monitor_name_bank: The dictionary containing the name of the monitors that are defined for any NeuronGroup() or Synapses().</li>
+<li>default_monitors: In case &#8211;&gt; and &lt;&#8211; symbols are used in the configuration file, this default monitor will be applied on all the target lines in between those marks.</li>
+<li>save_data: The save_data() object for saving the final data.</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="CxSystem.CxSystem.gather_result">
+<code class="descname">gather_result</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#CxSystem.CxSystem.gather_result" title="Permalink to this definition">¶</a></dt>
+<dd><p>After the simulation and using the syntaxes that are previously prepared in the syntax_bank of save_data() object, this method saves the collected data to a file.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="CxSystem.CxSystem.monitors">
+<code class="descname">monitors</code><span class="sig-paren">(</span><em>mon_args</em>, <em>object_name</em>, <em>equation</em><span class="sig-paren">)</span><a class="headerlink" href="#CxSystem.CxSystem.monitors" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method creates the Monitors() in brian2 based on the parameters that are extracted from a target line in configuration file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mon_args</strong> &#8211; The monitor arguments extracted from the target line.</li>
+<li><strong>object_name</strong> &#8211; The generated name of the current object.</li>
+<li><strong>equation</strong> &#8211; The equation of the NeuronGroup() to check if the target variable exist in it.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Main internal variables:</p>
+<ul class="simple">
+<li>mon_tag: The tag that is extracted from the target line every time.</li>
+<li>Mon_name: Generated variable name for a specific monitor.</li>
+<li>Mon_str: The syntax used for building a specific StateMonitor.</li>
+<li>sub_mon_tags: The tags in configuration file that are specified for a StateMonitor(), e.g. in record=True which is specified by [rec]True in configuration file, [rec] is saved in sub_mon_tags</li>
+<li>sub_mon_args: The corresponding arguments of sub_mon_tags for a StateMonitor(), e.g. in record=True which is specified by [rec]True in configuration file, True is saved in sub_mon_args.</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="CxSystem.CxSystem.neuron_group">
+<code class="descname">neuron_group</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#CxSystem.CxSystem.neuron_group" title="Permalink to this definition">¶</a></dt>
+<dd><p>The method that creates the NeuronGroups() based on the parameters that are extracted from the configuration file in the __init__ method of the class.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>args</strong> &#8211; This method have at least 3 main positional arguments directly passed from the __init__ method: Number of Neurons in the group, Type of neuron in the group and layer index. Description of the layer index as well as other possible arguments can be found in the configuration file tutorial.</td>
+</tr>
+</tbody>
+</table>
+<p>Main internal variables:</p>
+<ul class="simple">
+<li>mon_args: contains the monitor arguments extracted from the target line.</li>
+<li>net_center: center position of the neuron group in visual field coordinates, description can be found in configuration file tutorial.</li>
+<li>_dyn_neurongroup_name: Generated variable name for the NeuronGroup() object in brian2.</li>
+<li>_dyn_neuronnumber_name: Generated variable name for corresponding Neuron Number.</li>
+<li>_dyn_neuron_eq_name: Generated variable name for the NeuronGroup() equation.</li>
+<li>_dyn_neuron_thres_name: Generated variable name for the NeuronGroup() threshold.</li>
+<li>_dyn_neuron_reset_name: Generated variable name for the NeuronGroup() reset value.</li>
+<li>_dyn_neuron_refra_name: Generated variable name for the NeuronGroup() refractory value.</li>
+<li>_dyn_neuron_namespace_name: Generated variable name for the NeuronGroup() namespace.</li>
+<li>NG_init: NeuronGroups() should be initialized with a random vm, ge and gi values. To address this, a 6-line code is generated and put in this variable, the running of which will lead to initialization of current NeuronGroup().</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="CxSystem.CxSystem.relay">
+<code class="descname">relay</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#CxSystem.CxSystem.relay" title="Permalink to this definition">¶</a></dt>
+<dd><p>The method that creates the relay NeuronGroups based on the parameters that are extracted from the configuration         file in the __init__ method of the class. Note that the SpikeGeneratorGroup() does not support the locations and         synaptic connection based on the distance between the input, and the target neuron group. For this reason, a &#8220;relay&#8221;         neuron group is created which is directly connected to the SpikeGeneratorGroup(). Unlike SpikeGeneratorGroup() this         relay group supports the locations. With this workaround, the synaptic connection between the input and the Neuron group can be implemented         based on the distance of the neurons then.</p>
+<p>Note: extracting the input spikes and time sequences for using in a SpikeGeneratorGroup() is done in this method.         This procedure needs using a &#8220;run()&#8221; method in brian2. However, one of the limitations of the Brian2GeNN is that         the user cannot use multiple &#8220;run()&#8221; methods in the whole script. To address this issue, the GeNN device should be         set after using the first run(), hence the unusual placement of &#8220;set_device(&#8216;genn&#8217;)&#8221; command in current method.</p>
+<p>Note2: The radius of the VPM input is determined based on the Markram et al. 2015: The radius of the system is 210 um         and the number of VPM input is 60 (page 19 of supplements). As for the radius of the VPM input, it is mentioned in the          paper (page 462) that &#8220;neurons were arranged in 310 mini-columns at horizontal positions&#8221;. considering the area of the          circle with radius of 210um and 60/310 mini-columns, the radius will be equal to 92um.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>args</strong> &#8211; This method will have at least 4 main positional arguments directly passed from __init__ method: path to the input .mat file, and the frequency. Description of other possible arguments can be found in Configuration file tutorial.</td>
+</tr>
+</tbody>
+</table>
+<p>Main internal variables:</p>
+<ul class="simple">
+<li>inp: an instance of stimuli() object from stimuli module.</li>
+<li>relay_group: the dictionary containing the data for relay NeuronGroup()</li>
+<li>_dyn_neurongroup_name: Generated variable name for the NeuronGroup() object in brian2.</li>
+<li>_dyn_neuronnumber_name: Generated variable name for corresponding Neuron Number.</li>
+<li>_dyn_neuron_eq_name: Generated variable name for the NeuronGroup() equation.</li>
+<li>_dyn_neuron_thres_name: Generated variable name for the NeuronGroup() threshold.</li>
+<li>_dyn_neuron_reset_name: Generated variable name for the NeuronGroup() reset value.</li>
+<li>SGsyn_name: variable name for the Synapses() object that connects SpikeGeneratorGroup() and relay neurons.</li>
+</ul>
+<p>following four variables are build using the load_input_seq() method in stimuli object:</p>
+<ul class="simple">
+<li>spikes_str: The string containing the syntax for Spike indices in the input neuron group.</li>
+<li>times_str: The string containing the syntax for time indices in the input neuron group.</li>
+<li>SG_str: The string containing the syntax for creating the SpikeGeneratorGroup() based on the input .mat file.</li>
+<li>number_of_neurons: The number of neurons that exist in the input .mat file.</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="CxSystem.CxSystem.synapse">
+<code class="descname">synapse</code><span class="sig-paren">(</span><em>*args</em><span class="sig-paren">)</span><a class="headerlink" href="#CxSystem.CxSystem.synapse" title="Permalink to this definition">¶</a></dt>
+<dd><p>The method that creates the Synapses() in brian2, based on the parameters that are extracted from the configuration file in the __init__ method of the class.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>args</strong> &#8211; This method will have at least 4 main positional arguments directly passed from __init__ method: The receptor, e.g. ge or gi, pre-synaptic NeuronGroup index, post synaptic group index, and type of Synaptic connection , i.e. STDP or Fixed. Description of other possible arguments can be found in Configuration file tutorial.</td>
+</tr>
+</tbody>
+</table>
+<p>Main internal variables:</p>
+<ul class="simple">
+<li>mon_args: contains the monitor arguments extracted from the target line.</li>
+<li>args: normally args contains a set of arguments for a single Synapses() object. However, this changes when the post-synaptic neuron is the first (with index of 0) compartment of a multi-compartmental neuron. In this case, one might intend to target all three sub-compartments, i.e. Basal dendrites, Soma and proximal apical dendrites. So the single set of arguments will be changed to 3 sets of arguments and a for loop will take care of every one of them.</li>
+<li>dyn_syn_name: Generated variable name for the Synapses() object in brian2.</li>
+<li>_dyn_syn_eq_name: Generated variable name for the Synapses() equation.</li>
+<li>_dyn_syn_pre_eq_name: Generated variable name for pre_synaptic equations, i.e. &#8220;on_pre=...&#8221;</li>
+<li>_dyn_syn_post_eq_name: Generated variable name for post_synaptic equations, i.e. &#8220;on_post= ...&#8221;</li>
+<li>_dyn_syn_namespace_name: Generated variable name for the Synapses() namespace.</li>
+<li>syn_con_str: The string containing the syntax for connect() method of a current Synapses() object. This string changes depending on using the [p] and [n] tags in the configuration file.</li>
+</ul>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-parameter_parser">
+<span id="parameter-parser-module"></span><h2>Parameter Parser module<a class="headerlink" href="#module-parameter_parser" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="parameter_parser.neuron_parser">
+<em class="property">class </em><code class="descclassname">parameter_parser.</code><code class="descname">neuron_parser</code><span class="sig-paren">(</span><em>output_neuron</em>, <em>physio_config_df</em><span class="sig-paren">)</span><a class="headerlink" href="#parameter_parser.neuron_parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class embeds all parameter sets associated to all neuron types and will return it as a namespace in form of dictionary</p>
+<dl class="method">
+<dt id="parameter_parser.neuron_parser.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>output_neuron</em>, <em>physio_config_df</em><span class="sig-paren">)</span><a class="headerlink" href="#parameter_parser.neuron_parser.__init__" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="parameter_parser.synapse_parser">
+<em class="property">class </em><code class="descclassname">parameter_parser.</code><code class="descname">synapse_parser</code><span class="sig-paren">(</span><em>output_synapse</em>, <em>physio_config_df</em><span class="sig-paren">)</span><a class="headerlink" href="#parameter_parser.synapse_parser" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class contains all the variables that are required for the Synapses() object namespaces. There are several reference dictionaries in this class for:</p>
+<ul class="simple">
+<li>cw: connection weights for any connection between NeuronGroup()s.</li>
+<li>sp: Sparseness values for any connection between NeuronGroup()s.</li>
+<li>STDP: values for A_pre, A_post, Tau_pre and Tau_post for any connection between NeuronGroup()s.</li>
+<li>dist: distribution of the neurons for connection between NeuronGroup()s.</li>
+</ul>
+<p>There are also some important internal variables:</p>
+<ul class="simple">
+<li>Cp: Synaptic potentiation coefficient according to van Rossum J Neurosci 2000</li>
+<li>Cd: Synaptic depression coefficient according to van Rossum J Neurosci 2000</li>
+<li>stdp_Nsweeps: 60 in papers one does multiple trials to reach +-50% change in synapse strength. A-coefficient will be divided by this number</li>
+<li>stdp_max_strength_coefficient: This value is to avoid runaway plasticity.</li>
+<li>conn_prob_gain: This is used for compensation of small number of neurons and thus incoming synapses</li>
+</ul>
+<dl class="method">
+<dt id="parameter_parser.synapse_parser.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>output_synapse</em>, <em>physio_config_df</em><span class="sig-paren">)</span><a class="headerlink" href="#parameter_parser.synapse_parser.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>The initialization method for namespaces() object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>output_synapse</strong> &#8211; This is the dictionary created in neuron_reference() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this class, Synaptic namespace parameters are directly added to it. Following values are set after initialization: Cp, Cd, sparseness, ilam. Other variables are then set based on the type of the synaptic connection (STDP,Fixed).</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="parameter_parser.synapse_parser.Fixed">
+<code class="descname">Fixed</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#parameter_parser.synapse_parser.Fixed" title="Permalink to this definition">¶</a></dt>
+<dd><p>The Fixed method for assigning the parameters for Fixed synaptic connection to the customized_synapses() object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>output_synapse</strong> &#8211; This is the dictionary created in neuron_reference() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: wght_max, wght0.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="parameter_parser.synapse_parser.STDP">
+<code class="descname">STDP</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#parameter_parser.synapse_parser.STDP" title="Permalink to this definition">¶</a></dt>
+<dd><p>The STDP method for assigning the STDP parameters to the customized_synapses() object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>output_synapse</strong> &#8211; This is the dictionary created in neuron_reference() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: Apre, Apost, Tau_pre, Tau_post, wght_max, wght0.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="parameter_parser.synapse_parser.STDP_with_scaling">
+<code class="descname">STDP_with_scaling</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#parameter_parser.synapse_parser.STDP_with_scaling" title="Permalink to this definition">¶</a></dt>
+<dd><p>The STDP method for assigning the STDP parameters to the customized_synapses() object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>output_synapse</strong> &#8211; This is the dictionary created in neuron_reference() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: Apre, Apost, Tau_pre, Tau_post, wght_max, wght0.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-physiology_reference">
+<span id="physiology-reference-module"></span><h2>Physiology Reference module<a class="headerlink" href="#module-physiology_reference" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="physiology_reference.neuron_reference">
+<em class="property">class </em><code class="descclassname">physiology_reference.</code><code class="descname">neuron_reference</code><span class="sig-paren">(</span><em>idx</em>, <em>number_of_neurons</em>, <em>cell_type</em>, <em>layers_idx</em>, <em>general_grid_radius</em>, <em>min_distance</em>, <em>physio_config_df</em>, <em>network_center=0j</em><span class="sig-paren">)</span><a class="headerlink" href="#physiology_reference.neuron_reference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Using this class, a dictionary object is created which contains all parameters and variables that are needed to     create a group of that customized cell. This dictionary will eventually be used in process of building the cortical module.    New types of neurons should be implemented in this class.</p>
+<dl class="method">
+<dt id="physiology_reference.neuron_reference.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>idx</em>, <em>number_of_neurons</em>, <em>cell_type</em>, <em>layers_idx</em>, <em>general_grid_radius</em>, <em>min_distance</em>, <em>physio_config_df</em>, <em>network_center=0j</em><span class="sig-paren">)</span><a class="headerlink" href="#physiology_reference.neuron_reference.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>initialize the neuron_reference based on the arguments.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>number_of_neurons</strong> &#8211; number of neurons in the NeuronGroup() object.</li>
+<li><strong>cell_type</strong> &#8211; type of cell in the NeuronGroup: currently PC, SS, BC, MC and L1i.</li>
+<li><strong>layers_idx</strong> &#8211; indicating the layer in which the cell group is located. In case of SS, BC, MC and L1i it is an integer          but for PC which is a multi-compartmental neuron, it is a tuple array. This tuple numpy array defines the first          and last layers in which the neuron resides. So array([4,1]) means that the soma resides in layer 4 and the apical          dendrites which are (2 compartments) extend to layer 2/3 and 1. To avoid confusion, layer 2 is used as the indicator          of layer 2/3. Hence, if the last compartment of a neuron is in layer 2/3, use number 2.</li>
+<li><strong>network_center</strong> &#8211; as the name implies, this argument defines the center of teh NeuronGroup() in visual field coordinates. The default value is 0+0j.</li>
+<li><strong>resolution</strong> &#8211; resolution for formation of neurons in the grid. Default value is 0.1</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Main internal variables:</p>
+<ul class="simple">
+<li>output_neuron: the main dictionary containing all the data about current Customized_neuron_group including: number of neurons, threshold, reset, refractory, neuron type, soma position(layer), dendrites layer, total number of compartments, namespace, equation, positions (both in cortical and visual coordinates).</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="physiology_reference.neuron_reference.BC">
+<code class="descname">BC</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#physiology_reference.neuron_reference.BC" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method build up the equation for BC neurons. The final equation is then saved in output_neuron[&#8216;equation&#8217;].</p>
+<ul>
+<li><p class="first">The equation of the neuron is as follows:</p>
+<blockquote>
+<div><div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">dvm</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">gL</span><span class="o">*</span><span class="p">(</span><span class="n">EL</span><span class="o">-</span><span class="n">vm</span><span class="p">)</span> <span class="o">+</span> <span class="n">gL</span> <span class="o">*</span> <span class="n">DeltaT</span> <span class="o">*</span> <span class="n">exp</span><span class="p">((</span><span class="n">vm</span><span class="o">-</span><span class="n">VT</span><span class="p">)</span> <span class="o">/</span> <span class="n">DeltaT</span><span class="p">)</span> <span class="o">+</span> <span class="n">ge_soma</span> <span class="o">*</span> <span class="p">(</span><span class="n">Ee</span><span class="o">-</span><span class="n">vm</span><span class="p">)</span> <span class="o">+</span> <span class="n">gi_soma</span> <span class="o">*</span> <span class="p">(</span><span class="n">Ei</span><span class="o">-</span><span class="n">vm</span><span class="p">))</span> <span class="o">/</span> <span class="n">C</span> <span class="p">:</span> <span class="n">volt</span> <span class="p">(</span><span class="n">unless</span> <span class="n">refractory</span><span class="p">)</span>
+<span class="n">dge_soma</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="o">-</span><span class="n">ge_soma</span><span class="o">/</span><span class="n">tau_e</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">dgi_soma</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="o">-</span><span class="n">gi_soma</span><span class="o">/</span><span class="n">tau_i</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">x</span> <span class="p">:</span> <span class="n">meter</span>
+<span class="n">y</span> <span class="p">:</span> <span class="n">meter</span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="physiology_reference.neuron_reference.L1i">
+<code class="descname">L1i</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#physiology_reference.neuron_reference.L1i" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method build up the equation for Layer 1 inhibitory (L1i) neurons. The final equation is then saved in output_neuron[&#8216;equation&#8217;].</p>
+<ul>
+<li><p class="first">The equation of the neuron is as follows:</p>
+<blockquote>
+<div><div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">dvm</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">gL</span><span class="o">*</span><span class="p">(</span><span class="n">EL</span><span class="o">-</span><span class="n">vm</span><span class="p">)</span> <span class="o">+</span> <span class="n">gL</span> <span class="o">*</span> <span class="n">DeltaT</span> <span class="o">*</span> <span class="n">exp</span><span class="p">((</span><span class="n">vm</span><span class="o">-</span><span class="n">VT</span><span class="p">)</span> <span class="o">/</span> <span class="n">DeltaT</span><span class="p">)</span> <span class="o">+</span> <span class="n">ge_soma</span> <span class="o">*</span> <span class="p">(</span><span class="n">Ee</span><span class="o">-</span><span class="n">vm</span><span class="p">)</span> <span class="o">+</span> <span class="n">gi_soma</span> <span class="o">*</span> <span class="p">(</span><span class="n">Ei</span><span class="o">-</span><span class="n">vm</span><span class="p">))</span> <span class="o">/</span> <span class="n">C</span> <span class="p">:</span> <span class="n">volt</span> <span class="p">(</span><span class="n">unless</span> <span class="n">refractory</span><span class="p">)</span>
+<span class="n">dge_soma</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="o">-</span><span class="n">ge_soma</span><span class="o">/</span><span class="n">tau_e</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">dgi_soma</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="o">-</span><span class="n">gi_soma</span><span class="o">/</span><span class="n">tau_i</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">x</span> <span class="p">:</span> <span class="n">meter</span>
+<span class="n">y</span> <span class="p">:</span> <span class="n">meter</span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="physiology_reference.neuron_reference.MC">
+<code class="descname">MC</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#physiology_reference.neuron_reference.MC" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method build up the equation for MC neurons. The final equation is then saved in output_neuron[&#8216;equation&#8217;].</p>
+<ul>
+<li><p class="first">The equation of the neuron is as follows:</p>
+<blockquote>
+<div><div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">dvm</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">gL</span><span class="o">*</span><span class="p">(</span><span class="n">EL</span><span class="o">-</span><span class="n">vm</span><span class="p">)</span> <span class="o">+</span> <span class="n">gL</span> <span class="o">*</span> <span class="n">DeltaT</span> <span class="o">*</span> <span class="n">exp</span><span class="p">((</span><span class="n">vm</span><span class="o">-</span><span class="n">VT</span><span class="p">)</span> <span class="o">/</span> <span class="n">DeltaT</span><span class="p">)</span> <span class="o">+</span> <span class="n">ge_soma</span> <span class="o">*</span> <span class="p">(</span><span class="n">Ee</span><span class="o">-</span><span class="n">vm</span><span class="p">)</span> <span class="o">+</span> <span class="n">gi_soma</span> <span class="o">*</span> <span class="p">(</span><span class="n">Ei</span><span class="o">-</span><span class="n">vm</span><span class="p">))</span> <span class="o">/</span> <span class="n">C</span> <span class="p">:</span> <span class="n">volt</span> <span class="p">(</span><span class="n">unless</span> <span class="n">refractory</span><span class="p">)</span>
+<span class="n">dge_soma</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="o">-</span><span class="n">ge_soma</span><span class="o">/</span><span class="n">tau_e</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">dgi_soma</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="o">-</span><span class="n">gi_soma</span><span class="o">/</span><span class="n">tau_i</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">x</span> <span class="p">:</span> <span class="n">meter</span>
+<span class="n">y</span> <span class="p">:</span> <span class="n">meter</span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="physiology_reference.neuron_reference.PC">
+<code class="descname">PC</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#physiology_reference.neuron_reference.PC" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method build up the equation for PC neurons based on the number of compartments. The final equation is then saved in output_neuron[&#8216;equation&#8217;].</p>
+<p>Main internal variables:</p>
+<ul>
+<li><p class="first">eq_template_soma: Contains template somatic equation, the variables in side the equation could be replaced later using &#8220;Equation&#8221; function in brian2. :</p>
+<blockquote>
+<div><div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">dvm</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">gL</span><span class="o">*</span><span class="p">(</span><span class="n">EL</span><span class="o">-</span><span class="n">vm</span><span class="p">)</span> <span class="o">+</span> <span class="n">gealpha</span> <span class="o">*</span> <span class="p">(</span><span class="n">Ee</span><span class="o">-</span><span class="n">vm</span><span class="p">)</span> <span class="o">+</span> <span class="n">gealphaX</span> <span class="o">*</span> <span class="p">(</span><span class="n">Ee</span><span class="o">-</span><span class="n">vm</span><span class="p">)</span> <span class="o">+</span> <span class="n">gialpha</span> <span class="o">*</span> <span class="p">(</span><span class="n">Ei</span><span class="o">-</span><span class="n">vm</span><span class="p">)</span> <span class="o">+</span> <span class="n">gL</span> <span class="o">*</span> <span class="n">DeltaT</span> <span class="o">*</span> <span class="n">exp</span><span class="p">((</span><span class="n">vm</span><span class="o">-</span><span class="n">VT</span><span class="p">)</span> <span class="o">/</span> <span class="n">DeltaT</span><span class="p">)</span> <span class="o">+</span><span class="n">I_dendr</span><span class="p">)</span> <span class="o">/</span> <span class="n">C</span> <span class="p">:</span> <span class="n">volt</span> <span class="p">(</span><span class="n">unless</span> <span class="n">refractory</span><span class="p">)</span>
+<span class="n">dge</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="o">-</span><span class="n">ge</span><span class="o">/</span><span class="n">tau_e</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">dgealpha</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">ge</span><span class="o">-</span><span class="n">gealpha</span><span class="p">)</span><span class="o">/</span><span class="n">tau_e</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">dgeX</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="o">-</span><span class="n">geX</span><span class="o">/</span><span class="n">tau_eX</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">dgealphaX</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">geX</span><span class="o">-</span><span class="n">gealphaX</span><span class="p">)</span><span class="o">/</span><span class="n">tau_eX</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">dgi</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="o">-</span><span class="n">gi</span><span class="o">/</span><span class="n">tau_i</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">dgialpha</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">gi</span><span class="o">-</span><span class="n">gialpha</span><span class="p">)</span><span class="o">/</span><span class="n">tau_i</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">x</span> <span class="p">:</span> <span class="n">meter</span>
+<span class="n">y</span> <span class="p">:</span> <span class="n">meter</span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><p class="first">eq_template_dend: Contains template dendritic equation:</p>
+<blockquote>
+<div><div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">dvm</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">gL</span><span class="o">*</span><span class="p">(</span><span class="n">EL</span><span class="o">-</span><span class="n">vm</span><span class="p">)</span> <span class="o">+</span> <span class="n">gealpha</span> <span class="o">*</span> <span class="p">(</span><span class="n">Ee</span><span class="o">-</span><span class="n">vm</span><span class="p">)</span> <span class="o">+</span> <span class="n">gealphaX</span> <span class="o">*</span> <span class="p">(</span><span class="n">Ee</span><span class="o">-</span><span class="n">vm</span><span class="p">)</span> <span class="o">+</span> <span class="n">gialpha</span> <span class="o">*</span> <span class="p">(</span><span class="n">Ei</span><span class="o">-</span><span class="n">vm</span><span class="p">)</span> <span class="o">+</span> <span class="n">gL</span> <span class="o">*</span> <span class="n">DeltaT</span> <span class="o">*</span> <span class="n">exp</span><span class="p">((</span><span class="n">vm</span><span class="o">-</span><span class="n">VT</span><span class="p">)</span> <span class="o">/</span> <span class="n">DeltaT</span><span class="p">)</span> <span class="o">+</span><span class="n">I_dendr</span><span class="p">)</span> <span class="o">/</span> <span class="n">C</span> <span class="p">:</span> <span class="n">volt</span> <span class="p">(</span><span class="n">unless</span> <span class="n">refractory</span><span class="p">)</span>
+<span class="n">dge</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="o">-</span><span class="n">ge</span><span class="o">/</span><span class="n">tau_e</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">dgealpha</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">ge</span><span class="o">-</span><span class="n">gealpha</span><span class="p">)</span><span class="o">/</span><span class="n">tau_e</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">dgeX</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="o">-</span><span class="n">geX</span><span class="o">/</span><span class="n">tau_eX</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">dgealphaX</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">geX</span><span class="o">-</span><span class="n">gealphaX</span><span class="p">)</span><span class="o">/</span><span class="n">tau_eX</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">dgi</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="o">-</span><span class="n">gi</span><span class="o">/</span><span class="n">tau_i</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">dgialpha</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">gi</span><span class="o">-</span><span class="n">gialpha</span><span class="p">)</span><span class="o">/</span><span class="n">tau_i</span> <span class="p">:</span> <span class="n">siemens</span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="physiology_reference.neuron_reference.SS">
+<code class="descname">SS</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#physiology_reference.neuron_reference.SS" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method build up the equation for SS neurons. The final equation is then saved in output_neuron[&#8216;equation&#8217;].</p>
+<ul>
+<li><p class="first">The equation of the neuron is as follows:</p>
+<blockquote>
+<div><div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">dvm</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="p">(</span><span class="n">gL</span><span class="o">*</span><span class="p">(</span><span class="n">EL</span><span class="o">-</span><span class="n">vm</span><span class="p">)</span> <span class="o">+</span> <span class="n">gL</span> <span class="o">*</span> <span class="n">DeltaT</span> <span class="o">*</span> <span class="n">exp</span><span class="p">((</span><span class="n">vm</span><span class="o">-</span><span class="n">VT</span><span class="p">)</span> <span class="o">/</span> <span class="n">DeltaT</span><span class="p">)</span> <span class="o">+</span> <span class="n">ge_soma</span> <span class="o">*</span> <span class="p">(</span><span class="n">Ee</span><span class="o">-</span><span class="n">vm</span><span class="p">)</span> <span class="o">+</span> <span class="n">gi_soma</span> <span class="o">*</span> <span class="p">(</span><span class="n">Ei</span><span class="o">-</span><span class="n">vm</span><span class="p">))</span> <span class="o">/</span> <span class="n">C</span> <span class="p">:</span> <span class="n">volt</span> <span class="p">(</span><span class="n">unless</span> <span class="n">refractory</span><span class="p">)</span>
+<span class="n">dge_soma</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="o">-</span><span class="n">ge_soma</span><span class="o">/</span><span class="n">tau_e</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">dgi_soma</span><span class="o">/</span><span class="n">dt</span> <span class="o">=</span> <span class="o">-</span><span class="n">gi_soma</span><span class="o">/</span><span class="n">tau_i</span> <span class="p">:</span> <span class="n">siemens</span>
+<span class="n">x</span> <span class="p">:</span> <span class="n">meter</span>
+<span class="n">y</span> <span class="p">:</span> <span class="n">meter</span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="physiology_reference.neuron_reference.VPM">
+<code class="descname">VPM</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#physiology_reference.neuron_reference.VPM" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method build up the equation for VPM neurons. No equation is needed.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="physiology_reference.synapse_reference">
+<em class="property">class </em><code class="descclassname">physiology_reference.</code><code class="descname">synapse_reference</code><span class="sig-paren">(</span><em>receptor</em>, <em>pre_group_idx</em>, <em>post_group_idx</em>, <em>syn_type</em>, <em>pre_type</em>, <em>post_type</em>, <em>physio_config_df</em>, <em>post_comp_name='_soma'</em><span class="sig-paren">)</span><a class="headerlink" href="#physiology_reference.synapse_reference" title="Permalink to this definition">¶</a></dt>
+<dd><p>In this class, a dictionary object is created which contains all parameters and variables that are needed to         create a Synapses() object between two neuron group. This dictionary will eventually be used in process of         building the cortical module. New types of synapses should be implemented in this class.</p>
+<dl class="method">
+<dt id="physiology_reference.synapse_reference.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>receptor</em>, <em>pre_group_idx</em>, <em>post_group_idx</em>, <em>syn_type</em>, <em>pre_type</em>, <em>post_type</em>, <em>physio_config_df</em>, <em>post_comp_name='_soma'</em><span class="sig-paren">)</span><a class="headerlink" href="#physiology_reference.synapse_reference.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>initializes the synapse_reference based on its arguments.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>receptor</strong> &#8211; defines the type of the receptor in the synaptic connection. Currently ge and gi are implemented.</li>
+<li><strong>pre_group_idx</strong> &#8211; The index of the pre-synaptic group.</li>
+<li><strong>post_group_idx</strong> &#8211; The index of the post-synaptic group.</li>
+<li><strong>syn_type</strong> &#8211; Type of the synaptic connection, currently STDP and Fixed are implemented.</li>
+<li><strong>pre_type</strong> &#8211; Type of the pre-synaptic NeuronGroup.</li>
+<li><strong>post_type</strong> &#8211; Type of the post-synaptic NeuronGroup.</li>
+<li><strong>post_comp_name</strong> &#8211; Name of the target compartment in the cells of the post-synaptic NeuronGroup. The default value is &#8220;_soma&#8221; as usually soma is being targeted. In case other compartments are targeted in a PC cell, e.g. basal or apical dendrites, _basal or _apical will be used.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Main internal variables:</p>
+<ul class="simple">
+<li>output_synapse: the main dictionary containing all the data about current customized_synapse_group including: synaptic equations (model, pre, post), type of synapse, type of receptor, index and type of pre- and post-synaptic group, namespace for the Synapses() object, sparseness, ilam (?).</li>
+<li>_name_space: An instance of brian2_obj_namespaces() object which contains all the constant parameters for this synaptic equation.</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="physiology_reference.synapse_reference.Fixed">
+<code class="descname">Fixed</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#physiology_reference.synapse_reference.Fixed" title="Permalink to this definition">¶</a></dt>
+<dd><p>The method for implementing the Fixed synaptic connection.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="physiology_reference.synapse_reference.STDP">
+<code class="descname">STDP</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#physiology_reference.synapse_reference.STDP" title="Permalink to this definition">¶</a></dt>
+<dd><p>The method for implementing the STDP synaptic connection.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="physiology_reference.synapse_reference.STDP_with_scaling">
+<code class="descname">STDP_with_scaling</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#physiology_reference.synapse_reference.STDP_with_scaling" title="Permalink to this definition">¶</a></dt>
+<dd><p>The method for implementing the STDP synaptic connection.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-array_run">
+<span id="array-run-module"></span><h2>Array_run module<a class="headerlink" href="#module-array_run" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="array_run.array_run">
+<em class="property">class </em><code class="descclassname">array_run.</code><code class="descname">array_run</code><span class="sig-paren">(</span><em>anatomy_system_df</em>, <em>physiology_df</em>, <em>metadata_file_suffx</em><span class="sig-paren">)</span><a class="headerlink" href="#array_run.array_run" title="Permalink to this definition">¶</a></dt>
+<dd><blockquote>
+<div><dl class="method">
+<dt id="array_run.array_run.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>anatomy_system_df</em>, <em>physiology_df</em>, <em>metadata_file_suffx</em><span class="sig-paren">)</span><a class="headerlink" href="#array_run.array_run.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize the array_run for running several instances of CxSystem in parallel.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>anatomy_system_df</strong> &#8211; The dataframe containing the anatomical and system configurations that has an instance for array_run in it.</li>
+<li><strong>physiology_df</strong> &#8211; The dataframe containing the physiology configurations that has an instance for array_run in it.</li>
+<li><strong>metadata_file_suffx</strong> &#8211; The suffix for the metadata file containing the filename and changing parameters in each of the simulations.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div></blockquote>
+<dl class="method">
+<dt id="array_run.array_run.arr_run">
+<code class="descname">arr_run</code><span class="sig-paren">(</span><em>idx</em>, <em>working</em>, <em>paths</em><span class="sig-paren">)</span><a class="headerlink" href="#array_run.array_run.arr_run" title="Permalink to this definition">¶</a></dt>
+<dd><p>The function that each spawned process runs and parallel instances of CxSystems are created here.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>idx</strong> &#8211; index of the requested parallel CxSystem.</li>
+<li><strong>working</strong> &#8211; the index of the process that is being currently performed. This is to keep track of running processes to prevent spawning more than required processes.</li>
+<li><strong>paths</strong> &#8211; The path for saving the output of the current instance of CxSystem.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="array_run.array_run.df_builder_for_array_run">
+<code class="descname">df_builder_for_array_run</code><span class="sig-paren">(</span><em>original_df</em>, <em>index_of_array_variable</em>, <em>df_type</em>, <em>message=''</em>, <em>recursion_counter=1</em><span class="sig-paren">)</span><a class="headerlink" href="#array_run.array_run.df_builder_for_array_run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates new configuration dataframes for each of the scenarios from the original dataframe.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>original_df</strong> &#8211; original dataframe.</li>
+<li><strong>index_of_array_variable</strong> &#8211; index of the cell with array variable.</li>
+<li><strong>df_type</strong> &#8211; type of the dataframe (anatomy_and_system/physiology)</li>
+<li><strong>message</strong> &#8211; generated message from previous iteration (when recursion is needed)</li>
+<li><strong>recursion_counter</strong> &#8211; counting the iteration (when recursion is needed)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="array_run.array_run.message_finder">
+<code class="descname">message_finder</code><span class="sig-paren">(</span><em>df</em>, <em>idx</em>, <em>df_type</em><span class="sig-paren">)</span><a class="headerlink" href="#array_run.array_run.message_finder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates messages for each of the runs in array_run.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>df</strong> &#8211; input dataframe.</li>
+<li><strong>idx</strong> &#8211; index of the cell based on which the message is going to be generated.</li>
+<li><strong>df_type</strong> &#8211; type of dataframe.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="array_run.array_run.spawner">
+<code class="descname">spawner</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#array_run.array_run.spawner" title="Permalink to this definition">¶</a></dt>
+<dd><p>Spawns processes each dedicated to an instance of CxSystem.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-stimuli">
+<span id="stimuli-module"></span><h2>Stimuli module<a class="headerlink" href="#module-stimuli" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="stimuli.stimuli">
+<em class="property">class </em><code class="descclassname">stimuli.</code><code class="descname">stimuli</code><span class="sig-paren">(</span><em>duration</em>, <em>input_mat_path</em>, <em>output_folder</em>, <em>output_file_suffix</em>, <em>output_file_extension</em><span class="sig-paren">)</span><a class="headerlink" href="#stimuli.stimuli" title="Permalink to this definition">¶</a></dt>
+<dd><p>[Extracted from VCXmodel] This is the stimulation object for applying the input to a particular NeuronGroup(). Currently only video input is supported.</p>
+<dl class="method">
+<dt id="stimuli.stimuli.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>duration</em>, <em>input_mat_path</em>, <em>output_folder</em>, <em>output_file_suffix</em>, <em>output_file_extension</em><span class="sig-paren">)</span><a class="headerlink" href="#stimuli.stimuli.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initializes the input module for and instance of CxSystem.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>duration</strong> &#8211; </li>
+<li><strong>input_mat_path</strong> &#8211; .mat file location</li>
+<li><strong>output_folder</strong> &#8211; location of the saved output</li>
+<li><strong>output_file_suffix</strong> &#8211; suffix for the output file</li>
+<li><strong>output_file_extension</strong> &#8211; extension for the output file, i.e. gz, bz2, pickle</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="stimuli.stimuli.calculate_input_seqs">
+<code class="descname">calculate_input_seqs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#stimuli.stimuli.calculate_input_seqs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculating input sequence based on the video input.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="stimuli.stimuli.generate_inputs">
+<code class="descname">generate_inputs</code><span class="sig-paren">(</span><em>freq</em><span class="sig-paren">)</span><a class="headerlink" href="#stimuli.stimuli.generate_inputs" title="Permalink to this definition">¶</a></dt>
+<dd><p>The method for generating input based on the .mat file, using the internal _initialize_inputs() and _calculate_input_seqs() methods.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>freq</strong> &#8211; frequency.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="stimuli.stimuli.get_input_positions">
+<code class="descname">get_input_positions</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#stimuli.stimuli.get_input_positions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extract the positions from the .mat file.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="stimuli.stimuli.load_input_seq">
+<code class="descname">load_input_seq</code><span class="sig-paren">(</span><em>input_spike_file_location</em><span class="sig-paren">)</span><a class="headerlink" href="#stimuli.stimuli.load_input_seq" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads spikes from file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>input_spike_file_location</strong> &#8211; Location of the file to load spikes.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-save_data">
+<span id="save-data-module"></span><h2>Save data module<a class="headerlink" href="#module-save_data" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="save_data.save_data">
+<em class="property">class </em><code class="descclassname">save_data.</code><code class="descname">save_data</code><span class="sig-paren">(</span><em>save_path</em>, <em>datetime_str</em><span class="sig-paren">)</span><a class="headerlink" href="#save_data.save_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>As the name implies, this module is used for gathering the data and saving the result.</p>
+<dl class="method">
+<dt id="save_data.save_data.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>save_path</em>, <em>datetime_str</em><span class="sig-paren">)</span><a class="headerlink" href="#save_data.save_data.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initializes the save_data object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>save_path</strong> &#8211; The path for saving the data.</li>
+<li><strong>datetime_str</strong> &#8211; the string containing date and time that is supposed to be unique for each simulation and is used as a suffix for file names.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Main internal variables:</p>
+<ul class="simple">
+<li>data: the main variable to be saved. It contains all the data about the positions of the NeuronGroup()s as well as the monitor results.</li>
+<li>syntax_bank: Since the monitors are explicitly defined in the Globals(), extracting the data from them requires addressing their name explicitely. To automatize this process, the syntaxes for extracting the data from the target monitors are generated and saved in this variable, so that they can be run at the end of the simulation.</li>
+</ul>
+</dd></dl>
+
+<dl class="method">
+<dt id="save_data.save_data.creat_key">
+<code class="descname">creat_key</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#save_data.save_data.creat_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>In case the user wants to save a peculiar variable, this method can be used to check and create a new key in data dictionary (if does not exist).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>key</strong> &#8211; name of the key to be created in the final data variable.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="save_data.save_data.gather_result">
+<code class="descname">gather_result</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#save_data.save_data.gather_result" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gather the result by running the syntaxes previously saved in the syntax bank before running the simulation.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Cortical System Package</a><ul>
+<li><a class="reference internal" href="#module-CxSystem">Cortical System module</a></li>
+<li><a class="reference internal" href="#module-parameter_parser">Parameter Parser module</a></li>
+<li><a class="reference internal" href="#module-physiology_reference">Physiology Reference module</a></li>
+<li><a class="reference internal" href="#module-array_run">Array_run module</a></li>
+<li><a class="reference internal" href="#module-stimuli">Stimuli module</a></li>
+<li><a class="reference internal" href="#module-save_data">Save data module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="configuration.html"
+                        title="previous chapter">Configuration File Tutorial</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/code.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="configuration.html" title="Configuration File Tutorial"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">CxSystem 1.0 documentation</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2016, Vafa Andalibi.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+    </div>
+  </body>
+</html>

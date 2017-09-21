@@ -1,3 +1,6 @@
+from __future__ import division
+
+__author__ = 'Andalibi, V., Hokkanen H., Vanni, S.'
 
 '''
 The preliminary version of this software has been developed at Aalto University 2012-2015, 
@@ -6,14 +9,12 @@ under the terms of the GNU General Public License.
 Copyright 2017 Vafa Andalibi, Henri Hokkanen and Simo Vanni.
 '''
 
-from __future__ import division
 from brian2  import *
 import numpy as np
 from matplotlib import pyplot
 import sys
 import pandas
 
-__author__ = 'V_AD'
 
 
 

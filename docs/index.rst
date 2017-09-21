@@ -3,18 +3,20 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-GPU-Accelerated Cortical System Framework Documentation 
+CxSystem, a flexible cortical simulation framework
 ========================================================
 
-This is the documentation for GPU-accelerated cortical system framework implemented using Brian2, Brian2GeNN and GeNN libraries. 
+This is the documentation for CxSystem, a flexible cortical simulation framework, implemented in python using Brian2 module.\
+CxSystem supports Brian2 simulator's C++ code generation as well as CUDA code generation using the GeNN simulator via the Brian2genn frontend.
 
 Contents:
 
 .. toctree::
    :maxdepth: 2
 
-   project
+   introduction
    system
+   installation
    configuration
    code
 

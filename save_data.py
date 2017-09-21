@@ -1,3 +1,4 @@
+__author__ = 'Andalibi, V., Hokkanen H., Vanni, S.'
 
 '''
 The preliminary version of this software has been developed at Aalto University 2012-2015, 
@@ -6,7 +7,7 @@ under the terms of the GNU General Public License.
 Copyright 2017 Vafa Andalibi, Henri Hokkanen and Simo Vanni.
 '''
 
-__author__ = 'V_AD'
+
 from brian2  import *
 from numpy import *
 import os
@@ -21,9 +22,10 @@ class save_data(object):
     '''
     def __init__(self,save_path,datetime_str):
         '''
-        The initialization method for save_data object.
+        Initializes the save_data object.
 
         :param save_path: The path for saving the data.
+        :param datetime_str: the string containing date and time that is supposed to be unique for each simulation and is used as a suffix for file names.
 
         Main internal variables:
 
@@ -53,15 +55,15 @@ class save_data(object):
         if not key in self.data:
             self.data[key] = {}
 
-    def gather_result(self,CxSystem):
+    def gather_result(self):
+        '''
+        Gather the result by running the syntaxes previously saved in the syntax bank before running the simulation.
+        '''
         for syntax in self.syntax_bank:
             exec syntax
         self.save_to_file()
 
     def save_to_file(self):
-        '''
-        The metohd for saving the data varibale in .mat file.
-        '''
         print "Saving data to file."
         if not os.path.exists(self.save_folder):
             os.makedirs(self.save_folder)

@@ -1,3 +1,4 @@
+__author__ = 'Andalibi, V., Hokkanen H., Vanni, S.'
 
 '''
 The preliminary version of this software has been developed at Aalto University 2012-2015, 
@@ -21,10 +22,17 @@ import itertools
 
 class array_run(object):
 
-    def __init__(self,anatomy_df,physiology_df,metadata_file_suffx):
+    def __init__(self, anatomy_system_df, physiology_df, metadata_file_suffx):
+        '''
+        Initialize the array_run for running several instances of CxSystem in parallel.
+
+        :param anatomy_system_df: The dataframe containing the anatomical and system configurations that has an instance for array_run in it.
+        :param physiology_df: The dataframe containing the physiology configurations that has an instance for array_run in it.
+        :param metadata_file_suffx: The suffix for the metadata file containing the filename and changing parameters in each of the simulations.
+        '''
         self.metadata_filename = 'metadata_' + metadata_file_suffx + '.gz'
         self.array_run_metadata = pd.DataFrame
-        self.anatomy_df = anatomy_df
+        self.anatomy_df = anatomy_system_df
         self.physiology_df =physiology_df
         try :
             self.multidimension_array_run = int(self.parameter_finder(self.anatomy_df,'multidimension_array_run'))
@@ -47,7 +55,7 @@ class array_run(object):
             self.device = self.parameter_finder(self.anatomy_df, 'device')
         except TypeError:
             self.device = 'Python'
-        anatomy_array_search_result = anatomy_df[anatomy_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)]
+        anatomy_array_search_result = anatomy_system_df[anatomy_system_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)]
         physio_array_search_result = physiology_df[physiology_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)]
         arrays_idx_anatomy = where(anatomy_array_search_result.isnull().values != True)
         arrays_idx_anatomy = [(arrays_idx_anatomy[0][i],arrays_idx_anatomy[1][i]) for i in range(len(arrays_idx_anatomy[0]))]
@@ -59,10 +67,10 @@ class array_run(object):
 
         self.sum_of_array_runs = len(arrays_idx_anatomy) + len(arrays_idx_physio)
         if self.sum_of_array_runs > 1 and not self.multidimension_array_run:
-            anatomy_default = self.df_default_finder(anatomy_df)
+            anatomy_default = self.df_default_finder(anatomy_system_df)
             physio_default = self.df_default_finder(physiology_df)
         else:
-            anatomy_default = anatomy_df
+            anatomy_default = anatomy_system_df
             physio_default = physiology_df
         ## creating the array of dataframes for array run
         self.anat_titles = []
@@ -77,7 +85,7 @@ class array_run(object):
             meta_columns.extend(['Full path'])
             self.final_metadata_df = pd.DataFrame(index=[0],columns=meta_columns)
             if arrays_idx_anatomy:
-                anat_variations, anat_messages = self.df_builder_for_array_run( anatomy_df, arrays_idx_anatomy,df_type='anatomy')
+                anat_variations, anat_messages = self.df_builder_for_array_run(anatomy_system_df, arrays_idx_anatomy, df_type='anatomy')
             if arrays_idx_physio:
                 physio_variations, physio_messages = self.df_builder_for_array_run( physiology_df, arrays_idx_physio,df_type='physiology')
             if arrays_idx_anatomy and arrays_idx_physio:
@@ -103,7 +111,7 @@ class array_run(object):
             meta_columns.extend(['Dimension-1 Parameter','Dimension-1 Value','Full path'])
             self.final_metadata_df = pd.DataFrame(index=[0], columns=meta_columns)
             if arrays_idx_anatomy:
-                df_anat_array, anat_messages = self.df_builder_for_array_run(anatomy_df, arrays_idx_anatomy,df_type='anatomy')
+                df_anat_array, anat_messages = self.df_builder_for_array_run(anatomy_system_df, arrays_idx_anatomy, df_type='anatomy')
                 self.df_anat_final_array.extend(df_anat_array)
                 self.df_phys_final_array.extend([physio_default for _ in range(len(self.df_anat_final_array))])
                 self.final_messages.extend(anat_messages)
@@ -149,6 +157,13 @@ class array_run(object):
         self.spawner()
 
     def arr_run(self,idx, working,paths):
+        '''
+        The function that each spawned process runs and parallel instances of CxSystems are created here.
+
+        :param idx: index of the requested parallel CxSystem.
+        :param working: the index of the process that is being currently performed. This is to keep track of running processes to prevent spawning more than required processes.
+        :param paths: The path for saving the output of the current instance of CxSystem.
+        '''
         orig_idx = idx
         working.value += 1
         np.random.seed(idx)
@@ -163,12 +178,16 @@ class array_run(object):
                 shutil.rmtree(os.path.join(os.environ['HOME'],'.cache/scipy'))
             print "Info: scipy cache deleted to prevent benchmarking issues."
         print "################### Trial %d/%d started running for simulation number %d: %s ##########################" % (tr+1,self.trials_per_config,idx,self.final_messages[idx][1:])
-        cm = CX.CxSystem(self.df_anat_final_array[idx], self.df_phys_final_array[idx], output_file_suffix = self.final_messages[idx],instanciated_from_array_run=1)
+        cm = CX.CxSystem(self.df_anat_final_array[idx], self.df_phys_final_array[idx], output_file_suffix = self.final_messages[idx],
+                         instantiated_from_array_run=1)
         cm.run()
         paths[orig_idx] = cm.save_output_data.data['Full path']
         working.value -= 1
 
     def spawner(self):
+        '''
+        Spawns processes each dedicated to an instance of CxSystem.
+        '''
         print "following configurations are going to be simulated with %d processes using %s device (printed only in letters and numbers): " \
               "\n %s"%(self.number_of_process,self.device,str(self.final_messages).replace('_',''))
         manager = multiprocessing.Manager()
@@ -208,6 +227,15 @@ class array_run(object):
             raise NameError('Variable %s not found in the configuration file.'%keyword)
 
     def df_builder_for_array_run(self, original_df, index_of_array_variable,df_type,message='',recursion_counter = 1 ):
+        '''
+        Generates new configuration dataframes for each of the scenarios from the original dataframe.
+
+        :param original_df: original dataframe.
+        :param index_of_array_variable: index of the cell with array variable.
+        :param df_type: type of the dataframe (anatomy_and_system/physiology)
+        :param message: generated message from previous iteration (when recursion is needed)
+        :param recursion_counter: counting the iteration (when recursion is needed)
+        '''
         array_of_dfs = []
         run_messages = []
         array_variable = original_df.ix[index_of_array_variable[0][0]][index_of_array_variable[0][1]]
@@ -263,6 +291,13 @@ class array_run(object):
         return df
 
     def message_finder(self,df, idx,df_type):
+        '''
+        Generates messages for each of the runs in array_run.
+
+        :param df: input dataframe.
+        :param idx: index of the cell based on which the message is going to be generated.
+        :param df_type: type of dataframe.
+        '''
         idx = idx[0]
         whitelist = set('abcdefghijklmnopqrstuvwxyABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890._-')
         try:

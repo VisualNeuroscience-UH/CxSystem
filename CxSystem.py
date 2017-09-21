@@ -1,12 +1,13 @@
+__author__ = 'Andalibi, V., Hokkanen H., Vanni, S.'
 
 '''
-The preliminary version of this software has been developed at Aalto University 2012-2015, 
-and the full version at the University of Helsinki 2013-2017. The software is distributed 
-under the terms of the GNU General Public License. 
+The preliminary version of this software has been developed at Aalto University 2012-2015,
+and the full version at the University of Helsinki 2013-2017. The software is distributed
+under the terms of the GNU General Public License.
 Copyright 2017 Vafa Andalibi, Henri Hokkanen and Simo Vanni.
 '''
 
-__author__ = 'V_AD'
+
 from brian2 import *
 import brian2genn
 import os
@@ -34,7 +35,8 @@ import multiprocessing
 
 class CxSystem(object):
     '''
-    The main object of cortical system module for building and running a customized model of cortical module in Brian2Genn.
+    The main object of cortical system module for building and running a customized model of cortical module based on \
+    the configuration files.
     '''
 
     _NeuronGroup_prefix = 'NG'
@@ -55,16 +57,16 @@ class CxSystem(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self, anatomy_and_system_config,physiology_config, output_file_suffix = '',instanciated_from_array_run = 0):
+    def __init__(self, anatomy_and_system_config, physiology_config, output_file_suffix = "", instantiated_from_array_run = 0):
         '''
-        Initialize the cortical system by parsing the configuration file.
+        Initialize the cortical system by parsing both of the configuration files.
 
-        :param anatomy_and_system_config: The path to the configuration file.
-        :param output_path: The path to save the final data.
-        :param use_genn: switch the GeNN mode on/off (1/0), by default GeNN is off
+        :param anatomy_and_system_config: could be either the path to the anatomy and system configuration file, or the dataframe containing the configuration data.
+        :param output_path: could be either the path to the physiology configuration file, or the dataframe containing the configuration data.
+        :param output_file_suffix: switch the GeNN mode on/off (1/0), by default GeNN is off
+        :param instantiated_from_array_run: this flag, 0 by default, determines whether this instance of CxSystem is instantiated from another instance of CxSystem which is running an array run.
 
         Main internal variables:
-
 
         * customized_neurons_list: This list contains the neuron_reference instances. So for each neuron group target line, there would be an element in this list which contains all the information for that particular neuron group.
         * customized_synapses_list: This list contains the synapse_reference instances. Hence, for each synapse custom line, there would be an element in this list, containing all the necessary information.
@@ -114,9 +116,6 @@ class CxSystem(object):
         print "Info: current run filename suffix is: %s"%self.StartTime_str[1:]
         self.scale = 1
         self.do_benchmark = 0
-        # defaultclock.dt = 0.01 * ms
-        # if defaultclock.dt/second != 1e-4:
-        #     print "\nWarning: default clock is %s\n" %str(defaultclock.dt)
         self.numerical_integration_method = 'euler'
         print "Info : the system is running with %s integration method"%self.numerical_integration_method
         self.current_parameters_list = []
@@ -185,7 +184,7 @@ class CxSystem(object):
             trials_per_config = int(self.parameter_finder(self.anat_and_sys_conf_df,'trials_per_config'))
         except NameError:
             trials_per_config = 0
-        if any(check_array_run_anatomy) or any(check_array_run_physiology) or (trials_per_config > 1 and not instanciated_from_array_run):
+        if any(check_array_run_anatomy) or any(check_array_run_physiology) or (trials_per_config > 1 and not instantiated_from_array_run):
             array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df,self.StartTime_str)
             self.array_run = 1
             return
@@ -193,18 +192,17 @@ class CxSystem(object):
             self.conn_prob_gain = int(self.physio_config_df.ix[where(self.physio_config_df.values=='conn_prob_gain')[0]]['Value'].item())
         except ValueError:
             self.conn_prob_gain =1
-        self.configuration_executer()
+        self.configuration_executor()
         if type(self.awaited_conf_lines) != list :
            if self.thr.is_alive()==True:
                print "Waiting for the video input"
                self.thr.join()
            self.anat_and_sys_conf_df = self.awaited_conf_lines
-           self.configuration_executer()
-
+           self.configuration_executor()
         print "Cortical Module initialization Done."
 
 
-    def configuration_executer(self):
+    def configuration_executor(self):
         definition_lines_idx = self.anat_and_sys_conf_df.ix[:,0][self.anat_and_sys_conf_df.ix[:,0]=='row_type'].index
         order_of_lines = ['params','IN','G','S']
         for value_line_title in order_of_lines:

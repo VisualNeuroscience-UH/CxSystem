@@ -61,7 +61,7 @@ Accordingly, most of the *exec* commands inside the main object CxSystem() are c
 
 Fig.1 illustrates the schematic of the cortical system internal component: 
 
-.. figure:: ../main_uml.png
+.. figure:: ./main_uml.png
    :align: center 
 
    Fig.1 simplified UML diagram of the cortical system
