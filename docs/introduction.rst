@@ -5,10 +5,10 @@
 Introduction
 ==============================
 
-CxSystem is a cerebral cortex simulation framework, which operates on personal computers, and tested the simulation \
-software with a simplification of a recently published comprehensive cortical microcircuit model [1]_.
+CxSystem is a cerebral cortex simulation framework, which operates on personal computers. It has been tested \
+with a simplification of a recently published comprehensive cortical microcircuit model [1]_.
 The CxSystem aims at easy testing and buildup of diverse models at single cell resolution. |br|
-The CxSystem reuses components of earlier work [2]_. The code was completely \
+It reuses components of earlier work [2]_, but the code has been completely \
 rewritten to be dynamically compiled from configuration files, and to run on C++ and GeNN [3]_ \
 devices. Implemented on the top of the Python-based Brian2 simulator [4]_, CxSystem supports the \
 main goal of Brian, i.e. minimizing development time, by providing the user with a simplified interface. |br|

@@ -7,21 +7,24 @@ Configuration File Tutorial
 CxSystems are configured with two .csv files, namely Model & Network and Physiological configuration files.
 The Model & Network configuration file has two main types of lines:
 
-* **Titles-line**: These lines, starting with *row_type* keyword, defines the column titles for all the lines between the the next line and the next *Titles-line*:
+* **Titles-line**: These lines, starting with *row_type* keyword, defines the column titles for all the lines between the the next line and the next \
+*Titles-line*:
 
 ::
 
 	row_type,sys_mode,total_synapses
 
-This Titles-line indicates that all the lines between the next line and the next Titles-line have four types of columns:  row_type,sys_mode,total_synapses,do_optimize. In the next sections, all of these parameters will be described thoroughly. 
+This Titles-line indicates that all the lines between the next line and the next Titles-line have four types of columns:  row_type,sys_mode,\
+total_synapses. In the next sections, all of these parameters will be described thoroughly. 
 
-* **Values-line**: These lines define the column values corresponding to column titles in the last Titles-line:
+* **Values-line**: These lines define the column values corresponding to column titles in the most recent Titles-line:
 
 ::
 
 	params,local,7000
 
-These four values are in correspondence with the column titles of the previous Titles-line example. In other words, the last two examples defines the following values:
+These three values are in correspondence with the column titles of the previous Titles-line example. In other words, the last two examples defines \
+the following values:
 
 ::
 
@@ -31,12 +34,13 @@ These four values are in correspondence with the column titles of the previous T
 
 Currently there are three types of **row_type** implemented: 
 
-* params: defines the run-time parameters of the system run (partially equivalent to the VCxrun)
+* params: defines the run-time parameters of the system run 
 * IN: defines the input type in the system
 * G: defines the NeuronGroup()s in the system
 * S: defines the Synapses() connecting the NeuronGroup()s in the system
 
-In the next sections, each of these row_types has its own types of columns and are thoroughly explained with examples. Note that **mandatory** arguments are wrapped with **<>** whereas the **optional** ones are in **[]**. The corresponding **data type** is also presented using **{}**.
+In the next sections, each of these row_types has its own types of columns and are thoroughly explained with examples. Note that **mandatory** \
+arguments are wrapped with **<>** whereas the **optional** ones are in **[]**. The corresponding **data type** is also presented using **{}**.
 
 params
 -------------------
@@ -80,7 +84,7 @@ Example of the params Titles & Values-lines:
 
 ::
 
-	row_type,sys_mode,sys_mode,scale,grid_radius
+	row_type,sys_mode,scale,grid_radius
 	params,local,1,210*um
 
 Array Runs
@@ -93,9 +97,9 @@ with scale=1, scale=2 and scale=3, the parameter scale should be set to:
 	...,scale,...
 	...,{1,2,3},...
 
-This parallel run will use the number of processes that is set using the number_of_process parameter, e.g. if number_of_process=3, \
-then 3 processes will be used to run the 3 simulations. However, if number_of_process=2, 2 processes are first used to run the \
-simulation for scale=1, and scale=2. The 3rd simulation with scale=3 will start when any of the first two simulations are completed.
+This parallel run will use the number of processes (threads) that is set using the number_of_process parameter, e.g. if number_of_process=3, \
+then each of the 3 simulations runs in their own threads. However, if number_of_process=2, two processes run first the \
+simulation for scale=1, and scale=2. The third simulation with scale=3 will start when the first of the two simulations are completed.
 
 The array_run could also be set in range with defined step:
 
@@ -104,7 +108,7 @@ The array_run could also be set in range with defined step:
 	...,scale,...
 	...,{1|5|1},...
 
-This parallel run will use 4 simulations with scale=1, scale=2, scale=3 and scale=4.
+This parallel run will use four simulations with scale=1, scale=2, scale=3 and scale=4. Note the numpy style vector excluding the last index.
 
 When two or more parameters are set to use array runs, CxSystem can run the parallel runs either as multi-dimensional runs \
 or independent runs. For example: suppose a simulation is to be performed for scale {1,2,3} with do_init_vms set to {0,1}. \
@@ -153,19 +157,26 @@ The ellipsis represents the predecessor keywords in the line.
 	...,[St]<state variable1>+<state variable2> 
 
 
-Similar to [Sp], the ellipsis represents the predecessor keywords in the line. State variables are separated with *+*. An example of using [Sp] alongside with a [St] with three state variables of *ge_soma*,*gi_soma*, and *vm*:
+Similar to [Sp], the ellipsis represents the predecessor keywords in the line. State variables are separated with *+*. An example of using [Sp] \
+alongside with a [St] with three state variables of *ge_soma*, *gi_soma*, and *vm*:
 
 ::
 
 	...,[Sp] [St]ge_soma+gi_soma+vm
 
-By default all of the possible indices are being monitored (record = True). However, one might intend to monitor specific indices of NeuronGroup()/Synapses(). This can be achieved by using the [rec] tag followed by the indices of interest. In the following example two state monitors are defined for *apre* and *wght* of the Synapses() object. In the former state monitor the first 20 indices are being recorded whilst in the latter (*wght*), even indices between 0 and 20 are being recorded:
+By default all of the possible indices are being monitored (record = True). However, one might intend to monitor specific indices of \
+NeuronGroup()/Synapses(). This can be achieved by using the [rec] tag followed by the indices of interest. In the following example two state \
+monitors are defined for *apre* and *wght* of the Synapses() object. In the former state monitor the first 20 indices are being recorded while \
+in the latter (*wght*), only even indices between 0 and 20 are being recorded:
 
 ::
 
 	...,[St]apre[rec](0-20)+wght[rec](0-20-2)
 
-Occasionally, one might want to assign a specific type of monitor to several consecutive target lines. In this case, the generic monitor(s) can be defined in the first target line and a **-->** symbol should be written at the end of the line. **-->** indicates that all the next lines should be assigned with the same monitor. For finishing this assignment, a **<--** symbol should be put at the last target line of interest. Note that it is possible to overwrite the defined monitors of some lines between the **-->** and **<--** symbols simply by adding the monitor of the interest. 
+Occasionally, one might want to assign a specific type of monitor to several consecutive target lines. In this case, the generic monitor(s) can be \
+defined in the first target line and a **-->** symbol should be written at the end of the line. **-->** indicates that all the next lines should be \
+assigned with the same monitor. For finishing this assignment, a **<--** symbol should be put at the last target line of interest. Note that it is \
+possible to overwrite the defined monitors of some lines between the **-->** and **<--** symbols simply by adding the monitor of the interest. 
 
 ::
 
@@ -175,7 +186,9 @@ Occasionally, one might want to assign a specific type of monitor to several con
 	...,[Sp] 
 	..., <--
 
-In this example, an StateMonitor() over *ge_soma* is assigned on lines 1,3,4,5 by using the **-->** and **<--** symbol. In the second line, the usage of default StateMonitor() is over-written by using the -- keyword, indicating that the second line is not monitored. In the third line, however, this StateMonitor() is overwritten by a SpikeMonitor().
+In this example, an StateMonitor() over *ge_soma* is assigned on lines 1, 3 and 5 by using the **-->** and **<--** symbol. In the second line, \
+the usage of default StateMonitor() is over-written by using the -- keyword, indicating that the second line is not monitored. In the fourth line, \
+however, this StateMonitor() is overwritten by a SpikeMonitor().
 
 
 
