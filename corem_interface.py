@@ -3,6 +3,7 @@ The program is distributed under the terms of the GNU General Public License
 Copyright 2017 Vafa Andalibi, Simo Vanni, Henri Hokkanen.
 '''
 
+from __future__ import division
 import pandas as pd
 import numpy as np
 import sys,os,time
@@ -15,20 +16,21 @@ import bz2
 from brian2 import *  # Load brian2 last for unit-handling to work properly in Numpy
 
 
+# Global constants
+COREM_ROOT_DIR = '/home/shohokka/PycharmProjects/COREM/COREM/'
+COREM_RESULTS_DIR = 'results/'  # directory relative to ROOT_DIR
+COREM_RETINA_SCRIPTS_DIR = 'Retina_scripts/'  # directory relative to ROOT_DIR
+SUFFIX_BUILT_FROM_TEMPLATE = '_runme'
+CXSYSTEM_INPUT_DIR = '/home/shohokka/PycharmProjects/CXSystem_Git/video_input_files/'
+
+
 class Corem_retina(object):
     '''
     Class for running a COREM retina model and accessing results after simulation
     '''
 
-    # Global constants
-    COREM_ROOT_DIR = '/home/shohokka/PycharmProjects/COREM/COREM/'
-    COREM_RESULTS_DIR = 'results/'  # directory relative to ROOT_DIR
-    COREM_RETINA_SCRIPTS_DIR = 'Retina_scripts/'  # directory relative to ROOT_DIR
-    SUFFIX_BUILT_FROM_TEMPLATE = '_runme'
 
-    CXSYSTEM_INPUT_DIR = '/home/shohokka/PycharmProjects/CXSystem_Git/video_input_files/'
-
-    def __init__(self, retina_script_filename=None, result_ids=[], results_unit=1, script_is_template=False, custom_results_dir=None, retina_timestep=1*ms):
+    def __init__(self, retina_script_filename=None, pixels_per_degree=100, result_ids=[], results_unit=1, script_is_template=False, custom_results_dir=None, retina_timestep=1*ms):
         '''
 
         :param retina_script_filename: str, file in COREM_RETINA_SCRIPTS_DIR to run
@@ -41,17 +43,20 @@ class Corem_retina(object):
         else:
             self.retina_script_filename = ''
             self.retina_script_template_filename = retina_script_filename
-            self.template_file_location = self.COREM_ROOT_DIR + self.COREM_RETINA_SCRIPTS_DIR + self.retina_script_template_filename
+            self.template_file_location = COREM_ROOT_DIR + COREM_RETINA_SCRIPTS_DIR + self.retina_script_template_filename
             self.template_param_keys = self._which_parameters()
-            print 'Loaded a template retina. Please set_parameters() before you simulate_retina().'
+            print 'Loaded a template retina. Please prepare_template() before you simulate_retina().'
             print 'The parameters you need to give are:'
             print self.template_param_keys
 
+        self.script_is_template = script_is_template
+        self.pixels_per_degree = pixels_per_degree
         self.result_ids = result_ids
         self.results_unit = results_unit
         self.custom_results_dir = custom_results_dir
         self.retina_timestep = retina_timestep
         self.results_data = dict()
+        self.input_line = "retina.Input('impulse', {'start','100.0','stop','500.0','amplitude','1800.0','offset','100.0','sizeX','20','sizeY','20'})"
 
     def _which_parameters(self):
 
@@ -62,7 +67,7 @@ class Corem_retina(object):
         param_keys = [key.lstrip('$') for key in param_keys]
         return list(set(param_keys))
 
-    def set_parameters(self, param_keys_and_values):
+    def _prepare_template(self, param_keys_and_values):
         '''
         Replace parameter names in a retina template script with corresponding values.
 
@@ -70,21 +75,31 @@ class Corem_retina(object):
         :return:
         '''
 
+        # If not INPUT_LINE is given, we expect a method has been used to define it
+        if 'INPUT_LINE' not in param_keys_and_values.keys():
+            param_keys_and_values['INPUT_LINE'] = self.input_line
+        else:
+            self.input_line = param_keys_and_values['INPUT_LINE']
+
+        # Make sure PX_PER_DEG is in the template parameters
+        param_keys_and_values['PX_PER_DEG'] = self.pixels_per_degree
+
+
         template_script = Template(self.template_script)
         runnable_script = template_script.substitute(param_keys_and_values)
 
         template_script_basename = os.path.basename(self.retina_script_template_filename)
         template_script_basename = os.path.splitext(template_script_basename)[0]
-        runnable_script_filename = template_script_basename + self.SUFFIX_BUILT_FROM_TEMPLATE + '.py'
-        runnable_file_location = self.COREM_ROOT_DIR + self.COREM_RETINA_SCRIPTS_DIR + runnable_script_filename
+        runnable_script_filename = template_script_basename + SUFFIX_BUILT_FROM_TEMPLATE + '.py'
+        runnable_file_location = COREM_ROOT_DIR + COREM_RETINA_SCRIPTS_DIR + runnable_script_filename
         fi = open(runnable_file_location, 'w')
         fi.write(runnable_script)
         fi.close()
         self.retina_script_filename = runnable_script_filename
 
-        print 'Retina template parameters set. Retina ready for simulate_retina().'
+        print 'Retina template prepared for running.'
 
-    def simulate_retina(self):
+    def simulate_retina(self, retina_params={}):
         '''
         Run the retina script.
         Note that this always deletes any previous data in the results directory (COREM default behavior).
@@ -92,10 +107,13 @@ class Corem_retina(object):
         :return: True if script could be run, otherwise False
         '''
 
+        if self.script_is_template is True:
+            self._prepare_template(retina_params)
+
         print 'Running retina simulation %s' % self.retina_script_filename
         original_run_path = os.path.abspath(os.path.curdir)
-        os.chdir(self.COREM_ROOT_DIR)
-        call = './corem ' + self.COREM_RETINA_SCRIPTS_DIR + self.retina_script_filename
+        os.chdir(COREM_ROOT_DIR)
+        call = './corem ' + COREM_RETINA_SCRIPTS_DIR + self.retina_script_filename
         try:
             os.system(call)
         except:
@@ -103,15 +121,26 @@ class Corem_retina(object):
         os.chdir(original_run_path)
         return True
 
-    def read_results(self):
-        '''
-        Read data from the COREM results folder into a dict of TimedArrays
+    def archive_results(self, results_archive_dir, simulation_name):
 
-        :return: dict of arrays containing TimedArrays, indexed by result IDs -> cell number -> time
+        self._read_results(make_timedarray=False)  # data saved in timestep-resolution and without units
+
+        save_path = results_archive_dir + simulation_name + '.bz2'
+        print 'Archiving simulation results to ' + save_path
+
+        with bz2.BZ2File(save_path, 'wb') as fb:
+            pickle.dump(self.results_data, fb, pickle.HIGHEST_PROTOCOL)
+
+
+    def _read_results(self, make_timedarray=True):
+        '''
+        Read data from the COREM results folder into a dict (of TimedArrays)
+
+        :return: dict of results, indexed by result IDs -> cell number
         '''
 
         if self.custom_results_dir is None:
-            results_dir = self.COREM_ROOT_DIR+self.COREM_RESULTS_DIR
+            results_dir = COREM_ROOT_DIR+COREM_RESULTS_DIR
         else:
             results_dir = self.custom_results_dir
 
@@ -138,18 +167,48 @@ class Corem_retina(object):
                     return False
 
             a = results_dict[id]
-            b = transpose(a)
-            c = b * self.results_unit
-            self.results_data[id] = TimedArray(c, dt=self.retina_timestep)
 
+            if make_timedarray is True:
+                b = transpose(a)  # because of TimedArray
+                c = b * self.results_unit
+                self.results_data[id] = TimedArray(c, dt=self.retina_timestep)
+            else:
+                self.results_data[id] = a
 
     def _get_timedarray(self, id):
+
+        # Make sure results data have been loaded
         if len(self.results_data) == 0:
-            self.read_results()
+            self._read_results()
         else:
             pass
 
         return self.results_data[id]
+
+    def set_input_grating(self, grating_type, width, height, spatial_freq, temporal_freq, orientation=0, contrast=0.5):
+        '''
+        Set input to drifting/static/oscillating grating with given parameters
+
+        :param px_per_deg:
+        :param grating_type: type of grating (0=drifting, 1=oscillating (or static with temporal_freq=0))
+        :param width: input width in degrees
+        :param height: input height in degrees
+        :param spatial_freq: spatial frequency in cycles/degree
+        :param temporal_freq: temporal frequency in hertz
+        :param orientation: grating orientation in degrees (eg. 0: vertical, moving left-to-right, 90: horizontal, moving up-to-down)
+        :param contrast: contrast between grating peaks and troughs
+        :return:
+        '''
+        width_px = int(width * self.pixels_per_degree)
+        height_px = int(height * self.pixels_per_degree)
+        spatial_period = int(self.pixels_per_degree/spatial_freq)
+        orientation_rad = (orientation/360)*2*pi
+        self.input_line = "retina.Input('grating',{'type','"+str(grating_type)+"','step','0.001','length1','0.0','length2','4.0'," \
+                          "'length3','0.0','sizeX','"+str(width_px)+"','sizeY','"+str(height_px)+"','freq','"+str(temporal_freq)+"'," \
+                          "'period','"+str(spatial_period)+"','Lum','100.0','Contr','"+str(contrast)+"','phi_s','0.0'," \
+                          "'phi_t','0.0','orientation','"+str(orientation_rad)+"','red_weight','1.0','green_weight','1.0'," \
+                          "'blue_weight','1.0','red_phase','0.0','green_phase','0.0','blue_phase','0.0'})"
+        #print self.input_line
 
     def example_run_primate_model(self):
         '''
@@ -367,25 +426,57 @@ class Corem_retina(object):
         output_dict['spikes_0'][1].extend(list(spikes_off.t))
 
         # Vafa's savedata
-        save_path = self.CXSYSTEM_INPUT_DIR + 'parafov_output.bz2'
+        save_path = CXSYSTEM_INPUT_DIR + 'parafov_output.bz2'
         with bz2.BZ2File(save_path, 'wb') as fb:
             pickle.dump(output_dict, fb, pickle.HIGHEST_PROTOCOL)
 
 
+class Corem_output(object):
+
+    def __init__(self, corem_archive_dir, corem_simulation_name, corem_output_unit=1, corem_timestep=1*ms):
+
+        self.corem_archive_dir = corem_archive_dir
+        self.corem_simulation_name = corem_simulation_name
+        self.corem_output_unit = corem_output_unit
+        self.corem_timestep = corem_timestep
+
+        self.corem_output_data = dict()
+
+        self._read_corem_output()
+
+        print 'Baabaa black sheep!'
+
+    def _read_corem_output(self):
+        save_path = self.corem_archive_dir + self.corem_simulation_name + '.bz2'
+        print 'Reading simulation data from ' + save_path
+
+        with bz2.BZ2File(save_path, 'r') as fb:
+            output_raw = pickle.load(fb)
+
+        for id in output_raw.keys():
+            a = output_raw[id]
+            b = transpose(a)  # TimedArray takes 2D arrays with time as first and neuron index as the second dimension
+            c = b * self.corem_output_unit
+            self.corem_output_data[id] = TimedArray(c, dt=self.corem_timestep)
+
 if __name__ == '__main__':
 
-    #ret = Corem_retina('parvocustom.py', ['P_ganglion_L_ON_', 'P_ganglion_L_OFF_'], nsiemens)
-    #ret.example_run_primate_model()
+    ### STEP 1: Simulate retina
+    # ret = Corem_retina('parafoveal_parvo.py', 20, ['P_ganglion_L_ON_', 'P_ganglion_L_OFF_'], nsiemens, script_is_template=True)
+    # retina_params = {'SIM_TIME': 1200,
+    #                  'REC_START_TIME': 100,
+    #                  'RF_CENTER_SIGMA': 0.03,
+    #                  'CONE_H1_SIGMA': 0.5,
+    #                  'RF_SURROUND_SIGMA': 0.5,
+    #                  'SHOW_SIM': 'False'}
+    #
+    # ret.set_input_grating(grating_type=0, width=2, height=2, spatial_freq=1, temporal_freq=10, orientation=45)
+    #
+    # ret.simulate_retina(retina_params)
+    # ret.archive_results('/home/shohokka/PycharmProjects/corem_archive/', 'oblique_grating')
 
-    ret = Corem_retina('parafoveal_parvo.py', ['P_ganglion_L_ON_', 'P_ganglion_L_OFF_'], nsiemens, script_is_template=True)
-    retina_params = {'SIM_TIME': 1200, 'REC_START_TIME': 100, 'PX_PER_DEG': 10, 'RF_CENTER_SIGMA': 0.03,
-                     'CONE_H1_SIGMA': 0.5, 'RF_SURROUND_SIGMA': 0.5, 'SHOW_SIM': 'False'}
+    ### STEP 2: Read simulation output & do something with it
+    ret_output = Corem_output('/home/shohokka/PycharmProjects/corem_archive/', 'oblique_grating', 'nS')
 
-    retina_params['INPUT_LINE'] = "retina.Input('grating',{'type','0','step','0.001','length1','0.0','length2','4.0','length3','0.0','sizeX','20','sizeY','20','freq','2.5','period','20.0','Lum','100.0','Contr','0.5','phi_s','0.0','phi_t','0.0','orientation','0.0','red_weight','1.0','green_weight','1.0','blue_weight','1.0','red_phase','0.0','green_phase','0.0','blue_phase','0.0'})"
-
-    ret.set_parameters(retina_params)
-    ret.simulate_retina()
-
-    ret.example_run_parafoveal()
 
     print 'Done.'
