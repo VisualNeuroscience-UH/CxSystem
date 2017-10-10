@@ -8,6 +8,8 @@ import pandas as pd
 import numpy as np
 import sys,os,time
 import matplotlib.pyplot as plt
+from matplotlib.patches import Circle
+from matplotlib.collections import PatchCollection
 import scipy.io as spio
 import re
 from string import Template
@@ -284,7 +286,6 @@ class Corem_retina(object):
 
         plt.show()
 
-
     def example_run_parafoveal(self):
         '''
         An attempt at integrating COREM to CxSystem and at simulating parafoveal retina of macaque monkey.
@@ -433,20 +434,38 @@ class Corem_retina(object):
 
 class Corem_output(object):
 
-    def __init__(self, corem_archive_dir, corem_simulation_name, corem_output_unit=1, corem_timestep=1*ms):
+    def __init__(self, corem_archive_dir, corem_simulation_name, corem_output_unit=1, corem_timestep=1*ms, pixels_per_deg=1, input_width=1, input_height=1):
+        '''
+        Initialization routine for class Corem_output
+
+        :param corem_archive_dir: str, absolute reference to where packaged COREM output is stored
+        :param corem_simulation_name: str, (file-)name of COREM simulation data (without extension)
+        :param corem_output_unit: Brian2 unit, eg. nS, mV
+        :param corem_timestep: multiple of 1*ms, resolution of COREM simulation (TODO - should come automatically)
+        '''
 
         self.corem_archive_dir = corem_archive_dir
         self.corem_simulation_name = corem_simulation_name
         self.corem_output_unit = corem_output_unit
         self.corem_timestep = corem_timestep
 
+        # TODO - These should come from simulation data:
+        self.pixels_per_deg = pixels_per_deg
+        self.input_width = input_width
+        self.input_height = input_height
+
+        # Load COREM simulation data
         self.corem_output_data = dict()
+        self._load_corem_output()
 
-        self._read_corem_output()
+        # Set default positions (origin ie. 0) for COREM output cells
+        # Note that Brian2 TimedArray also indexes neurons from 0 onwards
+        self.corem_positions = dict()
+        for channel_id in self.corem_output_data.keys():
+            neuron_count = len(self.corem_output_data[channel_id][0])
+            self.corem_positions[channel_id] = [0]*neuron_count
 
-        print 'Baabaa black sheep!'
-
-    def _read_corem_output(self):
+    def _load_corem_output(self):
         save_path = self.corem_archive_dir + self.corem_simulation_name + '.bz2'
         print 'Reading simulation data from ' + save_path
 
@@ -455,9 +474,110 @@ class Corem_output(object):
 
         for id in output_raw.keys():
             a = output_raw[id]
-            b = transpose(a)  # TimedArray takes 2D arrays with time as first and neuron index as the second dimension
+            b = transpose(a)  # TimedArray takes in 2D arrays with time as the 1st and neuron index as the 2nd dimension
             c = b * self.corem_output_unit
-            self.corem_output_data[id] = TimedArray(c, dt=self.corem_timestep)
+            self.corem_output_data[id] = c
+
+    def get_corem_channel_raw(self, channel_id):
+
+        try:
+            return self.corem_output_data[channel_id]
+        except:
+            print 'Output channel ' + str(channel_id) + ' not found from simulation data. Please try one of these: '
+            print self.corem_output_data.keys()
+
+    def get_corem_channel_ta(self, channel_id):
+
+        try:
+            c = self.corem_output_data[channel_id]
+            return TimedArray(c, dt=self.corem_timestep)
+        except:
+            print 'Output channel ' + str(channel_id) + ' not found from simulation data. Please try one of these: '
+            print self.corem_output_data.keys()
+
+    def set_corem_positions_rectgrid(self, channel_id, grid_center):
+        '''
+
+        :param channel_id: str, name of the output channel in COREM data
+        :param grid_center: complex coordinates z=x+yj, x>0 and y representing location on retina in degrees
+        :return:
+        '''
+
+        neuron_spacing = 1/self.pixels_per_deg
+        w_neurons = self.input_width * self.pixels_per_deg
+        h_neurons = self.input_height * self.pixels_per_deg
+
+        # Assume w_neurons and h_neurons are even numbers
+        w_range = np.arange(-w_neurons / 2, w_neurons / 2) * neuron_spacing  # TODO - why here no +1 needed?
+        h_range = np.arange(-h_neurons / 2, h_neurons / 2) * neuron_spacing
+        h_range = np.flipud(h_range)  # For geometrical reasons (upper left spot belongs to neuron 0)
+
+        # Generate coordinates
+        z_coords = []
+        for y in h_range:
+            for x in w_range:
+                z = grid_center + complex(x, y)
+                small_shift = neuron_spacing/2  # add a shift to have positions in the centers of grid squares
+                z += complex(small_shift, small_shift)
+
+                z_coords.append(z)
+
+        self.corem_positions[channel_id] = np.array(z_coords)
+
+        # print len(self.corem_positions[channel_id])
+        # plt.scatter(self.corem_positions[channel_id].real, self.corem_positions[channel_id].imag)
+        # plt.show()
+
+    def get_corem_neuron_position(self, channel_id, neuron_index):
+        return self.corem_positions[channel_id][neuron_index]
+
+
+class Ganglion_mosaic(object):
+
+    def __init__(self, grid_center, gc_density, df_radius, input_width, input_height):
+        self.grid_center = grid_center
+        self.gc_density = gc_density
+        self.df_radius = df_radius
+        self.input_width = input_width
+        self.input_height = input_height
+
+        self._create_hexgrid()
+
+    def _create_hexgrid(self):
+        ### Create ganglion cell mosaic -> "z coordinates" in CxSystem
+
+        ganglion_spacing_adjacent = sqrt(2 / (sqrt(3) * self.gc_density))
+        w_ganglioncells = self.input_width / ganglion_spacing_adjacent
+
+        ganglion_spacing_rows = sqrt(sqrt(3) / (2 * self.gc_density))
+        h_ganglioncells = self.input_height / ganglion_spacing_rows
+
+        w_range = np.arange(-w_ganglioncells / 2, w_ganglioncells / 2 + 1) * ganglion_spacing_adjacent
+        h_range = np.arange(-h_ganglioncells / 2, h_ganglioncells / 2 + 1) * ganglion_spacing_rows
+        h_range = np.flipud(h_range)  # Indexing runs in up->down and left->right direction
+
+        # Generate ganglion cell coordinates
+        z_coords = []
+        row_counter = 0
+        for y in h_range:
+            row_counter += 1
+            for x in w_range:
+                z = self.grid_center + complex(x, y)
+                if row_counter % 2 == 0:
+                    z -= complex(ganglion_spacing_adjacent / 2)  # Shift every other row to have a hexagonal lattice
+
+                z_coords.append(z)
+
+        z_coords = np.array(z_coords)
+
+        # GC grid visualization
+        # plt.scatter(z_coords.real, z_coords.imag, s=0.3)
+        # patches = [Circle((z.real, z.imag), self.df_radius) for z in z_coords]
+        # collection = PatchCollection(patches)
+        # collection.set_facecolor('none')
+        # ax = plt.gca()
+        # ax.add_collection(collection)
+        # plt.show()
 
 if __name__ == '__main__':
 
@@ -476,7 +596,10 @@ if __name__ == '__main__':
     # ret.archive_results('/home/shohokka/PycharmProjects/corem_archive/', 'oblique_grating')
 
     ### STEP 2: Read simulation output & do something with it
-    ret_output = Corem_output('/home/shohokka/PycharmProjects/corem_archive/', 'oblique_grating', 'nS')
+    # ret_output = Corem_output('/home/shohokka/PycharmProjects/corem_archive/', 'oblique_grating', nS, pixels_per_deg=20, input_width=2, input_height=2)
+    # ret_output.set_corem_positions_rectgrid('P_ganglion_L_ON_', 5+0j)
 
+    glayer = Ganglion_mosaic(5+0j, 100, 0.05, 2, 2)
+    # grid_center, gc_density, df_radius, input_width, input_height
 
     print 'Done.'
