@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 import sys,os,time
 import matplotlib.pyplot as plt
-from matplotlib.patches import Circle
+from matplotlib.patches import Circle, RegularPolygon
 from matplotlib.collections import PatchCollection
 import scipy.io as spio
 import re
@@ -19,14 +19,15 @@ from brian2 import *  # Load brian2 last for unit-handling to work properly in N
 
 
 # Global constants
+# DIR: absolute directory reference, RELDIR: relative directory reference
 COREM_ROOT_DIR = '/home/shohokka/PycharmProjects/COREM/COREM/'
-COREM_RESULTS_DIR = 'results/'  # directory relative to ROOT_DIR
+COREM_RESULTS_RELDIR = 'results/'  # directory relative to ROOT_DIR
 COREM_RETINA_SCRIPTS_DIR = 'Retina_scripts/'  # directory relative to ROOT_DIR
 SUFFIX_BUILT_FROM_TEMPLATE = '_runme'
 CXSYSTEM_INPUT_DIR = '/home/shohokka/PycharmProjects/CXSystem_Git/video_input_files/'
 
 
-class Corem_retina(object):
+class CoremRetina(object):
     '''
     Class for running a COREM retina model and accessing results after simulation
     '''
@@ -142,7 +143,7 @@ class Corem_retina(object):
         '''
 
         if self.custom_results_dir is None:
-            results_dir = COREM_ROOT_DIR+COREM_RESULTS_DIR
+            results_dir = COREM_ROOT_DIR + COREM_RESULTS_RELDIR
         else:
             results_dir = self.custom_results_dir
 
@@ -432,7 +433,7 @@ class Corem_retina(object):
             pickle.dump(output_dict, fb, pickle.HIGHEST_PROTOCOL)
 
 
-class Corem_output(object):
+class CoremOutput(object):
 
     def __init__(self, corem_archive_dir, corem_simulation_name, corem_output_unit=1, corem_timestep=1*ms, pixels_per_deg=1, input_width=1, input_height=1):
         '''
@@ -528,11 +529,22 @@ class Corem_output(object):
         # plt.scatter(self.corem_positions[channel_id].real, self.corem_positions[channel_id].imag)
         # plt.show()
 
+    def get_corem_positions(self, channel_id):
+        return self.corem_positions[channel_id]
+
     def get_corem_neuron_position(self, channel_id, neuron_index):
         return self.corem_positions[channel_id][neuron_index]
 
+    def get_outputs_within_circle(self, center, radius, channel_id):
 
-class Ganglion_mosaic(object):
+        output_grid = self.corem_positions[channel_id]
+        wanted_indices = np.where(np.absolute(center - output_grid) <= radius)
+        return wanted_indices[0]  # For some reason np.where returns a tuple
+
+    def get_outputs_within_hexagon(self, center, radius, channel_id):
+        pass
+
+class GanglionMosaic(object):
 
     def __init__(self, grid_center, gc_density, df_radius, input_width, input_height):
         self.grid_center = grid_center
@@ -540,12 +552,18 @@ class Ganglion_mosaic(object):
         self.df_radius = df_radius
         self.input_width = input_width
         self.input_height = input_height
+        self.gc_rows = 0
+        self.gc_columns = 0
 
         self._create_hexgrid()
 
-    def _create_hexgrid(self):
-        ### Create ganglion cell mosaic -> "z coordinates" in CxSystem
+        self.retina_output_data = ''
+        self.retina_output_channel = ''
+        self.gc_to_corem_nodes = [[]] * len(self.gc_positions)
 
+
+    def _create_hexgrid(self):
+        # Create ganglion cell mosaic (hexagonal grid)
         ganglion_spacing_adjacent = sqrt(2 / (sqrt(3) * self.gc_density))
         w_ganglioncells = self.input_width / ganglion_spacing_adjacent
 
@@ -570,14 +588,71 @@ class Ganglion_mosaic(object):
 
         z_coords = np.array(z_coords)
 
-        # GC grid visualization
-        # plt.scatter(z_coords.real, z_coords.imag, s=0.3)
-        # patches = [Circle((z.real, z.imag), self.df_radius) for z in z_coords]
-        # collection = PatchCollection(patches)
-        # collection.set_facecolor('none')
-        # ax = plt.gca()
-        # ax.add_collection(collection)
-        # plt.show()
+        self.gc_positions = z_coords
+        self.gc_rows = h_ganglioncells
+        self.gc_columns = w_ganglioncells
+
+    def _compute_gc_to_corem_mapping(self):
+
+        bc_grid = self.retina_output_data
+        gc_grid = self.gc_positions
+
+        for i in range(0, len(gc_grid)):
+            current_gc = gc_grid[i]
+            corresponding_outputs = bc_grid.get_outputs_within_circle(current_gc, self.df_radius, self.retina_output_channel)
+            self.gc_to_corem_nodes[i] = corresponding_outputs
+
+    def import_corem_output(self, retina_output, channel_id):
+
+        self.retina_output_data = retina_output
+        self.retina_output_channel = channel_id
+        self._compute_gc_to_corem_mapping()
+
+    def show_grids(self):
+
+        bc_grid = self.retina_output_data.get_corem_positions(self.retina_output_channel)
+        gc_grid = self.gc_positions
+
+        # Show COREM grid (eg. bipolar cells)
+        plt.scatter(bc_grid.real, bc_grid.imag, s=0.5)
+
+        # Show ganglion cell grid
+        # patches = [Circle((z.real, z.imag), self.df_radius) for z in gc_grid]
+        patches = [RegularPolygon((z.real, z.imag), 6, self.df_radius) for z in gc_grid]
+        collection = PatchCollection(patches)
+        collection.set_facecolor('none')
+        collection.set_edgecolor('r')
+        ax = plt.gca()
+        ax.add_collection(collection)
+
+        plt.show()
+
+    def average_corem_output(self, gc_index):
+
+        bc_grid = self.retina_output_data.get_corem_positions(self.retina_output_channel)
+        gc_grid = self.gc_positions
+
+        gc_pos = gc_grid[gc_index]
+        corr_bc_nodes = self.gc_to_corem_nodes[gc_index]
+
+        # Get data from corresponding output nodes
+        bc_data = self.retina_output_data.get_corem_channel_raw(self.retina_output_channel)
+        corr_bc_data = transpose(bc_data)[corr_bc_nodes]  # 2D array with [output indices][time points]
+        #corr_bc_data = transpose(corr_bc_data)
+
+        # Scale output data in relation to distance from the ganglion cell "soma" (here gaussian filter)
+        sigma = 1
+        mu = gc_pos
+        output_decay = lambda z: np.exp(- np.absolute(z - mu)**2 / (2 * sigma**2)) * 1/(sigma * np.sqrt(2 * np.pi))
+
+        for k in range(0, len(corr_bc_nodes)):
+            corr_bc_data[k] *= output_decay(bc_grid[k])
+
+        # Sum filtered outputs
+        corr_bc_data = transpose(corr_bc_data)  # back to [time points][output indices]
+        gc_input = [sum(corr_bc_data[t]) for t in range(0, len(corr_bc_data))]
+
+        return gc_input
 
 if __name__ == '__main__':
 
@@ -595,11 +670,17 @@ if __name__ == '__main__':
     # ret.simulate_retina(retina_params)
     # ret.archive_results('/home/shohokka/PycharmProjects/corem_archive/', 'oblique_grating')
 
-    ### STEP 2: Read simulation output & do something with it
-    # ret_output = Corem_output('/home/shohokka/PycharmProjects/corem_archive/', 'oblique_grating', nS, pixels_per_deg=20, input_width=2, input_height=2)
-    # ret_output.set_corem_positions_rectgrid('P_ganglion_L_ON_', 5+0j)
+    ### STEP 2: Read simulation output
+    ret_output = CoremOutput('/home/shohokka/PycharmProjects/corem_archive/', 'oblique_grating', nS, pixels_per_deg=20, input_width=2, input_height=2)
+    ret_output.set_corem_positions_rectgrid('P_ganglion_L_ON_', 5+0j)
 
-    glayer = Ganglion_mosaic(5+0j, 100, 0.05, 2, 2)
+    ### STEP 3: Define ganglion cell layer
     # grid_center, gc_density, df_radius, input_width, input_height
+    glayer = GanglionMosaic(5 + 0j, 10, 0.15, 2, 2)
+    glayer.import_corem_output(ret_output, 'P_ganglion_L_ON_')
+    #glayer.show_grids()
+    a = glayer.average_corem_output(10)
+    plt.plot(range(0, len(a)), a)
+    plt.show()
 
     print 'Done.'

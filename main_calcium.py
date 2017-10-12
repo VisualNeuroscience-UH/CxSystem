@@ -9,6 +9,9 @@ time_start = datetime.datetime.now()
 CM = cxs.CxSystem(anatomy_and_system_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/calcium_config_file.csv',
                         physiology_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_calcium_June17.csv')
 
+# CM = cxs.CxSystem(anatomy_and_system_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/Burbank_config_test.csv',
+#                         physiology_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_Burbank.csv')
+
 time_before_run = datetime.datetime.now()
 CM.run()
 time_end = datetime.datetime.now()
