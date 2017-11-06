@@ -9,6 +9,7 @@ import numpy as np
 import sys,os,time
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, RegularPolygon
+from matplotlib.path import Path
 from matplotlib.collections import PatchCollection
 import scipy.io as spio
 import re
@@ -28,17 +29,18 @@ CXSYSTEM_INPUT_DIR = '/home/shohokka/PycharmProjects/CXSystem_Git/video_input_fi
 
 
 class CoremRetina(object):
-    '''
-    Class for running a COREM retina model and accessing results after simulation
-    '''
+    """
+    Class for running a COREM retina model
+    """
 
 
-    def __init__(self, retina_script_filename=None, pixels_per_degree=100, result_ids=[], results_unit=1, script_is_template=False, custom_results_dir=None, retina_timestep=1*ms):
-        '''
+    def __init__(self, retina_script_filename=None, pixels_per_degree=100, stream_ids=[], results_unit=1, script_is_template=False, custom_results_dir=None, retina_timestep=1 * ms):
+        """
+        Initialization method for class CoremRetina
 
         :param retina_script_filename: str, file in COREM_RETINA_SCRIPTS_DIR to run
         :param retina_timestep: x*ms, timestep of COREM simulation (default 1*ms)
-        '''
+        """
 
         if script_is_template is False:
             print 'Loaded a retina with all parameters in the script. Just simulate_retina() to get results.'
@@ -54,14 +56,21 @@ class CoremRetina(object):
 
         self.script_is_template = script_is_template
         self.pixels_per_degree = pixels_per_degree
-        self.result_ids = result_ids
-        self.results_unit = results_unit
+        self.stream_ids = stream_ids
+        self.results_unit = results_unit  # DATA_UNIT
         self.custom_results_dir = custom_results_dir
-        self.retina_timestep = retina_timestep
-        self.results_data = dict()
+        self.retina_timestep = retina_timestep  # RETINA_SIM_TIMESTEP
+        self.simulation_data = dict()
         self.input_line = "retina.Input('impulse', {'start','100.0','stop','500.0','amplitude','1800.0','offset','100.0','sizeX','20','sizeY','20'})"
 
+        #self.parameters_to_save = dict()
+
     def _which_parameters(self):
+        '''
+        Private method listing the parameters in a template script
+
+        :return: array of strings, parameter names
+        '''
 
         fi = open(self.template_file_location, 'r')
         self.template_script = fi.read()
@@ -72,7 +81,7 @@ class CoremRetina(object):
 
     def _prepare_template(self, param_keys_and_values):
         '''
-        Replace parameter names in a retina template script with corresponding values.
+        Replace parameter names in a retina template script with set values.
 
         :param keys_and_values: dict
         :return:
@@ -124,22 +133,31 @@ class CoremRetina(object):
         os.chdir(original_run_path)
         return True
 
-    def archive_results(self, results_archive_dir, simulation_name):
+    def _archive_parameters(self):
+        pass
 
-        self._read_results(make_timedarray=False)  # data saved in timestep-resolution and without units
+    def archive_data(self, results_archive_dir, simulation_name):
+        """
+        Archive and save data from a retina simulation (COREM erases everything in the results folder before runs)
+
+        :param results_archive_dir: string, absolute reference to target directory
+        :param simulation_name: string, wanted filename (the suffix .bz2 will be added automatically)
+        :return:
+        """
+        self._read_results(make_timedarray=False)  # data is to be saved in timestep-resolution and without units
 
         save_path = results_archive_dir + simulation_name + '.bz2'
         print 'Archiving simulation results to ' + save_path
 
         with bz2.BZ2File(save_path, 'wb') as fb:
-            pickle.dump(self.results_data, fb, pickle.HIGHEST_PROTOCOL)
-
+            pickle.dump(self.simulation_data, fb, pickle.HIGHEST_PROTOCOL)
 
     def _read_results(self, make_timedarray=True):
         '''
         Read data from the COREM results folder into a dict (of TimedArrays)
 
-        :return: dict of results, indexed by result IDs -> cell number
+        :param make_timedarray: results can be directly read into Brian2 TimedArrays (used in demo)
+        :return: dict of results, indexed by channel IDs and then cell number
         '''
 
         if self.custom_results_dir is None:
@@ -151,7 +169,7 @@ class CoremRetina(object):
 
         results_dict = dict()
 
-        for id in self.result_ids:
+        for id in self.stream_ids:
             simulation_files = [sim_file for sim_file in os.listdir(results_dir) if id in sim_file]
             simulation_files.sort()  # Sort in ascending order, eg. Ganglion_ON_0, 1, ..., Ganglion_ON_1000
             print '%s simulated on %s' % (id, time.ctime(os.path.getmtime(results_dir+simulation_files[0])))
@@ -174,19 +192,25 @@ class CoremRetina(object):
             if make_timedarray is True:
                 b = transpose(a)  # because of TimedArray
                 c = b * self.results_unit
-                self.results_data[id] = TimedArray(c, dt=self.retina_timestep)
+                self.simulation_data[id] = TimedArray(c, dt=self.retina_timestep)
             else:
-                self.results_data[id] = a
+                self.simulation_data[id] = a
 
-    def _get_timedarray(self, id):
+    def _get_timedarray(self, stream_id):
+        """
+        Return simulation data of a particular channel as a Brian2 TimedArray
+
+        :param stream_id: string, channel ID
+        :return:
+        """
 
         # Make sure results data have been loaded
-        if len(self.results_data) == 0:
+        if len(self.simulation_data) == 0:
             self._read_results()
         else:
             pass
 
-        return self.results_data[id]
+        return self.simulation_data[stream_id]
 
     def set_input_grating(self, grating_type, width, height, spatial_freq, temporal_freq, orientation=0, contrast=0.5):
         '''
@@ -287,9 +311,10 @@ class CoremRetina(object):
 
         plt.show()
 
-    def example_run_parafoveal(self):
+    def run_demo(self):
         '''
         An attempt at integrating COREM to CxSystem and at simulating parafoveal retina of macaque monkey.
+        TODO - Obsolete, these functionalities have been moved to class CoremOutput
 
         :return:
         '''
@@ -420,6 +445,8 @@ class CoremRetina(object):
 
         plt.scatter(spikes_on.t/ms, spikes_on.i, s=0.4, color='green', label='ON ganglion')
         plt.scatter(spikes_off.t/ms, spikes_off.i+number_cells, s=0.4, color='red', label='OFF ganglion')
+        plt.legend()
+        plt.show()
 
         output_dict['spikes_0'] = []
         output_dict['spikes_0'].append(list(spikes_on.i))
@@ -428,22 +455,26 @@ class CoremRetina(object):
         output_dict['spikes_0'][1].extend(list(spikes_off.t))
 
         # Vafa's savedata
-        save_path = CXSYSTEM_INPUT_DIR + 'parafov_output.bz2'
-        with bz2.BZ2File(save_path, 'wb') as fb:
-            pickle.dump(output_dict, fb, pickle.HIGHEST_PROTOCOL)
+        # save_path = CXSYSTEM_INPUT_DIR + 'parafov_output.bz2'
+        # with bz2.BZ2File(save_path, 'wb') as fb:
+        #     pickle.dump(output_dict, fb, pickle.HIGHEST_PROTOCOL)
 
 
-class CoremOutput(object):
+class CoremData(object):
+    """
+    Class for accessing COREM simulation data and placing it spatially
+    """
+    # TODO - default stream parameter, so you don't have to mention the stream every time
 
     def __init__(self, corem_archive_dir, corem_simulation_name, corem_output_unit=1, corem_timestep=1*ms, pixels_per_deg=1, input_width=1, input_height=1):
-        '''
-        Initialization routine for class Corem_output
+        """
+        Initialization method for class CoremOutput
 
         :param corem_archive_dir: str, absolute reference to where packaged COREM output is stored
         :param corem_simulation_name: str, (file-)name of COREM simulation data (without extension)
         :param corem_output_unit: Brian2 unit, eg. nS, mV
         :param corem_timestep: multiple of 1*ms, resolution of COREM simulation (TODO - should come automatically)
-        '''
+        """
 
         self.corem_archive_dir = corem_archive_dir
         self.corem_simulation_name = corem_simulation_name
@@ -457,7 +488,7 @@ class CoremOutput(object):
 
         # Load COREM simulation data
         self.corem_output_data = dict()
-        self._load_corem_output()
+        self._load_corem_data()
 
         # Set default positions (origin ie. 0) for COREM output cells
         # Note that Brian2 TimedArray also indexes neurons from 0 onwards
@@ -466,7 +497,13 @@ class CoremOutput(object):
             neuron_count = len(self.corem_output_data[channel_id][0])
             self.corem_positions[channel_id] = [0]*neuron_count
 
-    def _load_corem_output(self):
+    def _load_corem_data(self):
+        """
+        Internal method for loading archived COREM simulation data
+
+        :return:
+        """
+
         save_path = self.corem_archive_dir + self.corem_simulation_name + '.bz2'
         print 'Reading simulation data from ' + save_path
 
@@ -479,30 +516,42 @@ class CoremOutput(object):
             c = b * self.corem_output_unit
             self.corem_output_data[id] = c
 
-    def get_corem_channel_raw(self, channel_id):
+    def get_corem_stream_raw(self, stream_id):
+        """
+        Return a particular output stream as a raw 2D array. Neuron indexing begins from 0.
 
+        :param stream_id: str
+        :return: 2D array with time as the 1st and neuron index as the 2nd dimension
+        """
         try:
-            return self.corem_output_data[channel_id]
+            return self.corem_output_data[stream_id]
         except:
-            print 'Output channel ' + str(channel_id) + ' not found from simulation data. Please try one of these: '
+            print 'Output stream ' + str(stream_id) + ' not found from simulation data. Please try one of these: '
             print self.corem_output_data.keys()
 
-    def get_corem_channel_ta(self, channel_id):
+    def get_corem_stream_ta(self, stream_id):
+        """
+        Return a particular output stream as a Brian2 TimedArray. Neuron indexing begins from 0.
 
+        :param stream_id: str
+        :return: Brian2 TimedArray
+        """
         try:
-            c = self.corem_output_data[channel_id]
+            c = self.corem_output_data[stream_id]
             return TimedArray(c, dt=self.corem_timestep)
         except:
-            print 'Output channel ' + str(channel_id) + ' not found from simulation data. Please try one of these: '
+            print 'Output stream ' + str(stream_id) + ' not found from simulation data. Please try one of these: '
             print self.corem_output_data.keys()
 
-    def set_corem_positions_rectgrid(self, channel_id, grid_center):
-        '''
+    def place_corem_on_rectgrid(self, stream_id, grid_center):
+        """
+        Place COREM nodes of a particular stream on a rectangular grid centered at grid_center
+        TODO - Check this
 
-        :param channel_id: str, name of the output channel in COREM data
-        :param grid_center: complex coordinates z=x+yj, x>0 and y representing location on retina in degrees
+        :param stream_id: str, name of the output stream in COREM data
+        :param grid_center: complex coordinates z=x+yj, x>0 and y representing location in visual field (?) in degrees
         :return:
-        '''
+        """
 
         neuron_spacing = 1/self.pixels_per_deg
         w_neurons = self.input_width * self.pixels_per_deg
@@ -523,33 +572,79 @@ class CoremOutput(object):
 
                 z_coords.append(z)
 
-        self.corem_positions[channel_id] = np.array(z_coords)
+        self.corem_positions[stream_id] = np.array(z_coords)
 
         # print len(self.corem_positions[channel_id])
         # plt.scatter(self.corem_positions[channel_id].real, self.corem_positions[channel_id].imag)
         # plt.show()
 
-    def get_corem_positions(self, channel_id):
-        return self.corem_positions[channel_id]
+    def get_corem_positions(self, stream_id):
+        """
+        Return positions of COREM nodes of a particular stream
 
-    def get_corem_neuron_position(self, channel_id, neuron_index):
-        return self.corem_positions[channel_id][neuron_index]
+        :param stream_id: str
+        :return:
+        """
+        return self.corem_positions[stream_id]
 
-    def get_outputs_within_circle(self, center, radius, channel_id):
+    def get_corem_node_position(self, stream_id, neuron_index):
+        """
+        Return position of a COREM node of a particular stream
 
-        output_grid = self.corem_positions[channel_id]
+        :param stream_id: str
+        :param neuron_index: int
+        :return:
+        """
+        return self.corem_positions[stream_id][neuron_index]
+
+    def get_nodes_within_circle(self, center, radius, stream_id):
+        """
+        Get nodes (of a stream) within a set distance from a set point
+
+        :param center: x+yj
+        :param radius: float
+        :param stream_id: str
+        :return: array of ints (neuron indices)
+        """
+        output_grid = self.corem_positions[stream_id]
         wanted_indices = np.where(np.absolute(center - output_grid) <= radius)
         return wanted_indices[0]  # For some reason np.where returns a tuple
 
-    def get_outputs_within_hexagon(self, center, radius, channel_id):
-        pass
+    def get_nodes_within_hexagon(self, center, radius, stream_id):
+        """
+        Get nodes inside a hexagon
+
+        :param center: x+yj
+        :param radius: float
+        :param stream_id: str
+        :return: array of ints (neuron indices)
+        """
+
+        output_grid = self.corem_positions[stream_id]
+
+        hexagon = RegularPolygon((center.real, center.imag), 6, radius=radius)
+        hexagon_path = hexagon.get_path()       # matplotlib returns the unit hexagon
+        hexagon_tf = hexagon.get_transform()    # which can then be transformed to give the real path
+        real_hexagon_path = hexagon_tf.transform_path(hexagon_path)
+
+        output_grid_tuples = [(z.real, z.imag) for z in output_grid]
+        wanted_indices = np.where(real_hexagon_path.contains_points(output_grid_tuples))
+
+        return wanted_indices[0]
+
 
 class GanglionMosaic(object):
-
+    """
+    Class for generating ganglion cell responses
+    """
     def __init__(self, grid_center, gc_density, df_radius, input_width, input_height):
         self.grid_center = grid_center
         self.gc_density = gc_density
-        self.df_radius = df_radius
+        if df_radius == 0:
+            self.df_radius = self._compute_hexagon_radius(gc_density)
+        else:
+            self.df_radius = df_radius
+
         self.input_width = input_width
         self.input_height = input_height
         self.gc_rows = 0
@@ -561,8 +656,18 @@ class GanglionMosaic(object):
         self.retina_output_channel = ''
         self.gc_to_corem_nodes = [[]] * len(self.gc_positions)
 
+    def _compute_hexagon_radius(self, gc_density):
+
+        a = 2/(3*sqrt(3)*gc_density)  # from simple trigonometry
+        return sqrt(a)
 
     def _create_hexgrid(self):
+        """
+        Places the ganglion cells in a hexagonal grid according to __init__ parameters
+
+        :return:
+        """
+
         # Create ganglion cell mosaic (hexagonal grid)
         ganglion_spacing_adjacent = sqrt(2 / (sqrt(3) * self.gc_density))
         w_ganglioncells = self.input_width / ganglion_spacing_adjacent
@@ -593,19 +698,32 @@ class GanglionMosaic(object):
         self.gc_columns = w_ganglioncells
 
     def _compute_gc_to_corem_mapping(self):
+        """
+        Computes the 1-to-many mapping of ganglion cells to COREM nodes and stores it in the class variable
+        gc_to_corem_nodes
 
+        :return:
+        """
         bc_grid = self.retina_output_data
         gc_grid = self.gc_positions
 
         for i in range(0, len(gc_grid)):
             current_gc = gc_grid[i]
-            corresponding_outputs = bc_grid.get_outputs_within_circle(current_gc, self.df_radius, self.retina_output_channel)
+            # corresponding_outputs = bc_grid.get_nodes_within_circle(current_gc, self.df_radius, self.retina_output_channel)
+            corresponding_outputs = bc_grid.get_nodes_within_hexagon(current_gc, self.df_radius, self.retina_output_channel)
+
             self.gc_to_corem_nodes[i] = corresponding_outputs
 
-    def import_corem_output(self, retina_output, channel_id):
+    def import_corem_output(self, retina_output, stream_id):
+        """
+        Imports COREM simulation data
 
+        :param retina_output: CoremData instance
+        :param stream_id: str, name of wanted stream
+        :return:
+        """
         self.retina_output_data = retina_output
-        self.retina_output_channel = channel_id
+        self.retina_output_channel = stream_id
         self._compute_gc_to_corem_mapping()
 
     def show_grids(self):
@@ -617,13 +735,19 @@ class GanglionMosaic(object):
         plt.scatter(bc_grid.real, bc_grid.imag, s=0.5)
 
         # Show ganglion cell grid
-        # patches = [Circle((z.real, z.imag), self.df_radius) for z in gc_grid]
         patches = [RegularPolygon((z.real, z.imag), 6, self.df_radius) for z in gc_grid]
         collection = PatchCollection(patches)
         collection.set_facecolor('none')
         collection.set_edgecolor('r')
         ax = plt.gca()
         ax.add_collection(collection)
+
+        # patches_circ = [Circle((z.real, z.imag), self.df_radius) for z in gc_grid]
+        # collection_circ = PatchCollection(patches_circ)
+        # collection_circ.set_facecolor('none')
+        # collection_circ.set_edgecolor('b')
+        # ax = plt.gca()
+        # ax.add_collection(collection_circ)
 
         plt.show()
 
@@ -635,29 +759,204 @@ class GanglionMosaic(object):
         gc_pos = gc_grid[gc_index]
         corr_bc_nodes = self.gc_to_corem_nodes[gc_index]
 
+        # For testing purposes
+        # new_bc_nodes = self.retina_output_data.get_nodes_within_hexagon(gc_pos, self.df_radius, self.retina_output_channel)
+        # print 'Hex BC nodes are: ' + str(new_bc_nodes)
+        # print 'Circular BC nodes are: ' + str(corr_bc_nodes)
+
         # Get data from corresponding output nodes
-        bc_data = self.retina_output_data.get_corem_channel_raw(self.retina_output_channel)
+        bc_data = self.retina_output_data.get_corem_stream_raw(self.retina_output_channel)
         corr_bc_data = transpose(bc_data)[corr_bc_nodes]  # 2D array with [output indices][time points]
         #corr_bc_data = transpose(corr_bc_data)
 
         # Scale output data in relation to distance from the ganglion cell "soma" (here gaussian filter)
         sigma = 1
         mu = gc_pos
-        output_decay = lambda z: np.exp(- np.absolute(z - mu)**2 / (2 * sigma**2)) * 1/(sigma * np.sqrt(2 * np.pi))
+        # output_decay = lambda z: np.exp(- np.absolute(z - mu)**2 / (2 * sigma**2)) * 1/(sigma * np.sqrt(2 * np.pi))
+        output_decay = lambda z: 1
 
         for k in range(0, len(corr_bc_nodes)):
             corr_bc_data[k] *= output_decay(bc_grid[k])
 
         # Sum filtered outputs
         corr_bc_data = transpose(corr_bc_data)  # back to [time points][output indices]
-        gc_input = [sum(corr_bc_data[t]) for t in range(0, len(corr_bc_data))]
+        # gc_input = [sum(corr_bc_data[t]) for t in range(0, len(corr_bc_data))]
+        gc_input = [numpy.average(corr_bc_data[t]) for t in range(0, len(corr_bc_data))]
 
         return gc_input
 
+    def archive_gc_input(self, filename):
+
+        data_to_save = dict()
+        data_to_save['z_coord'] = self.gc_positions
+        data_to_save['retinal_gc_input'] = []
+
+        for i in range(len(self.gc_positions)):
+            a = self.average_corem_output(i)
+            data_to_save['retinal_gc_input'].append(a)
+
+        save_path = CXSYSTEM_INPUT_DIR + filename + '.bz2'
+        print 'Archiving GC input to ' + save_path
+
+        with bz2.BZ2File(save_path, 'wb') as fb:
+            pickle.dump(data_to_save, fb, pickle.HIGHEST_PROTOCOL)
+
+    def generate_gc_spikes(self, filename, runtime=0*ms, show_sim=False):
+
+        # Ganglion cell parameters
+        gc_params = {
+            "C_m": 100.0 * pF,
+            "g_L": 10.0 * nS,
+            "E_ex": 0.0 * mV,
+            "E_in": -70.0 * mV,
+            "E_L": -60.0 * mV,
+            "V_th": -55.0 * mV,
+            "V_reset": -60.0 * mV,
+            "t_ref": 2.0 * ms,
+            "rate": 0.0 * Hz,  # not used
+            "tau_e": 3.0 * ms,  # not used
+            "tau_i": 8.3 * ms,  # not used
+            "tonic_current": 0 * pA,
+            "noise": 0 * mV,
+            "gi": 0 * nS
+        }
+
+        gc_params['tau_m'] = gc_params['C_m'] / gc_params['g_L']
+        model_eq = 'dvm/dt = (((g_L*(E_L-vm) + ge*(E_ex-vm) + gi*(E_in-vm)) + tonic_current) / C_m) + noise*xi*tau_m**-0.5: volt'
+
+        N_gc = len(self.gc_positions)
+
+        # Prepare GC input for interfacing with Brian2
+        gc_input = [self.average_corem_output(k) for k in range(N_gc)]
+        gc_input = transpose(gc_input) * siemens  # TODO - unit should come from config
+        retina_timestep = self.retina_output_data.corem_timestep
+        gc_input_ta = TimedArray(gc_input, dt=retina_timestep)
+        model_eq_on = Equations(model_eq, ge='gc_input_ta(t,i)')
+
+        # Create GC neurons
+        gc_neuron = NeuronGroup(N_gc, model=model_eq_on, namespace=gc_params,
+                                threshold='vm > ' + repr(gc_params['V_th']), reset='vm = ' + repr(gc_params['V_reset']),
+                                refractory=gc_params['t_ref'], method='euler')
+
+        gc_spikes = SpikeMonitor(gc_neuron)
+
+        # Simulate ganglion cells!
+        run(runtime)
+
+        # Prepare spike trains for archiving
+        output_dict = dict()
+
+        # CxSystem (CxSystem.py->method relay->submethod spikes) loads given spike/input file and
+        # expects spike data inside two arrays:
+        # SPK_GENERATOR_SP = spikes_data['spikes_0'][0] - index of neuron
+        # SPK_GENERATOR_TI = spikes_data['spikes_0'][1] - time of spike
+        output_dict['spikes_0'] = []
+        output_dict['spikes_0'].append(list(gc_spikes.i))
+        output_dict['spikes_0'].append(list(gc_spikes.t))
+
+        schwarz = lambda z: 17 * log(z + 1)
+        output_dict['z_coord'] = self.gc_positions
+        output_dict['w_coord'] = schwarz(self.gc_positions)
+
+        save_path = CXSYSTEM_INPUT_DIR + filename + '.bz2'
+        print 'Saving GC spikes to ' + save_path
+
+        with bz2.BZ2File(save_path, 'wb') as fb:
+            pickle.dump(output_dict, fb, pickle.HIGHEST_PROTOCOL)
+
+        if show_sim is True:
+            plt.scatter(gc_spikes.t / ms, gc_spikes.i, s=0.4, color='green')
+            plt.show()
+
+    def show_gc_output(self, gc_index):
+
+        # Ganglion cell parameters
+        gc_params = {
+            "C_m": 100.0*pF,
+            "g_L": 10.0*nS,
+            "E_ex": 0.0*mV,
+            "E_in": -70.0*mV,
+            "E_L": -60.0*mV,
+            "V_th": -55.0*mV,
+            "V_reset": -60.0*mV,
+            "t_ref": 2.0*ms,
+            "rate": 0.0*Hz,         # not used
+            "tau_e": 3.0*ms,        # not used
+            "tau_i": 8.3*ms,        # not used
+            "tonic_current": 0*pA,
+            "noise": 0.1*mV,
+            "gi": 0*nS
+        }
+
+        gc_params['tau_m'] = gc_params['C_m'] / gc_params['g_L']
+
+        model_eq = 'dvm/dt = (((g_L*(E_L-vm) + ge*(E_ex-vm) + gi*(E_in-vm)) + tonic_current) / C_m) + noise*xi*tau_m**-0.5: volt'
+
+        gc_input = self.average_corem_output(gc_index)*siemens
+        retina_timestep = self.retina_output_data.corem_timestep
+        gc_input_ta = TimedArray(gc_input, dt=retina_timestep)
+        model_eq_on = Equations(model_eq, ge='gc_input_ta(t)')
+
+        gc_neuron = NeuronGroup(1, model=model_eq_on, namespace=gc_params,
+                                threshold='vm > ' + repr(gc_params['V_th']), reset='vm = ' + repr(gc_params['V_reset']),
+                                refractory=gc_params['t_ref'], method='euler')
+
+        gc_spikes = SpikeMonitor(gc_neuron)
+        gc_state = StateMonitor(gc_neuron, ['vm'], record=[0])
+
+        runtime=1000*ms
+        run(runtime)
+
+        plt.subplots(1, 3, sharex=True)
+
+        plt.subplot(131)
+        plt.title('Input to GC')
+        x_arg = np.linspace(0, runtime/ms, 1000)
+        plt.plot(x_arg, gc_input_ta(x_arg*ms))
+
+        plt.subplot(132)
+        plt.title('GC memb.voltage')
+        plt.plot(gc_state.t/ms, gc_state.vm[0]/mV)
+
+        plt.subplot(133)
+        plt.title('Firing rate')
+
+        # Moving avg firing rate
+        bin_size = 5*ms
+        n_bins = int(runtime / bin_size)
+        spike_counts, bin_edges = np.histogram(gc_spikes.t/ms, bins=n_bins)
+        firing_rates = [count / bin_size for count in spike_counts]
+
+        sigma = 1
+        gaussian_filter = lambda x: np.exp(- x ** 2 / (2 * sigma ** 2)) * 1 / (sigma * np.sqrt(2 * np.pi))
+        filter_radius = 50
+        v = gaussian_filter(np.arange(-filter_radius, filter_radius))
+        b = np.convolve(firing_rates, v, mode='same')
+        plt.plot(bin_edges[:-1], b)
+
+        plt.show()
+
+
+
 if __name__ == '__main__':
 
+    ### DEMO
+    # ret = CoremRetina('parafoveal_parvo.py', 5, ['P_ganglion_L_ON_', 'P_ganglion_L_OFF_'], nsiemens, script_is_template=True)
+    # retina_params = {'SIM_TIME': 1100,
+    #                  'REC_START_TIME': 100,
+    #                  'RF_CENTER_SIGMA': 0.03,
+    #                  'CONE_H1_SIGMA': 0.5,
+    #                  'RF_SURROUND_SIGMA': 0.5,
+    #                  'SHOW_SIM': 'False'}
+    #
+    # ret.set_input_grating(grating_type=0, width=2, height=2, spatial_freq=1, temporal_freq=7, orientation=0)
+    #
+    # ret.simulate_retina(retina_params)
+    # ret.run_demo()
+
+
     ### STEP 1: Simulate retina
-    # ret = Corem_retina('parafoveal_parvo.py', 20, ['P_ganglion_L_ON_', 'P_ganglion_L_OFF_'], nsiemens, script_is_template=True)
+    # ret = CoremRetina('parafoveal_parvo.py', 20, ['P_ganglion_L_ON_', 'P_ganglion_L_OFF_'], nsiemens, script_is_template=True)
     # retina_params = {'SIM_TIME': 1200,
     #                  'REC_START_TIME': 100,
     #                  'RF_CENTER_SIGMA': 0.03,
@@ -665,22 +964,25 @@ if __name__ == '__main__':
     #                  'RF_SURROUND_SIGMA': 0.5,
     #                  'SHOW_SIM': 'False'}
     #
-    # ret.set_input_grating(grating_type=0, width=2, height=2, spatial_freq=1, temporal_freq=10, orientation=45)
+    # ret.set_input_grating(grating_type=0, width=2, height=2, spatial_freq=1, temporal_freq=3, orientation=0)
     #
     # ret.simulate_retina(retina_params)
-    # ret.archive_results('/home/shohokka/PycharmProjects/corem_archive/', 'oblique_grating')
+    # ret.archive_data('/home/shohokka/PycharmProjects/corem_archive/', 'vertical_grating')
+    #
+    # ### STEP 2: Read simulation output
+    ret_output = CoremData('/home/shohokka/PycharmProjects/corem_archive/', 'vertical_grating',
+                           nS, pixels_per_deg=20, input_width=2, input_height=2)  # <- these should be in the output file
+    ret_output.place_corem_on_rectgrid('P_ganglion_L_ON_', 5+0j)
 
-    ### STEP 2: Read simulation output
-    ret_output = CoremOutput('/home/shohokka/PycharmProjects/corem_archive/', 'oblique_grating', nS, pixels_per_deg=20, input_width=2, input_height=2)
-    ret_output.set_corem_positions_rectgrid('P_ganglion_L_ON_', 5+0j)
-
-    ### STEP 3: Define ganglion cell layer
-    # grid_center, gc_density, df_radius, input_width, input_height
-    glayer = GanglionMosaic(5 + 0j, 10, 0.15, 2, 2)
+    # # ### STEP 3: Define ganglion cell layer
+    # # # grid_center, gc_density, df_radius, input_width, input_height
+    glayer = GanglionMosaic(5+0j, 10, df_radius=0, input_width=2, input_height=2)
     glayer.import_corem_output(ret_output, 'P_ganglion_L_ON_')
+    glayer.generate_gc_spikes('vertical_spk', 1000*ms, True)
+
+    # glayer.archive_gc_input('gc_test_vertical')
     #glayer.show_grids()
-    a = glayer.average_corem_output(10)
-    plt.plot(range(0, len(a)), a)
-    plt.show()
+    #glayer.show_gc_output(8)
+
 
     print 'Done.'

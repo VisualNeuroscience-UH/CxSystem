@@ -145,7 +145,7 @@ class Animator:
 if __name__ == '__main__':
 
     extension = ''
-    filepath = '/opt3/tmp/depol/depol_02_calcium_concentration2.0_Cpp_1000ms.bz2'
+    filepath = '/opt3/tmp/kumar/cecilia_20170803_21521493_background_rate0.6H_k0.3_Cpp_3500ms.bz2'
     filename = ntpath.basename(os.path.splitext(filepath)[0])
     folderpath = os.path.dirname(filepath)
     data = data_loader(filepath)

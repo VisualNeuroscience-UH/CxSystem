@@ -1356,7 +1356,7 @@ class CxSystem(object):
             Spikes_Name = 'GEN_SP'
             Time_Name = 'GEN_TI'
             SG_Name = 'GEN'
-            spikes_str = 'GEN_SP=tile(arange(%s),%d)'%(number_of_neurons,len(spike_times_))
+            spikes_str = 'GEN_SP=tile(arange(%s),%d)'%(number_of_neurons,len(spike_times))
             times_str = 'GEN_TI = repeat(%s,%s)*%s'%(spike_times[0:spike_times.index('*')],number_of_neurons,spike_times_unit)
             SG_str = 'GEN = SpikeGeneratorGroup(%s, GEN_SP, GEN_TI)'%number_of_neurons
             exec spikes_str in globals(), locals()  # running the string containing the syntax for Spike indices in the input neuron group.
@@ -1430,7 +1430,7 @@ class CxSystem(object):
             spikes_data = self.data_loader(os.path.join(self.output_folder, input_spikes_filename))
             print "Info: Spike file loaded from: %s" %os.path.join(self.output_folder, input_spikes_filename)
             SPK_GENERATOR_SP = spikes_data['spikes_0'][0]
-            SPK_GENERATOR_TI = spikes_data['spikes_0'][1]
+            SPK_GENERATOR_TI = spikes_data['spikes_0'][1]  # *second - add this if unit not given in input file
             number_of_neurons = len(spikes_data['w_coord'])
             SPK_GENERATOR = SpikeGeneratorGroup(number_of_neurons, SPK_GENERATOR_SP, SPK_GENERATOR_TI)
 
