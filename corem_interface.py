@@ -731,6 +731,16 @@ class GanglionMosaic(object):
         bc_grid = self.retina_output_data.get_corem_positions(self.retina_output_channel)
         gc_grid = self.gc_positions
 
+        bc_grid_cortex = self._cortical_mapping(bc_grid)
+        gc_grid_cortex = self._cortical_mapping(gc_grid)
+
+        plt.subplots(1, 2)
+
+        ### GRIDS in retina
+        plt.subplot(121)
+        plt.title('Retinal locations (in degrees)')
+        plt.xlabel('Eccentricity (deg)')
+        plt.ylabel('Azimuth (deg)')
         # Show COREM grid (eg. bipolar cells)
         plt.scatter(bc_grid.real, bc_grid.imag, s=0.5)
 
@@ -742,12 +752,41 @@ class GanglionMosaic(object):
         ax = plt.gca()
         ax.add_collection(collection)
 
+        # For testing: circles around hexagons
         # patches_circ = [Circle((z.real, z.imag), self.df_radius) for z in gc_grid]
         # collection_circ = PatchCollection(patches_circ)
         # collection_circ.set_facecolor('none')
         # collection_circ.set_edgecolor('b')
         # ax = plt.gca()
         # ax.add_collection(collection_circ)
+
+        ### GRIDS in cortex
+        plt.subplot(122)
+        plt.title('Cortical locations (mm)')
+        decay_const = 5
+        plt.scatter(bc_grid_cortex.real, bc_grid_cortex.imag, s=0.5)
+        # plt.scatter(gc_grid_cortex.real, gc_grid_cortex.imag)
+        patches_circ = [Circle((z.real, z.imag), 1/decay_const) for z in gc_grid_cortex]
+        collection_circ = PatchCollection(patches_circ)
+        collection_circ.set_facecolor('none')
+        collection_circ.set_edgecolor('b')
+        ax = plt.gca()
+        ax.add_collection(collection_circ)
+
+        network_center = 17*log((5+0j)+1)
+        network_radius = 2.5
+        network_circle = Circle((network_center.real, network_center.imag), network_radius)
+        network_circle.set_facecolor('none')
+        network_circle.set_edgecolor('green')
+        ax.add_artist(network_circle)
+
+        # patches = [RegularPolygon((z.real, z.imag), 6, self.df_radius) for z in gc_grid_cortex] # not really but
+        # collection = PatchCollection(patches)
+        # collection.set_facecolor('none')
+        # collection.set_edgecolor('r')
+        # ax = plt.gca()
+        # ax.add_collection(collection)
+
 
         plt.show()
 
@@ -800,6 +839,18 @@ class GanglionMosaic(object):
 
         with bz2.BZ2File(save_path, 'wb') as fb:
             pickle.dump(data_to_save, fb, pickle.HIGHEST_PROTOCOL)
+
+    def _cortical_mapping(self, z):
+        """
+        Takes in z=r=e^(i*theta) in coordinates of visual field
+
+        :param z:
+        :return: w, coordinates in cortex (mm)
+        """
+        k = 17
+        a = 1
+        w = k*log(z+a)
+        return w
 
     def generate_gc_spikes(self, filename, runtime=0*ms, show_sim=False):
 
@@ -854,9 +905,9 @@ class GanglionMosaic(object):
         output_dict['spikes_0'].append(list(gc_spikes.i))
         output_dict['spikes_0'].append(list(gc_spikes.t))
 
-        schwarz = lambda z: 17 * log(z + 1)
+        # Save positions in retina (in degrees of visual field)
         output_dict['z_coord'] = self.gc_positions
-        output_dict['w_coord'] = schwarz(self.gc_positions)
+        output_dict['w_coord'] = self._cortical_mapping(self.gc_positions)
 
         save_path = CXSYSTEM_INPUT_DIR + filename + '.bz2'
         print 'Saving GC spikes to ' + save_path
@@ -978,10 +1029,10 @@ if __name__ == '__main__':
     # # # grid_center, gc_density, df_radius, input_width, input_height
     glayer = GanglionMosaic(5+0j, 10, df_radius=0, input_width=2, input_height=2)
     glayer.import_corem_output(ret_output, 'P_ganglion_L_ON_')
-    glayer.generate_gc_spikes('vertical_spk', 1000*ms, True)
+    # glayer.generate_gc_spikes('vertical_spk', 1000*ms, True)
 
     # glayer.archive_gc_input('gc_test_vertical')
-    #glayer.show_grids()
+    glayer.show_grids()
     #glayer.show_gc_output(8)
 
 

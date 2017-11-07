@@ -1,7 +1,7 @@
-'''
+"""
 The program is distributed under the terms of the GNU General Public License
 Copyright 2017 Vafa Andalibi, Simo Vanni, Henri Hokkanen.
-'''
+"""
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,6 +18,7 @@ import zlib
 import bz2
 import cPickle as pickle
 
+INPUT_SOURCE = 'spikes'
 
 def _status_printer(str):
     cleaner = ' ' * 100
@@ -60,7 +61,7 @@ def spike_to_frame(groups, spikes, X_axis, Y_axis, w_coord, axis_precision, d_t 
             spikes_tmp = [round(t, int(abs(log10(d_t)))) for t in spikes[group][1]]
         except:
             continue
-        current_layer = int(group[group.index('_L')+2:group.index('_L')+3] if not 'vpm' in group else 0)
+        current_layer = int(group[group.index('_L')+2:group.index('_L')+3] if not INPUT_SOURCE in group else 0)
         current_layer = current_layer-1 if current_layer>2 else current_layer
         color_value = colors_[group_idx]
         total_perc = float(group_idx) / number_of_groups * 100
@@ -145,14 +146,15 @@ class Animator:
 if __name__ == '__main__':
 
     extension = ''
-    filepath = '/opt3/tmp/kumar/cecilia_20170803_21521493_background_rate0.6H_k0.3_Cpp_3500ms.bz2'
+    filepath = '/opt3/tmp/corem_tests/akuankka_20171107_15462288_Python_1500ms.bz2'
+    # filepath = '/opt3/tmp/kumar/lalli_20170828_16073299_Cpp_1500ms.bz2'
     filename = ntpath.basename(os.path.splitext(filepath)[0])
     folderpath = os.path.dirname(filepath)
     data = data_loader(filepath)
     NNs = data['number_of_neurons']
     layers_NN = zeros([6])
     for group in NNs.keys():
-        current_layer = int(group[group.index('_L') + 2:group.index('_L') + 3] if not 'vpm' in group else 0)
+        current_layer = int(group[group.index('_L') + 2:group.index('_L') + 3] if not INPUT_SOURCE in group else 0)
         current_layer = current_layer - 1 if current_layer > 2 else current_layer
         layers_NN[current_layer] = layers_NN[current_layer] + NNs[group]
 
@@ -219,12 +221,12 @@ if __name__ == '__main__':
         ax_arr[plot_idx].set_ylabel('Cortical Surface Dimension 2 [mm]')
         ax_arr[plot_idx].text(0.03,0.95,"Number of Neurons: %d"%layers_NN[plot_idx],transform=ax_arr[plot_idx].transAxes , fontsize=9, bbox={'boxstyle':'round','facecolor':'wheat','alpha':0.9} )
 
-    groups_layers = [int(group[group.index('_L')+2:group.index('_L')+3] if not 'vpm' in group else 0) for group in groups]
+    groups_layers = [int(group[group.index('_L')+2:group.index('_L')+3] if not INPUT_SOURCE in group else 0) for group in groups]
     sorted_groups = [x for (y,x) in sorted(zip(groups_layers,groups))]
     sorted_colors = [colors_[ii] for ii in [groups.index(group) for group in sorted_groups]]
 
     for idx,group in enumerate(sorted_groups) :
-        current_title = group[group.index('_')+1 :].replace('_L',' [Layer').replace('to',' to ') + ']' if not 'vpm' in group else group[group.index('_')+1 :].replace('_L',' [Layer ').replace('to',' to ')
+        current_title = group[group.index('_')+1 :].replace('_L',' [Layer').replace('to',' to ') + ']' if not INPUT_SOURCE in group else group[group.index('_')+1 :].replace('_L',' [Layer ').replace('to',' to ')
         ax_arr[3].plot(100,100, 's',label=current_title,markersize=10, color=sorted_colors[idx])
     ax_arr[3].legend(bbox_to_anchor=(0, -0.2), loc='upper left', borderaxespad=0, numpoints=1 ,ncol=6)
     plt.tight_layout(pad=0.4, w_pad=-40, h_pad=1.0)

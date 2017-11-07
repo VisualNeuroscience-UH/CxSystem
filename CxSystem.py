@@ -1055,7 +1055,7 @@ class CxSystem(object):
                      % (_dyn_syn_name, _pre_group_idx, _post_group_idx,_dyn_syn_eq_name, _dyn_syn_pre_eq_name, _dyn_syn_namespace_name)
 
             ###############
-            ############### Connecting synapses
+            ############### Connecting synapses; first parsing configuration file
             ###############
 
             _syn_ref_name = self.neurongroups_list[int(current_pre_syn_idx)][self.neurongroups_list[int( \
@@ -1113,29 +1113,50 @@ class CxSystem(object):
 
             else:
                 syn_con_str = "%s.connect(condition='i!=j', p= " % _dyn_syn_name
-                # Connecting the synapses based on either [the defined probability and the distance] or
+
+                # CONNECTING THE SYNAPSES
+                # based on either [the defined probability and the distance] or
                 # [only the distance] plus considering the number of connections
+
+                # See first if a connection probability is defined between neuron groups and
+                # then possibly scale with distance (if expanded mode)
                 try:
                     if self.sys_mode == 'local':
                         syn_con_str += "'%f'" % float(p_arg)
+
                     elif self.sys_mode == 'expanded':
                         # syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))/(sqrt((x_pre-x_post) \
                         #    **2+(y_pre-y_post)**2)/mm)'   " % (float(p_arg), self.customized_synapses_list[-1]['ilam'])
                         syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))'" % (
                         float(p_arg), self.customized_synapses_list[-1]['ilam']) # todo the divisoin by the distance is temporarily removed to avoid division by zeros, try to understand what is going on using Hanna's email and if it's needed, add a fixed version
 
+                # If no connection probability is defined, then use "sparseness" values as connection probability and
+                # possibly scale with distance
                 except ValueError:
                     p_arg = self.customized_synapses_list[-1]['sparseness']
+
                     if '_relay_vpm' in self.neurongroups_list[int(current_pre_syn_idx)]:
                         syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)))/(2*0.025**2))'" \
                                        % (float(p_arg))
+
+                    elif '_relay_spikes' in self.neurongroups_list[int(current_pre_syn_idx)]:
+
+                        # Use exponential decay here
+                        print 'Exp decay here!'
+                        decay_const = 5/mm  # Unit important here to remind of scale
+                        syn_con_str += "'%f * exp(-%f * sqrt((x_pre-x_post)**2 + (y_pre-y_post)**2) )'" \
+                                       % (float(p_arg), float(decay_const) )
+
                     elif self.sys_mode == 'local':
                         syn_con_str += "'%f'" % p_arg
+
                     elif self.sys_mode == 'expanded':
                         # syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))/(sqrt((x_pre-x_post)\
                         # **2+(y_pre-y_post)**2)/mm)'   " % (p_arg, self.customized_synapses_list[-1]['ilam'])
                         syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))'" % (
                         p_arg, self.customized_synapses_list[-1]['ilam']) # todo the divisoin by the distance is temporarily removed to avoid division by zeros, try to understand what is going on using Hanna's email and if it's needed, add a fixed version
+
+                ### Below this,
                 try:
                     syn_con_str += ',n=%d)' % int(n_arg)
                 except ValueError:
@@ -1475,7 +1496,7 @@ class CxSystem(object):
                 self.customized_neurons_list[self.spike_input_group_idx]['z_positions'] = squeeze(spikes_data['z_coord'])
                 self.customized_neurons_list[self.spike_input_group_idx]['w_positions'] = squeeze(spikes_data['w_coord'])
 
-            # setting the position of the neurons based on the positions in the .mat input file:
+            # Positions of input neuron axons set here!
             exec "%s.x=real(self.customized_neurons_list[%d]['w_positions'])*mm\n" \
                  "%s.y=imag(self.customized_neurons_list[%d]['w_positions'])*mm" % \
                  (NG_name, self.spike_input_group_idx, NG_name, self.spike_input_group_idx) in globals(), locals()
