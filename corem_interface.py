@@ -919,6 +919,8 @@ class GanglionMosaic(object):
             plt.scatter(gc_spikes.t / ms, gc_spikes.i, s=0.4, color='green')
             plt.show()
 
+
+
     def show_gc_output(self, gc_index):
 
         # Ganglion cell parameters
@@ -1005,6 +1007,7 @@ if __name__ == '__main__':
     # ret.simulate_retina(retina_params)
     # ret.run_demo()
 
+    STIMSEQ_NAME = 'stripes'
 
     ### STEP 1: Simulate retina
     # ret = CoremRetina('parafoveal_parvo.py', 20, ['P_ganglion_L_ON_', 'P_ganglion_L_OFF_'], nsiemens, script_is_template=True)
@@ -1013,26 +1016,31 @@ if __name__ == '__main__':
     #                  'RF_CENTER_SIGMA': 0.03,
     #                  'CONE_H1_SIGMA': 0.5,
     #                  'RF_SURROUND_SIGMA': 0.5,
-    #                  'SHOW_SIM': 'False'}
-    #
-    # ret.set_input_grating(grating_type=0, width=2, height=2, spatial_freq=1, temporal_freq=3, orientation=0)
-    #
+    #                  'SHOW_SIM': 'True'}
+
+    # retina_params['INPUT_LINE'] = "retina.Input('sequence','input_sequences/Weberlaw/0_255/',{'InputFramePeriod','100'})"
+    # ret.set_input_grating(grating_type=1, width=2, height=2, spatial_freq=2, temporal_freq=0, orientation=0)
+
+
     # ret.simulate_retina(retina_params)
-    # ret.archive_data('/home/shohokka/PycharmProjects/corem_archive/', 'vertical_grating')
+    # ret.archive_data('/home/shohokka/PycharmProjects/corem_archive/', STIMSEQ_NAME)
     #
     # ### STEP 2: Read simulation output
-    ret_output = CoremData('/home/shohokka/PycharmProjects/corem_archive/', 'vertical_grating',
+    ret_output = CoremData('/home/shohokka/PycharmProjects/corem_archive/', STIMSEQ_NAME,
                            nS, pixels_per_deg=20, input_width=2, input_height=2)  # <- these should be in the output file
     ret_output.place_corem_on_rectgrid('P_ganglion_L_ON_', 5+0j)
 
-    # # ### STEP 3: Define ganglion cell layer
-    # # # grid_center, gc_density, df_radius, input_width, input_height
+
+    ### STEP 3: Define ganglion cell layer
+    # # grid_center, gc_density, df_radius, input_width, input_height
     glayer = GanglionMosaic(5+0j, 10, df_radius=0, input_width=2, input_height=2)
     glayer.import_corem_output(ret_output, 'P_ganglion_L_ON_')
-    # glayer.generate_gc_spikes('vertical_spk', 1000*ms, True)
+    glayer.generate_gc_spikes(STIMSEQ_NAME, 1000*ms, True)
+
+    # TODO - As a quality control, show computed GC spiking in time & grids
 
     # glayer.archive_gc_input('gc_test_vertical')
-    glayer.show_grids()
+    # glayer.show_grids()
     #glayer.show_gc_output(8)
 
 

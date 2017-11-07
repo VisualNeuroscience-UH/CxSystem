@@ -1143,7 +1143,7 @@ class CxSystem(object):
 
                         # Use exponential decay here
                         print 'Exp decay here!'
-                        decay_const = 5/mm  # Unit important here to remind of scale
+                        decay_const = 10/mm  # Unit important here to remind of scale
                         syn_con_str += "'%f * exp(-%f * sqrt((x_pre-x_post)**2 + (y_pre-y_post)**2) )'" \
                                        % (float(p_arg), float(decay_const) )
 

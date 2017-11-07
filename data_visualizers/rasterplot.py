@@ -29,6 +29,9 @@ from multiprocess import Manager
 import datetime
 from tqdm import *
 
+import scipy.stats as ss
+from matplotlib.animation import FuncAnimation
+
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 
@@ -1184,6 +1187,34 @@ class SimulationData(object):
 
         return n_spiking, mean_firing_rates, isicovs, fanofactors
 
+    def import_ax(self, ax):
+        self.ax = ax
+        self.theplot, = ax.plot([], [], '.')
+
+    def animate(self, i):
+        t_res = 1*ms
+        self.show_spikes_at_t(7, i*t_res)
+
+    def show_spikes_at_t(self, group_id, t):
+
+        t_abs = t/second
+        t_res = 0.01  # 0.01 seems ok
+
+        group_name = self.group_numbering[group_id]
+        w_coord = self.data['positions_all']['w_coord'][group_name]
+        spikes_i = self.data['spikes_all'][group_name][0].astype(int)
+        spikes_t = self.data['spikes_all'][group_name][1]
+
+        who_are_spiking = np.unique(spikes_i[np.where(abs(spikes_t - t_abs) < t_res)])
+        spikers_coord = np.array([w_coord[i] for i in who_are_spiking])
+
+        # print who_are_spiking
+        self.ax.set_title('Time ' + str(t), fontsize=18)
+
+        self.theplot.set_data(spikers_coord.real, spikers_coord.imag)
+
+
+
 
 class ExperimentData(object):
     """
@@ -1475,8 +1506,10 @@ def combined_metrics_plot():
 
 
 
+
 # MAIN
 if __name__ == '__main__':
+
 
     ###### Depol x calcium plot ######
     # exp = ExperimentData('/opt3/tmp/bigrun/depolxcalcium/', 'fepol')
@@ -1497,9 +1530,9 @@ if __name__ == '__main__':
     # plt.show()
 
     ###### For analysing a set of runs ######
-    exp = ExperimentData('/opt3/tmp/kumar/', 'irduk')
-    exp.computestats('stats_irduk_new.csv',
-                    ['calcium_concentration', 'J', 'k', 'background_rate'])
+    # exp = ExperimentData('/opt3/tmp/kumar/', 'irduk')
+    # exp.computestats('stats_irduk_new.csv',
+    #                 ['calcium_concentration', 'J', 'k', 'background_rate'])
 
     ###### For creating side-by-side rasterplots ######
     # simulations = ['depol_37_calcium_concentration1.0_Cpp_3000ms.bz2', 'depol_37_calcium_concentration1.4_Cpp_3000ms.bz2',
@@ -1508,7 +1541,21 @@ if __name__ == '__main__':
     #
     # calciumplot(sim_files=simulations, sim_titles=sim_title, neurons_per_group=40, runtime=3.0)
 
+    ### Animating data
+    simfile = 'corem_tests/stripes_20171107_19455261_Python_1500ms.bz2'
+    a = SimulationData(simfile)
 
+    fig,ax = plt.subplots()
+    plt.xlim([25,35])
+    plt.ylim([-3,3])
+    ax.scatter([],[])
+
+    a.import_ax(ax)
+
+    anim = FuncAnimation(fig, a.animate, frames=np.arange(1000), interval=10)
+
+    # print a.show_spikes_at_t(ax,7, 0.0063*second)
+    plt.show()
 
 
 

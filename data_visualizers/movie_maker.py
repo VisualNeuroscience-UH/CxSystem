@@ -146,7 +146,7 @@ class Animator:
 if __name__ == '__main__':
 
     extension = ''
-    filepath = '/opt3/tmp/corem_tests/akuankka_20171107_15462288_Python_1500ms.bz2'
+    filepath = '/opt3/tmp/corem_tests/akuankka_20171107_17132887_Python_1500ms.bz2'
     # filepath = '/opt3/tmp/kumar/lalli_20170828_16073299_Cpp_1500ms.bz2'
     filename = ntpath.basename(os.path.splitext(filepath)[0])
     folderpath = os.path.dirname(filepath)
