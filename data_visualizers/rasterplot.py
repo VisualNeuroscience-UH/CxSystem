@@ -29,7 +29,6 @@ from multiprocess import Manager
 import datetime
 from tqdm import *
 
-import scipy.stats as ss
 from matplotlib.animation import FuncAnimation
 
 matplotlib.rcParams['pdf.fonttype'] = 42
@@ -1200,7 +1199,8 @@ class SimulationData(object):
         t_abs = t/second
         t_res = 0.01  # 0.01 seems ok
 
-        group_name = self.group_numbering[group_id]
+        # group_name = self.group_numbering[group_id]
+        group_name = 'NG0_relay_spikes'
         w_coord = self.data['positions_all']['w_coord'][group_name]
         spikes_i = self.data['spikes_all'][group_name][0].astype(int)
         spikes_t = self.data['spikes_all'][group_name][1]
@@ -1542,17 +1542,17 @@ if __name__ == '__main__':
     # calciumplot(sim_files=simulations, sim_titles=sim_title, neurons_per_group=40, runtime=3.0)
 
     ### Animating data
-    simfile = 'corem_tests/stripes_20171107_19455261_Python_1500ms.bz2'
+    simfile = 'corem_tests/square40_20171108_10200291_Python_1500ms.bz2'
     a = SimulationData(simfile)
 
     fig,ax = plt.subplots()
-    plt.xlim([25,35])
-    plt.ylim([-3,3])
+    plt.xlim([20,40])
+    plt.ylim([-6,6])
     ax.scatter([],[])
 
     a.import_ax(ax)
 
-    anim = FuncAnimation(fig, a.animate, frames=np.arange(1000), interval=10)
+    anim = FuncAnimation(fig, a.animate, frames=np.arange(1000), interval=40)
 
     # print a.show_spikes_at_t(ax,7, 0.0063*second)
     plt.show()

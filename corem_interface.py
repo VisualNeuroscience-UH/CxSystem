@@ -18,6 +18,7 @@ import cPickle as pickle
 import bz2
 from brian2 import *  # Load brian2 last for unit-handling to work properly in Numpy
 
+from matplotlib.animation import FuncAnimation
 
 # Global constants
 # DIR: absolute directory reference, RELDIR: relative directory reference
@@ -152,6 +153,17 @@ class CoremRetina(object):
         with bz2.BZ2File(save_path, 'wb') as fb:
             pickle.dump(self.simulation_data, fb, pickle.HIGHEST_PROTOCOL)
 
+    def _natural_sort(self, l):
+        """
+        Thanks to Mark Byers at StackOverflow
+
+        :param l:
+        :return:
+        """
+        convert = lambda text: int(text) if text.isdigit() else text.lower()
+        alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+        return sorted(l, key=alphanum_key)
+
     def _read_results(self, make_timedarray=True):
         '''
         Read data from the COREM results folder into a dict (of TimedArrays)
@@ -171,7 +183,13 @@ class CoremRetina(object):
 
         for id in self.stream_ids:
             simulation_files = [sim_file for sim_file in os.listdir(results_dir) if id in sim_file]
-            simulation_files.sort()  # Sort in ascending order, eg. Ganglion_ON_0, 1, ..., Ganglion_ON_1000
+
+            # NB! Since COREM names output files without leading zeros, the default sort will produce
+            # weird behavior later on. Natural sort is needed.
+            # simulation_files.sort()  # Sort in ascending order, eg. Ganglion_ON_0, 1, ..., Ganglion_ON_1000
+            simulation_files = self._natural_sort(simulation_files)
+
+            print simulation_files
             print '%s simulated on %s' % (id, time.ctime(os.path.getmtime(results_dir+simulation_files[0])))
 
             n_sim_files = len(simulation_files)
@@ -314,7 +332,7 @@ class CoremRetina(object):
     def run_demo(self):
         '''
         An attempt at integrating COREM to CxSystem and at simulating parafoveal retina of macaque monkey.
-        TODO - Obsolete, these functionalities have been moved to class CoremOutput
+        TODO - Obsolete, these functionalities have been moved to class CoremData
 
         :return:
         '''
@@ -734,21 +752,24 @@ class GanglionMosaic(object):
         bc_grid_cortex = self._cortical_mapping(bc_grid)
         gc_grid_cortex = self._cortical_mapping(gc_grid)
 
-        plt.subplots(1, 2)
+        self.grids_fig, self.grids_ax = plt.subplots(1, 2)
 
         ### GRIDS in retina
         plt.subplot(121)
+        ax = plt.gca()
         plt.title('Retinal locations (in degrees)')
         plt.xlabel('Eccentricity (deg)')
         plt.ylabel('Azimuth (deg)')
         # Show COREM grid (eg. bipolar cells)
         plt.scatter(bc_grid.real, bc_grid.imag, s=0.5)
+        # self.anim_retina_grid, = self.grids_ax[0].plot([5], [0], '.')
+        self.anim_retina_grid, = ax.plot([], [], '.')
 
         # Show ganglion cell grid
         patches = [RegularPolygon((z.real, z.imag), 6, self.df_radius) for z in gc_grid]
         collection = PatchCollection(patches)
         collection.set_facecolor('none')
-        collection.set_edgecolor('r')
+        collection.set_edgecolor('grey')
         ax = plt.gca()
         ax.add_collection(collection)
 
@@ -762,14 +783,16 @@ class GanglionMosaic(object):
 
         ### GRIDS in cortex
         plt.subplot(122)
+        ax = plt.gca()
         plt.title('Cortical locations (mm)')
         decay_const = 5
         plt.scatter(bc_grid_cortex.real, bc_grid_cortex.imag, s=0.5)
         # plt.scatter(gc_grid_cortex.real, gc_grid_cortex.imag)
+        self.anim_cortex_grid, = ax.plot([], [], '.')
         patches_circ = [Circle((z.real, z.imag), 1/decay_const) for z in gc_grid_cortex]
         collection_circ = PatchCollection(patches_circ)
         collection_circ.set_facecolor('none')
-        collection_circ.set_edgecolor('b')
+        collection_circ.set_edgecolor('grey')
         ax = plt.gca()
         ax.add_collection(collection_circ)
 
@@ -787,8 +810,31 @@ class GanglionMosaic(object):
         # ax = plt.gca()
         # ax.add_collection(collection)
 
+        # plt.show()
 
-        plt.show()
+    def animate_grids(self, i):
+
+        t = i * 1*ms
+        t_abs = t/second
+        t_res = 0.001  # 0.01 seems ok
+
+        bc_grid = self.retina_output_data.get_corem_positions(self.retina_output_channel)
+        gc_grid = self.gc_positions
+        gc_grid_cortex = self._cortical_mapping(gc_grid)
+
+        # w_coord = self.data['positions_all']['w_coord'][group_name]
+        spikes_i = self.gc_spikes_i.astype(int)
+        spikes_t = self.gc_spikes_t  # / second
+
+        who_are_spiking = np.unique(spikes_i[np.where(abs(spikes_t - t_abs) < t_res)])
+        retina_spikers_coord = np.array([gc_grid[i] for i in who_are_spiking])
+        cortex_spikers_coord = np.array([gc_grid_cortex[i] for i in who_are_spiking])
+
+        self.grids_fig.suptitle('Time ' + str(t), fontsize=18)
+
+        self.anim_retina_grid.set_data(retina_spikers_coord.real, retina_spikers_coord.imag)
+        self.anim_cortex_grid.set_data(cortex_spikers_coord.real, cortex_spikers_coord.imag)
+
 
     def average_corem_output(self, gc_index):
 
@@ -802,6 +848,8 @@ class GanglionMosaic(object):
         # new_bc_nodes = self.retina_output_data.get_nodes_within_hexagon(gc_pos, self.df_radius, self.retina_output_channel)
         # print 'Hex BC nodes are: ' + str(new_bc_nodes)
         # print 'Circular BC nodes are: ' + str(corr_bc_nodes)
+        # print 'Nodes within hexagon '+str(gc_index)+': '
+        # print corr_bc_nodes
 
         # Get data from corresponding output nodes
         bc_data = self.retina_output_data.get_corem_stream_raw(self.retina_output_channel)
@@ -820,7 +868,14 @@ class GanglionMosaic(object):
         # Sum filtered outputs
         corr_bc_data = transpose(corr_bc_data)  # back to [time points][output indices]
         # gc_input = [sum(corr_bc_data[t]) for t in range(0, len(corr_bc_data))]
+        # TODO - Mean of empty slice warning!
         gc_input = [numpy.average(corr_bc_data[t]) for t in range(0, len(corr_bc_data))]
+
+        # Debugging 8/11
+        # plt.figure()
+        # corr_bc_data = transpose(corr_bc_data)
+        # [plt.plot(range(900), corr_bc_data[k]) for k in range(len(corr_bc_nodes))]
+        # plt.show()
 
         return gc_input
 
@@ -904,6 +959,10 @@ class GanglionMosaic(object):
         output_dict['spikes_0'] = []
         output_dict['spikes_0'].append(list(gc_spikes.i))
         output_dict['spikes_0'].append(list(gc_spikes.t))
+
+        # Save for visualization
+        self.gc_spikes_i = np.array(gc_spikes.i)
+        self.gc_spikes_t = np.array(gc_spikes.t)
 
         # Save positions in retina (in degrees of visual field)
         output_dict['z_coord'] = self.gc_positions
@@ -1007,41 +1066,52 @@ if __name__ == '__main__':
     # ret.simulate_retina(retina_params)
     # ret.run_demo()
 
-    STIMSEQ_NAME = 'stripes'
+    STIMSEQ_NAME = 'oblique_grating'
 
-    ### STEP 1: Simulate retina
-    # ret = CoremRetina('parafoveal_parvo.py', 20, ['P_ganglion_L_ON_', 'P_ganglion_L_OFF_'], nsiemens, script_is_template=True)
-    # retina_params = {'SIM_TIME': 1200,
-    #                  'REC_START_TIME': 100,
-    #                  'RF_CENTER_SIGMA': 0.03,
-    #                  'CONE_H1_SIGMA': 0.5,
-    #                  'RF_SURROUND_SIGMA': 0.5,
-    #                  'SHOW_SIM': 'True'}
+    ## STEP 1: Simulate retina
+    ret = CoremRetina('parafoveal_parvo.py', 20, ['P_ganglion_L_ON_', 'P_ganglion_L_OFF_'], nsiemens, script_is_template=True)
+    retina_params = {'SIM_TIME': 1000,
+                     'REC_START_TIME': 100,
+                     'RF_CENTER_SIGMA': 0.03,
+                     'CONE_H1_SIGMA': 0.5,
+                     'RF_SURROUND_SIGMA': 0.5,
+                     'SHOW_SIM': 'True'}
 
-    # retina_params['INPUT_LINE'] = "retina.Input('sequence','input_sequences/Weberlaw/0_255/',{'InputFramePeriod','100'})"
-    # ret.set_input_grating(grating_type=1, width=2, height=2, spatial_freq=2, temporal_freq=0, orientation=0)
+    # retina_params['INPUT_LINE'] = "retina.Input('sequence','input_sequences/Square40/',{'InputFramePeriod','100'})"
+    ret.set_input_grating(grating_type=1, width=2, height=2, spatial_freq=2, temporal_freq=1, orientation=45)
 
+    ret.simulate_retina(retina_params)
 
-    # ret.simulate_retina(retina_params)
-    # ret.archive_data('/home/shohokka/PycharmProjects/corem_archive/', STIMSEQ_NAME)
-    #
+    ret.archive_data('/home/shohokka/PycharmProjects/corem_archive/', STIMSEQ_NAME)
+
+    # ret.run_demo()
+
     # ### STEP 2: Read simulation output
-    ret_output = CoremData('/home/shohokka/PycharmProjects/corem_archive/', STIMSEQ_NAME,
-                           nS, pixels_per_deg=20, input_width=2, input_height=2)  # <- these should be in the output file
-    ret_output.place_corem_on_rectgrid('P_ganglion_L_ON_', 5+0j)
-
-
-    ### STEP 3: Define ganglion cell layer
+    # ret_output = CoremData('/home/shohokka/PycharmProjects/corem_archive/', STIMSEQ_NAME,
+    #                        nS, pixels_per_deg=20, input_width=2, input_height=2)  # <- these should be in the output file
+    # ret_output.place_corem_on_rectgrid('P_ganglion_L_ON_', 5+0j)
+    #
+    #
+    # ### STEP 3: Define ganglion cell layer
     # # grid_center, gc_density, df_radius, input_width, input_height
-    glayer = GanglionMosaic(5+0j, 10, df_radius=0, input_width=2, input_height=2)
-    glayer.import_corem_output(ret_output, 'P_ganglion_L_ON_')
-    glayer.generate_gc_spikes(STIMSEQ_NAME, 1000*ms, True)
-
-    # TODO - As a quality control, show computed GC spiking in time & grids
-
-    # glayer.archive_gc_input('gc_test_vertical')
+    # glayer = GanglionMosaic(5+0j, 10, df_radius=0, input_width=2, input_height=2)
+    # glayer.import_corem_output(ret_output, 'P_ganglion_L_ON_')
+    # glayer.generate_gc_spikes(STIMSEQ_NAME, 1000*ms, show_sim=False)
+    #
     # glayer.show_grids()
+    # anim = FuncAnimation(glayer.grids_fig, glayer.animate_grids, frames=np.arange(1000), interval=20)
+    # plt.show()
+
+    #
+    # # TODO - As a quality control, show computed GC spiking in time & grids
+    #
     #glayer.show_gc_output(8)
 
+    # # glayer.average_corem_output(2)
+    # # plt.plot(range(900), glayer.average_corem_output(4))
+    # # plt.show()
+    # # glayer.show_grids()
+    # # plt.show()
+    #
 
     print 'Done.'
