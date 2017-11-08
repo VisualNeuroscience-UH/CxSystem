@@ -1197,7 +1197,7 @@ class SimulationData(object):
     def show_spikes_at_t(self, group_id, t):
 
         t_abs = t/second
-        t_res = 0.01  # 0.01 seems ok
+        t_res = 0.001  # 0.001 seems ok
 
         # group_name = self.group_numbering[group_id]
         group_name = 'NG0_relay_spikes'
@@ -1542,12 +1542,12 @@ if __name__ == '__main__':
     # calciumplot(sim_files=simulations, sim_titles=sim_title, neurons_per_group=40, runtime=3.0)
 
     ### Animating data
-    simfile = 'corem_tests/square40_20171108_10200291_Python_1500ms.bz2'
+    simfile = 'corem_tests/oblique_grating_20171108_16512817_Python_1500ms.bz2'
     a = SimulationData(simfile)
 
     fig,ax = plt.subplots()
-    plt.xlim([20,40])
-    plt.ylim([-6,6])
+    plt.xlim([25,35])
+    plt.ylim([-3,3])
     ax.scatter([],[])
 
     a.import_ax(ax)

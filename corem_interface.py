@@ -816,7 +816,7 @@ class GanglionMosaic(object):
 
         t = i * 1*ms
         t_abs = t/second
-        t_res = 0.001  # 0.01 seems ok
+        t_res = 0.001  # 0.001 seems ok
 
         bc_grid = self.retina_output_data.get_corem_positions(self.retina_output_channel)
         gc_grid = self.gc_positions
@@ -928,7 +928,7 @@ class GanglionMosaic(object):
         }
 
         gc_params['tau_m'] = gc_params['C_m'] / gc_params['g_L']
-        model_eq = 'dvm/dt = (((g_L*(E_L-vm) + ge*(E_ex-vm) + gi*(E_in-vm)) + tonic_current) / C_m) + noise*xi*tau_m**-0.5: volt'
+        model_eq = 'dvm/dt = (((g_L*(E_L-vm) + ge*(E_ex-vm) + gi*(E_in-vm)) + tonic_current) / C_m) :volt' # + noise*xi*tau_m**-0.5: volt'
 
         N_gc = len(self.gc_positions)
 
@@ -942,12 +942,14 @@ class GanglionMosaic(object):
         # Create GC neurons
         gc_neuron = NeuronGroup(N_gc, model=model_eq_on, namespace=gc_params,
                                 threshold='vm > ' + repr(gc_params['V_th']), reset='vm = ' + repr(gc_params['V_reset']),
-                                refractory=gc_params['t_ref'], method='euler')
+                                refractory=gc_params['t_ref'], method='exponential_euler')
 
         gc_spikes = SpikeMonitor(gc_neuron)
 
         # Simulate ganglion cells!
+        defaultclock.dt = 0.1 * ms
         run(runtime)
+        # TODO - Why always error in num integration? Decreasing timestep doesn't seem to help.
 
         # Prepare spike trains for archiving
         output_dict = dict()
@@ -1066,41 +1068,41 @@ if __name__ == '__main__':
     # ret.simulate_retina(retina_params)
     # ret.run_demo()
 
-    STIMSEQ_NAME = 'oblique_grating'
+    STIMSEQ_NAME = 'trump'
 
     ## STEP 1: Simulate retina
-    ret = CoremRetina('parafoveal_parvo.py', 20, ['P_ganglion_L_ON_', 'P_ganglion_L_OFF_'], nsiemens, script_is_template=True)
-    retina_params = {'SIM_TIME': 1000,
-                     'REC_START_TIME': 100,
-                     'RF_CENTER_SIGMA': 0.03,
-                     'CONE_H1_SIGMA': 0.5,
-                     'RF_SURROUND_SIGMA': 0.5,
-                     'SHOW_SIM': 'True'}
-
-    # retina_params['INPUT_LINE'] = "retina.Input('sequence','input_sequences/Square40/',{'InputFramePeriod','100'})"
-    ret.set_input_grating(grating_type=1, width=2, height=2, spatial_freq=2, temporal_freq=1, orientation=45)
-
-    ret.simulate_retina(retina_params)
-
-    ret.archive_data('/home/shohokka/PycharmProjects/corem_archive/', STIMSEQ_NAME)
+    # ret = CoremRetina('parafoveal_parvo.py', 20, ['P_ganglion_L_ON_', 'P_ganglion_L_OFF_'], nsiemens, script_is_template=True)
+    # retina_params = {'SIM_TIME': 1500,
+    #                  'REC_START_TIME': 100,
+    #                  'RF_CENTER_SIGMA': 0.03,
+    #                  'CONE_H1_SIGMA': 0.5,
+    #                  'RF_SURROUND_SIGMA': 0.5,
+    #                  'SHOW_SIM': 'True'}
+    #
+    # retina_params['INPUT_LINE'] = "retina.Input('sequence','input_sequences/Trump/',{'InputFramePeriod','250'})"
+    # # ret.set_input_grating(grating_type=1, width=2, height=2, spatial_freq=1, temporal_freq=5, orientation=45)
+    #
+    # ret.simulate_retina(retina_params)
+    #
+    # ret.archive_data('/home/shohokka/PycharmProjects/corem_archive/', STIMSEQ_NAME)
 
     # ret.run_demo()
 
     # ### STEP 2: Read simulation output
-    # ret_output = CoremData('/home/shohokka/PycharmProjects/corem_archive/', STIMSEQ_NAME,
-    #                        nS, pixels_per_deg=20, input_width=2, input_height=2)  # <- these should be in the output file
-    # ret_output.place_corem_on_rectgrid('P_ganglion_L_ON_', 5+0j)
-    #
-    #
-    # ### STEP 3: Define ganglion cell layer
-    # # grid_center, gc_density, df_radius, input_width, input_height
-    # glayer = GanglionMosaic(5+0j, 10, df_radius=0, input_width=2, input_height=2)
-    # glayer.import_corem_output(ret_output, 'P_ganglion_L_ON_')
-    # glayer.generate_gc_spikes(STIMSEQ_NAME, 1000*ms, show_sim=False)
-    #
-    # glayer.show_grids()
-    # anim = FuncAnimation(glayer.grids_fig, glayer.animate_grids, frames=np.arange(1000), interval=20)
-    # plt.show()
+    ret_output = CoremData('/home/shohokka/PycharmProjects/corem_archive/', STIMSEQ_NAME,
+                           nS, pixels_per_deg=20, input_width=2, input_height=2)  # <- these should be in the output file
+    ret_output.place_corem_on_rectgrid('P_ganglion_L_ON_', 5+0j)
+
+
+    ### STEP 3: Define ganglion cell layer
+    # grid_center, gc_density, df_radius, input_width, input_height
+    glayer = GanglionMosaic(5+0j, 400, df_radius=0, input_width=2, input_height=2)
+    glayer.import_corem_output(ret_output, 'P_ganglion_L_ON_')
+    glayer.generate_gc_spikes(STIMSEQ_NAME, 1000*ms, show_sim=False)
+
+    glayer.show_grids()
+    anim = FuncAnimation(glayer.grids_fig, glayer.animate_grids, frames=np.arange(1000), interval=1)
+    plt.show()
 
     #
     # # TODO - As a quality control, show computed GC spiking in time & grids
