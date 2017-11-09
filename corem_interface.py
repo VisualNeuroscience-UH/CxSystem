@@ -16,9 +16,9 @@ import re
 from string import Template
 import cPickle as pickle
 import bz2
+from matplotlib.animation import FuncAnimation
 from brian2 import *  # Load brian2 last for unit-handling to work properly in Numpy
 
-from matplotlib.animation import FuncAnimation
 
 # Global constants
 # DIR: absolute directory reference, RELDIR: relative directory reference
@@ -189,7 +189,7 @@ class CoremRetina(object):
             # simulation_files.sort()  # Sort in ascending order, eg. Ganglion_ON_0, 1, ..., Ganglion_ON_1000
             simulation_files = self._natural_sort(simulation_files)
 
-            print simulation_files
+            # print simulation_files
             print '%s simulated on %s' % (id, time.ctime(os.path.getmtime(results_dir+simulation_files[0])))
 
             n_sim_files = len(simulation_files)
@@ -674,7 +674,31 @@ class GanglionMosaic(object):
         self.retina_output_channel = ''
         self.gc_to_corem_nodes = [[]] * len(self.gc_positions)
 
+        # Ganglion cell parameters
+        self.default_gc_params = {
+            "C_m": 100.0 * pF,
+            "g_L": 10.0 * nS,
+            "E_ex": 0.0 * mV,
+            "E_in": -70.0 * mV,
+            "E_L": -60.0 * mV,
+            "V_th": -55.0 * mV,
+            "V_reset": -60.0 * mV,
+            "t_ref": 2.0 * ms,
+            "rate": 0.0 * Hz,  # not used
+            "tau_e": 3.0 * ms,  # not used
+            "tau_i": 8.3 * ms,  # not used
+            "tonic_current": 0 * pA,
+            "noise": 0.1 * mV,
+            "gi": 0 * nS
+        }
+
     def _compute_hexagon_radius(self, gc_density):
+        """
+        Given a density ganglion cells, computes how large a hexagon can GCs have
+
+        :param gc_density: int/float, density of ganglion cells per deg^2
+        :return: float, maximal radius of hexagons (in deg)
+        """
 
         a = 2/(3*sqrt(3)*gc_density)  # from simple trigonometry
         return sqrt(a)
@@ -745,6 +769,11 @@ class GanglionMosaic(object):
         self._compute_gc_to_corem_mapping()
 
     def show_grids(self):
+        """
+        Display of COREM data and simulated ganglion cell spikes in retinal and cortical locations
+
+        :return:
+        """
 
         bc_grid = self.retina_output_data.get_corem_positions(self.retina_output_channel)
         gc_grid = self.gc_positions
@@ -752,12 +781,19 @@ class GanglionMosaic(object):
         bc_grid_cortex = self._cortical_mapping(bc_grid)
         gc_grid_cortex = self._cortical_mapping(gc_grid)
 
-        self.grids_fig, self.grids_ax = plt.subplots(1, 2)
+        self.grids_fig, self.grids_ax = plt.subplots(1, 3)
+
+        ### Bipolar output
+        plt.subplot(131)
+        ax = plt.gca()
+        plt.title('Bipolar output')
+        # self.anim_bipolar_grid = sns.heatmap(np.zeros((40,40)), vmin=0, vmax=1000, ax=ax)
+        self.anim_bipolar_grid = ax.imshow(np.random.random((40,40)), interpolation='none', vmin=0.5e-9, vmax=1.5e-9, aspect='auto')
 
         ### GRIDS in retina
-        plt.subplot(121)
+        plt.subplot(132)
         ax = plt.gca()
-        plt.title('Retinal locations (in degrees)')
+        plt.title('Ganglion cell spikes (in retina)')
         plt.xlabel('Eccentricity (deg)')
         plt.ylabel('Azimuth (deg)')
         # Show COREM grid (eg. bipolar cells)
@@ -782,9 +818,11 @@ class GanglionMosaic(object):
         # ax.add_collection(collection_circ)
 
         ### GRIDS in cortex
-        plt.subplot(122)
+        plt.subplot(133)
         ax = plt.gca()
-        plt.title('Cortical locations (mm)')
+        plt.title('Ganglion cell spikes (proj to cortex)')
+        plt.xlabel('x (mm)')
+        plt.ylabel('y (mm)')
         decay_const = 5
         plt.scatter(bc_grid_cortex.real, bc_grid_cortex.imag, s=0.5)
         # plt.scatter(gc_grid_cortex.real, gc_grid_cortex.imag)
@@ -803,6 +841,7 @@ class GanglionMosaic(object):
         network_circle.set_edgecolor('green')
         ax.add_artist(network_circle)
 
+        # plt.tight_layout()
         # patches = [RegularPolygon((z.real, z.imag), 6, self.df_radius) for z in gc_grid_cortex] # not really but
         # collection = PatchCollection(patches)
         # collection.set_facecolor('none')
@@ -813,7 +852,14 @@ class GanglionMosaic(object):
         # plt.show()
 
     def animate_grids(self, i):
+        """
+        Animation routine for show_grids
 
+        :param i: int, time step (typically refers to i-th millisecond)
+        :return:
+        """
+
+        # Parameters (for spike plots)
         t = i * 1*ms
         t_abs = t/second
         t_res = 0.001  # 0.001 seems ok
@@ -822,6 +868,13 @@ class GanglionMosaic(object):
         gc_grid = self.gc_positions
         gc_grid_cortex = self._cortical_mapping(gc_grid)
 
+        # First draw bipolar output
+        bc_data = self.retina_output_data.get_corem_stream_ta(self.retina_output_channel)
+        bc_snapshot = np.reshape([bc_data(t, k) for k in range(len(bc_grid))], (-1, 40))
+
+        self.anim_bipolar_grid.set_array(bc_snapshot)
+
+        # Then, draw spiking
         # w_coord = self.data['positions_all']['w_coord'][group_name]
         spikes_i = self.gc_spikes_i.astype(int)
         spikes_t = self.gc_spikes_t  # / second
@@ -835,8 +888,13 @@ class GanglionMosaic(object):
         self.anim_retina_grid.set_data(retina_spikers_coord.real, retina_spikers_coord.imag)
         self.anim_cortex_grid.set_data(cortex_spikers_coord.real, cortex_spikers_coord.imag)
 
-
     def average_corem_output(self, gc_index):
+        """
+        Averages data from many COREM nodes corresponding to 1 ganglion cell
+
+        :param gc_index: int, index of ganglion cell
+        :return: array of floats, ganglion cell input [indexing in time]
+        """
 
         bc_grid = self.retina_output_data.get_corem_positions(self.retina_output_channel)
         gc_grid = self.gc_positions
@@ -859,28 +917,28 @@ class GanglionMosaic(object):
         # Scale output data in relation to distance from the ganglion cell "soma" (here gaussian filter)
         sigma = 1
         mu = gc_pos
-        # output_decay = lambda z: np.exp(- np.absolute(z - mu)**2 / (2 * sigma**2)) * 1/(sigma * np.sqrt(2 * np.pi))
-        output_decay = lambda z: 1
+        output_decay = lambda z: np.exp(- np.absolute(z - mu)**2 / (2 * sigma**2))  # * 1/(sigma * np.sqrt(2 * np.pi))
+        # output_decay = lambda z: 1
 
-        for k in range(0, len(corr_bc_nodes)):
-            corr_bc_data[k] *= output_decay(bc_grid[k])
+        distance_weights = [output_decay(bc_grid[corr_bc_nodes[i]]) for i in range(len(corr_bc_nodes))]
 
-        # Sum filtered outputs
         corr_bc_data = transpose(corr_bc_data)  # back to [time points][output indices]
         # gc_input = [sum(corr_bc_data[t]) for t in range(0, len(corr_bc_data))]
         # TODO - Mean of empty slice warning!
-        gc_input = [numpy.average(corr_bc_data[t]) for t in range(0, len(corr_bc_data))]
-
-        # Debugging 8/11
-        # plt.figure()
-        # corr_bc_data = transpose(corr_bc_data)
-        # [plt.plot(range(900), corr_bc_data[k]) for k in range(len(corr_bc_nodes))]
-        # plt.show()
+        if len(corr_bc_nodes) > 0:
+            gc_input = [numpy.average(corr_bc_data[t], weights=distance_weights) for t in range(0, len(corr_bc_data))]
+        else:
+            gc_input = [0 for t in range(len(corr_bc_data))]
 
         return gc_input
 
     def archive_gc_input(self, filename):
+        """
+        Archives averaged ganglion cell input (not usually necessary)
 
+        :param filename: str, file to which data is written
+        :return:
+        """
         data_to_save = dict()
         data_to_save['z_coord'] = self.gc_positions
         data_to_save['retinal_gc_input'] = []
@@ -897,9 +955,9 @@ class GanglionMosaic(object):
 
     def _cortical_mapping(self, z):
         """
-        Takes in z=r=e^(i*theta) in coordinates of visual field
+        Retino-cortical coordinate transformation
 
-        :param z:
+        :param z: complex number, coordinates of visual field (deg)
         :return: w, coordinates in cortex (mm)
         """
         k = 17
@@ -908,28 +966,20 @@ class GanglionMosaic(object):
         return w
 
     def generate_gc_spikes(self, filename, runtime=0*ms, show_sim=False):
+        """
+        Simulates ganglion cell responses and then saves them to a file
 
-        # Ganglion cell parameters
-        gc_params = {
-            "C_m": 100.0 * pF,
-            "g_L": 10.0 * nS,
-            "E_ex": 0.0 * mV,
-            "E_in": -70.0 * mV,
-            "E_L": -60.0 * mV,
-            "V_th": -55.0 * mV,
-            "V_reset": -60.0 * mV,
-            "t_ref": 2.0 * ms,
-            "rate": 0.0 * Hz,  # not used
-            "tau_e": 3.0 * ms,  # not used
-            "tau_i": 8.3 * ms,  # not used
-            "tonic_current": 0 * pA,
-            "noise": 0 * mV,
-            "gi": 0 * nS
-        }
+        :param filename: str
+        :param runtime: time in ms
+        :param show_sim: bool, shows a rasterplot of responses (default: False)
+        :return:
+        """
 
+        gc_params = self.default_gc_params
         gc_params['tau_m'] = gc_params['C_m'] / gc_params['g_L']
-        model_eq = 'dvm/dt = (((g_L*(E_L-vm) + ge*(E_ex-vm) + gi*(E_in-vm)) + tonic_current) / C_m) :volt' # + noise*xi*tau_m**-0.5: volt'
+        defaultclock.dt = 0.1 * ms
 
+        model_eq = 'dvm/dt = (((g_L*(E_L-vm) + ge*(E_ex-vm) + gi*(E_in-vm)) + tonic_current) / C_m) + noise*xi*tau_m**-0.5: volt'
         N_gc = len(self.gc_positions)
 
         # Prepare GC input for interfacing with Brian2
@@ -942,14 +992,13 @@ class GanglionMosaic(object):
         # Create GC neurons
         gc_neuron = NeuronGroup(N_gc, model=model_eq_on, namespace=gc_params,
                                 threshold='vm > ' + repr(gc_params['V_th']), reset='vm = ' + repr(gc_params['V_reset']),
-                                refractory=gc_params['t_ref'], method='exponential_euler')
+                                refractory=gc_params['t_ref'], method='euler')
 
         gc_spikes = SpikeMonitor(gc_neuron)
 
         # Simulate ganglion cells!
-        defaultclock.dt = 0.1 * ms
+
         run(runtime)
-        # TODO - Why always error in num integration? Decreasing timestep doesn't seem to help.
 
         # Prepare spike trains for archiving
         output_dict = dict()
@@ -980,9 +1029,13 @@ class GanglionMosaic(object):
             plt.scatter(gc_spikes.t / ms, gc_spikes.i, s=0.4, color='green')
             plt.show()
 
-
-
     def show_gc_output(self, gc_index):
+        """
+        Obsolete - can probably be erased soon
+
+        :param gc_index:
+        :return:
+        """
 
         # Ganglion cell parameters
         gc_params = {
@@ -1068,10 +1121,12 @@ if __name__ == '__main__':
     # ret.simulate_retina(retina_params)
     # ret.run_demo()
 
-    STIMSEQ_NAME = 'trump'
+    STIMSEQ_NAME = 'vertical_grating'
 
     ## STEP 1: Simulate retina
     # ret = CoremRetina('parafoveal_parvo.py', 20, ['P_ganglion_L_ON_', 'P_ganglion_L_OFF_'], nsiemens, script_is_template=True)
+
+    # TODO - Retina params should go to init
     # retina_params = {'SIM_TIME': 1500,
     #                  'REC_START_TIME': 100,
     #                  'RF_CENTER_SIGMA': 0.03,
@@ -1079,41 +1134,34 @@ if __name__ == '__main__':
     #                  'RF_SURROUND_SIGMA': 0.5,
     #                  'SHOW_SIM': 'True'}
     #
-    # retina_params['INPUT_LINE'] = "retina.Input('sequence','input_sequences/Trump/',{'InputFramePeriod','250'})"
+    # TODO - Make a function of making seq films
+    # retina_params['INPUT_LINE'] = "retina.Input('sequence','input_sequences/Square40/',{'InputFramePeriod','100'})"
     # # ret.set_input_grating(grating_type=1, width=2, height=2, spatial_freq=1, temporal_freq=5, orientation=45)
     #
     # ret.simulate_retina(retina_params)
     #
+    # archive_data shouldn't be a separate call
     # ret.archive_data('/home/shohokka/PycharmProjects/corem_archive/', STIMSEQ_NAME)
 
-    # ret.run_demo()
 
     # ### STEP 2: Read simulation output
+    # TODO - Is it ever necessary to read CoremData separately? Could this just be inside the GanglionMosaic class?
     ret_output = CoremData('/home/shohokka/PycharmProjects/corem_archive/', STIMSEQ_NAME,
-                           nS, pixels_per_deg=20, input_width=2, input_height=2)  # <- these should be in the output file
+                           nS, pixels_per_deg=20, input_width=2, input_height=2)  # TODO <- these should be in the output file
     ret_output.place_corem_on_rectgrid('P_ganglion_L_ON_', 5+0j)
 
 
     ### STEP 3: Define ganglion cell layer
     # grid_center, gc_density, df_radius, input_width, input_height
-    glayer = GanglionMosaic(5+0j, 400, df_radius=0, input_width=2, input_height=2)
+    glayer = GanglionMosaic(5+0j, 50, df_radius=0, input_width=2, input_height=2)
     glayer.import_corem_output(ret_output, 'P_ganglion_L_ON_')
     glayer.generate_gc_spikes(STIMSEQ_NAME, 1000*ms, show_sim=False)
 
     glayer.show_grids()
-    anim = FuncAnimation(glayer.grids_fig, glayer.animate_grids, frames=np.arange(1000), interval=1)
+    anim = FuncAnimation(glayer.grids_fig, glayer.animate_grids, frames=np.arange(1000), interval=40)
+    # print 'Saving animation'
+    # anim.save('/home/shohokka/' + STIMSEQ_NAME + '.mp4', extra_args=['-vcodec', 'libx264'])
     plt.show()
 
-    #
-    # # TODO - As a quality control, show computed GC spiking in time & grids
-    #
-    #glayer.show_gc_output(8)
-
-    # # glayer.average_corem_output(2)
-    # # plt.plot(range(900), glayer.average_corem_output(4))
-    # # plt.show()
-    # # glayer.show_grids()
-    # # plt.show()
-    #
 
     print 'Done.'
