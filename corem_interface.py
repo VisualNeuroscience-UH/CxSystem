@@ -688,7 +688,7 @@ class GanglionMosaic(object):
             "tau_e": 3.0 * ms,  # not used
             "tau_i": 8.3 * ms,  # not used
             "tonic_current": 0 * pA,
-            "noise": 0.1 * mV,
+            "noise": 0 * mV,
             "gi": 0 * nS
         }
 
@@ -1121,26 +1121,26 @@ if __name__ == '__main__':
     # ret.simulate_retina(retina_params)
     # ret.run_demo()
 
-    STIMSEQ_NAME = 'vertical_grating'
+    STIMSEQ_NAME = 'smallspot'
 
     ## STEP 1: Simulate retina
     # ret = CoremRetina('parafoveal_parvo.py', 20, ['P_ganglion_L_ON_', 'P_ganglion_L_OFF_'], nsiemens, script_is_template=True)
-
-    # TODO - Retina params should go to init
-    # retina_params = {'SIM_TIME': 1500,
+    #
+    # ### TODO - Retina params should go to init
+    # retina_params = {'SIM_TIME': 1100,
     #                  'REC_START_TIME': 100,
     #                  'RF_CENTER_SIGMA': 0.03,
     #                  'CONE_H1_SIGMA': 0.5,
     #                  'RF_SURROUND_SIGMA': 0.5,
     #                  'SHOW_SIM': 'True'}
     #
-    # TODO - Make a function of making seq films
-    # retina_params['INPUT_LINE'] = "retina.Input('sequence','input_sequences/Square40/',{'InputFramePeriod','100'})"
+    # ## TODO - Make a function of making seq films
+    # retina_params['INPUT_LINE'] = "retina.Input('sequence','input_sequences/smallspot/',{'InputFramePeriod','100'})"
     # # ret.set_input_grating(grating_type=1, width=2, height=2, spatial_freq=1, temporal_freq=5, orientation=45)
     #
     # ret.simulate_retina(retina_params)
     #
-    # archive_data shouldn't be a separate call
+    # ## TODO- archive_data shouldn't be a separate call
     # ret.archive_data('/home/shohokka/PycharmProjects/corem_archive/', STIMSEQ_NAME)
 
 
@@ -1149,19 +1149,19 @@ if __name__ == '__main__':
     ret_output = CoremData('/home/shohokka/PycharmProjects/corem_archive/', STIMSEQ_NAME,
                            nS, pixels_per_deg=20, input_width=2, input_height=2)  # TODO <- these should be in the output file
     ret_output.place_corem_on_rectgrid('P_ganglion_L_ON_', 5+0j)
-
-
-    ### STEP 3: Define ganglion cell layer
-    # grid_center, gc_density, df_radius, input_width, input_height
-    glayer = GanglionMosaic(5+0j, 50, df_radius=0, input_width=2, input_height=2)
+    #
+    #
+    # ### STEP 3: Define ganglion cell layer
+    # # grid_center, gc_density, df_radius, input_width, input_height
+    glayer = GanglionMosaic(5+0j, 200, df_radius=0, input_width=2, input_height=2)
     glayer.import_corem_output(ret_output, 'P_ganglion_L_ON_')
     glayer.generate_gc_spikes(STIMSEQ_NAME, 1000*ms, show_sim=False)
 
     glayer.show_grids()
     anim = FuncAnimation(glayer.grids_fig, glayer.animate_grids, frames=np.arange(1000), interval=40)
-    # print 'Saving animation'
-    # anim.save('/home/shohokka/' + STIMSEQ_NAME + '.mp4', extra_args=['-vcodec', 'libx264'])
-    plt.show()
+    print 'Saving animation'
+    anim.save('/home/shohokka/' + STIMSEQ_NAME + '.mp4', extra_args=['-vcodec', 'libx264'])
+    # plt.show()
 
 
     print 'Done.'

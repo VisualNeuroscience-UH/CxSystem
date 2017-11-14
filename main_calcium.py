@@ -1,6 +1,7 @@
 import CxSystem as cxs
 import os
 from brian2  import *
+import brian2tools.nmlexport
 import datetime
 
 default_runtime = 500*ms
@@ -13,6 +14,7 @@ CM = cxs.CxSystem(anatomy_and_system_config = os.path.dirname(os.path.realpath(_
 #                         physiology_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_Burbank.csv')
 
 time_before_run = datetime.datetime.now()
+set_device('neuroml2', filename="cxsystem.nml")
 CM.run()
 time_end = datetime.datetime.now()
 
