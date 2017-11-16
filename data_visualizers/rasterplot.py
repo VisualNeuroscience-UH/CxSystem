@@ -47,7 +47,7 @@ class SimulationData(object):
     """
     # TODO - Make class agnostic about network structure, ie extract following constants from datafile
 
-    default_data_file_path = '/opt3/tmp/'
+    default_data_file_path = '/opt3/tmp/01_cxs_rev1/'
     default_sampling_frequency = 1000
     defaultclock_dt = 0.1 * ms
 
@@ -1214,8 +1214,6 @@ class SimulationData(object):
         self.theplot.set_data(spikers_coord.real, spikers_coord.imag)
 
 
-
-
 class ExperimentData(object):
     """
     Class for managing and analysing data from multiple simulations (such as an experiment).
@@ -1403,8 +1401,6 @@ class ExperimentData(object):
         sim.publicationplot(sampling_factor=sampling_factor, time_limits=time_limits, ax=ax)
 
 
-
-
 def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='Effect of increased $Ca^{2+}$ concentration (mM)'):
     """
     Plots simplified rasterplots of simulations next to each other. For publications.
@@ -1530,9 +1526,12 @@ if __name__ == '__main__':
     # plt.show()
 
     ###### For analysing a set of runs ######
-    # exp = ExperimentData('/opt3/tmp/kumar/', 'irduk')
-    # exp.computestats('stats_irduk_new.csv',
-    #                 ['calcium_concentration', 'J', 'k', 'background_rate'])
+    # Seeing results in iPython for example:
+    #  plt.figure(); a = data.pivot_table('irregularity_mean', index='background_rate', columns='k').sort_index(ascending=False); sns.heatmap(a, cmap='binary', vmax=1)
+
+    exp = ExperimentData('/opt3/tmp/01_cxs_rev1/', '00_synapsefix')
+    exp.computestats('stats_00_synapsefix.csv',
+                    ['calcium_concentration', 'J', 'k', 'background_rate'])
 
     ###### For creating side-by-side rasterplots ######
     # simulations = ['depol_37_calcium_concentration1.0_Cpp_3000ms.bz2', 'depol_37_calcium_concentration1.4_Cpp_3000ms.bz2',
@@ -1542,20 +1541,20 @@ if __name__ == '__main__':
     # calciumplot(sim_files=simulations, sim_titles=sim_title, neurons_per_group=40, runtime=3.0)
 
     ### Animating data
-    simfile = 'corem_tests/oblique_grating_20171108_16512817_Python_1500ms.bz2'
-    a = SimulationData(simfile)
-
-    fig,ax = plt.subplots()
-    plt.xlim([25,35])
-    plt.ylim([-3,3])
-    ax.scatter([],[])
-
-    a.import_ax(ax)
-
-    anim = FuncAnimation(fig, a.animate, frames=np.arange(1000), interval=40)
-
-    # print a.show_spikes_at_t(ax,7, 0.0063*second)
-    plt.show()
+    # simfile = 'corem_tests/oblique_grating_20171108_16512817_Python_1500ms.bz2'
+    # a = SimulationData(simfile)
+    #
+    # fig,ax = plt.subplots()
+    # plt.xlim([25,35])
+    # plt.ylim([-3,3])
+    # ax.scatter([],[])
+    #
+    # a.import_ax(ax)
+    #
+    # anim = FuncAnimation(fig, a.animate, frames=np.arange(1000), interval=40)
+    #
+    # # print a.show_spikes_at_t(ax,7, 0.0063*second)
+    # plt.show()
 
 
 

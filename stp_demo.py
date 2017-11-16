@@ -1,5 +1,5 @@
 # Test suite for spike frequency adaptation
-# According to Fuhrmann et al. J Neurophysiol 2002.
+# According to Fuhrmann et al. J Neurophysiol 2002 vol 87.
 #
 # Author Henri Hokkanen <henri.hokkanen@helsinki.fi> 14 Nov 2017
 
@@ -161,38 +161,54 @@ S_alt.R = 1
 ### SYNAPSE 2 Facil. ###
 #I = PoissonGroup(1, 23*Hz)
 
-# Facilitating ????
+# Facilitating clock-driven
 S2 = Synapses(H, G,
              model=''' dR/dt = (1-R)/taurec2 : 1 (clock-driven)
-                       du/dt = -(u-U)/taufacil : 1 (clock-driven) ''',
+                       du/dt = -u/taufacil : 1 (clock-driven) ''',
              on_pre=''' ge_post += R * w
                         R = R*(1-u)
                         u = u + U1*(1-u)''')
 
+# Facilitating event-driven
+S2_alt = Synapses(H, G,
+             model=''' R : 1
+                       u : 1 ''',
+             on_pre=''' R = R + (1-R)*(1 - exp(-(t-lastupdate)/taurec2))
+                        u = u * exp(-(t-lastupdate)/taufacil)
+                        ge_post += R * w
+                        R = R - u*R
+                        u = u + U1*(1-u)''')
+
 
 S2.connect(i=0, j=2)
+S2_alt.connect(i=0, j=3)
 
 S2.u = U
 S2.R = 1
+S2_alt.u = U
+S2_alt.R = 1
 
 ########################
 SM = StateMonitor(S, ('R'), record=True)
 S_altM = StateMonitor(S_alt, ('R'), record=True)
 
 S2M = StateMonitor(S2, ('R', 'u'), record=True)
+S2_altM = StateMonitor(S2_alt, ('R', 'u'), record=True)
 
 # SM2 = StateMonitor(S2, ('R'), record=True)
 run(2000 * ms)
 
 
 plt.subplots(2,2)
+plt.suptitle('Clock- vs. event-driven synapses with STP')
+
 vm_lim = [-70.1, -68.5]
 
 ### Membrane voltage plot
 plt.subplot(2,2,1)
 plt.title('$V_m$ (depressing)')
-plt.plot(M.t/ms, M.vm[0]/mV, label='Neuron 1')
-plt.plot(M.t/ms, M.vm[1]/mV, label='Neuron 2')
+plt.plot(M.t/ms, M.vm[0]/mV, label='CD')
+plt.plot(M.t/ms, M.vm[1]/mV, label='ED')
 # plt.plot(M_spikes.t/ms, [0*mV] * len(M_spikes.t), '.')
 xlabel('Time (ms)')
 ylabel('V_m (V)')
@@ -202,8 +218,8 @@ plt.ylim(vm_lim)
 ###
 plt.subplot(2,2,2)
 plt.title('R (depressing)')
-plt.plot(SM.t/ms, SM.R[0], label='Clock-driven')
-plt.plot(S_altM.t/ms, S_altM.R[0], label='Event-driven')
+plt.plot(SM.t/ms, SM.R[0], label='CD')
+plt.plot(S_altM.t/ms, S_altM.R[0], label='ED')
 xlabel('Time (ms)')
 ylabel('Frac. resources (1)')
 plt.ylim([0, 1])
@@ -212,7 +228,8 @@ plt.legend()
 ### Membrane voltage plot
 plt.subplot(2,2,3)
 plt.title('$V_m$ (facil)')
-plt.plot(M.t/ms, M.vm[2]/mV, label='Neuron 1')
+plt.plot(M.t/ms, M.vm[2]/mV, label='CD')
+plt.plot(M.t/ms, M.vm[3]/mV, label='ED')
 # plt.plot(M.t/ms, M.vm[1]/mV, label='Neuron 2')
 # plt.plot(M_spikes.t/ms, [0*mV] * len(M_spikes.t), '.')
 xlabel('Time (ms)')
@@ -225,6 +242,8 @@ plt.subplot(2,2,4)
 plt.title('R, u (facil)')
 plt.plot(S2M.t/ms, S2M.R[0], label='R, CD')
 plt.plot(S2M.t/ms, S2M.u[0], label='u, CD')
+plt.plot(S2_altM.t/ms, S2_altM.R[0], label='R, ED')
+plt.plot(S2_altM.t/ms, S2_altM.u[0], label='u, ED')
 # plt.plot(S_altM.t/ms, S_altM.R[0], label='Event-driven')
 xlabel('Time (ms)')
 ylabel('R/u (1)')

@@ -436,7 +436,7 @@ class synapse_reference(object):
         * _name_space: An instance of brian2_obj_namespaces() object which contains all the constant parameters for this synaptic equation.
 
         '''
-        synapse_reference.syntypes = array(['STDP', 'STDP_with_scaling', 'Fixed'])
+        synapse_reference.syntypes = array(['STDP', 'STDP_with_scaling', 'Fixed', 'Fixed_rev1', 'Depressing', 'Facilitating'])
         assert syn_type in synapse_reference.syntypes, "Cell type '%s' is not defined" % syn_type
         self.output_synapse = {}
         self.output_synapse['type'] = syn_type
@@ -491,6 +491,7 @@ class synapse_reference(object):
                         apost += Apost * wght0 * Cp
                         wght = clip(wght + apre, 0, wght_max)
                         '''
+
     def STDP_with_scaling(self):
         '''
         The method for implementing the STDP synaptic connection.
@@ -541,4 +542,46 @@ class synapse_reference(object):
             ''')
         self.output_synapse['pre_eq'] = '''
         %s+=wght
+        ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
+
+    def Fixed_rev1(self):
+        '''
+        The method for implementing the Fixed synaptic connection.
+
+        '''
+        self.output_synapse['equation'] = Equations('''
+            wght:siemens
+            ''')
+        self.output_synapse['pre_eq'] = '''
+        %s+=wght
+        ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
+
+    def Depressing(self):
+
+        self.output_synapse['equation'] = Equations('''
+        wght : siemens
+        R : 1
+        ''')
+
+        self.output_synapse['pre_eq'] = '''
+        R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_d))
+        %s += R * wght
+        R = R - U * R
+        ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
+
+
+    def Facilitating(self):
+
+        self.output_synapse['equation'] = Equations('''
+        wght : siemens
+        R : 1
+        u : 1
+        ''')
+
+        self.output_synapse['pre_eq'] = '''
+        R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_fd))
+        u = u * exp(-(t-lastupdate)/tau_f)
+        %s += R * wght
+        R = R - u * R
+        u = u + U_f * (1-u)
         ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')

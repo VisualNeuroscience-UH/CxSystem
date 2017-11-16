@@ -34,12 +34,7 @@ class synapse_parser(object):
 
     '''
 
-    # For _change_calcium()
-    _excitatory_groups = ['PC', 'SS', 'VPM']
-    _steep_inhibitory_groups = ['MC']
-    _shallow_inhibitory_groups = ['BC']
-    _steep_post = _excitatory_groups + _steep_inhibitory_groups
-    _shallow_post = _shallow_inhibitory_groups
+
 
     def __init__(self,output_synapse,physio_config_df):
         '''
@@ -50,27 +45,16 @@ class synapse_parser(object):
         self.output_synapse = output_synapse
         self.physio_config_df = physio_config_df
 
-        synapse_parser.type_ref = array (['STDP','STDP_with_scaling', 'Fixed'])
+        synapse_parser.type_ref = array (['STDP','STDP_with_scaling', 'Fixed', 'Fixed_rev1', 'Depressing', 'Facilitating'])
         assert output_synapse['type'] in synapse_parser.type_ref, "Cell type '%s' is not defined." % output_synapse['type']
         self.output_namespace = {}
         self.output_namespace['Cp'] = self.value_extractor(self.physio_config_df,'Cp')
         self.output_namespace['Cd'] = self.value_extractor(self.physio_config_df,'Cd')
         self.sparseness = self.value_extractor(self.physio_config_df,'sp_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
         self.ilam = self.value_extractor(self.physio_config_df,'ilam_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
-        self.calcium_concentration = self.value_extractor(self.physio_config_df, 'calcium_concentration' )   # Change calcium concentration here or with _change_calcium()
+        self.calcium_concentration = self.value_extractor(self.physio_config_df, 'calcium_concentration' )
 
-        # Set dissociation constant for Hill equation (see change_calcium)
-        # Update 2017-02-17: It's not only E->E and E->I connections that get scaled. Goes both ways. See Markram suppl p16.
-        if output_synapse['pre_group_type'] in self._excitatory_groups and output_synapse['post_group_type'] in self._steep_post:
-            self._K12 = 2.79
-        elif output_synapse['pre_group_type'] in self._steep_inhibitory_groups and output_synapse['post_group_type'] in self._excitatory_groups:
-            self._K12 = 2.79
-        elif output_synapse['pre_group_type'] in self._excitatory_groups and output_synapse['post_group_type'] in self._shallow_post:
-            self._K12 = 1.09
-        elif output_synapse['pre_group_type'] in self._shallow_inhibitory_groups and output_synapse['post_group_type'] in self._excitatory_groups:
-            self._K12 = 1.09
-        else:
-            self._K12 = np.average([2.79, 1.09])
+        self._set_calcium_dependency()
 
         # Set (initial) weights for chosen synapse type
         getattr(synapse_parser, output_synapse['type'])(self)
@@ -101,7 +85,37 @@ class synapse_parser(object):
         except ValueError:
             raise ValueError("Parameter %s not found in the configuration file."%key_name)
 
-    def _change_calcium(self, ca, cw=None):
+    def _set_calcium_dependency(self):
+        """
+        Sets the dissociation constant for calcium-dependent modulation of synaptic weight
+        # NB! It's not only E->E and E->I connections that get scaled. Goes both ways. See Markram suppl p16.
+        """
+
+        excitatory_groups = ['PC', 'SS', 'VPM']
+        steep_inhibitory_groups = ['MC']
+        shallow_inhibitory_groups = ['BC']
+        steep_post = excitatory_groups + steep_inhibitory_groups
+        shallow_post = shallow_inhibitory_groups
+
+        if self.output_synapse['pre_group_type'] in excitatory_groups and self.output_synapse['post_group_type'] in steep_post:
+            self._K12 = 2.79
+        elif self.output_synapse['pre_group_type'] in steep_inhibitory_groups and self.output_synapse['post_group_type'] in excitatory_groups:
+            self._K12 = 2.79
+        elif self.output_synapse['pre_group_type'] in excitatory_groups and self.output_synapse['post_group_type'] in shallow_post:
+            self._K12 = 1.09
+        elif self.output_synapse['pre_group_type'] in shallow_inhibitory_groups and self.output_synapse['post_group_type'] in excitatory_groups:
+            self._K12 = 1.09
+        else:
+            self._K12 = np.average([2.79, 1.09])
+
+    def _scale_by_calcium(self, ca, cw=None):
+        """
+        Scales synaptic weight depending on calcium level
+
+        :param ca: float, calcium concentration in mM
+        :param cw: float, connection weight with calcium level 2.0mM (optional)
+        :return: float, scaled synaptic weight
+        """
 
         if cw is None:
             original_synapse_strength = self.cw_baseline_calcium
@@ -114,6 +128,26 @@ class synapse_parser(object):
         final_synapse_strength = original_synapse_strength * calcium_factor
 
         return final_synapse_strength
+
+    def _set_utilization_factor(self, is_facilitating=False):
+        excitatory_groups = ['PC', 'SS', 'in']
+        inhibitory_groups = ['BC', 'MC', 'L1i']
+
+        if is_facilitating is False:
+            U_E = self.value_extractor(self.physio_config_df, 'U_E')
+            U_I = self.value_extractor(self.physio_config_df, 'U_I')
+
+            if self.output_synapse['pre_group_type'] in excitatory_groups:
+                self.output_namespace['U'] = U_E
+            elif self.output_synapse['pre_group_type'] in inhibitory_groups:
+                self.output_namespace['U'] = U_I
+            else:
+                print 'Warning! Unrecognized group type %s will have outbound synapses with averaged utilization factor' % self.output_synapse['pre_group_type']
+                self.output_namespace['U'] = np.average([U_E, U_I])
+
+        else:
+            U_f = self.value_extractor(self.physio_config_df, 'U_f')
+            self.output_namespace['U_f'] = U_f
 
     def STDP(self):
         '''
@@ -157,7 +191,6 @@ class synapse_parser(object):
         min_delay = std_delay / 2.
         self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, min_delay)
 
-
     def Fixed(self):
         '''
         The Fixed method for assigning the parameters for Fixed synaptic connection to the customized_synapses() object.
@@ -171,13 +204,78 @@ class synapse_parser(object):
 
         if self.calcium_concentration > 0: # For change_calcium()
             self.cw_baseline_calcium = std_wght
-            std_wght = self._change_calcium(self.calcium_concentration)
+            std_wght = self._scale_by_calcium(self.calcium_concentration)
 
         self.output_namespace['init_wght'] = '(%f * rand() + %f) * nS' % (std_wght , mu_wght)
         std_delay = self.value_extractor(self.physio_config_df,'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
         min_delay = std_delay / 2.
         self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, min_delay)
 
+    def Fixed_rev1(self):
+        '''
+         The Fixed method for assigning the parameters for Fixed synaptic connection to the customized_synapses() object.
+
+         :param output_synapse: This is the dictionary created in neuron_reference() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: wght_max, wght0.
+         '''
+
+        std_wght = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+        #mu_wght = std_wght / 2.
+
+        if self.calcium_concentration > 0:  # For change_calcium()
+            self.cw_baseline_calcium = std_wght
+            std_wght = self._scale_by_calcium(self.calcium_concentration)
+
+        self.output_namespace['init_wght'] = '%f * nS' % std_wght
+        #self.output_namespace['init_wght'] = '(%f * rand() + %f) * nS' % (std_wght, mu_wght)
+
+        std_delay = self.value_extractor(self.physio_config_df, 'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
+        min_delay = std_delay / 2.
+        self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, min_delay)
+
+
+    def Depressing(self):
+        '''
+         Depressing synapse
+
+         '''
+
+        mu_wght = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+        self._set_utilization_factor()
+        tau_d = self.value_extractor(self.physio_config_df, 'tau_d')
+        self.output_namespace['tau_d'] = tau_d
+
+        if self.calcium_concentration > 0:  # For change_calcium()
+            self.cw_baseline_calcium = mu_wght
+            mu_wght = self._scale_by_calcium(self.calcium_concentration)
+
+        self.output_namespace['init_wght'] = '%f * nS' % mu_wght
+
+        std_delay = self.value_extractor(self.physio_config_df, 'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
+        min_delay = std_delay / 2.
+        self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, min_delay)
+
+    def Facilitating(self):
+        '''
+         Facilitating synapse
+
+         '''
+
+        mu_wght = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+        self._set_utilization_factor(is_facilitating=True)
+        tau_fd = self.value_extractor(self.physio_config_df, 'tau_fd')
+        self.output_namespace['tau_fd'] = tau_fd
+        tau_f = self.value_extractor(self.physio_config_df, 'tau_f')
+        self.output_namespace['tau_f'] = tau_f
+
+        if self.calcium_concentration > 0:  # For change_calcium()
+            self.cw_baseline_calcium = mu_wght
+            mu_wght = self._scale_by_calcium(self.calcium_concentration)
+
+        self.output_namespace['init_wght'] = '%f * nS' % mu_wght
+
+        std_delay = self.value_extractor(self.physio_config_df, 'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
+        min_delay = std_delay / 2.
+        self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, min_delay)
 
 #############################################
 ##################### Neurons  #############
