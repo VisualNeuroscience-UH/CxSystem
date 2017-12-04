@@ -1529,9 +1529,9 @@ if __name__ == '__main__':
     # Seeing results in iPython for example:
     #  plt.figure(); a = data.pivot_table('irregularity_mean', index='background_rate', columns='k').sort_index(ascending=False); sns.heatmap(a, cmap='binary', vmax=1)
 
-    exp = ExperimentData('/opt3/tmp/01_cxs_rev1/', '00_synapsefix')
-    exp.computestats('stats_00_synapsefix.csv',
-                    ['calcium_concentration', 'J', 'k', 'background_rate'])
+    exp = ExperimentData('/opt3/tmp/01_cxs_rev1/', '13_adextest')
+    exp.computestats('stats_13_adextest.csv',
+                    ['calcium_concentration', 'J', 'k', 'background_rate', 'depolarization_level', 'PC_rheobase_scaling'])
 
     ###### For creating side-by-side rasterplots ######
     # simulations = ['depol_37_calcium_concentration1.0_Cpp_3000ms.bz2', 'depol_37_calcium_concentration1.4_Cpp_3000ms.bz2',

@@ -45,7 +45,7 @@ class synapse_parser(object):
         self.output_synapse = output_synapse
         self.physio_config_df = physio_config_df
 
-        synapse_parser.type_ref = array (['STDP','STDP_with_scaling', 'Fixed', 'Fixed_rev1', 'Depressing', 'Facilitating'])
+        synapse_parser.type_ref = array (['STDP','STDP_with_scaling', 'Fixed', 'Fixed_future', 'Depressing', 'Facilitating'])
         assert output_synapse['type'] in synapse_parser.type_ref, "Cell type '%s' is not defined." % output_synapse['type']
         self.output_namespace = {}
         self.output_namespace['Cp'] = self.value_extractor(self.physio_config_df,'Cp')
@@ -211,7 +211,7 @@ class synapse_parser(object):
         min_delay = std_delay / 2.
         self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, min_delay)
 
-    def Fixed_rev1(self):
+    def Fixed_future(self):
         '''
          The Fixed method for assigning the parameters for Fixed synaptic connection to the customized_synapses() object.
 
@@ -239,7 +239,10 @@ class synapse_parser(object):
 
          '''
 
-        mu_wght = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+        # mu_wght = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+        std_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+        mu_wght = std_wght / 2.
+
         self._set_utilization_factor()
         tau_d = self.value_extractor(self.physio_config_df, 'tau_d')
         self.output_namespace['tau_d'] = tau_d
@@ -248,7 +251,8 @@ class synapse_parser(object):
             self.cw_baseline_calcium = mu_wght
             mu_wght = self._scale_by_calcium(self.calcium_concentration)
 
-        self.output_namespace['init_wght'] = '%f * nS' % mu_wght
+        # self.output_namespace['init_wght'] = '%f * nS' % mu_wght
+        self.output_namespace['init_wght'] = '(%f * rand() + %f) * nS' % (std_wght, mu_wght)
 
         std_delay = self.value_extractor(self.physio_config_df, 'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
         min_delay = std_delay / 2.
@@ -260,7 +264,10 @@ class synapse_parser(object):
 
          '''
 
-        mu_wght = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+        # mu_wght = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+        std_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+        mu_wght = std_wght / 2.
+
         self._set_utilization_factor(is_facilitating=True)
         tau_fd = self.value_extractor(self.physio_config_df, 'tau_fd')
         self.output_namespace['tau_fd'] = tau_fd
@@ -271,7 +278,8 @@ class synapse_parser(object):
             self.cw_baseline_calcium = mu_wght
             mu_wght = self._scale_by_calcium(self.calcium_concentration)
 
-        self.output_namespace['init_wght'] = '%f * nS' % mu_wght
+        # self.output_namespace['init_wght'] = '%f * nS' % mu_wght
+        self.output_namespace['init_wght'] = '(%f * rand() + %f) * nS' % (std_wght, mu_wght)
 
         std_delay = self.value_extractor(self.physio_config_df, 'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
         min_delay = std_delay / 2.
@@ -301,6 +309,49 @@ class neuron_parser (object):
             self.output_namespace[neural_parameter] = self.value_extractor(cropped_df,neural_parameter)
 
         getattr(self, '_'+ output_neuron['type'])(output_neuron)
+
+        # Setting depolarization to threshold for the AdEx model
+        # using analytical expression for rheobase (less analytical for PC)
+        flag_adex = self.value_extractor(self.physio_config_df, 'flag_adex')
+        if flag_adex == 1:
+            print 'Using adaptive EIF model'
+            computed_rheobase = self._compute_adex_rheobase()
+            depolarization_level = self.value_extractor(self.physio_config_df, 'depolarization_level')
+            if output_neuron['type'] != 'PC':
+                real_rheobase = computed_rheobase
+            else:
+                PC_rheobase_scaling = self.value_extractor(self.physio_config_df, 'PC_rheobase_scaling')
+                real_rheobase = PC_rheobase_scaling * computed_rheobase
+
+            self.output_namespace['adex_depolarization'] = real_rheobase * depolarization_level
+            print 'Rheobase: '+str(real_rheobase)+'  Injection: '+str(self.output_namespace['adex_depolarization'])
+        else:
+            print 'Using NON-adaptive EIF model'
+            self.output_namespace['adex_depolarization'] = 0*pA
+
+    def _compute_adex_rheobase(self):
+        a = self.output_namespace['a']
+        gL = np.sum(self.output_namespace['gL'])
+        tau_w = self.output_namespace['tau_w']
+        tau_m = self.output_namespace['taum_soma']
+        VT = self.output_namespace['VT']
+        EL = self.output_namespace['EL']
+        DeltaT = self.output_namespace['DeltaT']
+
+        bif_type = (a / gL) * (tau_w / tau_m)
+
+        if bif_type < 1:  # saddle-node bifurcation
+            rheobase = (gL + a) * (VT - EL - DeltaT + DeltaT * log(1 + a / gL))
+
+        elif bif_type > 1:  # Andronov-Hopf bifurcation
+            rheobase = (gL + a) * (VT - EL - DeltaT + DeltaT * log(1 + tau_m / tau_w)) + DeltaT * gL * (
+            (a / gL) - (tau_m / tau_w))
+
+        else:
+            print 'Unable to compute rheobase!'
+            rheobase = 0 * pA
+
+        return rheobase
 
     def _PC(self,output_neuron):
         '''
@@ -368,19 +419,3 @@ class neuron_parser (object):
             new_key = df['Value'][df['Key'] == key_name].item().replace("']", "").split("['")
             return self.value_extractor(df,new_key)
 
-
-# if __name__ == '__main__':
-#     output_synapse = {'type':'Fixed', 'pre_group_type': 'PC', 'post_group_type': 'BC'}
-#
-#     syns = synapse_parser(output_synapse)
-#
-#     ca = np.arange(0.7, 5, 0.1)
-#     rfss = syns._change_calcium(ca)
-#
-#     # Testing
-#     pyplot.plot(ca,rfss, color='blue', lw=2)
-#     pyplot.xscale('log')
-#     pyplot.yscale('log')
-#     pyplot.xlim([0.7, 5])
-#     pyplot.ylim([0.03, 10])
-#     pyplot.show()

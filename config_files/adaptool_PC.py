@@ -1,9 +1,10 @@
+from __future__ import division
 from brian2 import *
 import matplotlib.pyplot as plt
 
 
-dendritic_extent = 1
-test_current = 300*pA
+dendritic_extent = 4
+#test_current = 150*pA
 
 refr_time = 4*ms
 defaultclock_dt = 0.1*ms  # Just for visualization! Changing this doesn't change the clock.
@@ -15,8 +16,13 @@ gl = 4.2e-5*siemens*cm**-2
 Area_tot_pyram = 25000 * 0.75 * um**2
 VT = -41.61*mV
 Vcut = -25*mV
-V_res = -55*mV
+V_res = -39*mV
 EL = -70.11*mV
+
+# Adaptation parameters
+tau_w = 300*ms
+a = 2.0*nsiemens
+b = 60*pA
 
 # Dendritic parameters
 neuron_namespace = dict()
@@ -35,23 +41,6 @@ neuron_namespace['gL'] = fract_areas[dendritic_extent] * \
 neuron_namespace['taum_soma'] = neuron_namespace['C'][1] / neuron_namespace['gL'][1]
 
 
-# OBSOLETE - Code for simplified model
-# fract_area_fixed = fract_areas[dendritic_extent]
-#
-# area_basal = 0.2 * area_total
-# area_apical = 0*um**2
-# for i in range(0, dendritic_extent+1):
-#     area_apical += fract_area_fixed[2+i] * area_total
-#
-# R_basal = Ra[0]
-# R_apical = Ra[-1]  # last compartment always with Ra[-1] resistance
-# for i in range(0, dendritic_extent):
-#     R_apical += Ra[i+1]
-#
-# gL_basal = gl*area_basal
-# gL_apical = gl*area_apical
-# C_basal = Cm*area_basal*2  # x2 to account for spine area
-# C_apical = Cm*area_apical*2  # x2 to account for spine area
 
 # Synaptic parameters; redundant in this tool as there are no synaptic conductances
 tau_e = 3*ms  # Depends on neuron type
@@ -61,19 +50,66 @@ Ei = -75*mV
 #tau_m = C/gL
 
 
+def total_PC_area():
+    areas = fract_areas[dendritic_extent] * Area_tot_pyram  * 2
+    area_total = np.sum(areas)
+    return area_total
+
+
+def compute_rheobase():
+    PC_area = total_PC_area()
+    gL = PC_area * gl
+    C = PC_area*Cm
+
+    tau_m = C/gL
+
+    print 'PC capacitance: '+str(C)
+
+    bif_type = (a/gL)*(tau_w/tau_m)
+
+    if bif_type < 1:  # saddle-node bifurcation
+        print 'SN type neuron'
+        rheobase = (gL+a)*(VT - EL - DeltaT + DeltaT*log(1+a/gL))
+
+    elif bif_type > 1:  # Andronov-Hopf bifurcation
+        print 'AH type neuron'
+        rheobase = (gL+a)*(VT - EL - DeltaT + DeltaT*log(1+tau_m/tau_w)) + DeltaT*gL*((a/gL) - (tau_m/tau_w))
+
+    else:
+        print 'Unable to compute rheobase!'
+        rheobase = 0*pA
+
+    return rheobase
+
+rheobase = compute_rheobase()
+print 'Rheobase: '+str(rheobase)
+
 ###############################
 # EQUATIONS & RUNNING the SIM #
 ###############################
 
 ### BEGIN -- Copy-paste from physiology_reference
 
+# ORIGINAL
+# eq_template_soma = '''
+# dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr + I_injected*(1-exp(-t/(50*msecond)))) / C) : volt (unless refractory)
+# dge/dt = -ge/tau_e : siemens
+# dgealpha/dt = (ge-gealpha)/tau_e : siemens
+# dgi/dt = -gi/tau_i : siemens
+# dgialpha/dt = (gi-gialpha)/tau_i : siemens
+# '''
+
+# WITH ADAPTATION
 eq_template_soma = '''
-dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr + I_injected*(1-exp(-t/(50*msecond)))) / C) : volt (unless refractory)
+dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) -w +I_dendr + I) / C) : volt (unless refractory)
 dge/dt = -ge/tau_e : siemens
 dgealpha/dt = (ge-gealpha)/tau_e : siemens
 dgi/dt = -gi/tau_i : siemens
 dgialpha/dt = (gi-gialpha)/tau_i : siemens
+dw/dt = (-a*(EL-vm)-w)/tau_w : amp
+I : amp
 '''
+
 #: The template for the dendritic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
 eq_template_dend = '''
 dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) +I_dendr) / C : volt
@@ -90,12 +126,23 @@ neuron_equ = Equations(eq_template_dend, vm="vm_basal", ge="ge_basal",
                                            gL=neuron_namespace['gL'][0],
                                            gi="gi_basal", geX="geX_basal", gialpha="gialpha_basal",
                                            gealphaX="gealphaX_basal", I_dendr="Idendr_basal")
+
+# ORIGINAL
+# neuron_equ += Equations(eq_template_soma, gL=neuron_namespace['gL'][1],
+#                                             ge='ge_soma', geX='geX_soma', gi='gi_soma', gealpha='gealpha_soma',
+#                                             gealphaX='gealphaX_soma',
+#                                             gialpha='gialpha_soma', C=neuron_namespace['C'][1],
+#                                             I_dendr='Idendr_soma', I_injected=test_current,
+#                                             taum_soma=neuron_namespace['taum_soma'])
+
+# ADAPTIVE
 neuron_equ += Equations(eq_template_soma, gL=neuron_namespace['gL'][1],
                                             ge='ge_soma', geX='geX_soma', gi='gi_soma', gealpha='gealpha_soma',
                                             gealphaX='gealphaX_soma',
                                             gialpha='gialpha_soma', C=neuron_namespace['C'][1],
-                                            I_dendr='Idendr_soma', I_injected=test_current,
+                                            I_dendr='Idendr_soma',
                                             taum_soma=neuron_namespace['taum_soma'])
+
 for _ii in range(dendritic_extent + 1):  # extra dendritic compartment in the same level of soma
     neuron_equ += Equations(eq_template_dend, vm="vm_a%d" % _ii,
                                                 C=neuron_namespace['C'][_ii],
@@ -136,36 +183,61 @@ neuron_equ += Equations('I_dendr = gapost*(vmpost-vmself) : amp',
 ### END -- Copy-paste from physiology_reference
 
 # Main
-G = NeuronGroup(1, neuron_equ, threshold='vm > '+repr(Vcut), reset='vm = '+repr(V_res), refractory=refr_time, method='euler')
+
+# ORIGINAL
+# G = NeuronGroup(1, neuron_equ, threshold='vm > '+repr(Vcut),reset='vm = '+repr(V_res), refractory=refr_time, method='euler')
+
+# With adaptation
+#w_reset = Function(w_reset_func, arg_units=[amp], return_unit=amp)
+
+G = NeuronGroup(1, neuron_equ, threshold='vm > '+repr(Vcut),
+                reset='vm = '+repr(V_res)+'; w=w+'+repr(b),
+                refractory=refr_time, method='euler')
+
+
 G.vm = EL
 
 
 # M = StateMonitor(G, ('vm','ge','gi'), record=True)
 # M_spikes = SpikeMonitor(G)
-M = StateMonitor(G, ('vm'), record=True)
+M = StateMonitor(G, ('vm', 'w'), record=True)
 M_spikes = SpikeMonitor(G)
 
 
-# Constant current fed here for 1000ms
-# run(20 * ms)
-# G.I = test_current
-# run(1000 * ms)
-# G.I = 0*nA
-# run(50 * ms)
+test_current = rheobase*0.45
+print 'Current injection: '+str(test_current)
 
-run(1000*ms)
+# Constant current fed here for 1000ms
+G.I = 0*pA
+run(500 * ms)
+G.I = test_current
+run(1000 * ms)
+G.I = 0*pA
+run(500 * ms)
+
 
 
 ############
 # PLOTTING #
 ############
 
-plt.figure()
+plt.subplots(1,3)
+
+plt.subplot(131)
 plt.title('$V_m$ with spikes')
 plt.plot(M.t/ms, M.vm[0])
 plt.plot(M_spikes.t/ms, [0*mV] * len(M_spikes.t), '.')
 xlabel('Time (ms)')
 ylabel('V_m (V)')
 ylim([-0.075, 0.02])
+
+plt.subplot(132)
+plt.plot(M.t/ms, M.w[0]/pA)
+
+plt.subplot(133)
+plt.plot(M.vm[0]/mV, M.w[0]/pA)
+xlabel('V_m (V)')
+ylabel('Adap.var. w (pA)')
+
 plt.show()
 

@@ -126,7 +126,7 @@ taurec1 = 450*ms
 taurec2 = 450*ms
 taufacil = 2000*ms
 U = 0.5
-U1 = 0.086
+U1 = 0.09
 w = 0.80*nS
 
 ### SYNAPSE 1 Depr. ###
@@ -183,9 +183,9 @@ S2_alt = Synapses(H, G,
 S2.connect(i=0, j=2)
 S2_alt.connect(i=0, j=3)
 
-S2.u = U
+S2.u = U1
 S2.R = 1
-S2_alt.u = U
+S2_alt.u = U1
 S2_alt.R = 1
 
 ########################

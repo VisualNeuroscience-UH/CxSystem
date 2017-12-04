@@ -6,8 +6,8 @@ import datetime
 
 time_start = datetime.datetime.now()
 
-CM = cxs.CxSystem(anatomy_and_system_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/Markram_config_file_rev1.csv',
-                        physiology_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_rev1.csv')
+CM = cxs.CxSystem(anatomy_and_system_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/Markram_config_file_adex.csv',
+                        physiology_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_adex.csv')
 
 time_before_run = datetime.datetime.now()
 CM.run()

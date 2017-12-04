@@ -73,6 +73,12 @@ class neuron_reference(object):
         self.output_neuron['namespace'] = neuron_parser(self.output_neuron, physio_config_df).output_namespace
         self.output_neuron['equation'] = ''
 
+        # BEGIN AdEx: Setting reset condition
+        self.flag_adex = self.value_extractor(self.physio_config_df, 'flag_adex')
+        if self.flag_adex == 1:
+            self.output_neuron['reset'] += '; w=w+'+repr(self.output_neuron['namespace']['b'])
+        # END AdEx
+
         variable_start_idx = self.physio_config_df['Variable'][self.physio_config_df['Variable'] == self.output_neuron['type']].index[0]
         try:
             variable_end_idx = self.physio_config_df['Variable'].dropna().index.tolist()[
@@ -147,12 +153,17 @@ class neuron_reference(object):
         # eq_template_dend = self.value_extractor(self.cropped_df_for_current_type,'eq_template_dend')
 
         eq_template_soma = '''
-        dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
+        dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr -w + adex_depolarization +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
         dge/dt = -ge/tau_e : siemens
         dgealpha/dt = (ge-gealpha)/tau_e : siemens
         dgi/dt = -gi/tau_i : siemens
         dgialpha/dt = (gi-gialpha)/tau_i : siemens
         '''
+        if self.flag_adex == 1:
+            eq_template_soma += '''
+            dw/dt = (-a*(EL-vm)-w)/tau_w : amp
+            '''
+
         #: The template for the dendritic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
         eq_template_dend = '''
         dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) +I_dendr) / C : volt
@@ -242,10 +253,14 @@ class neuron_reference(object):
 
         # Diffusive noise model
         self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) -w + adex_depolarization +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
             dge/dt = -ge/tau_e : siemens
             dgi/dt = -gi/tau_i : siemens
             ''', ge='ge_soma', gi='gi_soma')
+
+        if self.flag_adex == 1:
+            self.output_neuron['equation'] += Equations('''
+                dw/dt = (-a*(EL-vm)-w)/tau_w : amp''')
 
         # Conductance noise model
         # self.output_neuron['equation'] = Equations('''
@@ -276,10 +291,14 @@ class neuron_reference(object):
 
         # Diffusive noise model
         self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) -w + adex_depolarization +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
             dge/dt = -ge/tau_e : siemens
             dgi/dt = -gi/tau_i : siemens
             ''', ge='ge_soma', gi='gi_soma')
+
+        if self.flag_adex == 1:
+            self.output_neuron['equation'] += Equations('''
+                dw/dt = (-a*(EL-vm)-w)/tau_w : amp''')
 
         # Conductance noise model
         # self.output_neuron['equation'] = Equations('''
@@ -311,10 +330,14 @@ class neuron_reference(object):
 
         # Diffusive noise model
         self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) -w + adex_depolarization +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
             dge/dt = -ge/tau_e : siemens
             dgi/dt = -gi/tau_i : siemens
             ''', ge='ge_soma', gi='gi_soma')
+
+        if self.flag_adex == 1:
+            self.output_neuron['equation'] += Equations('''
+                dw/dt = (-a*(EL-vm)-w)/tau_w : amp''')
 
         # Conductance noise model
         # self.output_neuron['equation'] = Equations('''
@@ -346,10 +369,14 @@ class neuron_reference(object):
 
         # Diffusive noise model
         self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) -w + adex_depolarization +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
             dge/dt = -ge/tau_e : siemens
             dgi/dt = -gi/tau_i : siemens
             ''', ge='ge_soma', gi='gi_soma')
+
+        if self.flag_adex == 1:
+            self.output_neuron['equation'] += Equations('''
+                dw/dt = (-a*(EL-vm)-w)/tau_w : amp''')
 
         # Conductance noise model
         # self.output_neuron['equation'] = Equations('''
@@ -436,7 +463,7 @@ class synapse_reference(object):
         * _name_space: An instance of brian2_obj_namespaces() object which contains all the constant parameters for this synaptic equation.
 
         '''
-        synapse_reference.syntypes = array(['STDP', 'STDP_with_scaling', 'Fixed', 'Fixed_rev1', 'Depressing', 'Facilitating'])
+        synapse_reference.syntypes = array(['STDP', 'STDP_with_scaling', 'Fixed', 'Fixed_future', 'Depressing', 'Facilitating'])
         assert syn_type in synapse_reference.syntypes, "Cell type '%s' is not defined" % syn_type
         self.output_synapse = {}
         self.output_synapse['type'] = syn_type
@@ -544,7 +571,7 @@ class synapse_reference(object):
         %s+=wght
         ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
 
-    def Fixed_rev1(self):
+    def Fixed_future(self):
         '''
         The method for implementing the Fixed synaptic connection.
 
