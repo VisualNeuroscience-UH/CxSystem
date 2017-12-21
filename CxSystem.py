@@ -624,17 +624,17 @@ class CxSystem(object):
 
         if neuron_type in ['L1i', 'BC', 'MC']:
             background_weight = \
-            repr(bg_synapse._scale_cw_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_E_I_weight')))
+            repr(bg_synapse._scale_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_E_I_weight')))
 
             background_weight_inhibition = \
-            repr(bg_synapse_inh._scale_cw_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_I_I_weight')))
+            repr(bg_synapse_inh._scale_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_I_I_weight')))
 
         else:
             background_weight = \
-            repr(bg_synapse._scale_cw_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_E_E_weight')))
+            repr(bg_synapse._scale_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_E_E_weight')))
 
             background_weight_inhibition = \
-            repr(bg_synapse_inh._scale_cw_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_I_E_weight')))
+            repr(bg_synapse_inh._scale_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_I_E_weight')))
 
 
         # print 'Adding Poisson background input with params: '+n_background_inputs+', '+background_rate+', '+background_weight

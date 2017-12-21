@@ -108,7 +108,7 @@ class synapse_parser(object):
         else:
             self._K12 = np.average([2.79, 1.09])
 
-    def _scale_cw_by_calcium(self, ca, cw=None):
+    def _scale_by_calcium(self, ca, cw=None):
         """
         Scales synaptic weight depending on calcium level
 
@@ -129,10 +129,8 @@ class synapse_parser(object):
 
         return final_synapse_strength
 
-    def _scale_uf_by_calcium(self):
-        pass
 
-    def _set_utilization_factor(self, is_facilitating=False):
+    def _set_utilization_factor(self, is_facilitating=False, ca=2.0):
         excitatory_groups = ['PC', 'SS', 'in']
         inhibitory_groups = ['BC', 'MC', 'L1i']
 
@@ -141,16 +139,17 @@ class synapse_parser(object):
             U_I = self.value_extractor(self.physio_config_df, 'U_I')
 
             if self.output_synapse['pre_group_type'] in excitatory_groups:
-                self.output_namespace['U'] = U_E
+                self.output_namespace['U'] = self._scale_by_calcium(ca, U_E)
             elif self.output_synapse['pre_group_type'] in inhibitory_groups:
-                self.output_namespace['U'] = U_I
+                self.output_namespace['U'] = self._scale_by_calcium(ca, U_I)
             else:
                 print 'Warning! Unrecognized group type %s will have outbound synapses with averaged utilization factor' % self.output_synapse['pre_group_type']
-                self.output_namespace['U'] = np.average([U_E, U_I])
+                U = np.average([U_E, U_I])
+                self.output_namespace['U'] = self._scale_by_calcium(ca, U)
 
         else:
             U_f = self.value_extractor(self.physio_config_df, 'U_f')
-            self.output_namespace['U_f'] = U_f
+            self.output_namespace['U_f'] = self._scale_by_calcium(ca, U_f)
 
     def STDP(self):
         '''
@@ -233,8 +232,8 @@ class synapse_parser(object):
         # Calcium scaling is just multiplication by a constant so we can scale min and mean wght
         # instead of scaling individual weights separately after randomization
         if self.calcium_concentration > 0:
-            mean_wght = self._scale_cw_by_calcium(self.calcium_concentration, mean_wght)
-            min_wght = self._scale_cw_by_calcium(self.calcium_concentration, min_wght)
+            mean_wght = self._scale_by_calcium(self.calcium_concentration, mean_wght)
+            min_wght = self._scale_by_calcium(self.calcium_concentration, min_wght)
 
         # SET the weight (uniform distribution [min_wght, min_wght+mean_wght])
         # NB!! You might think (min_wght, mean_wght) should be the other way around, but remember that rand gives
@@ -261,8 +260,8 @@ class synapse_parser(object):
         # Calcium scaling is just multiplication by a constant so we can scale mean and SD wght
         # instead of scaling individual weights separately after randomization (change of variables of the Gaussian PDF)
         if self.calcium_concentration > 0:
-            mean_wght = self._scale_cw_by_calcium(self.calcium_concentration, mean_wght)
-            sd_wght  = self._scale_cw_by_calcium(self.calcium_concentration, sd_wght) # we don't want to prescribe SDs separately in this model
+            mean_wght = self._scale_by_calcium(self.calcium_concentration, mean_wght)
+            sd_wght  = self._scale_by_calcium(self.calcium_concentration, sd_wght) # we don't want to prescribe SDs separately in this model
 
         # SET the weight
         self.output_namespace['init_wght'] = '(%f + %f*randn()) * nS' % (mean_wght, sd_wght)
@@ -273,59 +272,64 @@ class synapse_parser(object):
         sd_delay = mean_delay / 2.
         self.output_namespace['delay'] = '(%f + %f*randn()) * ms' % (mean_delay, sd_delay)
 
-
     def Depressing(self):
         '''
          Depressing synapse
 
          '''
 
-        mu_wght = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
-        std_wght = mu_wght / 2.
+        # GET weight params
+        mean_wght = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+        min_wght = mean_wght / 2.
 
-        self._set_utilization_factor()
+        # GET time constant
         tau_d = self.value_extractor(self.physio_config_df, 'tau_d')
         self.output_namespace['tau_d'] = tau_d
 
-        if self.calcium_concentration > 0:  # For change_calcium()
-            pass
-            # self.cw_baseline_calcium = mu_wght
-            # mu_wght = self._scale_cw_by_calcium(self.calcium_concentration)
+        # SET utilization factor & SCALE it wrt calcium level
+        self._set_utilization_factor(ca=self.calcium_concentration)
 
+        # SET the weight (uniform distribution [min_wght, min_wght+mean_wght])
+        # NB!! You might think (min_wght, mean_wght) should be the other way around, but remember that rand gives
+        # values between 0 and 1, NOT values with mean 0 like randn!
+        self.output_namespace['init_wght'] = '(%f + %f * rand()) * nS' % (min_wght, mean_wght)
 
-        # self.output_namespace['init_wght'] = '%f * nS' % mu_wght
-        self.output_namespace['init_wght'] = '(%f * rand() + %f) * nS' % (std_wght, mu_wght)
+        # SET the synaptic delay (uniform distribution [min_delay, min_delay+mean_delay])
+        # NB!! Same applies here, see assignment of init_wght
+        mean_delay = self.value_extractor(self.physio_config_df,'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
+        min_delay = mean_delay / 2.
+        self.output_namespace['delay'] = '(%f + %f * rand()) * ms' % (min_delay, mean_delay)
 
-        std_delay = self.value_extractor(self.physio_config_df, 'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
-        min_delay = std_delay / 2.
-        self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, min_delay)
 
     def Facilitating(self):
         '''
          Facilitating synapse
 
          '''
+        # GET weight params
+        mean_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+        min_wght = mean_wght / 2.
 
-        # mu_wght = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
-        std_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
-        mu_wght = std_wght / 2.
-
-        self._set_utilization_factor(is_facilitating=True)
+        # GET time constants
         tau_fd = self.value_extractor(self.physio_config_df, 'tau_fd')
         self.output_namespace['tau_fd'] = tau_fd
         tau_f = self.value_extractor(self.physio_config_df, 'tau_f')
         self.output_namespace['tau_f'] = tau_f
 
-        if self.calcium_concentration > 0:  # For change_calcium()
-            self.cw_baseline_calcium = mu_wght
-            mu_wght = self._scale_cw_by_calcium(self.calcium_concentration)
+        # SET utilization factor & SCALE it wrt calcium level
+        self._set_utilization_factor(is_facilitating=True, ca=self.calcium_concentration)
 
-        # self.output_namespace['init_wght'] = '%f * nS' % mu_wght
-        self.output_namespace['init_wght'] = '(%f * rand() + %f) * nS' % (std_wght, mu_wght)
+        # SET the weight (uniform distribution [min_wght, min_wght+mean_wght])
+        # NB!! You might think (min_wght, mean_wght) should be the other way around, but remember that rand gives
+        # values between 0 and 1, NOT values with mean 0 like randn!
+        self.output_namespace['init_wght'] = '(%f + %f * rand()) * nS' % (min_wght, mean_wght)
 
-        std_delay = self.value_extractor(self.physio_config_df, 'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
-        min_delay = std_delay / 2.
-        self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, min_delay)
+        # SET the synaptic delay (uniform distribution [min_delay, min_delay+mean_delay])
+        # NB!! Same applies here, see assignment of init_wght
+        mean_delay = self.value_extractor(self.physio_config_df,'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
+        min_delay = mean_delay / 2.
+        self.output_namespace['delay'] = '(%f + %f * rand()) * ms' % (min_delay, mean_delay)
+
 
 #############################################
 ##################### Neurons  #############
