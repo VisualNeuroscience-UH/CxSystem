@@ -1623,9 +1623,9 @@ def combined_metrics_plot():
 # MAIN
 if __name__ == '__main__':
 
-    a = SimulationData('21_fixedcalcium_testruns_20171221_12274787_background_rate0.4H_k0.3_Cpp_3500ms.bz2')
-    print a.global_osc_freq(t_limits=[500*ms, -1], plot=True)
-    a._isi_cdf_group(8)
+    # a = SimulationData('21_fixedcalcium_testruns_20171221_12274787_background_rate0.4H_k0.3_Cpp_3500ms.bz2')
+    # print a.global_osc_freq(t_limits=[500*ms, -1], plot=True)
+    # a._isi_cdf_group(8)
     # a.rasterplot()
 
     ###### Depol x calcium plot ######
@@ -1650,9 +1650,9 @@ if __name__ == '__main__':
     # Seeing results in iPython for example:
     #  plt.figure(); a = data.pivot_table('irregularity_mean', index='background_rate', columns='k').sort_index(ascending=False); sns.heatmap(a, cmap='binary', vmax=1)
 
-    # exp = ExperimentData('/opt3/tmp/01_cxs_rev1/', '21_fixedcalcium_testruns')
-    # exp.computestats('stats_21_fixedcalcium_testruns.csv',
-    #                 ['calcium_concentration', 'J', 'k', 'background_rate'])
+    exp = ExperimentData('/opt3/tmp/01_cxs_rev1/', '22_fixedstp_testruns')
+    exp.computestats('stats_22_fixedstp_testruns.csv',
+                    ['calcium_concentration', 'J', 'k', 'background_rate'])
 
     ###### For creating side-by-side rasterplots ######
     # simulations = ['depol_37_calcium_concentration1.0_Cpp_3000ms.bz2', 'depol_37_calcium_concentration1.4_Cpp_3000ms.bz2',
