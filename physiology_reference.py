@@ -487,8 +487,8 @@ class synapse_reference(object):
         * _name_space: An instance of brian2_obj_namespaces() object which contains all the constant parameters for this synaptic equation.
 
         '''
-        synapse_reference.syntypes = array(['STDP', 'STDP_with_scaling', 'Fixed', 'Fixed_future', 'Depressing', 'Facilitating'])
-        assert syn_type in synapse_reference.syntypes, "Cell type '%s' is not defined" % syn_type
+        synapse_reference.syntypes = array(['STDP', 'STDP_with_scaling', 'Fixed', 'Fixed_calcium', 'Fixed_normal', 'Depressing', 'Facilitating'])
+        assert syn_type in synapse_reference.syntypes, "Synapse type '%s' is not defined" % syn_type
         self.output_synapse = {}
         self.output_synapse['type'] = syn_type
         self.output_synapse['receptor'] = receptor
@@ -595,7 +595,19 @@ class synapse_reference(object):
         %s+=wght
         ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
 
-    def Fixed_future(self):
+    def Fixed_calcium(self):
+        '''
+        The method for implementing the Fixed synaptic connection.
+
+        '''
+        self.output_synapse['equation'] = Equations('''
+            wght:siemens
+            ''')
+        self.output_synapse['pre_eq'] = '''
+        %s+=wght
+        ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
+
+    def Fixed_normal(self):
         '''
         The method for implementing the Fixed synaptic connection.
 
