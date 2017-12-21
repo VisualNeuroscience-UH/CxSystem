@@ -124,21 +124,21 @@ M_spikes = SpikeMonitor(G)
 ### STP parameters ###
 taurec1 = 450*ms
 taurec2 = 450*ms
-taufacil = 2000*ms
+taufacil = 100*ms
 U = 0.5
-U1 = 0.09
+U1 = 0.02
 w = 0.80*nS
 
 ### SYNAPSE 1 Depr. ###
-H = PoissonGroup(1, 23*Hz)
+H = PoissonGroup(1, 50*Hz)
 
 # Clock-driven depressing
 # R - resources ie. presynaptic vesicles
 # Whether to have ge_post += U*R*w or R*w is a question of taste (what "w" represents; release of U*all_vesicles or all_vesicles)
 S = Synapses(H, G,
              model='dR/dt = (1-R)/taurec1 : 1 (clock-driven)',
-             on_pre=''' ge_post += R * w
-                        R = R*(1-U) ''')
+             on_pre=''' ge_post += R * U * w
+                        R = R-U*R ''')
 
 # Event-driven depressing
 # (because for some reason Brian2 refuses to solve the eq above)
@@ -146,7 +146,7 @@ S = Synapses(H, G,
 S_alt = Synapses(H, G,
              model='R:1',
              on_pre=''' R = R + (1-R)*(1 - exp(-(t-lastupdate)/taurec2))
-                        ge_post += R * w
+                        ge_post += R * U * w
                         R = R - U*R''')
 
 
@@ -164,8 +164,8 @@ S_alt.R = 1
 # Facilitating clock-driven
 S2 = Synapses(H, G,
              model=''' dR/dt = (1-R)/taurec2 : 1 (clock-driven)
-                       du/dt = -u/taufacil : 1 (clock-driven) ''',
-             on_pre=''' ge_post += R * w
+                       du/dt = (U1-u)/taufacil : 1 (clock-driven) ''',
+             on_pre=''' ge_post += R * w * u
                         R = R*(1-u)
                         u = u + U1*(1-u)''')
 
@@ -174,10 +174,11 @@ S2_alt = Synapses(H, G,
              model=''' R : 1
                        u : 1 ''',
              on_pre=''' R = R + (1-R)*(1 - exp(-(t-lastupdate)/taurec2))
-                        u = u * exp(-(t-lastupdate)/taufacil)
-                        ge_post += R * w
+                        u = u + (U1-u)*(1 - exp(-(t-lastupdate)/taufacil))
+                        ge_post += R * w * u
                         R = R - u*R
                         u = u + U1*(1-u)''')
+#u = u * exp(-(t-lastupdate)/taufacil)
 
 
 S2.connect(i=0, j=2)

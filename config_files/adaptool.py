@@ -50,54 +50,101 @@ DeltaT = 2*mV
 # C_apical = Cm*area_apical*2  # x2 to account for spine area
 
 
-# BC cell
+# BC cell *
 # C = 100*pF
 # gL = 10*nS
+# tau_m = C/gL
 # VT = -38.8*mV
 # Vcut = VT + 5*DeltaT
-# V_res = VT - 4*mV
-# EL = -67.66*mV
-# a = 2.0*nS
-# tau_w = 10*ms
-# b = 0.1*pA
-
-# L1i cell
-# C = 63.36*pF
-# gL =3.2*nS
-# VT = -36.8*mV
-# Vcut = VT + 5*DeltaT
-# V_res = VT - 4*mV
 # EL = -67.66*mV
 
-# MC cell
-C = 92.1*pF
-gL = 4.2*nS
-VT = -42.29*mV
+# BC 1st params
+# DeltaT = 2.0*mV
+# V_res = -38.8*mV-4*mV
+# a = -3*nS
+# tau_w = 150*ms
+# b = 50*pA
+
+# BC 2nd params
+# DeltaT = 2.0*mV
+# V_res = -50*mV
+# a = 0.1*nS
+# tau_w = 120*ms
+# b = 150*pA
+
+# L1i cell *
+C = 63.36*pF
+gL =3.2*nS
+tau_m = C/gL
+VT = -36.8*mV
 Vcut = VT + 5*DeltaT
-V_res = VT - 4*mV
-EL = -60.38*mV
-a = 2.0*nS
-tau_w = 300*ms
-b = 60*pA
+# V_res = VT - 4*mV
+EL = -67.66*mV
+
+# L1i 1st params
+# V_res = -36.8*mV-4*mV
+# a = -1*nS
+# tau_w = 150*ms
+# b = 50*pA
+
+# L1i 2nd params
+V_res = -50*mV
+a = 0.1*nS
+tau_w = 80*ms
+b = 80*pA
+
+# MC cell *
+# C = 92.1*pF
+# gL = 4.2*nS
+# tau_m = C/gL
+# VT = -42.29*mV
+# Vcut = VT + 5*DeltaT
+# EL = -60.38*mV
+
+# 1st MC params
+# a = -0.5*nS
+# tau_w = 160*ms
+# b = 80*pA
+# V_res = -46*mV
+
+# 2nd MC params
+# a = 0.1*nS
+# tau_w = 200*ms
+# b = 90*pA
+# V_res = -40*mV
 
 # SS cell
 # C = 35*pF
 # gL = 1.0*nS
+# tau_m = C/gL
 # VT = -45*mV
 # Vcut = -25*mV
 # V_res = -70*mV
 # EL = -70*mV
+# a = 0.5*nS
+# tau_w = 100*ms
+# b = 80*pA
+# V_res = -50*mV
 
-# SS cell (alternative; params wanted within physiological range)
+# SS cell (alternative; params wanted within physiological range) *
 # C = 110*pF
 # gL = 3.1*nS
+# tau_m = C/gL
 # VT = -45*mV
 # Vcut = -35*mV
-# V_res = -70*mV
 # EL = -70*mV
-# a = 2.0*nS
+
+# SS 1st params
+# V_res = -65*mV
+# a = -1.5*nS
+# tau_w = 60*ms
+# b = 100*pA
+
+# SS 2nd params
+# V_res = -70*mV
+# a = 0.1*nS
 # tau_w = 300*ms
-# b = 60*pA
+# b = 150*pA
 
 # Naud cNA cell
 # C = 59*pF
@@ -114,6 +161,7 @@ b = 60*pA
 # Naud cAD cell
 # C = 83*pF
 # gL = 1.7*nS
+# tau_m = C/gL
 # VT = -56*mV
 # Vcut = -35*mV
 # V_res = -54*mV
@@ -135,17 +183,18 @@ b = 60*pA
 # a = -0.8*nS
 # b = 65*pA
 
-# Naud up-down
+# Naud cAC
 # C = 200*pF
 # gL = 12*nS
+# tau_m=C/gL
 # VT = -50*mV
 # Vcut = -35*mV
 # V_res = -58*mV
 # EL = -70*mV
 # DeltaT=2.0*mV
 # tau_w = 300*ms
-# a = -6*nS
-# b = 0.01*pA
+# a = 2*nS
+# b = 60*pA
 
 # Synaptic parameters; redundant in this tool as there are no synaptic conductances
 # tau_e = 3*ms  # Depends on neuron type
@@ -153,18 +202,59 @@ b = 60*pA
 # Ee = 0*mV
 # Ei = -75*mV
 
+# Naud generic cell
+# C = 100*pF
+# gL = 10*nS
+# VT = -50*mV
+# Vcut = VT + 5*DeltaT
+# EL = -70*mV
 
-tau_m = C/gL
+# A rather typical cell
+# C = 100*pF
+# gL = 10*nS
+# tau_m = C/gL
+# VT = -40*mV
+# Vcut = -20*mV
+# EL = -60*mV
+# DeltaT = 2.0*mV
+
+# cNAC (SN-type)
+# V_res = -45*mV
+# a = -4*nS
+# tau_w = 150*ms
+# b = 50*pA
+
+# dNAC? (SN-type)
+# V_res = -45*mV
+# a = -5*nS
+# tau_w = 130*ms
+# b = 20*pA
+
+# bNAC (AH-type)
+# V_res = -70*mV
+# a = 2*nS
+# tau_w = 300*ms
+# b = 50*pA
+
+# bAC (AH-type)
+# V_res = -50*mV
+# a = 0.5*nS
+# tau_w = 300*ms
+# b = 80*pA
+
+
 
 # Adaptation parameters
-# tau_w = 300*ms
-# a = -6*nS
-# b = 0.01*pA
+# tau_w = 100*ms
+# a = 2*nS
+# b = 50*pA
+# V_res = -50*mV
 
 
 
 def compute_rheobase():
     bif_type = (a/gL)*(tau_w/tau_m)
+    print 'a (x gL): '+str(a/gL)+ '   tau_w (x tau_m): '+str(tau_w/tau_m)
 
     if bif_type < 1:  # saddle-node bifurcation
         print 'SN type neuron'
@@ -230,18 +320,19 @@ G.vm = EL
 M = StateMonitor(G, ('vm', 'w', 'I'), record=True)
 M_spikes = SpikeMonitor(G)
 
-test_current = compute_rheobase()
-print 'Rheobase: ' + str(test_current)
-test_current *= 2
-print 'Injection current: ' + str(test_current)
+rheobase = compute_rheobase()
+print 'Rheobase: ' + str(rheobase)
+test_currents = np.array([0.98, 1.02, 1.2, 1.3, 1.4])
+print 'Stimuli (x rheobase): ' + str(test_currents)
 
 # Constant current fed here for 1000ms
 G.I = 0
 run(500*ms)
-G.I = test_current
-run(1000 * ms)
-G.I = 0
-run(500*ms)
+for curr in test_currents:
+    G.I = curr*rheobase
+    run(5000 * ms)
+    G.I = 0
+    run(2000*ms)
 
 ############
 # PLOTTING #
@@ -253,10 +344,10 @@ plt.subplots(1,4)
 plt.subplot(141)
 plt.title('$V_m$ with spikes')
 plt.plot(M.t/ms, M.vm[0])
-plt.plot(M_spikes.t/ms, [0*mV] * len(M_spikes.t), '.')
+plt.plot(M_spikes.t/ms, [-20*mV] * len(M_spikes.t), '.')
 xlabel('Time (ms)')
 ylabel('V_m (V)')
-ylim([-0.075, 0.02])
+ylim([-0.09, 0.02])
 
 plt.subplot(142)
 plt.plot(M.t/ms, M.I[0]/pA)

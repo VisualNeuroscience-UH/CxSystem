@@ -131,6 +131,9 @@ class SimulationData(object):
 
         return data
 
+    def _flatten(self, l):
+        return [item for sublist in l for item in sublist]
+
     def value_extractor(self, df, key_name):
         """
         Method for extracting simulation parameters from anatomy and physiology configurations inside data files.
@@ -304,6 +307,117 @@ class SimulationData(object):
         fig.suptitle(os.path.basename(self.datafile), fontsize=16)
         plt.show()
 
+    def global_osc_freq(self, bin_size=3*ms, t_limits=None, plot=False):
+
+        # PREPROCESS spike data
+        timebin = bin_size/second
+        if t_limits is None:
+            t_start = 0*second
+            t_end = self.runtime * second
+        elif t_limits[1] == -1:
+            t_start = t_limits[0]
+            t_end = self.runtime * second
+        else:
+            t_start = t_limits[0]
+            t_end = t_limits[1]
+
+        window_duration = t_end - t_start
+
+        allspikes = []
+        for group in self.group_numbering.values():
+            spikes_gp = self.data['spikes_all'][group][1]
+            allspikes.extend(spikes_gp)
+        allspikes = np.array(allspikes)
+        allspikes.sort()
+        try:
+            start_ix = min(where(allspikes >= t_start / second)[0])
+            end_ix = max(where(allspikes <= t_end / second)[0])
+        except:
+            return 'NA'
+
+        allspikes = allspikes[start_ix:end_ix+1]
+
+        # MAKE spike count histogram & Fourier transform of it -- frequencies x2 for some reason, check
+        # n_bins2 = int(window_duration/timebin)
+        # spike_counts2, bin_edges2 = np.histogram(allspikes, bins=n_bins2, range=(t_start/second, t_end/second))
+        #
+        # spike_counts_f = np.fft.rfft(spike_counts)
+        # pow_spectrum = [abs(x)**2/n_bins for x in spike_counts_f]
+        # freqs = np.fft.fftfreq(n=spike_counts_f.size, d=timebin)
+        #
+        # max_ix = argmax(pow_spectrum[1:])
+
+        bin_edges = np.arange(t_start/second, t_end/second + timebin, timebin)
+        n_bins = len(bin_edges) - 1
+
+        binned_spikes = pd.cut(allspikes, bin_edges)
+        spike_counts = pd.value_counts(binned_spikes)
+        spike_counts = spike_counts.reindex(binned_spikes.categories)  # value_counts orders by count so re-ordering is needed
+        spike_counts_f = np.fft.rfft(spike_counts)
+        pow_spectrum = [abs(x)**2/n_bins for x in spike_counts_f]
+        freqs = np.fft.rfftfreq(n_bins, timebin)
+
+        # Find fundamental frequency
+        power_cutoff = 0.25
+        pow_spectrum_nozero = np.array(pow_spectrum[1:])
+        max_ix = argmax(pow_spectrum_nozero)+1
+        max_power_freq = freqs[max_ix]
+        peak_ix = np.where(pow_spectrum_nozero > power_cutoff*pow_spectrum[max_ix])[0] +1
+        peak_freqs = freqs[peak_ix]
+        fund_freq = min(peak_freqs)
+
+        if plot is False:
+            return fund_freq
+
+        else:
+            plt.subplots(1,2)
+
+            plt.subplot(121)
+            plt.title('Spike count histogram (bin '+repr(bin_size)+')')
+            plt.plot(np.linspace(t_start/second, t_end/second, n_bins), spike_counts)
+
+            plt.subplot(122)
+            plt.title('Fourier transform')
+            plt.plot(freqs, pow_spectrum)
+            ax = plt.gca()
+            ax.axhline(y=power_cutoff*pow_spectrum[max_ix], linestyle='--', color='red')
+            ax.axvline(x=fund_freq, linestyle='--', color='grey')
+            plt.show()
+
+
+    def _isi_cdf_group(self, group_id, t_limits=None, ax=None):
+
+        # if t_limits is None:
+        #     t_start = 0*second
+        #     t_end = self.runtime * second
+        # elif t_limits[1] == -1:
+        #     t_start = t_limits[0]
+        #     t_end = self.runtime * second
+        # else:
+        #     t_start = t_limits[0]
+        #     t_end = t_limits[1]
+
+        isis, spiking_neurons = self._interspikeintervals_group(group_id)
+        isis = self._flatten(isis.values())
+        max_isi = max(isis)
+        isihist, bin_edges = np.histogram(isis, bins=500, range=(0,max_isi))
+        N_isis = sum(isihist)
+        cdf = cumsum(isihist)/N_isis
+
+
+        if ax is None:
+            plt.subplots(1, 2)
+            plt.subplot(121)
+            plt.title('ISI histogram')
+            plt.plot(bin_edges[:-1], isihist)
+
+            plt.subplot(122)
+            plt.title('Cumulative ISI distribution')
+            plt.plot(bin_edges[:-1], cdf)
+            plt.show()
+        else:
+            ax.plot(bin_edges[:-1], cdf)
+
     def rasterplot_compressed(self, neurons_per_group=20, ax=None):
         """
         Plots a simplified rasterplot with only layers labeled, not neuron groups. Possibly useful for publications.
@@ -414,7 +528,7 @@ class SimulationData(object):
 
         try:
             spike_df = pd.concat(spike_dict)
-            spike_df.time = numpy.round(spike_df.time, 2)  # Decrease time-resolution here
+            spike_df.time = numpy.round(spike_df.time, 3)  # Decrease time-resolution here
         except:
             spike_df = pd.DataFrame(data={'time':[0], 'neuron_index':[0]})  # if there's nothing to concat, create an empty df
 
@@ -972,7 +1086,7 @@ class SimulationData(object):
             ax.plot(bin_edges[:-1], i_rates_sum, label='Inhibitory', c='r')
             ax.legend()
 
-    def global_osc_freq(self):
+    def global_osc_freq_autocorr(self):
 
         bin_size = 3*ms
 
@@ -991,14 +1105,7 @@ class SimulationData(object):
         period = (bin_size/second)*lag
         osc_freq = 1/period
 
-        # print osc_freq
-        #
-        # plt.figure()
-        # plt.plot(e_rates_sum)
-        # plt.show()
-
         return osc_freq
-
 
     def firingrates_ei(self):
         """
@@ -1104,8 +1211,7 @@ class SimulationData(object):
             # Then calculate mean of pairwise synchronies
             return mean(pairwise_coeffs)
         else:
-            return 'X'
-
+            return 'NA'
 
     def _pop_measures_group(self, group_id, time_to_drop=500*ms):
         """
@@ -1128,14 +1234,14 @@ class SimulationData(object):
             # We can do this because indexing is chronological
             true_begin_idx = min(where(spikes[1] > time_to_drop/second)[0])
         except ValueError:
-            # print 'No spikes in ' + self.group_numbering[group_id]
+            # If no spikes, then return an "empty" measures array
             return [0, [], [], -1]
 
         spikes_new = []
         spikes_new.append(spikes[0][true_begin_idx:])
         spikes_new.append(spikes[1][true_begin_idx:])
 
-        # Count how many neurons are spiking
+        # Count how many neurons are spiking (at least 1 spike)
         spiking_neurons = unique(spikes_new[0])
         n_spiking = len(spiking_neurons)
 
@@ -1148,12 +1254,14 @@ class SimulationData(object):
 
             if len(spike_idx) >= 2:
                 spikeintervals = []
-                # Begin counting from 2nd spike and for each step calculate the duration between jth - (j-1)th spike time
+
+                # Begin counting from 2nd spike and
+                # for each step calculate the duration between jth - (j-1)th spike time
                 for j in range(1, len(spike_idx)):
                     interval = (spikes_new[1][spike_idx[j]] - spikes_new[1][spike_idx[j-1]]) * second
                     spikeintervals.append(interval)
 
-                # Calculate coeff of variation for these neurons (+mean firing rates)
+                # Calculate coefficient of variation for these neurons (and mean firing rates)
                 isicovs.append(std(spikeintervals)/mean(spikeintervals))
                 mean_firing_rates.append((len(spikeintervals)+1)/true_runtime)
 
@@ -1170,14 +1278,12 @@ class SimulationData(object):
         :return: four dictionaries in the same order as in _pop_measures_group(), all indexed by group identifiers
 
         """
-
         n_spiking = dict()
         mean_firing_rates = dict()
         isicovs = dict()
         fanofactors = dict()
 
         for group_id in self.group_numbering.keys():
-            # print self.group_numbering[group_id]
             n_spiking_gp, mean_firing_rates_gp, isicovs_gp, fanofactor_gp = self._pop_measures_group(group_id, time_to_drop)
             n_spiking[group_id] = n_spiking_gp
             mean_firing_rates[group_id] = mean_firing_rates_gp
@@ -1232,7 +1338,7 @@ class ExperimentData(object):
 
     def _computestats_single_sim(self, sim_file, settings=None, parameters_to_extract=[]):
         """
-        Computes activity measures for a single simulation and based on given cutoff values return frequency of
+        Computes activity measures for a single simulation and based on given cutoff values returns frequency of
         eg. neurons firing 'irregularly' or with 'normal' firing rate. Also parameters can be extracted
         from configuration files.
 
@@ -1245,22 +1351,25 @@ class ExperimentData(object):
             settings = {'time_to_drop': 500*ms, 'rate_min': 0*Hz, 'rate_max': 30*Hz, 'isicov_min': 0.5,
                         'isicov_max': 1.5, 'fanofactor_max': 10, 'active_group_min': 0.2, 'dec_places': 14}
 
-        # Dataframe for collecting everything
-
+        # BUILD DATAFRAME for collecting everything
         group_measures = ['p_'+group_name for group_name in SimulationData.group_numbering.values()]
         group_measures.extend(['mfr_'+group_name for group_name in SimulationData.group_numbering.values()])
         stats_to_compute = ['duration', 'n_spiking', 'p_spiking', 'n_firing_rate_normal', 'p_firing_rate_normal',
-                            'n_irregular', 'p_irregular', 'irregularity_mean', 'n_groups_active', 'n_groups_asynchronous', 'n_groups_synchronous', 'mean_synchrony', 'mfr_all', 'osc_freq']
+                            'n_irregular', 'p_irregular', 'irregularity_mean', 'n_groups_active',
+                            'n_groups_asynchronous', 'n_groups_synchronous', 'mean_synchrony', 'mfr_all',
+                            'mfr_spiking', 'osc_freq_ft', 'osc_freq_ac']
         stats = pd.DataFrame(index=[sim_file], columns=parameters_to_extract + stats_to_compute + group_measures)
 
+        # Helper function
         flatten = lambda l: [item for sublist in l for item in sublist]
 
-        # print 'Analysing ' + sim_file + '...'
-        try:
-            sim = SimulationData(sim_file, data_path=self.experiment_path)
-            duration = (sim.runtime * second - settings['time_to_drop']) / second
 
-            # Extract specified simulation parameters
+        try:
+            # OPEN simulation results file
+            sim = SimulationData(sim_file, data_path=self.experiment_path)
+
+            # EXTRACT specified simulation parameters
+            duration = (sim.runtime * second - settings['time_to_drop']) / second
             extracted_params = []
             for param_name in parameters_to_extract:
                 param_value = sim.get_sim_parameter(param_name)
@@ -1271,16 +1380,21 @@ class ExperimentData(object):
 
                 extracted_params.append(param_value)
 
-            # Calculate aggregate measures (n-measures)
+            # COMPUTE population measures
             n_spiking, mean_firing_rates, isicovs, fanofactors = sim.pop_measures(settings['time_to_drop'])
-
             n_spiking_total = sum(n_spiking.values())
+            osc_freq_ft = sim.global_osc_freq(t_limits=[settings['time_to_drop'], -1])
+            osc_freq_ac = sim.global_osc_freq_autocorr()
 
+            # TRANSFORM results into a readable form
+
+            # -> Group activities (= n_spiking/n_total)
             group_activities = []
             for group_id in SimulationData.group_numbering.keys():
                 activity = round(n_spiking[group_id] / SimulationData.neurons_in_group[group_id], settings['dec_places'])
                 group_activities.append(activity)
 
+            # -> Firing rates
             group_firing_rates = []
             for group_id in SimulationData.group_numbering.keys():
                 with np.errstate(divide='raise'):
@@ -1292,18 +1406,8 @@ class ExperimentData(object):
 
             n_firing_rate_normal = len([rate for rate in flatten(mean_firing_rates.values())
                                         if settings['rate_min'] < rate < settings['rate_max']])
-
-            isicovs_flat = flatten(isicovs.values())
-            n_irregular = len([isicov for isicov in isicovs_flat
-                               if settings['isicov_min'] < isicov < settings['isicov_max']])
             n_firing_rate_normal = np.int32(n_firing_rate_normal)
-            n_irregular = np.int32(n_irregular)
-            try:
-                irregularity_mean = round(mean(isicovs_flat), settings['dec_places'])
-            except:
-                irregularity_mean = 'N/A'
 
-            # Calculate mean firing rate
             neuron_count = sum(SimulationData.neurons_in_group.values())
             try:
                 rates_sum = sum(rate for rate in flatten(mean_firing_rates.values()))
@@ -1311,10 +1415,23 @@ class ExperimentData(object):
                 rates_sum = 0
 
             mfr_all = round(rates_sum / neuron_count, settings['dec_places'])
+            isicovs_flat = flatten(isicovs.values())
+            n_atleast_twospikes = len(isicovs_flat)
+            if n_atleast_twospikes > 0:
+                mfr_spiking = round(rates_sum / n_atleast_twospikes, settings['dec_places'])
+            else:
+                mfr_spiking = 'NA'
 
-            # Get global oscillation frequency
-            osc_freq = sim.global_osc_freq()
+            # -> Irregularity
+            n_irregular = len([isicov for isicov in isicovs_flat
+                               if settings['isicov_min'] < isicov < settings['isicov_max']])
+            n_irregular = np.int32(n_irregular)
+            try:
+                irregularity_mean = round(mean(isicovs_flat), settings['dec_places'])
+            except:
+                irregularity_mean = 'NA'
 
+            # -> Synchrony
             # Calculating the synchrony measure makes sense only if the group is active enough
             # So, first calculate n_groups_active and count asynchronous groups from those
             active_groups = [group_id for group_id, ng_spiking in n_spiking.items()
@@ -1326,7 +1443,7 @@ class ExperimentData(object):
 
             mean_synchrony = sim.mean_synchrony(time_to_drop=settings['time_to_drop'])
 
-            # Calculate p-measures (Percentage of neurons)
+            # Finally, transform numbers into frequencies
             n_total_neurons = sum(sim.neurons_in_group.values())
             p_spiking = round(n_spiking_total / n_total_neurons, settings['dec_places'])
             if n_spiking_total > 0:
@@ -1336,11 +1453,11 @@ class ExperimentData(object):
                 p_firing_rate_normal = ''
                 p_irregular = ''
 
-            # Add everything to the dataframe
+            # COMPILE DATAFRAME
             stats.loc[sim_file] = extracted_params + \
                                         [duration, n_spiking_total, p_spiking, n_firing_rate_normal, p_firing_rate_normal,
                                          n_irregular, p_irregular, irregularity_mean, n_groups_active, n_groups_asynchronous,
-                                         n_groups_synchronous, mean_synchrony, mfr_all, osc_freq] + \
+                                         n_groups_synchronous, mean_synchrony, mfr_all, mfr_spiking, osc_freq_ft, osc_freq_ac] + \
                                          group_activities + group_firing_rates
             return stats
 
@@ -1506,6 +1623,10 @@ def combined_metrics_plot():
 # MAIN
 if __name__ == '__main__':
 
+    # a = SimulationData('07_standardruns_necodepfac/07_standardruns_necodepfac_20171117_21000002_k0.55_background_rate0.2H_Cpp_3500ms.bz2')
+    # print a.global_osc_freq(t_limits=[500*ms, -1], plot=True)
+    # a._isi_cdf_group(8)
+    # a.rasterplot()
 
     ###### Depol x calcium plot ######
     # exp = ExperimentData('/opt3/tmp/bigrun/depolxcalcium/', 'fepol')
@@ -1529,9 +1650,9 @@ if __name__ == '__main__':
     # Seeing results in iPython for example:
     #  plt.figure(); a = data.pivot_table('irregularity_mean', index='background_rate', columns='k').sort_index(ascending=False); sns.heatmap(a, cmap='binary', vmax=1)
 
-    exp = ExperimentData('/opt3/tmp/01_cxs_rev1/', '13_adextest')
-    exp.computestats('stats_13_adextest.csv',
-                    ['calcium_concentration', 'J', 'k', 'background_rate', 'depolarization_level', 'PC_rheobase_scaling'])
+    exp = ExperimentData('/opt3/tmp/01_cxs_rev1/', '19_adexv2_explo')
+    exp.computestats('stats_19_adexv2_explo.csv',
+                    ['calcium_concentration', 'J', 'k', 'background_rate'])
 
     ###### For creating side-by-side rasterplots ######
     # simulations = ['depol_37_calcium_concentration1.0_Cpp_3000ms.bz2', 'depol_37_calcium_concentration1.4_Cpp_3000ms.bz2',

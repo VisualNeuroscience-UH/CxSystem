@@ -108,7 +108,7 @@ class synapse_parser(object):
         else:
             self._K12 = np.average([2.79, 1.09])
 
-    def _scale_by_calcium(self, ca, cw=None):
+    def _scale_cw_by_calcium(self, ca, cw=None):
         """
         Scales synaptic weight depending on calcium level
 
@@ -128,6 +128,8 @@ class synapse_parser(object):
         final_synapse_strength = original_synapse_strength * calcium_factor
 
         return final_synapse_strength
+
+    def _scale_uf_by_calcium(self):
 
     def _set_utilization_factor(self, is_facilitating=False):
         excitatory_groups = ['PC', 'SS', 'in']
@@ -197,6 +199,8 @@ class synapse_parser(object):
 
         :param output_synapse: This is the dictionary created in neuron_reference() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: wght_max, wght0.
         '''
+
+        # TODO - Notation here a bit confusing and should be corrected (mu should be mean and std deviation, standard or other)
         stdp_max_strength_coefficient = self.value_extractor(self.physio_config_df, 'stdp_max_strength_coefficient')
         self.output_namespace['wght_max'] = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type']))* stdp_max_strength_coefficient
         std_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
@@ -204,7 +208,7 @@ class synapse_parser(object):
 
         if self.calcium_concentration > 0: # For change_calcium()
             self.cw_baseline_calcium = std_wght
-            std_wght = self._scale_by_calcium(self.calcium_concentration)
+            std_wght = self._scale_cw_by_calcium(self.calcium_concentration)
 
         self.output_namespace['init_wght'] = '(%f * rand() + %f) * nS' % (std_wght , mu_wght)
         std_delay = self.value_extractor(self.physio_config_df,'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
@@ -223,7 +227,7 @@ class synapse_parser(object):
 
         if self.calcium_concentration > 0:  # For change_calcium()
             self.cw_baseline_calcium = std_wght
-            std_wght = self._scale_by_calcium(self.calcium_concentration)
+            std_wght = self._scale_cw_by_calcium(self.calcium_concentration)
 
         self.output_namespace['init_wght'] = '%f * nS' % std_wght
         #self.output_namespace['init_wght'] = '(%f * rand() + %f) * nS' % (std_wght, mu_wght)
@@ -239,17 +243,17 @@ class synapse_parser(object):
 
          '''
 
-        # mu_wght = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
-        std_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
-        mu_wght = std_wght / 2.
+        mu_wght = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+        std_wght = mu_wght / 2.
 
         self._set_utilization_factor()
         tau_d = self.value_extractor(self.physio_config_df, 'tau_d')
         self.output_namespace['tau_d'] = tau_d
 
         if self.calcium_concentration > 0:  # For change_calcium()
-            self.cw_baseline_calcium = mu_wght
-            mu_wght = self._scale_by_calcium(self.calcium_concentration)
+            # self.cw_baseline_calcium = mu_wght
+            # mu_wght = self._scale_cw_by_calcium(self.calcium_concentration)
+
 
         # self.output_namespace['init_wght'] = '%f * nS' % mu_wght
         self.output_namespace['init_wght'] = '(%f * rand() + %f) * nS' % (std_wght, mu_wght)
@@ -276,7 +280,7 @@ class synapse_parser(object):
 
         if self.calcium_concentration > 0:  # For change_calcium()
             self.cw_baseline_calcium = mu_wght
-            mu_wght = self._scale_by_calcium(self.calcium_concentration)
+            mu_wght = self._scale_cw_by_calcium(self.calcium_concentration)
 
         # self.output_namespace['init_wght'] = '%f * nS' % mu_wght
         self.output_namespace['init_wght'] = '(%f * rand() + %f) * nS' % (std_wght, mu_wght)
@@ -310,23 +314,23 @@ class neuron_parser (object):
 
         getattr(self, '_'+ output_neuron['type'])(output_neuron)
 
-        # Setting depolarization to threshold for the AdEx model
-        # using analytical expression for rheobase (less analytical for PC)
+        # Setting depolarization to p% of threshold
         flag_adex = self.value_extractor(self.physio_config_df, 'flag_adex')
-        if flag_adex == 1:
-            print 'Using adaptive EIF model'
-            computed_rheobase = self._compute_adex_rheobase()
-            depolarization_level = self.value_extractor(self.physio_config_df, 'depolarization_level')
-            if output_neuron['type'] != 'PC':
-                real_rheobase = computed_rheobase
-            else:
-                PC_rheobase_scaling = self.value_extractor(self.physio_config_df, 'PC_rheobase_scaling')
-                real_rheobase = PC_rheobase_scaling * computed_rheobase
 
-            self.output_namespace['adex_depolarization'] = real_rheobase * depolarization_level
-            print 'Rheobase: '+str(real_rheobase)+'  Injection: '+str(self.output_namespace['adex_depolarization'])
+        if flag_adex == 1:
+            rheobase = self.output_namespace['rheobase_adex']
+            depolarization_level = self.value_extractor(self.physio_config_df, 'depolarization_level')
+
+            if output_neuron['type'] == 'PC':
+                rheobase = rheobase[output_neuron['dend_comp_num']-1]
+                print '-> dend extent: '+str(output_neuron['dend_comp_num'])
+
+            self.output_namespace['adex_depolarization'] = rheobase * depolarization_level
+
+            print 'Rheobase: '+str(rheobase)
+
         else:
-            print 'Using NON-adaptive EIF model'
+            # print 'Using NON-adaptive EIF model'
             self.output_namespace['adex_depolarization'] = 0*pA
 
     def _compute_adex_rheobase(self):

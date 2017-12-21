@@ -3,7 +3,7 @@ from brian2 import *
 import matplotlib.pyplot as plt
 
 
-dendritic_extent = 4
+dendritic_extent = 1
 #test_current = 150*pA
 
 refr_time = 4*ms
@@ -16,13 +16,13 @@ gl = 4.2e-5*siemens*cm**-2
 Area_tot_pyram = 25000 * 0.75 * um**2
 VT = -41.61*mV
 Vcut = -25*mV
-V_res = -39*mV
 EL = -70.11*mV
 
 # Adaptation parameters
-tau_w = 300*ms
-a = 2.0*nsiemens
-b = 60*pA
+V_res = -50*mV
+tau_w = 200*ms
+a = 0.1*nsiemens
+b = 130*pA
 
 # Dendritic parameters
 neuron_namespace = dict()
@@ -60,6 +60,8 @@ def compute_rheobase():
     PC_area = total_PC_area()
     gL = PC_area * gl
     C = PC_area*Cm
+    # gL = 0.03*Area_tot_pyram*gl
+    # C = 0.03*Area_tot_pyram*Cm
 
     tau_m = C/gL
 
@@ -81,8 +83,8 @@ def compute_rheobase():
 
     return rheobase
 
-rheobase = compute_rheobase()
-print 'Rheobase: '+str(rheobase)
+# rheobase = compute_rheobase()
+# print 'Rheobase: '+str(rheobase)
 
 ###############################
 # EQUATIONS & RUNNING the SIM #
@@ -111,14 +113,23 @@ I : amp
 '''
 
 #: The template for the dendritic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
+# eq_template_dend = '''
+# dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) +I_dendr) / C : volt
+# dge/dt = -ge/tau_e : siemens
+# dgealpha/dt = (ge-gealpha)/tau_e : siemens
+# dgi/dt = -gi/tau_i : siemens
+# dgialpha/dt = (gi-gialpha)/tau_i : siemens
+# '''
+
+# ADAPT. ALSO IN DENDRITE COMPARTMENTS
 eq_template_dend = '''
-dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) +I_dendr) / C : volt
+dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) +I_dendr -w) / C : volt
 dge/dt = -ge/tau_e : siemens
 dgealpha/dt = (ge-gealpha)/tau_e : siemens
 dgi/dt = -gi/tau_i : siemens
 dgialpha/dt = (gi-gialpha)/tau_i : siemens
+dw/dt = (-a*(EL-vm)-w)/tau_w : amp
 '''
-
 
 neuron_equ = Equations(eq_template_dend, vm="vm_basal", ge="ge_basal",
                                            gealpha="gealpha_basal",
@@ -141,7 +152,7 @@ neuron_equ += Equations(eq_template_soma, gL=neuron_namespace['gL'][1],
                                             gealphaX='gealphaX_soma',
                                             gialpha='gialpha_soma', C=neuron_namespace['C'][1],
                                             I_dendr='Idendr_soma',
-                                            taum_soma=neuron_namespace['taum_soma'])
+                                            taum_soma=neuron_namespace['taum_soma'], w='w_soma')
 
 for _ii in range(dendritic_extent + 1):  # extra dendritic compartment in the same level of soma
     neuron_equ += Equations(eq_template_dend, vm="vm_a%d" % _ii,
@@ -150,7 +161,7 @@ for _ii in range(dendritic_extent + 1):  # extra dendritic compartment in the sa
                                                 ge="ge_a%d" % _ii,
                                                 gi="gi_a%d" % _ii, geX="geX_a%d" % _ii,
                                                 gealpha="gealpha_a%d" % _ii, gialpha="gialpha_a%d" % _ii,
-                                                gealphaX="gealphaX_a%d" % _ii, I_dendr="Idendr_a%d" % _ii)
+                                                gealphaX="gealphaX_a%d" % _ii, I_dendr="Idendr_a%d" % _ii, w='w_a%d' % _ii)
 
 # Defining decay between soma and basal dendrite & apical dendrites
 neuron_equ += Equations('I_dendr = gapre*(vmpre-vmself)  : amp',
@@ -204,17 +215,21 @@ M = StateMonitor(G, ('vm', 'w'), record=True)
 M_spikes = SpikeMonitor(G)
 
 
-test_current = rheobase*0.45
-print 'Current injection: '+str(test_current)
+rheobase = compute_rheobase()
+print 'Rheobase: ' + str(rheobase)
+rheobase=115*pA
+print 'Rheobase: ' + str(rheobase)
+test_currents = np.array([0.95, 1.05, 1.2, 1.3, 1.4])
+print 'Stimuli (x rheobase): ' + str(test_currents*rheobase)
 
 # Constant current fed here for 1000ms
-G.I = 0*pA
-run(500 * ms)
-G.I = test_current
-run(1000 * ms)
-G.I = 0*pA
-run(500 * ms)
-
+G.I = 0
+run(500*ms)
+for curr in test_currents:
+    G.I = curr*rheobase
+    run(2000 * ms)
+    G.I = 0
+    run(500*ms)
 
 
 ############
