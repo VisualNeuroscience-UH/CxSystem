@@ -23,7 +23,7 @@ _weights,w_TC_E-E_connections,J,
 ,w_All_I-I_connections,k * J,# was: 0.83*nS
 ,,,
 ### BACKGROUND INPUT ###,,,
-background_rate,,{0.05|0.65|0.05}*Hz,
+background_rate,,{0.05|0.65|0.1}*Hz,
 background_rate_inhibition,,0*Hz,
 background_E_E_weight,,J,
 background_E_I_weight,,J,

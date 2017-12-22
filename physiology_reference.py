@@ -628,7 +628,7 @@ class synapse_reference(object):
 
         self.output_synapse['pre_eq'] = '''
         R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_d))
-        %s += R * wght
+        %s += R * U * wght
         R = R - U * R
         ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
 
@@ -643,8 +643,8 @@ class synapse_reference(object):
 
         self.output_synapse['pre_eq'] = '''
         R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_fd))
-        u = u * exp(-(t-lastupdate)/tau_f)
-        %s += R * wght
+        u = u + (U_f-u)*(1 - exp(-(t-lastupdate)/tau_f))
+        %s += R * u * wght
         R = R - u * R
         u = u + U_f * (1-u)
         ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
