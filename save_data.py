@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 __author__ = 'Andalibi, V., Hokkanen H., Vanni, S.'
 
 '''
@@ -40,7 +41,7 @@ class save_data(object):
         self.save_folder = ntpath.dirname(self.save_path)
         self.save_extension = os.path.splitext(self.save_path)[1]
         if os.getcwd() in self.save_path:
-            print "Info: the output of the system is saved in %s" %os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+            print u"ℹ️ The output of the system is saved in %s" %os.path.abspath(os.path.join(os.getcwd(), os.pardir))
             self.save_folder = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
             self.save_path = os.path.join(self.save_folder,self.save_filename)
         self.data = {}
@@ -64,7 +65,7 @@ class save_data(object):
         self.save_to_file()
 
     def save_to_file(self):
-        print "Saving data to file."
+        print u"⌛ Saving data to file ..."
         if not os.path.exists(self.save_folder):
             os.makedirs(self.save_folder)
         self.save_path = os.path.join(self.save_folder, self.save_pure_filename + self.datetime_str + self.save_extension)
