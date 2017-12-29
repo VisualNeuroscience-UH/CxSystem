@@ -1,10 +1,13 @@
+# -*- coding: utf-8 -*-
+__author__ = 'Andalibi, V., Hokkanen H., Vanni, S.'
 
 '''
-The program is distributed under the terms of the GNU General Public License
-Copyright 2017 Vafa Andalibi, Simo Vanni, Henri Hokkanen.
+The preliminary version of this software has been developed at Aalto University 2012-2015, 
+and the full version at the University of Helsinki 2013-2017. The software is distributed 
+under the terms of the GNU General Public License. 
+Copyright 2017 Vafa Andalibi, Henri Hokkanen and Simo Vanni.
 '''
 
-__author__ = 'V_AD'
 from numpy import *
 from brian2  import *
 # import scipy.io as sio
@@ -14,6 +17,7 @@ import cPickle as pickle
 import zlib
 import bz2
 import shutil
+
 
 
 class stimuli(object):
@@ -44,7 +48,7 @@ class stimuli(object):
         self.calculate_input_seqs()
 
     def initialize_inputs(self,  freq):
-        print "Initializing stimuli..."
+        print u"⌛ Initializing stimuli ..."
 
         #type : video
         _V1_mats = {}
@@ -55,7 +59,7 @@ class stimuli(object):
         # Fill ISI with N-1 times frameduration of zeros
         SOA = 60 # in ms
         stimulus_epoch_duration = 15 # in ms, duration of Burbank whole stimulus
-        assert np.mod(SOA, stimulus_epoch_duration) == 0, 'Stimulus onset asynchrony (SOA) must be an integer times frameduration, aborting...'
+        assert np.mod(SOA, stimulus_epoch_duration) == 0, u'❌ Stimulus onset asynchrony (SOA) must be an integer times frameduration.'
         SOA_in_N_frames = int(SOA / stimulus_epoch_duration)
         dense_stimulus = _V1_mats['stimulus']
         sparse_stimulus = np.tile(np.zeros_like(dense_stimulus), (1, SOA_in_N_frames))
@@ -74,7 +78,7 @@ class stimuli(object):
         _all_stim = squeeze(_V1_mats['stimulus'])
         if len(_all_stim.shape) == 2:
             slash_indices = [idx for idx, ltr in enumerate(self.input_mat_path) if ltr == '/']
-            print 'One video stimulus found in file ' + self.input_mat_path[slash_indices[-1]+1:]
+            print u'ℹ️ One video stimulus found in file ' + self.input_mat_path[slash_indices[-1]+1:]
 
     def calculate_input_seqs(self):
         set_device('cpp_standalone', directory=os.path.join(self.output_folder,'Input_cpp_run'+ self.output_file_suffix ))
@@ -98,7 +102,7 @@ class stimuli(object):
         shutil.rmtree(os.path.join(self.output_folder,'Input_cpp_run'+ self.output_file_suffix))
 
     def save_input_sequence(self,spike_mons, save_path):
-        print "Saving the generated video input..."
+        print u"⌛ Saving the generated video input..."
         self.generated_input_folder = save_path + self.output_file_extension
         data_to_save = {}
         for ii in range(len(spike_mons)):
@@ -119,7 +123,7 @@ class stimuli(object):
         new_spikes = self.loaded_data['spikes_0']
         neuron_positions_in_cortex = io.loadmat(self.input_mat_path, variable_names='w_coord')
         number_of_neurons = len(neuron_positions_in_cortex['w_coord'])
-        print "Info: Video input loaded"
+        print u"✅ Video input loaded"
         return new_spikes[0], new_spikes[1], number_of_neurons
 
 

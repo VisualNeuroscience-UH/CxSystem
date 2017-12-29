@@ -1,17 +1,21 @@
-
-'''
-The program is distributed under the terms of the GNU General Public License
-Copyright 2017 Vafa Andalibi, Simo Vanni, Henri Hokkanen.
-'''
-
+# -*- coding: utf-8 -*-
 from __future__ import division
+
+__author__ = 'Andalibi, V., Hokkanen H., Vanni, S.'
+
+'''
+The preliminary version of this software has been developed at Aalto University 2012-2015, 
+and the full version at the University of Helsinki 2013-2017. The software is distributed 
+under the terms of the GNU General Public License. 
+Copyright 2017 Vafa Andalibi, Henri Hokkanen and Simo Vanni.
+'''
+
 from brian2  import *
 import numpy as np
 from matplotlib import pyplot
 import sys
 import pandas
 
-__author__ = 'V_AD'
 
 
 
@@ -46,7 +50,7 @@ class synapse_parser(object):
         self.physio_config_df = physio_config_df
 
         synapse_parser.type_ref = array (['STDP','STDP_with_scaling', 'Fixed', 'Fixed_calcium', 'Fixed_normal', 'Depressing', 'Facilitating'])
-        assert output_synapse['type'] in synapse_parser.type_ref, "Synapse type '%s' is not defined." % output_synapse['type']
+        assert output_synapse['type'] in synapse_parser.type_ref, u"❌ Synapse type '%s' is not defined." % output_synapse['type']
         self.output_namespace = {}
         self.output_namespace['Cp'] = self.value_extractor(self.physio_config_df,'Cp')
         self.output_namespace['Cd'] = self.value_extractor(self.physio_config_df,'Cd')
@@ -341,7 +345,7 @@ class neuron_parser (object):
     def __init__(self, output_neuron,physio_config_df):
         self.physio_config_df = physio_config_df
         neuron_parser.type_ref = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM'])
-        assert output_neuron['type'] in neuron_parser.type_ref, "Cell type '%s' is not defined." % output_neuron['category']
+        assert output_neuron['type'] in neuron_parser.type_ref, u"❌ Cell type '%s' is not defined." % output_neuron['category']
         self.output_namespace = {}
         variable_start_idx = self.physio_config_df['Variable'][self.physio_config_df['Variable'] == output_neuron['type']].index[0]
         try:
