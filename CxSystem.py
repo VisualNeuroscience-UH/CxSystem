@@ -103,6 +103,7 @@ class CxSystem(object):
             'do_benchmark': [13,self.set_do_benchmark],
             'multidimension_array_run': [14,self.passer],  # this parameter is used by array_run module, so here we just pass
             'number_of_process': [15,self.passer],  # this parameter is used by array_run module, so here we just pass
+            'profiling': [16, self.set_profiling],
             'trials_per_config': [1,self.passer],
 
             ####
@@ -197,7 +198,7 @@ class CxSystem(object):
             self.conn_prob_gain = int(self.physio_config_df.ix[where(self.physio_config_df.values=='conn_prob_gain')[0]]['Value'].item())
         except ValueError:
             self.conn_prob_gain =1
-        self.configuration_executer()
+        self.configuration_executor()
         if type(self.awaited_conf_lines) != list :
            if self.thr.is_alive()==True:
                print u"⌛ Waiting for the video input ..."
@@ -484,6 +485,8 @@ class CxSystem(object):
     def set_profiling(self,*args):
         assert int(args[0]) in [0,1] , u"❌ Profiling flag should be either 0 or 1"
         self.profiling = int(args[0])
+        if self.profiling == 1:
+            print u"ℹ️ Profiling of CPU time usage is activated!"
 
     def neuron_group(self, *args):
         '''
