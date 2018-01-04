@@ -1,0 +1,23 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH -t 00:45:00
+#SBATCH -J tester1
+#SBATCH -o tester.out.%j
+#SBATCH -e tester.er.%j
+#SBATCH --mem=60000
+#SBATCH --mail-type=END
+#SBATCH --mail-user=vafa.andalibi@gmail.com
+
+export PATH=${USERAPPL}/my_python/bin:$PATH
+export PYTHONPATH=${USERAPPL}/my_python/lib/python2.7/site-packages:$PYTHONPATH
+
+module purge
+module load gcc/4.9.3
+module list
+
+set -xe
+
+cd ${SLURM_SUBMIT_DIR:-.}
+pwd
+
+python CxSystem.py

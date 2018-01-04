@@ -20,6 +20,7 @@ import bz2
 import cPickle as pickle
 import sys
 import itertools
+from cluster_run import *
 
 class array_run(object):
 
@@ -46,16 +47,31 @@ class array_run(object):
             print u"⚠️ number_of_process is not defined in the configuration file, the default number of processes are 3/4*number of CPU cores: %d processes" % self.number_of_process
         try:
             self.do_benchmark = int(self.parameter_finder(self.anatomy_df,'do_benchmark'))
-        except TypeError:
+        except (TypeError,NameError) as e:
             self.do_benchmark = 0
         try:
             self.trials_per_config = int(self.parameter_finder(self.anatomy_df,'trials_per_config'))
         except TypeError:
+            print u"⚠️trials_per_config is not defined in the configuration file, the default value is 1"
             self.trials_per_config = 1
         try:
             self.device = self.parameter_finder(self.anatomy_df, 'device')
         except TypeError:
+            print u"⚠   device is not defined in the configuration file, the default value is 'Python'"
             self.device = 'Python'
+        try:
+            self.run_in_cluster = int(self.parameter_finder(self.anatomy_df, 'run_in_cluster'))
+        except (TypeError,NameError) as e:
+            self.run_in_cluster = 0
+        try:
+            self.cluster_job_file_path = self.parameter_finder(self.anatomy_df, 'cluster_job_file_path')
+        except (TypeError,NameError) as e:
+            pass
+        try:
+            self.cluster_number_of_nodes = int(self.parameter_finder(self.anatomy_df,'cluster_number_of_nodes'))
+        except (TypeError,NameError) as e:
+            pass
+
         anatomy_array_search_result = anatomy_system_df[anatomy_system_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)]
         physio_array_search_result = physiology_df[physiology_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)]
         arrays_idx_anatomy = where(anatomy_array_search_result.isnull().values != True)
@@ -152,11 +168,21 @@ class array_run(object):
                     self.final_metadata_df['Dimension-1 Value'][counter] = val
                     counter+=1
 
-
-
         print u"ℹ️ array of Dataframes for anatomical and physiological configuration are ready"
+        if self.run_in_cluster:
+            self.total_configs = len(self.df_anat_final_array)
+            self.config_per_node = self.total_configs / self.cluster_number_of_nodes
+            self.clipping_indices = np.arange(0, self.total_configs, self.config_per_node)[:self.total_configs / self.config_per_node]
+            cluster_run(self)
+            return
         self.spawner()
 
+    def cluster_run(self):
+        '''
+
+        :return:
+        '''
+        print "hi"
     def arr_run(self,idx, working,paths):
         '''
         The function that each spawned process runs and parallel instances of CxSystems are created here.

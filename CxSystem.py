@@ -13,6 +13,8 @@ from brian2 import *
 import brian2genn
 import os
 import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 from physiology_reference import *
 from matplotlib.pyplot import  *
 from save_data import *
@@ -104,7 +106,10 @@ class CxSystem(object):
             'profiling': [14, self.set_profiling],
             'multidimension_array_run': [15,self.passer],  # this parameter is used by array_run module, so here we just pass
             'number_of_process': [16,self.passer],  # this parameter is used by array_run module, so here we just pass
-            'trials_per_config': [1,self.passer],
+            'trials_per_config': [17,self.passer],
+            # 'run_in_cluster': [18,self.set_run_in_cluster],
+            # 'cluster_job_file_path': [19,self.set_cluster_job_file_path],
+            # 'cluster_number_of_nodes': [20,self.cluster_number_of_nodes],
             ####
             #### Line definitions:
             'G': [nan,self.neuron_group],
@@ -143,6 +148,9 @@ class CxSystem(object):
         self.load_positions_only = 0
         self.profiling = 0
         self.awaited_conf_lines = []
+        # self.run_in_cluster = 0
+        # self.cluster_job_file_path = ''
+        # self.cluster_number_of_nodes = 0
         self.physio_config_df = pandas.read_csv(physiology_config) if type(physiology_config) == str else physiology_config
         self.physio_config_df = self.physio_config_df.applymap(lambda x: NaN if str(x)[0] == '#' else x)
         self.anat_and_sys_conf_df = pandas.read_csv(anatomy_and_system_config,header=None) if type(anatomy_and_system_config) == str else anatomy_and_system_config
@@ -186,6 +194,7 @@ class CxSystem(object):
             trials_per_config = int(self.parameter_finder(self.anat_and_sys_conf_df,'trials_per_config'))
         except NameError:
             trials_per_config = 0
+        # check for array_run and return
         if any(check_array_run_anatomy) or any(check_array_run_physiology) or (trials_per_config > 1 and not instantiated_from_array_run):
             array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df,self.StartTime_str)
             self.array_run = 1
@@ -383,7 +392,7 @@ class CxSystem(object):
         self.save_output_data.data['positions_all']['w_coord'] = {}
         self.save_output_data.data['positions_all']['z_coord'] = {}
         self.save_output_data.data['number_of_neurons'] = {}
-        self.save_output_data.data['runtime'] = self.runtime / self.runtime._get_best_unit()
+        self.save_output_data.data['runtime'] = self.runtime / self.runtime.get_best_unit()
         self.save_output_data.data['sys_mode'] = self.sys_mode
         try:
             self.save_output_data.data['scale'] = self.scale
@@ -455,6 +464,17 @@ class CxSystem(object):
         assert int(args[0]) in [0,1] , u"❌ Profiling flag should be either 0 or 1"
         self.profiling = int(args[0])
 
+    # def set_run_in_cluster(self,*args):
+    #     assert int(args[0]) in [0,1] , u"❌ run_in_cluster flag should be either 0 or 1"
+    #     self.run_in_cluster = int(args[0])
+    #
+    # def set_cluster_job_file_path(self,*args):
+    #     assert os.path.isfile(args[0]), u"❌ Cluster job file doesn't exist."
+    #     self.cluster_job_file_path = args[0]
+    #
+    # def cluster_number_of_nodes(self,*args):
+    #     self.cluster_number_of_nodes = int(args[0])
+
     def neuron_group(self, *args):
         '''
         The method that creates the NeuronGroups() based on the parameters that are extracted from the configuration file in the __init__ method of the class.
@@ -515,7 +535,7 @@ class CxSystem(object):
         if noise_sigma == '--':
             noise_sigma = '0*mV'
         noise_sigma = eval(noise_sigma)
-        assert 'V' in str(noise_sigma._get_best_unit()), u'❌ The unit of noise_sigma should be volt'
+        assert 'V' in str(noise_sigma.get_best_unit()), u'❌ The unit of noise_sigma should be volt'
         if neuron_type == 'PC':  # extract the layer index of PC neurons separately
             exec 'layer_idx = array(' + layer_idx.replace('->', ',') + ')'
         try:
@@ -1461,11 +1481,13 @@ class CxSystem(object):
 
 
 if __name__ == '__main__' :
+    # CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/CUBA_config.csv', \
+    #               os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_CUBA.csv', )
     CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/Burbank_config.csv', \
                   os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_Burbank.csv', )
+
     CM.run()
-
-    from data_visualizers.data_visualization import DataVisualization
-
-    dv = DataVisualization()
-    dv.make_figure()
+    # from data_visualizers.data_visualization import DataVisualization
+    #
+    # dv = DataVisualization()
+    # dv.make_figure()
