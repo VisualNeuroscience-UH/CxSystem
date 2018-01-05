@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 
 
 refr_time = 4*ms
-defaultclock_dt = 0.01*ms  # Just for visualization! Changing this doesn't change the clock.
 DeltaT = 2*mV
+
 
 ######################################################
 #  NEURON TYPES -- uncomment appropriate parameters  #
@@ -77,7 +77,7 @@ C = 63.36*pF
 gL =3.2*nS
 tau_m = C/gL
 VT = -36.8*mV
-Vcut = VT + 5*DeltaT
+Vcut = 20*mV
 # V_res = VT - 4*mV
 EL = -67.66*mV
 
@@ -242,14 +242,11 @@ b = 80*pA
 # tau_w = 300*ms
 # b = 80*pA
 
-
-
 # Adaptation parameters
 # tau_w = 100*ms
 # a = 2*nS
 # b = 50*pA
 # V_res = -50*mV
-
 
 
 def compute_rheobase():
@@ -322,7 +319,7 @@ M_spikes = SpikeMonitor(G)
 
 rheobase = compute_rheobase()
 print 'Rheobase: ' + str(rheobase)
-test_currents = np.array([0.98, 1.02, 1.2, 1.3, 1.4])
+test_currents = np.array([1.02])
 print 'Stimuli (x rheobase): ' + str(test_currents)
 
 # Constant current fed here for 1000ms
@@ -334,10 +331,11 @@ for curr in test_currents:
     G.I = 0
     run(2000*ms)
 
+
+
 ############
 # PLOTTING #
 ############
-
 
 plt.subplots(1,4)
 
