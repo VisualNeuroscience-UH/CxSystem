@@ -84,15 +84,15 @@ class cluster_run(object):
                     sl2.write(line)
                 for item_idx,item in enumerate(array_run_obj.clipping_indices):
                     try:
-                        sl2.write('srun -N 1 python CxSystem.py _tmp_anat_config.csv _tmp_physio_config.csv %d %d &\n'%(
+                        sl2.write('srun -N 1 -n 1 -c 16 python CxSystem.py _tmp_anat_config.csv _tmp_physio_config.csv %d %d &\n'%(
                             item,array_run_obj.clipping_indices[item_idx+1]-array_run_obj.clipping_indices[item_idx]))
                     except IndexError:
-                        sl2.write('srun -N 1 python CxSystem.py _tmp_anat_config.csv _tmp_physio_config.csv %d %d &\n' % (
+                        sl2.write('srun -N 1 -n 1 -c 16 python CxSystem.py _tmp_anat_config.csv _tmp_physio_config.csv %d %d &\n' % (
                         item, array_run_obj.total_configs - array_run_obj.clipping_indices[item_idx]))
-                sl2.write('wait')
+                sl2.write('wait\n')
         scp.put('./_tmp_slurm.job', os.path.join(self.remote_path, '_tmp_slurm.job'))
         print u"✅ Slurm file generated and copied to cluster"
-        self.ssh_commander('cd %s;sbatch _tmp_slurm.job' % self.remote_path, 0)
+        self.ssh_commander('cd %s;sbatch _tmp_slurm.job' % self.remote_path, 1)
         print u"✅ Slurm job successfully submitted"
 
 
@@ -102,7 +102,7 @@ class cluster_run(object):
         out= stdout.read(),
         if print_flag:
             print out[0]
-        return out
+        return out[0]
 
     def parameter_finder(self,df,keyword):
         location = where(df.values == keyword)
