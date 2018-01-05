@@ -256,9 +256,9 @@ class CxSystem(object):
 
     def set_device(self,*args):
         self.device = args[0]
-        assert self.device in ['GeNN', 'Cpp',
-                               'Python'], u'❌ Device %s is not defined. Check capital letters in device name.' % self.device
-        if device == 'GeNN':
+        assert self.device.lower() in ['genn', 'cpp',
+                               'python'], u'❌ Device %s is not defined. Check capital letters in device name.' % self.device
+        if self.device.lower() == 'genn':
             print u"⚠️ System is going to be run using GeNN devices, " \
                   "Errors may rise if Brian2/Brian2GeNN/GeNN is not installed correctly or the limitations are not " \
                   "taken in to account."
@@ -281,7 +281,7 @@ class CxSystem(object):
                     self.benchmarking_data['Simulation Time'] = str(self.runtime)
                     self.benchmarking_data['Device'] = self.device
                     self.benchmarking_data['File Suffix'] = self.StartTime_str[1:]
-                    if self.device != 'Python':
+                    if self.device.lower() != 'python':
                         self.benchmarking_data['Python Compilation'] = __builtin__.code_generation_start - self.start_time
                         self.benchmarking_data['Brian Code generation'] = __builtin__.compile_start - __builtin__.code_generation_start
                         self.benchmarking_data['Device-Specific Compilation'] = __builtin__.run_start - __builtin__.compile_start
@@ -309,9 +309,9 @@ class CxSystem(object):
                     w.writerow(self.benchmarking_data)
                     print u"✅ Benchmarking data saved"
             print u"ℹ️ Simulating %s took in total %d s" % (str(self.runtime),self.end_time-self.start_time)
-            if self.device == 'GeNN':
+            if self.device.lower() == 'genn':
                 shutil.rmtree(os.path.join(self.output_folder, self.StartTime_str[1:]))
-            elif self.device == 'Cpp':
+            elif self.device.lower() == 'cpp':
                 shutil.rmtree(os.path.join(self.output_folder, self.StartTime_str[1:]))
 
     def set_runtime_parameters(self):
@@ -338,10 +338,10 @@ class CxSystem(object):
             print u"ℹ️ CxSystem is running in %s mode" %self.sys_mode
         if self.do_benchmark:
             print u"⚠️ CxSystem is performing benchmarking. The Brian2 should be configured to use benchmarking."
-        if self.device == 'GeNN':
+        if self.device.lower() == 'genn':
             set_device('genn', directory=os.path.join(self.output_folder, self.StartTime_str[1:]))
             prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
-        elif self.device == 'Cpp':
+        elif self.device.lower() == 'cpp':
             set_device('cpp_standalone', directory=os.path.join(self.output_folder, self.StartTime_str[1:]))
             prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
 
@@ -386,7 +386,7 @@ class CxSystem(object):
                 print u"⚠   remote_output_path is not defined in the configuration file, the default path is ./results [in cluster]"
                 self.output_folder = "./results"
         self.output_file_extension = '.'+self.output_path.split('.')[-1]
-        self.StartTime_str += '_' + self.device + '_' + str(int((self.runtime / second) * 1000)) + 'ms'
+        self.StartTime_str += '_' + self.device.lower() + '_' + str(int((self.runtime / second) * 1000)) + 'ms'
         self.save_output_data = save_data(self.output_path,self.StartTime_str)  # This is for saving the output
         self.save_output_data.creat_key('positions_all')
         self.save_output_data.creat_key('Neuron_Groups_Parameters')
@@ -1032,7 +1032,7 @@ class CxSystem(object):
 
             self.monitors(monitors.split(' '), _dyn_syn_name, self.customized_synapses_list[-1]['equation'])
 
-            if self.device == 'Python' :
+            if self.device.lower() == 'python' :
                 num_tmp = 0
                 exec "num_tmp = len(%s.i)" % _dyn_syn_name
                 self.total_number_of_synapses += num_tmp
@@ -1485,10 +1485,8 @@ if __name__ == '__main__' :
         except IndexError:
             CM = CxSystem(net_config, phys_config)
     except IndexError:
-        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/CUBA_config.csv', \
-                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_CUBA.csv', )
-        # CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/Burbank_config.csv', \
-        #               os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_Burbank.csv', )
+        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/Burbank_config.csv', \
+                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_Burbank.csv', )
     CM.run()
     # from data_visualizers.data_visualization import DataVisualization
     #
