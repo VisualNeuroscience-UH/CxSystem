@@ -121,6 +121,8 @@ class CxSystem(object):
         self.do_benchmark = 0
         self.numerical_integration_method = 'euler'
         print u"ℹ️ the system is running with %s integration method"%self.numerical_integration_method
+        self.cluster_run_start_idx = cluster_run_start_idx
+        self.cluster_run_step = cluster_run_step
         self.current_parameters_list = []
         self.current_parameters_list_orig_len = 0 # current_parameters_list is changing at some point in the code, so the original length of it is needed
         self.current_values_list = []
@@ -375,7 +377,14 @@ class CxSystem(object):
     def _set_output_path(self, *args):
         self.output_path = args[0]
         assert os.path.splitext(self.output_path)[1], u"❌ The output_path_and_filename should contain file extension (.gz, .bz2 or .pickle)"
-        self.output_folder = os.path.dirname(self.output_path)
+        if self.cluster_run_start_idx == -1 and self.cluster_run_step == -1 :
+            self.output_folder = os.path.dirname(self.output_path)
+        else: # this means CxSystem is in running in cluster so the output path should be changed to remote_output_path
+            try:
+                self.output_folder = self.parameter_finder(self.anat_and_sys_conf_df, 'remote_output_path')
+            except NameError:
+                print u"⚠   remote_output_path is not defined in the configuration file, the default path is ./results [in cluster]"
+                self.output_folder = "./results"
         self.output_file_extension = '.'+self.output_path.split('.')[-1]
         self.StartTime_str += '_' + self.device + '_' + str(int((self.runtime / second) * 1000)) + 'ms'
         self.save_output_data = save_data(self.output_path,self.StartTime_str)  # This is for saving the output
