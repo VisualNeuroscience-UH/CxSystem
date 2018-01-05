@@ -81,7 +81,10 @@ class cluster_run(object):
         scp.put(physio_file_address, os.path.join(self.remote_repo_path, '_tmp_physio_config.csv'))
         print u"✅ config files transfered to cluster"
         # ask user to set the number of nodes, time and memory:
-        raw_input("Please check the default slurm.job file and set the number of nodes, time, memory and email address, then press a key to contiue ...")
+        raw_input(u"ℹ️ Please check the default slurm.job file and set the time, memory and uncomment and enter email address if you wish."
+                  "\nNote that the number of nodes in default slurm file should always be set to 1. Instead you should enter the number of nodes in the CxSystem network config file. "
+                  "\nAlso the default number of CPUs=16 does not need to be changed most of the times. "
+                  "\nPress a key to contiue ...")
 
         # building slurm :
         if not os.path.isdir('./_cluster_tmp'):
@@ -103,63 +106,22 @@ class cluster_run(object):
         print u"✅ Slurm file generated and copied to cluster"
         self.chan = self.client.invoke_shell()
         self.chan.send('cd %s\n'%self.remote_repo_path)
-        # for item_idx, item in enumerate(array_run_obj.clipping_indices):
-        #     self.chan.send('sbatch _tmp_slurm_%d.job\n' %item_idx)
-        # print u"✅ Slurm job successfully submitted"
-        self.spawner()
+        for item_idx, item in enumerate(array_run_obj.clipping_indices):
+            self.chan.send('sbatch _tmp_slurm_%d.job\n' %item_idx)
+            time.sleep(1)
+        print u"✅ Slurm job successfully submitted"
+        checker_data = {}
+        checker_data['cluster_address'] = self.cluster_address
+        checker_data['username'] = self.username
+        checker_data['local_folder'] = os.path.dirname(self.output_path_and_filename)
+        checker_data['remote_repo_path'] = self.remote_repo_path
+        checker_data['remote_output_folder'] = self.remote_output_folder
+        checker_data['remote_repo_path'] = self.remote_repo_path
+        with open ('./_cluster_tmp/_tmp_checker_data.pkl','wb') as ff:
+            pickle.dump(checker_data,ff)
+        print u"✅ _tmp_checker_data saved. To download the result and clean the environments after getting the email, run 'python cluster_run.py'\n" \
+              u"Alternatively you can run it in another terminal and it will do its job when the results are ready."
 
-
-    def checker_downloader_cleaner(self):
-        def ssh_commander(client,command, print_flag):
-            stdin, stdout, stderr = client.exec_command(command)
-            out = stdout.read(),
-            if print_flag:
-                print out[0]
-            return out[0]
-        client = paramiko.SSHClient()
-        client.load_system_host_keys()
-        client.set_missing_host_key_policy(paramiko.WarningPolicy)
-        client.connect(self.cluster_address, port=22, username=self.username, password=self.password)
-        scp = SCPClient(client.get_transport())
-        print u"✅ Checker_downloader_cleaner Connected to %s"%self.cluster_address
-        # time.sleep(15)
-        local_folder = os.path.dirname(self.output_path_and_filename)
-        if not os.path.isdir(local_folder):
-            os.mkdir(local_folder)
-        remote_result_abs_path = ssh_commander(client,'cd %s;cd %s; pwd' % (self.remote_repo_path,
-                                                                     self.remote_output_folder), 1).rstrip('\r\n')
-        waiting_flag = True
-        print "waiting"
-        while waiting_flag:
-            if not ssh_commander(client,'cd %s; ls -d */' % (remote_result_abs_path), 0) and 'metadata' in ssh_commander(client,'cd %s; ls' % (remote_result_abs_path), 0):
-                #just to double check:
-                if not self.username in  ssh_commander(client,'squeue -l -u %s'%self.username , 0):
-                # here it means there is no folder in result folder and therefore all simulations are done
-                # so we copy back the result and remove the files on cluster
-                    for item in ssh_commander(client,'cd %s; ls' % (remote_result_abs_path), 0).split('\n'):
-                        if item != '':
-                            scp.get(os.path.join(remote_result_abs_path,item),os.path.join(local_folder,item))
-                    # cleaning
-                    ssh_commander(client,'cd %s; rm auto_cluster_job*;rm _tmp_*;rm -rf %s' % (self.remote_repo_path, remote_result_abs_path), 0)
-                    waiting_flag = False
-            time.sleep(5)
-            print "iteration"
-        self.client.close()
-        print u"✅ Results downloaded and remote cleaned."
-        shutil.rmtree('./_cluster_tmp')
-        print u"✅ Local environment cleaned."
-        print u"✅ Results available in: %s" %local_folder
-
-
-
-    def spawner(self):
-        '''
-        Spawns processes each dedicated to an instance of CxSystem.
-        '''
-        print u"ℹ️ checker_downloader_cleaner process started"
-        p = multiprocessing.Process(target=self.checker_downloader_cleaner, args=())
-        p.start()
-        p.join()
 
     def ssh_commander(self,command,print_flag):
         stdin, stdout, stderr = self.client.exec_command(command,get_pty=True)
@@ -183,3 +145,47 @@ class cluster_run(object):
             raise NameError('Variable %s not found in the configuration file.'%keyword)
 
 
+if __name__ == '__main__':
+    def ssh_commander(client, command, print_flag):
+        stdin, stdout, stderr = client.exec_command(command)
+        out = stdout.read(),
+        if print_flag:
+            print out[0]
+        return out[0]
+    with open('./_cluster_tmp/_tmp_checker_data.pkl','rb') as ff:
+        checker_data = pickle.load(ff)
+    client = paramiko.SSHClient()
+    client.load_system_host_keys()
+    client.set_missing_host_key_policy(paramiko.WarningPolicy)
+    password = getpass.getpass('password: ')
+    client.connect(checker_data['cluster_address'], port=22, username=checker_data['username'], password=password)
+    scp = SCPClient(client.get_transport())
+    # print u"✅ Checker_downloader_cleaner Connected to %s"%self.cluster_address
+    time.sleep(1)
+    if not os.path.isdir(checker_data['local_folder']):
+        os.mkdir(checker_data['local_folder'])
+    remote_result_abs_path = ssh_commander(client,'cd %s;cd %s; pwd' % (checker_data['remote_repo_path'],
+                                                                     checker_data['remote_output_folder']), 0).rstrip('\r\n')
+
+    waiting_flag = True
+    print u"⌛ Waiting for the results ..."
+    while waiting_flag:
+        # if not ssh_commander(client,'cd %s; ls -d */' % (remote_result_abs_path), 0) and 'metadata' in ssh_commander(client,'cd %s; ls' % (remote_result_abs_path), 0):
+        # just a better check:
+        if not checker_data['username'] in ssh_commander(client, 'squeue -l -u %s' % checker_data['username'], 0):
+            # here it means there is no folder in result folder and therefore all simulations are done
+            # so we copy back the result and remove the files on cluster
+            print u"⌛ Copying the results from cluster..."
+            for item in ssh_commander(client, 'cd %s; ls' % (remote_result_abs_path), 0).split('\n'):
+                if item != '':
+                    scp.get(os.path.join(remote_result_abs_path, item), os.path.join(checker_data['local_folder'], item))
+            # cleaning
+            ssh_commander(client, 'cd %s; rm auto_cluster_job*;rm _tmp_*;rm -rf %s' % (
+            checker_data['remote_repo_path'], remote_result_abs_path), 0)
+            waiting_flag = False
+        time.sleep(1)
+    client.close()
+    print u"✅ Results are downloaded and remote is cleaned."
+    shutil.rmtree('./_cluster_tmp')
+    print u"✅ Local environment cleaned."
+    print u"✅ Results available in: %s" % checker_data['local_folder']
