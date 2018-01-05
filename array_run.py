@@ -20,7 +20,6 @@ import bz2
 import cPickle as pickle
 import sys
 import itertools
-from cluster_run import *
 
 class array_run(object):
 
@@ -34,6 +33,8 @@ class array_run(object):
         '''
         self.cluster_start_idx = cluster_start_idx
         self.cluster_step = cluster_step
+        if self.cluster_start_idx == -1 and self.cluster_step == -1:
+            from cluster_run import * # import cluster run module only if CxSystem is not running on the cluster to prevent dependency issues
         if self.cluster_start_idx != -1 and self.cluster_step != -1 :
             self.metadata_filename = 'metadata_' + 'part_'+ str((self.cluster_start_idx/self.cluster_step)+1) +'_' +metadata_file_suffx + '.gz'
         else:
