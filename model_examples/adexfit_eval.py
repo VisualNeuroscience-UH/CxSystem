@@ -27,7 +27,7 @@ class MarkramStepInjectionTraces(object):
     Extracts data from step current injection traces
     """
 
-    def __init__(self, traces_directory='', traces_file_prefix='', current_steps=[], stim_start=500, stim_end=2500):
+    def __init__(self, traces_directory='', traces_file_prefix='', current_steps=[], stim_start=700, stim_end=2700):
         times = []
         voltages = []
         traces_file_suffix = '.dat'
@@ -55,13 +55,14 @@ class MarkramStepInjectionTraces(object):
         self.traces_features = efel.getFeatureValues(self.traces,
                                                      ['spikecount_stimint', 'time_to_first_spike', 'inv_first_ISI',
                                                       'inv_last_ISI'])
-        self.current_steps = current_stepss
+        self.current_steps = current_steps
 
-
+    def plot_traces(self):
+        pass
 
 class AdexNeuron(object):
 
-    def __init__(self, target_traces=MarkramStepInjectionTraces(), stim_total=3000, stim_start=500, stim_end=2500):
+    def __init__(self, target_traces=MarkramStepInjectionTraces(), stim_total=3000, stim_start=700, stim_end=2700):
         self.target = target_traces
 
         self.stim_total = stim_total
@@ -69,7 +70,7 @@ class AdexNeuron(object):
         self.stim_end = stim_end
 
         self.equation_soma = '''
-        dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) -w + I) / C : volt (unless refractory)
+        dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) -w + I_hypol + I_depol) / C : volt (unless refractory)
         dw/dt = (-a*(EL-vm)-w)/tau_w : amp
         I : amp
         '''
@@ -94,11 +95,11 @@ class AdexNeuron(object):
         M = StateMonitor(G, ('vm'), record=True)
 
         # Run the step current injections
-        G.I = current_steps[0]
+        G.I_hypol = current_steps[0]*nA
         run(self.stim_start * ms)
 
         for step in range(1, n_steps):
-            G.I[step] = current_steps[step]
+            G.I_depol[step] = current_steps[step]*nA
         run((self.stim_end-self.stim_start)*ms)
 
         G.I = current_steps[0]

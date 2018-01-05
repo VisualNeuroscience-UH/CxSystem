@@ -248,114 +248,115 @@ b = 80*pA
 # b = 50*pA
 # V_res = -50*mV
 
+if __name__ == '__main__':
 
-def compute_rheobase():
-    bif_type = (a/gL)*(tau_w/tau_m)
-    print 'a (x gL): '+str(a/gL)+ '   tau_w (x tau_m): '+str(tau_w/tau_m)
+    def compute_rheobase():
+        bif_type = (a/gL)*(tau_w/tau_m)
+        print 'a (x gL): '+str(a/gL)+ '   tau_w (x tau_m): '+str(tau_w/tau_m)
 
-    if bif_type < 1:  # saddle-node bifurcation
-        print 'SN type neuron'
-        rheobase = (gL+a)*(VT - EL - DeltaT + DeltaT*log(1+a/gL))
+        if bif_type < 1:  # saddle-node bifurcation
+            print 'SN type neuron'
+            rheobase = (gL+a)*(VT - EL - DeltaT + DeltaT*log(1+a/gL))
 
-    elif bif_type > 1:  # Andronov-Hopf bifurcation
-        print 'AH type neuron'
-        rheobase = (gL+a)*(VT - EL - DeltaT + DeltaT*log(1+tau_m/tau_w)) + DeltaT*gL*((a/gL) - (tau_m/tau_w))
+        elif bif_type > 1:  # Andronov-Hopf bifurcation
+            print 'AH type neuron'
+            rheobase = (gL+a)*(VT - EL - DeltaT + DeltaT*log(1+tau_m/tau_w)) + DeltaT*gL*((a/gL) - (tau_m/tau_w))
 
-    else:
-        print 'Unable to compute rheobase!'
-        rheobase = 0*pA
+        else:
+            print 'Unable to compute rheobase!'
+            rheobase = 0*pA
 
-    return rheobase
+        return rheobase
 
-###############################
-# EQUATIONS & RUNNING the SIM #
-###############################
+    ###############################
+    # EQUATIONS & RUNNING the SIM #
+    ###############################
 
-# if 'PC_flag' not in locals():
-#     eq_soma = '''
-#      dvm/dt = ((gL*(EL-vm) + ge * (Ee-vm) + gi * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I) / C) : volt
-#      dge/dt = -ge/tau_e : siemens
-#      dgi/dt = -gi/tau_i : siemens
-#      I: amp
-#      '''
-# else:
-#     eq_soma = '''
-#      dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + I + (1/R_apical)*(v_apical-vm) + (1/R_basal)*(v_basal-vm) ) / C : volt
-#      dv_apical/dt = (gL_apical*(EL-v_apical) + (1/R_apical)*(vm-v_apical))/C_apical : volt
-#      dv_basal/dt = (gL_basal*(EL-v_basal) + (1/R_apical)*(vm-v_basal))/C_basal : volt
-#      I: amp
-#      '''
+    # if 'PC_flag' not in locals():
+    #     eq_soma = '''
+    #      dvm/dt = ((gL*(EL-vm) + ge * (Ee-vm) + gi * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I) / C) : volt
+    #      dge/dt = -ge/tau_e : siemens
+    #      dgi/dt = -gi/tau_i : siemens
+    #      I: amp
+    #      '''
+    # else:
+    #     eq_soma = '''
+    #      dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + I + (1/R_apical)*(v_apical-vm) + (1/R_basal)*(v_basal-vm) ) / C : volt
+    #      dv_apical/dt = (gL_apical*(EL-v_apical) + (1/R_apical)*(vm-v_apical))/C_apical : volt
+    #      dv_basal/dt = (gL_basal*(EL-v_basal) + (1/R_apical)*(vm-v_basal))/C_basal : volt
+    #      I: amp
+    #      '''
 
-# WITH ADAPTATION
-eq_soma = '''
-dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) -w + I) / C : volt (unless refractory)
-dw/dt = (-a*(EL-vm)-w)/tau_w : amp
-I : amp
-'''
+    # WITH ADAPTATION
+    eq_soma = '''
+    dvm/dt = (gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) -w + I) / C : volt (unless refractory)
+    dw/dt = (-a*(EL-vm)-w)/tau_w : amp
+    I : amp
+    '''
 
-# eq_soma = '''
-# dvm/dt = ((gL*(EL-vm) + ge * (Ee-vm) + gi * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) -w + I ) / C) : volt (unless refractory)
-# dge/dt = -ge/tau_e : siemens
-# dgi/dt = -gi/tau_i : siemens
-# dw/dt = (-a*(EL-vm)-w)/tau_w : amp
-# I : amp
-# '''
+    # eq_soma = '''
+    # dvm/dt = ((gL*(EL-vm) + ge * (Ee-vm) + gi * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) -w + I ) / C) : volt (unless refractory)
+    # dge/dt = -ge/tau_e : siemens
+    # dgi/dt = -gi/tau_i : siemens
+    # dw/dt = (-a*(EL-vm)-w)/tau_w : amp
+    # I : amp
+    # '''
 
-# Main
-#G = NeuronGroup(1,eq_soma, threshold='vm > '+repr(Vcut), reset = 'vm = '+repr(V_res), refractory = refr_time, method='euler')
-G = NeuronGroup(1, eq_soma, threshold='vm > '+repr(Vcut),
-                reset='vm = '+repr(V_res)+'; w=w+'+repr(b),
-                refractory=refr_time, method='euler')
+    # Main
+    #G = NeuronGroup(1,eq_soma, threshold='vm > '+repr(Vcut), reset = 'vm = '+repr(V_res), refractory = refr_time, method='euler')
+    G = NeuronGroup(1, eq_soma, threshold='vm > '+repr(Vcut),
+                    reset='vm = '+repr(V_res)+'; w=w+'+repr(b),
+                    refractory=refr_time, method='euler')
 
-G.vm = EL
+    G.vm = EL
 
-# G.v_apical = EL
-# G.v_basal = EL
+    # G.v_apical = EL
+    # G.v_basal = EL
 
-# M = StateMonitor(G, ('vm','ge','gi'), record=True)
-# M_spikes = SpikeMonitor(G)
-M = StateMonitor(G, ('vm', 'w', 'I'), record=True)
-M_spikes = SpikeMonitor(G)
+    # M = StateMonitor(G, ('vm','ge','gi'), record=True)
+    # M_spikes = SpikeMonitor(G)
+    M = StateMonitor(G, ('vm', 'w', 'I'), record=True)
+    M_spikes = SpikeMonitor(G)
 
-rheobase = compute_rheobase()
-print 'Rheobase: ' + str(rheobase)
-test_currents = np.array([1.02])
-print 'Stimuli (x rheobase): ' + str(test_currents)
+    rheobase = compute_rheobase()
+    print 'Rheobase: ' + str(rheobase)
+    test_currents = np.array([1.02])
+    print 'Stimuli (x rheobase): ' + str(test_currents)
 
-# Constant current fed here for 1000ms
-G.I = 0
-run(500*ms)
-for curr in test_currents:
-    G.I = curr*rheobase
-    run(5000 * ms)
+    # Constant current fed here for 1000ms
     G.I = 0
-    run(2000*ms)
+    run(500*ms)
+    for curr in test_currents:
+        G.I = curr*rheobase
+        run(5000 * ms)
+        G.I = 0
+        run(2000*ms)
 
 
 
-############
-# PLOTTING #
-############
+    ############
+    # PLOTTING #
+    ############
 
-plt.subplots(1,4)
+    plt.subplots(1,4)
 
-plt.subplot(141)
-plt.title('$V_m$ with spikes')
-plt.plot(M.t/ms, M.vm[0])
-plt.plot(M_spikes.t/ms, [-20*mV] * len(M_spikes.t), '.')
-xlabel('Time (ms)')
-ylabel('V_m (V)')
-ylim([-0.09, 0.02])
+    plt.subplot(141)
+    plt.title('$V_m$ with spikes')
+    plt.plot(M.t/ms, M.vm[0])
+    plt.plot(M_spikes.t/ms, [-20*mV] * len(M_spikes.t), '.')
+    xlabel('Time (ms)')
+    ylabel('V_m (V)')
+    ylim([-0.09, 0.02])
 
-plt.subplot(142)
-plt.plot(M.t/ms, M.I[0]/pA)
+    plt.subplot(142)
+    plt.plot(M.t/ms, M.I[0]/pA)
 
-plt.subplot(143)
-plt.plot(M.t/ms, M.w[0]/pA)
+    plt.subplot(143)
+    plt.plot(M.t/ms, M.w[0]/pA)
 
-plt.subplot(144)
-plt.plot(M.vm[0]/mV, M.w[0]/pA)
-xlabel('V_m (V)')
-ylabel('Adap.var. w (pA)')
+    plt.subplot(144)
+    plt.plot(M.vm[0]/mV, M.w[0]/pA)
+    xlabel('V_m (V)')
+    ylabel('Adap.var. w (pA)')
 
-plt.show()
+    plt.show()
