@@ -179,7 +179,7 @@ class CxSystem(object):
                     params_indices[0][0]].dropna().append(
                     self.anat_and_sys_conf_df.iloc[row_idx][1:]).dropna().reset_index(drop=True)
                 self.anat_and_sys_conf_df = new_anat_and_sys_conf_df
-            for row in params_indices[0][1:]:
+            for row in reversed(params_indices[0][1:]):
                 self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.drop(row - 1).reset_index(drop=True)
                 self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.drop(row - 1).reset_index(drop=True)
 
