@@ -34,7 +34,7 @@ class array_run(object):
         self.cluster_start_idx = cluster_start_idx
         self.cluster_step = cluster_step
         if self.cluster_start_idx == -1 and self.cluster_step == -1:
-            from cluster_run import * # import cluster run module only if CxSystem is not running on the cluster to prevent dependency issues
+            import cluster_run # import cluster run module only if CxSystem is not running on the cluster to prevent dependency issues
         if self.cluster_start_idx != -1 and self.cluster_step != -1 :
             self.metadata_filename = 'metadata_' + 'part_'+ str((self.cluster_start_idx/self.cluster_step)+1) +'_' +metadata_file_suffx + '.gz'
         else:
@@ -179,7 +179,7 @@ class array_run(object):
             self.total_configs = len(self.df_anat_final_array)* self.trials_per_config
             self.config_per_node = self.total_configs / self.cluster_number_of_nodes
             self.clipping_indices = np.arange(0, self.total_configs, self.config_per_node)[:self.total_configs / self.config_per_node]
-            cluster_run(self,anat_file_address,physio_file_address)
+            cluster_run.cluster_run(self,anat_file_address,physio_file_address)
             return
         if cluster_start_idx != -1 and cluster_step != -1: # this runs in cluster
             self.spawner(self.cluster_start_idx,self.cluster_step)
