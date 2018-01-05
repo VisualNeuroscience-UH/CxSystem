@@ -53,8 +53,8 @@ class cluster_run(object):
         try:
             self.username = self.parameter_finder(array_run_obj.anatomy_df, 'username')
         except NameError:
-            self.username = raw_input('username: ')
-        self.password = getpass.getpass('password: ')
+            self.username = raw_input('Enter Username: ')
+        self.password = getpass.getpass('Enter Password: ')
 
         self.client = paramiko.SSHClient()
         self.client.load_system_host_keys()
@@ -76,10 +76,12 @@ class cluster_run(object):
         scp.put(physio_file_address, os.path.join(self.remote_repo_path, '_tmp_physio_config.csv'))
         print u"✅ config files transfered to cluster"
         # ask user to set the number of nodes, time and memory:
-        raw_input(u"ℹ️ Please check the default slurm.job file and set the time, memory and uncomment and enter email address if you wish."
-                  "\nNote that the number of nodes in default slurm file should always be set to 1. Instead you should enter the number of nodes in the CxSystem network config file. "
-                  "\nAlso the default number of CPUs=16 does not need to be changed most of the times. "
-                  "\nPress a key to contiue ...")
+        raw_input(u"ℹ️ CxSystem is about to submit batch jobs to cluster. Please note the followings:\n"
+                  u"\t- Make sure that CxSystem in cluster is updated. We intentionally do not pull the latest version in your cluster repository.\n"
+                  u"\t- The number of nodes in default slurm file should always be set to 1. You should enter the desired number of nodes in the CxSystem network config file instead.\n"
+                  u"\t- Check the default slurm.job file and set the time, memory and uncomment and enter email address if you wish.\n"
+                  u"\n- Default number of CPU cores is set to 16 and does not need to be changed most of the times.\n"
+                  u"\nPress a key to contiue ...")
 
         # building slurm :
         if not os.path.isdir('./_cluster_tmp'):
@@ -152,7 +154,7 @@ if __name__ == '__main__':
     client = paramiko.SSHClient()
     client.load_system_host_keys()
     client.set_missing_host_key_policy(paramiko.WarningPolicy)
-    password = getpass.getpass('password: ')
+    password = getpass.getpass('Enter Password: ')
     client.connect(checker_data['cluster_address'], port=22, username=checker_data['username'], password=password)
     scp = SCPClient(client.get_transport())
     # print u"✅ Checker_downloader_cleaner Connected to %s"%self.cluster_address
