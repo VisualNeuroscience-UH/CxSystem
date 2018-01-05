@@ -84,15 +84,16 @@ class cluster_run(object):
                     sl2.write(line)
                 for item_idx,item in enumerate(array_run_obj.clipping_indices):
                     try:
-                        sl2.write('srun --node=1 python CxSystem.py _tmp_anat_config.csv _tmp_physio_config.csv %d %d\n'%(
+                        sl2.write('srun -N 1 python CxSystem.py _tmp_anat_config.csv _tmp_physio_config.csv %d %d &\n'%(
                             item,array_run_obj.clipping_indices[item_idx+1]-array_run_obj.clipping_indices[item_idx]))
                     except IndexError:
-                        sl2.write('srun --node=1 python CxSystem.py _tmp_anat_config.csv _tmp_physio_config.csv %d %d\n' % (
+                        sl2.write('srun -N 1 python CxSystem.py _tmp_anat_config.csv _tmp_physio_config.csv %d %d &\n' % (
                         item, array_run_obj.total_configs - array_run_obj.clipping_indices[item_idx]))
+                sl2.write('wait')
         scp.put('./_tmp_slurm.job', os.path.join(self.remote_path, '_tmp_slurm.job'))
         print u"✅ Slurm file generated and copied to cluster"
-        # self.ssh_commander('cd %s;sbatch _tmp_slurm.job' % self.remote_path, 0)
-
+        self.ssh_commander('cd %s;sbatch _tmp_slurm.job' % self.remote_path, 0)
+        print u"✅ Slurm job successfully submitted"
 
 
 

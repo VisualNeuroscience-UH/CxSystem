@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH -N 2
+##SBATCH -N 2
 #SBATCH -t 00:45:00
 #SBATCH -J auto_cluster_job
 #SBATCH -o auto_cluster_job.out.%j
 #SBATCH -e auto_cluster_job.er.%j
 #SBATCH --mem=60000
-#SBATCH --mail-type=END
-#SBATCH --mail-user=vafa.andalibi@gmail.com
+##SBATCH --mail-type=END
+##SBATCH --mail-user=vafa.andalibi@gmail.com
 
 export PATH=${USERAPPL}/my_python/bin:$PATH
 export PYTHONPATH=${USERAPPL}/my_python/lib/python2.7/site-packages:$PYTHONPATH
