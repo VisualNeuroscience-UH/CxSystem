@@ -55,7 +55,7 @@ class MarkramStepInjectionTraces(object):
         self.traces_features = efel.getFeatureValues(self.traces,
                                                      ['spikecount_stimint', 'time_to_first_spike', 'inv_first_ISI',
                                                       'inv_last_ISI'])
-        self.current_steps = current_steps
+        self.current_steps = current_stepss
 
 
 
