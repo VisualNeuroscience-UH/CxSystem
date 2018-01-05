@@ -60,7 +60,7 @@ class CxSystem(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self, anatomy_and_system_config, physiology_config, output_file_suffix = "", instantiated_from_array_run = 0):
+    def __init__(self, anatomy_and_system_config, physiology_config, output_file_suffix = "", instantiated_from_array_run = 0, cluster_run_start_idx=-1,cluster_run_step=-1):
         '''
         Initialize the cortical system by parsing both of the configuration files.
 
@@ -107,9 +107,6 @@ class CxSystem(object):
             'multidimension_array_run': [15,self.passer],  # this parameter is used by array_run module, so here we just pass
             'number_of_process': [16,self.passer],  # this parameter is used by array_run module, so here we just pass
             'trials_per_config': [17,self.passer],
-            # 'run_in_cluster': [18,self.set_run_in_cluster],
-            # 'cluster_job_file_path': [19,self.set_cluster_job_file_path],
-            # 'cluster_number_of_nodes': [20,self.cluster_number_of_nodes],
             ####
             #### Line definitions:
             'G': [nan,self.neuron_group],
@@ -148,9 +145,6 @@ class CxSystem(object):
         self.load_positions_only = 0
         self.profiling = 0
         self.awaited_conf_lines = []
-        # self.run_in_cluster = 0
-        # self.cluster_job_file_path = ''
-        # self.cluster_number_of_nodes = 0
         self.physio_config_df = pandas.read_csv(physiology_config) if type(physiology_config) == str else physiology_config
         self.physio_config_df = self.physio_config_df.applymap(lambda x: NaN if str(x)[0] == '#' else x)
         self.anat_and_sys_conf_df = pandas.read_csv(anatomy_and_system_config,header=None) if type(anatomy_and_system_config) == str else anatomy_and_system_config
@@ -196,7 +190,8 @@ class CxSystem(object):
             trials_per_config = 0
         # check for array_run and return
         if any(check_array_run_anatomy) or any(check_array_run_physiology) or (trials_per_config > 1 and not instantiated_from_array_run):
-            array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df,self.StartTime_str)
+            array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df,self.StartTime_str,int(cluster_run_start_idx),
+                                int(cluster_run_step),anatomy_and_system_config,physiology_config)
             self.array_run = 1
             return
         try:
@@ -464,16 +459,6 @@ class CxSystem(object):
         assert int(args[0]) in [0,1] , u"❌ Profiling flag should be either 0 or 1"
         self.profiling = int(args[0])
 
-    # def set_run_in_cluster(self,*args):
-    #     assert int(args[0]) in [0,1] , u"❌ run_in_cluster flag should be either 0 or 1"
-    #     self.run_in_cluster = int(args[0])
-    #
-    # def set_cluster_job_file_path(self,*args):
-    #     assert os.path.isfile(args[0]), u"❌ Cluster job file doesn't exist."
-    #     self.cluster_job_file_path = args[0]
-    #
-    # def cluster_number_of_nodes(self,*args):
-    #     self.cluster_number_of_nodes = int(args[0])
 
     def neuron_group(self, *args):
         '''
@@ -1481,11 +1466,20 @@ class CxSystem(object):
 
 
 if __name__ == '__main__' :
-    # CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/CUBA_config.csv', \
-    #               os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_CUBA.csv', )
-    CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/Burbank_config.csv', \
-                  os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_Burbank.csv', )
-
+    try: # this runs in cluster
+        net_config = sys.argv[1]
+        phys_config = sys.argv[2]
+        try:
+            ar_run_start_idx = sys.argv[3]
+            ar_run_step = sys.argv[4]
+            CM = CxSystem(net_config, phys_config, cluster_run_start_idx=ar_run_start_idx, cluster_run_step=ar_run_step)
+        except IndexError:
+            CM = CxSystem(net_config, phys_config)
+    except IndexError:
+        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/CUBA_config.csv', \
+                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_CUBA.csv', )
+        # CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/Burbank_config.csv', \
+        #               os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_Burbank.csv', )
     CM.run()
     # from data_visualizers.data_visualization import DataVisualization
     #

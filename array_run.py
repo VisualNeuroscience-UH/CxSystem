@@ -24,7 +24,7 @@ from cluster_run import *
 
 class array_run(object):
 
-    def __init__(self, anatomy_system_df, physiology_df, metadata_file_suffx):
+    def __init__(self, anatomy_system_df, physiology_df, metadata_file_suffx,cluster_start_idx,cluster_step,anat_file_address,physio_file_address):
         '''
         Initialize the array_run for running several instances of CxSystem in parallel.
 
@@ -32,7 +32,12 @@ class array_run(object):
         :param physiology_df: The dataframe containing the physiology configurations that has an instance for array_run in it.
         :param metadata_file_suffx: The suffix for the metadata file containing the filename and changing parameters in each of the simulations.
         '''
-        self.metadata_filename = 'metadata_' + metadata_file_suffx + '.gz'
+        self.cluster_start_idx = cluster_start_idx
+        self.cluster_step = cluster_step
+        if self.cluster_start_idx != -1 and self.cluster_step != -1 :
+            self.metadata_filename = 'metadata_' + 'part_'+ str((self.cluster_start_idx/self.cluster_step)+1) +'_' +metadata_file_suffx + '.gz'
+        else:
+            self.metadata_filename = 'metadata_' + metadata_file_suffx + '.gz'
         self.array_run_metadata = pd.DataFrame
         self.anatomy_df = anatomy_system_df
         self.physiology_df =physiology_df
@@ -169,20 +174,18 @@ class array_run(object):
                     counter+=1
 
         print u"ℹ️ array of Dataframes for anatomical and physiological configuration are ready"
-        if self.run_in_cluster:
-            self.total_configs = len(self.df_anat_final_array)
+        if self.run_in_cluster and self.cluster_start_idx == -1 and self.cluster_step == -1: # this runs to run the Cxsystems over the cluster
+            self.total_configs = len(self.df_anat_final_array)* self.trials_per_config
             self.config_per_node = self.total_configs / self.cluster_number_of_nodes
             self.clipping_indices = np.arange(0, self.total_configs, self.config_per_node)[:self.total_configs / self.config_per_node]
-            cluster_run(self)
+            cluster_run(self,anat_file_address,physio_file_address)
             return
-        self.spawner()
+        if cluster_start_idx != -1 and cluster_step != -1: # this runs in cluster
+            self.spawner(self.cluster_start_idx,self.cluster_step)
+            return
+        self.spawner(0,len(self.final_messages) * self.trials_per_config) # this runs when not in cluster
 
-    def cluster_run(self):
-        '''
 
-        :return:
-        '''
-        print "hi"
     def arr_run(self,idx, working,paths):
         '''
         The function that each spawned process runs and parallel instances of CxSystems are created here.
@@ -211,7 +214,7 @@ class array_run(object):
         paths[orig_idx] = cm.save_output_data.data['Full path']
         working.value -= 1
 
-    def spawner(self):
+    def spawner(self,start_idx,steps_from_start):
         '''
         Spawns processes each dedicated to an instance of CxSystem.
         '''
@@ -224,20 +227,21 @@ class array_run(object):
         number_of_runs = len(self.final_messages) * self.trials_per_config
         self.final_metadata_df = self.final_metadata_df.loc[np.repeat(self.final_metadata_df.index.values, self.trials_per_config)].reset_index(drop=True)
         assert len(self.final_messages) < 1000 , u'❌ The array run is trying to run more than 1000 simulations, this is not allowed unless you REALLY want it and if you REALLY want it you should konw what to do.'
-        while len(jobs) < number_of_runs:
+        # while len(jobs) < number_of_runs:
+        while len(jobs) < steps_from_start:
             time.sleep(1.5)
             if working.value < self.number_of_process:
-                idx = len(jobs)
+                idx = start_idx + len(jobs)
                 p = multiprocessing.Process(target=self.arr_run, args=(idx, working,paths))
                 jobs.append(p)
                 p.start()
         for j in jobs:
             j.join()
 
-        for idx in range(len(paths)):
-            self.final_metadata_df['Full path'][idx] = paths[idx]
-        self.data_saver(os.path.join(os.path.dirname(paths[0]),self.metadata_filename),self.final_metadata_df)
-        print u"✅ Array run metadata saved at: %s"%os.path.join(os.path.dirname(paths[0]),self.metadata_filename)
+        for item in paths.keys():
+            self.final_metadata_df['Full path'][item] = paths[item]
+        self.data_saver(os.path.join(os.path.dirname(paths[paths.keys()[0]]),self.metadata_filename),self.final_metadata_df)
+        print u"✅ Array run metadata saved at: %s"%os.path.join(os.path.dirname(paths[paths.keys()[0]]),self.metadata_filename)
 
     def parameter_finder(self,df,keyword):
         location = where(df.values == keyword)
@@ -371,3 +375,4 @@ class array_run(object):
         elif '.pickle' in save_path:
             with open(save_path, 'wb') as fb:
                 pickle.dump(data, fb, pickle.HIGHEST_PROTOCOL)
+

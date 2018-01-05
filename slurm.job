@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH -N 1
+#SBATCH -N 2
 #SBATCH -t 00:45:00
-#SBATCH -J tester1
-#SBATCH -o tester.out.%j
-#SBATCH -e tester.er.%j
+#SBATCH -J auto_cluster_job
+#SBATCH -o auto_cluster_job.out.%j
+#SBATCH -e auto_cluster_job.er.%j
 #SBATCH --mem=60000
 #SBATCH --mail-type=END
 #SBATCH --mail-user=vafa.andalibi@gmail.com
@@ -20,4 +20,3 @@ set -xe
 cd ${SLURM_SUBMIT_DIR:-.}
 pwd
 
-python CxSystem.py
