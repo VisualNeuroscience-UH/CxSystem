@@ -47,11 +47,6 @@ class cluster_run(object):
             print u"⚠   remote_repo_path is not defined in the configuration file, the default value is home directory ~"
             self.remote_repo_path = "."
         try:
-            self.remote_repo_path = int(self.parameter_finder(array_run_obj.anatomy_df, 'auto_download_result'))
-        except NameError:
-            print u"⚠   auto_download_results is not defined in the configuration file, the default value is 1"
-            self.auto_download_results = 1
-        try:
             self.cluster_address = self.parameter_finder(array_run_obj.anatomy_df, 'cluster_address')
         except NameError:
             raise Exception("cluster_address is not defined for running CxSystem on cluster")
