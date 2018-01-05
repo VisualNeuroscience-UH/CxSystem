@@ -130,8 +130,8 @@ class cluster_run(object):
         if location[0].size:
             counter = int(location[0])+1
             while counter < df.shape[0] :
-                if '#' not in str(df.ix[counter][int(location[1])]):
-                    value = df.ix[counter][int(location[1])]
+                if '#' not in str(df.loc[counter][int(location[1])]):
+                    value = df.loc[counter][int(location[1])]
                     break
                 else:
                     counter+=1

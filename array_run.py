@@ -252,8 +252,8 @@ class array_run(object):
         if location[0].size:
             counter = int(location[0])+1
             while counter < df.shape[0] :
-                if '#' not in str(df.ix[counter][int(location[1])]):
-                    value = df.ix[counter][int(location[1])]
+                if '#' not in str(df.loc[counter][int(location[1])]):
+                    value = df.loc[counter][int(location[1])]
                     break
                 else:
                     counter+=1
@@ -273,7 +273,7 @@ class array_run(object):
         '''
         array_of_dfs = []
         run_messages = []
-        array_variable = original_df.ix[index_of_array_variable[0][0]][index_of_array_variable[0][1]]
+        array_variable = original_df.loc[index_of_array_variable[0][0]][index_of_array_variable[0][1]]
         opening_braket_idx = array_variable.index('{')
         if (not self.multidimension_array_run and self.sum_of_array_runs>1) or (self.sum_of_array_runs==1 and ':' in array_variable):
             colon_idx = array_variable.index(':')
@@ -296,7 +296,7 @@ class array_run(object):
             if type(var) == str :
                 var = var.strip()
             temp_df = original_df.copy()
-            temp_df.ix[index_of_array_variable[0][0]][index_of_array_variable[0][1]] = var
+            temp_df.loc[index_of_array_variable[0][0]][index_of_array_variable[0][1]] = var
             if self.multidimension_array_run and len(index_of_array_variable)>1:
                 tmp_title,tmp_value,tmp_message = self.message_finder(temp_df, index_of_array_variable,df_type)
                 temp_df, messages = self.df_builder_for_array_run(temp_df, index_of_array_variable[1:],df_type,tmp_message,recursion_counter=recursion_counter+1)
@@ -319,10 +319,10 @@ class array_run(object):
         df_search_result = where(df_search_result.isnull().values == False)
         arrays_idx_ = [(df_search_result[0][i], df_search_result[1][i]) for i in range(len(df_search_result[0]))]
         for to_default_idx in arrays_idx_:
-            value_to_default = df.ix[to_default_idx[0]][to_default_idx[1]]
+            value_to_default = df.loc[to_default_idx[0]][to_default_idx[1]]
             assert ':' in value_to_default, u"❌ The default value should be defined for %s , or make sure multidimension_array_run in configuraiton file is set to 1." % value_to_default
             default = value_to_default[value_to_default.index('{')+1:value_to_default.index(':')]
-            df.ix[to_default_idx[0]][to_default_idx[1]] = df.ix[to_default_idx[0]][to_default_idx[1]].replace(value_to_default[value_to_default.index('{'):value_to_default.index('}')+1],default)
+            df.loc[to_default_idx[0]][to_default_idx[1]] = df.loc[to_default_idx[0]][to_default_idx[1]].replace(value_to_default[value_to_default.index('{'):value_to_default.index('}')+1],default)
         return df
 
     def message_finder(self,df, idx,df_type):
@@ -350,10 +350,10 @@ class array_run(object):
                         value = str(df[idx[0]][idx[1]])
                     else:
                         title = str(df['Variable'][idx[0]])
-                        value = str(df.ix[idx[0]][idx[1]])
+                        value = str(df.loc[idx[0]][idx[1]])
                 except TypeError:
                     title = str(df['Key'][idx[0]])
-                    value = str(df.ix[idx[0]][idx[1]])
+                    value = str(df.loc[idx[0]][idx[1]])
                 message = '_' + title + ''.join(filter(whitelist.__contains__, value))
         finally: # for metadata
             if df_type == 'anatomy':

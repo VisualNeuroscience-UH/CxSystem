@@ -107,6 +107,13 @@ class CxSystem(object):
             'multidimension_array_run': [15,self.passer],  # this parameter is used by array_run module, so here we just pass
             'number_of_process': [16,self.passer],  # this parameter is used by array_run module, so here we just pass
             'trials_per_config': [17,self.passer],
+            'run_in_cluster': [18,self.passer],
+            'cluster_job_file_path':[19,self.passer],
+            'cluster_number_of_nodes':[20,self.passer],
+            'cluster_address': [21,self.passer],
+            'username':[22,self.passer],
+            'remote_repo_path': [23,self.passer],
+            'remote_output_folder': [24,self.passer],
             ####
             #### Line definitions:
             'G': [nan,self.neuron_group],
@@ -152,10 +159,8 @@ class CxSystem(object):
         self.anat_and_sys_conf_df = pandas.read_csv(anatomy_and_system_config,header=None) if type(anatomy_and_system_config) == str else anatomy_and_system_config
         self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.applymap(lambda x: x.strip() if type(x) == str else x)
         ## dropping the commented lines :
-        self.anat_and_sys_conf_df =  self.anat_and_sys_conf_df.drop(self.anat_and_sys_conf_df[0].index[self.anat_and_sys_conf_df[0][
-            self.anat_and_sys_conf_df[0].str.contains('#') == True].index.tolist()]).reset_index(drop=True)
-        self.physio_config_df = self.physio_config_df.drop(self.physio_config_df['Variable'].index[self.physio_config_df['Variable'][
-            self.physio_config_df['Variable'].str.contains('#') == True].index.tolist()]).reset_index(drop=True)
+        self.anat_and_sys_conf_df =  self.anat_and_sys_conf_df.drop(self.anat_and_sys_conf_df[0].index[self.anat_and_sys_conf_df[0][self.anat_and_sys_conf_df[0].str.contains('#') == True].index.tolist()]).reset_index(drop=True)
+        self.physio_config_df = self.physio_config_df.drop(self.physio_config_df['Variable'].index[self.physio_config_df['Variable'][self.physio_config_df['Variable'].str.contains('#') == True].index.tolist()]).reset_index(drop=True)
         # merging the params lines into one row:
         params_indices = where(self.anat_and_sys_conf_df.values == 'params')
         if params_indices[0].size > 1:
@@ -174,12 +179,9 @@ class CxSystem(object):
                     params_indices[0][0]].dropna().append(
                     self.anat_and_sys_conf_df.iloc[row_idx][1:]).dropna().reset_index(drop=True)
                 self.anat_and_sys_conf_df = new_anat_and_sys_conf_df
-                # create new df OR append to existing df with NaNs of columns, where N columns = N significant
-                # columns in row_idx-1:row_idx
-                # self.anat_and_sys_conf_df.iloc[params_indices[0][0]-1] = self.anat_and_sys_conf_df.iloc[params_indices[0][0]-1].dropna().append(self.anat_and_sys_conf_df.iloc[row_idx-1][1:]).dropna().reset_index(drop=True)
-                # self.anat_and_sys_conf_df.iloc[params_indices[0][0]] = self.anat_and_sys_conf_df.iloc[params_indices[0][0]].dropna().append(self.anat_and_sys_conf_df.iloc[row_idx][1:]).dropna().reset_index(drop=True)
-            self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.drop(params_indices[0][1:]).reset_index(drop=True)
-            self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.drop(params_indices[0][1:]-1).reset_index(drop=True)
+            for row in params_indices[0][1:]:
+                self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.drop(row - 1).reset_index(drop=True)
+                self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.drop(row - 1).reset_index(drop=True)
 
         self.conf_df_to_save = self.anat_and_sys_conf_df
         self.physio_df_to_save =  self.physio_config_df
@@ -197,7 +199,7 @@ class CxSystem(object):
             self.array_run = 1
             return
         try:
-            self.conn_prob_gain = int(self.physio_config_df.ix[where(self.physio_config_df.values=='conn_prob_gain')[0]]['Value'].item())
+            self.conn_prob_gain = int(self.physio_config_df.loc[where(self.physio_config_df.values=='conn_prob_gain')[0]]['Value'].item())
         except ValueError:
             self.conn_prob_gain =1
         self.configuration_executor()
@@ -211,12 +213,12 @@ class CxSystem(object):
 
 
     def configuration_executor(self):
-        definition_lines_idx = self.anat_and_sys_conf_df.ix[:,0][self.anat_and_sys_conf_df.ix[:,0]=='row_type'].index
+        definition_lines_idx = self.anat_and_sys_conf_df.loc[:,0][self.anat_and_sys_conf_df.loc[:,0]=='row_type'].index
         order_of_lines = ['params','IN','G','S']
         for value_line_title in order_of_lines:
             for def_idx in definition_lines_idx:
-                if value_line_title in self.anat_and_sys_conf_df.ix[def_idx+1,0]:
-                    self.current_parameters_list = self.anat_and_sys_conf_df.ix[def_idx,1:].dropna()
+                if value_line_title in self.anat_and_sys_conf_df.loc[def_idx+1,0]:
+                    self.current_parameters_list = self.anat_and_sys_conf_df.loc[def_idx,1:].dropna()
                     self.current_parameters_list = self.current_parameters_list[~self.current_parameters_list.str.contains('#')]
                     self.current_parameters_list_orig_len = len(self.current_parameters_list)
                     try:
@@ -224,12 +226,12 @@ class CxSystem(object):
                     except IndexError:
                         next_def_line_idx = self.anat_and_sys_conf_df[0].__len__()
                     for self.value_line_idx in range(def_idx+1,next_def_line_idx):
-                        if type(self.anat_and_sys_conf_df.ix[self.value_line_idx, 0]) == str:
-                            if self.anat_and_sys_conf_df.ix[self.value_line_idx,0] in self.parameter_to_method_mapping.keys() and self.anat_and_sys_conf_df.ix[self.value_line_idx, 0][0]!= '#':
-                                self.current_parameters_list = self.anat_and_sys_conf_df.ix[def_idx,1:].dropna()
+                        if type(self.anat_and_sys_conf_df.loc[self.value_line_idx, 0]) == str:
+                            if self.anat_and_sys_conf_df.loc[self.value_line_idx,0] in self.parameter_to_method_mapping.keys() and self.anat_and_sys_conf_df.loc[self.value_line_idx, 0][0]!= '#':
+                                self.current_parameters_list = self.anat_and_sys_conf_df.loc[def_idx,1:].dropna()
                                 self.current_parameters_list = self.current_parameters_list[~self.current_parameters_list.str.contains('#')]
-                                self.current_values_list = self.anat_and_sys_conf_df.ix[self.value_line_idx,self.current_parameters_list.index].dropna()
-                                self.parameter_to_method_mapping[self.anat_and_sys_conf_df.ix[self.value_line_idx, 0]][1]()
+                                self.current_values_list = self.anat_and_sys_conf_df.loc[self.value_line_idx,self.current_parameters_list.index].dropna()
+                                self.parameter_to_method_mapping[self.anat_and_sys_conf_df.loc[self.value_line_idx, 0]][1]()
                     break
 
     def parameter_finder(self,df,keyword):
@@ -237,8 +239,8 @@ class CxSystem(object):
         if location[0].size:
             counter = int(location[0])+1
             while counter < df.shape[0] :
-                if '#' not in str(df.ix[counter][int(location[1])]):
-                    value = df.ix[counter][int(location[1])]
+                if '#' not in str(df.loc[counter][int(location[1])]):
+                    value = df.loc[counter][int(location[1])]
                     break
                 else:
                     counter+=1
@@ -498,10 +500,10 @@ class CxSystem(object):
         obligatory_columns = list(array(_all_columns)[_obligatory_params])
         obligatory_indices = [self.current_parameters_list[self.current_parameters_list == ii].index.item() for ii in
                               obligatory_columns]
-        assert not any(self.current_values_list.ix[obligatory_indices] == '--'), \
+        assert not any(self.current_values_list.loc[obligatory_indices] == '--'), \
             u'❌ Following obligatory values cannot be "--":\n%s' % str([_all_columns[ii] for ii in _obligatory_params])
         assert len(self.current_values_list) == self.current_parameters_list_orig_len,\
-            u"❌ One or more of of the columns for NeuronGroup definition is missing in the following line:\n %s " % str(self.anat_and_sys_conf_df.ix[self.value_line_idx].to_dict().values())
+            u"❌ One or more of of the columns for NeuronGroup definition is missing in the following line:\n %s " % str(self.anat_and_sys_conf_df.loc[self.value_line_idx].to_dict().values())
         idx = -1
         net_center = 0 + 0j
         number_of_neurons = 0
@@ -767,10 +769,10 @@ class CxSystem(object):
         obligatory_columns = list(array(_all_columns)[_obligatory_params])
         obligatory_indices = [self.current_parameters_list[self.current_parameters_list == ii].index.item() for ii in
                               obligatory_columns]
-        assert not any(self.current_values_list.ix[obligatory_indices].isnull()), \
+        assert not any(self.current_values_list.loc[obligatory_indices].isnull()), \
             u'❌ Following obligatory values cannot be "--":\n%s' % str([_all_columns[ii] for ii in _obligatory_params])
         assert len(self.current_values_list) == self.current_parameters_list_orig_len, \
-        u"❌ One or more of of the columns for synapse definition is missing in the following line:\n %s " %str(self.anat_and_sys_conf_df.ix[self.value_line_idx].to_dict().values())
+        u"❌ One or more of of the columns for synapse definition is missing in the following line:\n %s " %str(self.anat_and_sys_conf_df.loc[self.value_line_idx].to_dict().values())
         _options = {
             '[C]': self.neuron_group,
         }
@@ -824,7 +826,7 @@ class CxSystem(object):
             if current_post_syn_tags == '[C]':  # [C] means the target is a compartment
                 _post_group_idx, _post_com_idx = current_post_syn_idx.split('[' + 'C' + ']')
                 assert int(_post_group_idx) < len(self.neurongroups_list),\
-                u'❌ The synapse in the following line is targeting a group index that is not defined:\n%s'%str(self.anat_and_sys_conf_df.ix[self.value_line_idx].to_dict().values())
+                u'❌ The synapse in the following line is targeting a group index that is not defined:\n%s'%str(self.anat_and_sys_conf_df.loc[self.value_line_idx].to_dict().values())
                 self.current_values_list.values[index_of_post_syn_idx] = _post_group_idx
                 pre_group_ref_idx = [self.customized_neurons_list.index(tmp_group) for tmp_group in
                                      self.customized_neurons_list if tmp_group['idx'] == int(current_pre_syn_idx)][0]
@@ -874,7 +876,7 @@ class CxSystem(object):
                 self.current_values_list = [self.current_values_list]
         else:
             assert int(current_post_syn_idx) < len(self.neurongroups_list), \
-                u'❌ The synapse in the following line is targeting a group index that is not defined:\n%s' % str(self.anat_and_sys_conf_df.ix[self.value_line_idx].to_dict().values())
+                u'❌ The synapse in the following line is targeting a group index that is not defined:\n%s' % str(self.anat_and_sys_conf_df.loc[self.value_line_idx].to_dict().values())
             pre_group_ref_idx = [self.customized_neurons_list.index(tmp_group) for tmp_group in \
                                  self.customized_neurons_list if int(tmp_group['idx']) == \
                                  int(current_pre_syn_idx)][0]
@@ -957,7 +959,7 @@ class CxSystem(object):
                     self.default_load_flag = -1
                     _do_load = int(syn[index_of_load_connection ].replace('<--', ''))
                     if _do_load ==1:
-                        assert hasattr(self,'loaded_brian_data'), u"❌ Synaptic connection in the following line is set to be loaded, however the load_brian_data_path is not defined in the parameters. The connection is being created:\n%s"%str(self.anat_and_sys_conf_df.ix[self.value_line_idx].to_dict().values())
+                        assert hasattr(self,'loaded_brian_data'), u"❌ Synaptic connection in the following line is set to be loaded, however the load_brian_data_path is not defined in the parameters. The connection is being created:\n%s"%str(self.anat_and_sys_conf_df.loc[self.value_line_idx].to_dict().values())
                 else:
                     _do_load = int(syn[self.current_parameters_list[self.current_parameters_list=='load_connection'].index.item()])
             except TypeError:
@@ -1401,7 +1403,7 @@ class CxSystem(object):
          current %s input. The parameters should be consist of:\n %s'%(_input_type,input_type_to_method_mapping[_input_type][0])
         obligatory_columns = list(array(input_type_to_method_mapping[_input_type][0])[input_type_to_method_mapping[_input_type][1]])
         obligatory_indices = [self.current_parameters_list[self.current_parameters_list==ii].index.item() for ii in obligatory_columns]
-        assert not any(self.current_values_list.ix[obligatory_indices]=='--'), \
+        assert not any(self.current_values_list.loc[obligatory_indices]=='--'), \
             u'❌ Following obligatory values cannot be "--":\n%s' % str([_all_columns[ii] for ii in _obligatory_params])
         assert len(self.current_parameters_list) == len(self.current_values_list), \
             u'❌ The number of columns for the input are not equal to number of values in the configuration file.'
@@ -1485,8 +1487,8 @@ if __name__ == '__main__' :
         except IndexError:
             CM = CxSystem(net_config, phys_config)
     except IndexError:
-        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/Burbank_config.csv', \
-                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_Burbank.csv', )
+        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/Markram_config_file.csv', \
+                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters.csv', )
     CM.run()
     # from data_visualizers.data_visualization import DataVisualization
     #
