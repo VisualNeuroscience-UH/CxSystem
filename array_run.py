@@ -76,7 +76,10 @@ class array_run(object):
         try:
             self.cluster_number_of_nodes = int(self.parameter_finder(self.anatomy_df,'cluster_number_of_nodes'))
         except (TypeError,NameError) as e:
-            pass
+            self.cluster_number_of_nodes =1
+
+        if self.cluster_number_of_nodes > 20:
+            raise Exception(u'❌ Number of nodes cannot be higher than 20.')
 
         anatomy_array_search_result = anatomy_system_df[anatomy_system_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)]
         physio_array_search_result = physiology_df[physiology_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)]
