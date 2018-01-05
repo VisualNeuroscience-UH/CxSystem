@@ -77,11 +77,11 @@ class cluster_run(object):
         print u"✅ config files transfered to cluster"
         # ask user to set the number of nodes, time and memory:
         raw_input(u"ℹ️ CxSystem is about to submit batch jobs to cluster. Please note the followings:\n"
-                  u"\t- Make sure that CxSystem in cluster is updated. We intentionally do not pull the latest version in your cluster repository.\n"
-                  u"\t- The number of nodes in default slurm file should always be set to 1. You should enter the desired number of nodes in the CxSystem network config file instead.\n"
-                  u"\t- Check the default slurm.job file and set the time, memory and uncomment and enter email address if you wish.\n"
-                  u"\n- Default number of CPU cores is set to 16 and does not need to be changed most of the times.\n"
-                  u"\nPress a key to contiue ...")
+                  u"- Make sure that CxSystem in cluster is updated. We intentionally do not pull the latest version in your cluster repository.\n"
+                  u"- The number of nodes in default slurm file should always be set to 1. You should enter the desired number of nodes in the CxSystem network config file instead.\n"
+                  u"- Check the default slurm.job file and set the time, memory and uncomment and enter email address if you wish.\n"
+                  u"- Default number of CPU cores is set to 16 and does not need to be changed most of the times.\n"
+                  u"Press a key to contiue ...")
 
         # building slurm :
         if not os.path.isdir('./_cluster_tmp'):
