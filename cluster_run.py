@@ -29,8 +29,8 @@ from scp import SCPClient
 class cluster_run(object):
 
     def __init__(self,array_run_obj, anat_file_address,physio_file_address):
-        if not os.path.exists('./_cluster_tmp').replace('/',os.sep):
-            os.mkdir('./_cluster_tmp').replace('/',os.sep)
+        if not os.path.exists('./_cluster_tmp'.replace('/',os.sep)):
+            os.mkdir('./_cluster_tmp'.replace('/',os.sep))
         # with open('./_cluster_tmp/array_run_obj.pkl','wb') as fbb:
         #     pickle.dump(array_run_obj,fbb,pickle.HIGHEST_PROTOCOL)
         self.output_path_and_filename = self.parameter_finder(array_run_obj.anatomy_df, 'output_path_and_filename')
@@ -82,7 +82,7 @@ class cluster_run(object):
         # building slurm :
         for item_idx, item in enumerate(array_run_obj.clipping_indices):
             with open("./slurm.job".replace('/',os.sep),'r') as sl1:
-                with open ("./_cluster_tmp/_tmp_slurm_%d.job".replace('/',os.sep)%item_idx,'w') as sl2:
+                with open ("./_cluster_tmp/_tmp_slurm_%d.job".replace('/',os.sep)%item_idx,'wb') as sl2:
                     for line in sl1:
                         sl2.write(line)
                     # for item_idx,item in enumerate(array_run_obj.clipping_indices):
