@@ -963,6 +963,7 @@ class CxSystem(object):
                 else:
                     _do_load = int(syn[self.current_parameters_list[self.current_parameters_list=='load_connection'].index.item()])
             except TypeError:
+                _do_load = 0
                 pass
 
             try:
@@ -975,6 +976,7 @@ class CxSystem(object):
                 else:
                     _do_save = int(syn[index_of_save_connection])
             except TypeError:
+                _do_save = 0
                 pass
 
             if (self.default_load_flag==1 or (self.default_load_flag==-1 and _do_load == 1 )) and \
