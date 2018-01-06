@@ -1,1 +1,1 @@
-../mechanisms/SK_E2.mod
+.././mechanisms/SK_E2.mod

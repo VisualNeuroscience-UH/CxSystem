@@ -1,1 +1,1 @@
-../mechanisms/NaTa_t.mod
+.././mechanisms/NaTa_t.mod

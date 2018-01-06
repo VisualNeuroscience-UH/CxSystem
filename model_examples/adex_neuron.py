@@ -1,6 +1,6 @@
 from brian2 import *
 import matplotlib.pyplot as plt
-
+import efel
 
 
 
@@ -333,7 +333,6 @@ if __name__ == '__main__':
         run(2000*ms)
 
 
-
     ############
     # PLOTTING #
     ############
@@ -360,3 +359,13 @@ if __name__ == '__main__':
     ylabel('Adap.var. w (pA)')
 
     plt.show()
+
+    traces=[]
+    trace={}
+    trace['T'] = M.t/ms
+    trace['V'] = M.vm[0]/mV
+    trace['stim_start'] = [500]
+    trace['stim_end'] = [5500]
+    traces.append(trace)
+
+    print efel.getFeatureValues(traces, ['peak_time'])

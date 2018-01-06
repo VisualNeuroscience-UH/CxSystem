@@ -1,1 +1,1 @@
-../mechanisms/Ca.mod
+.././mechanisms/Ca.mod

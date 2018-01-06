@@ -1,1 +1,1 @@
-../mechanisms/Ca_LVAst.mod
+.././mechanisms/Ca_LVAst.mod

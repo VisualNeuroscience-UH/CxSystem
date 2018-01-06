@@ -1,1 +1,1 @@
-../mechanisms/K_Tst.mod
+.././mechanisms/K_Tst.mod

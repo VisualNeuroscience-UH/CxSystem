@@ -1,1 +1,1 @@
-../mechanisms/Nap_Et2.mod
+.././mechanisms/Nap_Et2.mod

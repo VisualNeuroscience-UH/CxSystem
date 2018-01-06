@@ -1,1 +1,1 @@
-../mechanisms/K_Pst.mod
+.././mechanisms/K_Pst.mod

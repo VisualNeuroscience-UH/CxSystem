@@ -1,1 +1,1 @@
-../mechanisms/ProbGABAAB_EMS.mod
+.././mechanisms/ProbGABAAB_EMS.mod

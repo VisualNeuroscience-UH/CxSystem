@@ -1,1 +1,1 @@
-../mechanisms/CaDynamics_E2.mod
+.././mechanisms/CaDynamics_E2.mod

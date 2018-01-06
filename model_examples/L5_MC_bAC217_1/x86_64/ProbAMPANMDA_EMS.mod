@@ -1,1 +1,1 @@
-../mechanisms/ProbAMPANMDA_EMS.mod
+.././mechanisms/ProbAMPANMDA_EMS.mod

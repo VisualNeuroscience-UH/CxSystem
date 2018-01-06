@@ -1,1 +1,1 @@
-../mechanisms/Ih.mod
+.././mechanisms/Ih.mod

@@ -1,1 +1,1 @@
-../mechanisms/SKv3_1.mod
+.././mechanisms/SKv3_1.mod

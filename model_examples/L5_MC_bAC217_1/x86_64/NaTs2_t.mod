@@ -1,1 +1,1 @@
-../mechanisms/NaTs2_t.mod
+.././mechanisms/NaTs2_t.mod
