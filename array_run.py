@@ -50,7 +50,7 @@ class array_run(object):
             self.number_of_process = int(self.parameter_finder(self.anatomy_df, 'number_of_process'))
         except TypeError:
             self.number_of_process = int(multiprocessing.cpu_count() * 3 / 4)
-            print u"⚠️ number_of_process is not defined in the configuration file, the default number of processes are 3/4*number of CPU cores: %d processes" % self.number_of_process
+            print " -  number_of_process is not defined in the configuration file, the default number of processes are 3/4*number of CPU cores: %d processes" % self.number_of_process
         try:
             self.do_benchmark = int(self.parameter_finder(self.anatomy_df,'do_benchmark'))
         except (TypeError,NameError) as e:
@@ -58,12 +58,12 @@ class array_run(object):
         try:
             self.trials_per_config = int(self.parameter_finder(self.anatomy_df,'trials_per_config'))
         except TypeError:
-            print u"⚠️trials_per_config is not defined in the configuration file, the default value is 1"
+            print " - trials_per_config is not defined in the configuration file, the default value is 1"
             self.trials_per_config = 1
         try:
             self.device = self.parameter_finder(self.anatomy_df, 'device')
         except TypeError:
-            print u"⚠   device is not defined in the configuration file, the default value is 'Python'"
+            print " -    device is not defined in the configuration file, the default value is 'Python'"
             self.device = 'Python'
         try:
             self.run_in_cluster = int(self.parameter_finder(self.anatomy_df, 'run_in_cluster'))
@@ -79,7 +79,7 @@ class array_run(object):
             self.cluster_number_of_nodes =1
 
         if self.cluster_number_of_nodes > 50:
-            raise Exception(u'❌ Number of nodes cannot be higher than 20.')
+            raise Exception(' -  Number of nodes cannot be higher than 20.')
 
         anatomy_array_search_result = anatomy_system_df[anatomy_system_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)]
         physio_array_search_result = physiology_df[physiology_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)]
@@ -150,7 +150,7 @@ class array_run(object):
         self.all_titles = self.anat_titles + self.physio_titles
 
         if not self.df_anat_final_array and not self.df_phys_final_array:
-            print u"ℹ️ no array_run variable found, the default configurations are going to be simulated %d times"%self.trials_per_config
+            print " -  no array_run variable found, the default configurations are going to be simulated %d times"%self.trials_per_config
             # trial_per_conf_idx = where(anatomy_default.values == 'trials_per_config')
             # anatomy_default[int(trial_per_conf_idx[1])][int(trial_per_conf_idx[0])] = ''
             self.df_anat_final_array = [anatomy_default] * self.trials_per_config
@@ -177,7 +177,7 @@ class array_run(object):
                     self.final_metadata_df['Dimension-1 Value'][counter] = val
                     counter+=1
 
-        print u"ℹ️ array of Dataframes for anatomical and physiological configuration are ready"
+        print " -  array of Dataframes for anatomical and physiological configuration are ready"
         if self.run_in_cluster and self.cluster_start_idx == -1 and self.cluster_step == -1: # this runs to run the Cxsystems over the cluster
             self.total_configs = len(self.df_anat_final_array)* self.trials_per_config
             self.config_per_node = self.total_configs / self.cluster_number_of_nodes
@@ -210,7 +210,7 @@ class array_run(object):
                 shutil.rmtree(os.path.join(os.environ['USERPROFILE'],'AppData','Local','Temp',os.environ['USERNAME'],'python27_compiled'))
             else:
                 shutil.rmtree(os.path.join(os.environ['HOME'],'.cache/scipy'))
-            print u"ℹ️ scipy cache deleted to prevent benchmarking issues."
+            print " -  scipy cache deleted to prevent benchmarking issues."
         print "################### Trial %d/%d started running for simulation number %d: %s ##########################" % (tr+1,self.trials_per_config,idx,self.final_messages[idx][1:])
         cm = CX.CxSystem(self.df_anat_final_array[idx], self.df_phys_final_array[idx], output_file_suffix = self.final_messages[idx],
                          instantiated_from_array_run=1)
@@ -222,7 +222,7 @@ class array_run(object):
         '''
         Spawns processes each dedicated to an instance of CxSystem.
         '''
-        print u"ℹ️ Following configurations are going to be simulated with %d processes using %s device (printed only in letters and numbers): " \
+        print " -  Following configurations are going to be simulated with %d processes using %s device (printed only in letters and numbers): " \
               "\n %s"%(self.number_of_process,self.device,str(self.final_messages).replace('_',''))
         manager = multiprocessing.Manager()
         jobs = []
@@ -230,7 +230,7 @@ class array_run(object):
         paths = manager.dict()
         number_of_runs = len(self.final_messages) * self.trials_per_config
         self.final_metadata_df = self.final_metadata_df.loc[np.repeat(self.final_metadata_df.index.values, self.trials_per_config)].reset_index(drop=True)
-        assert len(self.final_messages) < 1000 , u'❌ The array run is trying to run more than 1000 simulations, this is not allowed unless you REALLY want it and if you REALLY want it you should konw what to do.'
+        assert len(self.final_messages) < 1000 , ' -  The array run is trying to run more than 1000 simulations, this is not allowed unless you REALLY want it and if you REALLY want it you should konw what to do.'
         # while len(jobs) < number_of_runs:
         while len(jobs) < steps_from_start:
             time.sleep(1.5)
@@ -245,7 +245,7 @@ class array_run(object):
         for item in paths.keys():
             self.final_metadata_df['Full path'][item] = paths[item]
         self.data_saver(os.path.join(os.path.dirname(paths[paths.keys()[0]]),self.metadata_filename),self.final_metadata_df)
-        print u"✅ Array run metadata saved at: %s"%os.path.join(os.path.dirname(paths[paths.keys()[0]]),self.metadata_filename)
+        print " -  Array run metadata saved at: %s"%os.path.join(os.path.dirname(paths[paths.keys()[0]]),self.metadata_filename)
 
     def parameter_finder(self,df,keyword):
         location = where(df.values == keyword)
@@ -279,12 +279,12 @@ class array_run(object):
             colon_idx = array_variable.index(':')
             array_variable = array_variable.replace(array_variable[opening_braket_idx + 1:colon_idx + 1],'') # removing default value
         elif ':' in array_variable:
-            print u"⚠️ The default value set for %s is omitted since the array run is multidimentional (multidimension_array_run flag is set to 1)" %array_variable
+            print " -  The default value set for %s is omitted since the array run is multidimentional (multidimension_array_run flag is set to 1)" %array_variable
             colon_idx = array_variable.index(':')
             array_variable = array_variable.replace(array_variable[opening_braket_idx + 1:colon_idx + 1], '')  # removing default value
         closing_braket_idx = array_variable.index('}')
         template_of_variable = array_variable[:opening_braket_idx] + '^^^' + array_variable[closing_braket_idx + 1:]
-        assert not ('|' in array_variable and '&' in array_variable), u"❌ The following array run should be defined either using | or & not both of them:" %array_variable
+        assert not ('|' in array_variable and '&' in array_variable), " -  The following array run should be defined either using | or & not both of them:" %array_variable
         if '|' in array_variable :
             changing_part = array_variable[opening_braket_idx + 1:closing_braket_idx].replace('|', ',')
             tmp_str = 'arange(' + changing_part + ')'
@@ -320,7 +320,7 @@ class array_run(object):
         arrays_idx_ = [(df_search_result[0][i], df_search_result[1][i]) for i in range(len(df_search_result[0]))]
         for to_default_idx in arrays_idx_:
             value_to_default = df.loc[to_default_idx[0]][to_default_idx[1]]
-            assert ':' in value_to_default, u"❌ The default value should be defined for %s , or make sure multidimension_array_run in configuraiton file is set to 1." % value_to_default
+            assert ':' in value_to_default, " -  The default value should be defined for %s , or make sure multidimension_array_run in configuraiton file is set to 1." % value_to_default
             default = value_to_default[value_to_default.index('{')+1:value_to_default.index(':')]
             df.loc[to_default_idx[0]][to_default_idx[1]] = df.loc[to_default_idx[0]][to_default_idx[1]].replace(value_to_default[value_to_default.index('{'):value_to_default.index('}')+1],default)
         return df
