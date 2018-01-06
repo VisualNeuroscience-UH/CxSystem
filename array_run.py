@@ -178,7 +178,7 @@ class array_run(object):
                     counter+=1
 
         print " -  array of Dataframes for anatomical and physiological configuration are ready"
-        if self.run_in_cluster and self.cluster_start_idx == -1 and self.cluster_step == -1: # this runs to run the Cxsystems over the cluster
+        if self.run_in_cluster==1 and self.cluster_start_idx == -1 and self.cluster_step == -1: # this runs to run the Cxsystems over the cluster
             self.total_configs = len(self.df_anat_final_array)* self.trials_per_config
             self.config_per_node = self.total_configs / self.cluster_number_of_nodes
             self.clipping_indices = np.arange(0, self.total_configs, self.config_per_node)[:self.total_configs / self.config_per_node]
