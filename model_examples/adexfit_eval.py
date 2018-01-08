@@ -1,5 +1,5 @@
 """
-Parameter fitting for adaptive exponential integrate-and-fire neurons
+Fitness evaluation for adaptive exponential integrate-and-fire neurons
 using traces from simulated BBP neurons
 by Henri Hokkanen <henri.hokkanen@helsinki.fi>, January 2018
 
@@ -16,13 +16,13 @@ For generating step injection traces
   - follow instructions in (2) on how to run the model
 """
 
+from __future__ import division
 from brian2 import *
 import numpy as np
 import matplotlib.pyplot as plt
 from os import path, getcwd
 import efel
-from scipy.optimize import minimize
-
+prefs.codegen.target = 'numpy'
 
 
 class MarkramStepInjectionTraces(object):
@@ -88,7 +88,7 @@ class AdexOptimizable(object):
     """
     Runs experiments on an AdEx neuron & evaluates fitness
     """
-    def __init__(self, passive_params, target_traces=MarkramStepInjectionTraces(), stim_total=3000, stim_start=700, stim_end=2700):
+    def __init__(self, passive_params, target_traces=MarkramStepInjectionTraces(), feature_names=None, stim_total=3000, stim_start=700, stim_end=2700):
         self.adex_passive_params = passive_params
         self.target = target_traces
 
@@ -105,16 +105,26 @@ class AdexOptimizable(object):
 
         # Objectives: number of spikes, first spike latency, first ISI, last ISI (...) => squared error
         # For possible features: efel.api.getFeatureNames()
-        self.feature_names = ['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI',
-                              'inv_last_ISI', 'AHP_depth_abs']
+        if feature_names is None:
+            self.feature_names = ['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI',
+                                  'inv_last_ISI']
+        else:
+            self.feature_names = feature_names
+
         self.target_values = self.target.getTargetValues(self.feature_names)
 
     def _listMean(self, val):
+        """
+        Handling of possible lists from feature extraction
+
+        :param val:
+        :return:
+        """
         try:
             return float(val)
         except:
             if len(val) >0:
-                return np.mean(val)
+                return mean(val)
             else:
                 return 0
 
@@ -122,11 +132,12 @@ class AdexOptimizable(object):
         """
         Runs model with given parameters and evaluates results with respect to target features
 
-        :param individual: [a, tau_w, b, V_res]
-        :return:
+        :param individual: [a, tau_w, b, V_res] in units nS, ms, pA, mV, respectively
+        :return: list of errors, length depending number of extracted features
         """
+        print str(individual)
 
-        print 'Evaluating '+str(individual)
+        # PREPARE FOR RUNNING CURRENT INJECTIONS
         # Better variable names for sake of clarity
         a, tau_w, b, V_res = individual
         neupar = self.adex_passive_params
@@ -143,11 +154,11 @@ class AdexOptimizable(object):
         G = NeuronGroup(n_steps, equation_final, threshold='vm > ' + repr(neupar['Vcut']),
                         reset='vm = ' + repr(V_res) + '; w=w+' + repr(b),
                         refractory=neupar['refr_time'], method='euler')
-        G.vm = neupar['EL']  # NB! eFel will fail without this line (for unknown reasons)
 
+        G.vm = neupar['EL']  # NB! eFel will fail without this line (for unknown reasons)
         M = StateMonitor(G, ('vm'), record=True)
 
-        # Run the step current injections
+        # RUN THE CURRENT INJECTIONS
         G.I_hypol = current_steps[0] * nA
         run(self.stim_start * ms)
 
@@ -172,70 +183,58 @@ class AdexOptimizable(object):
             trace['hyperpolarization'] = [current_steps[0]]
             optimizable_traces.append(trace)
 
-
         # Test if eFel feature extraction is working correctly
-        if test_feature_extraction is True:
-            test_feature_values = efel.getFeatureValues(optimizable_traces, ['peak_time', 'AP_height'])
+        # if test_feature_extraction is True:
+        #     test_feature_values = efel.getFeatureValues(optimizable_traces, ['peak_time', 'AP_height'])
+        #
+        #     plt.subplots(1, n_steps-1)
+        #     for step_number in range(1, n_steps):
+        #         peak_times = test_feature_values[step_number-1]['peak_time']
+        #         ap_heights = test_feature_values[step_number-1]['AP_height']
+        #
+        #         plt.subplot(1, n_steps-1, step_number)
+        #         plt.plot(optimizable_traces[step_number-1]['T'], optimizable_traces[step_number-1]['V'])
+        #         plt.plot(peak_times, ap_heights, 'o')
+        #
+        #     plt.show()
 
-            plt.subplots(1, n_steps-1)
-            for step_number in range(1, n_steps):
-                peak_times = test_feature_values[step_number-1]['peak_time']
-                ap_heights = test_feature_values[step_number-1]['AP_height']
-
-                plt.subplot(1, n_steps-1, step_number)
-                plt.plot(optimizable_traces[step_number-1]['T'], optimizable_traces[step_number-1]['V'])
-                plt.plot(peak_times, ap_heights, 'o')
-
-            plt.show()
-
-        # Compute fitness
-        # self.feature_names = ['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI',
-        #                       'inv_last_ISI', 'AHP_depth_abs']
+        # COMPUTE "FITNESS"
         individual_values = efel.getFeatureValues(optimizable_traces, self.feature_names)
 
-        # print 'Target values: '
-        # print str(self.target_values)
-        # print 'Current values: '
-        # print str(individual_values)
-
-        # Preprocess value lists (mean arrays)
+        # Preprocess value lists (take means of arrays)
         for step in range(0, n_steps - 1):
             individual_values[step] = {k: self._listMean(v) for k, v in individual_values[step].items()}
             self.target_values[step] = {k: self._listMean(v) for k, v in self.target_values[step].items()}
 
-        frac_errors=[]
+        # Calculate errors in extracted features by averaging over all current steps
+        feature_errors=[]
         for feature in self.feature_names:
-            mse_terms = [(individual_values[i][feature]-self.target_values[i][feature])**2 for i in range(0, n_steps-1)]
-            mse_normalization_terms = [individual_values[i][feature] for i in range(0, n_steps-1)]
-            mse_normalization = (np.sum(mse_normalization_terms)/(n_steps-1))**2
+            abs_errors = [abs(individual_values[i][feature] - self.target_values[i][feature]) for i in range(0, n_steps - 1)]
+            avg_errors = mean(abs_errors)
+            feature_errors.append(avg_errors)
 
-            mse = (np.sum(mse_terms)/(n_steps-1))
-            mfe = mse/mse_normalization
-            frac_errors.append(mfe)
-
-        fitness = np.sum(frac_errors)
-
-        # Plot traces
-        if plot_traces == True:
+        # PLOT TRACES (if requested)
+        if plot_traces is True:
             self.target.plotTraces(optimizable_traces)
 
-        print 'Fitness: '+str(fitness)
-        return fitness
+        print feature_errors
 
-# Def: Fitness/cost function; optimizes a,b,w,V_res
+        return feature_errors
+
 
 if __name__ == '__main__':
+    # Example use of classes
     current_steps = [-0.037109, 0.1291404, 0.1399021, 0.1506638]
     test_target = MarkramStepInjectionTraces('L5_MC_bAC217_1/hoc_recordings/', 'soma_voltage_step', current_steps)
 
     MC_passive_params = {'C': 92.1*pF, 'gL': 4.2*nS, 'VT': -42.29*mV, 'DeltaT': 4*mV,
                          'Vcut': 20*mV, 'EL': -60.38*mV, 'refr_time': 4*ms}
 
+    test_neuron = AdexOptimizable(MC_passive_params, test_target,
+                                  ['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI',
+                                  'inv_last_ISI'])
 
-    test_neuron = AdexOptimizable(MC_passive_params, test_target)
-    init_guess = [2, 300, 50, -55]
-    # print test_neuron.evaluateFitness(init_guess)
+    # Visualization of optimized parameters (after 100 generations)
+    init_guess = [0.7199995715982088, 153.18939361105447, 62.88915388914671, -45.405472248324564]
+    print test_neuron.evaluateFitness(init_guess, plot_traces=True)
 
-    bounds = [(0,10), (0,300), (0,400), (-70,-40)]
-    res = minimize(test_neuron.evaluateFitness, init_guess, bounds=bounds, options={'maxiter': 3})
-    print res.x
