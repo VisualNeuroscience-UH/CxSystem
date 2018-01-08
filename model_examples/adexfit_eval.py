@@ -120,22 +120,46 @@ class AdexOptimizable(object):
         :param val:
         :return:
         """
-        try:
-            return float(val)
-        except:
-            if len(val) >0:
-                return mean(val)
-            else:
-                return 0
+        if val is None:
+            return 0
+        else:
+            try:
+                return float(val)
+            except:
+                if len(val) > 0:
+                    return mean(val)
+                else:
+                    return 0
 
-    def evaluateFitness(self, individual, plot_traces=False, test_feature_extraction=False):
+    def _listFirst(self, val):
+        """
+        Handling of possible lists from feature extraction
+
+        :param val:
+        :return:
+        """
+
+        if val is None:
+            return 0
+        else:
+            try:
+                return float(val)
+            except:
+                if len(val) > 0:
+                    return float(val[0])
+                else:
+                    return 0
+
+
+    def evaluateFitness(self, individual, plot_traces=False, test_feature_extraction=False, verbose=False):
         """
         Runs model with given parameters and evaluates results with respect to target features
 
         :param individual: [a, tau_w, b, V_res] in units nS, ms, pA, mV, respectively
         :return: list of errors, length depending number of extracted features
         """
-        print str(individual)
+        if verbose is True:
+            print 'Current AdEx params (a, tau_w, b, V_res): ' + str(individual)
 
         # PREPARE FOR RUNNING CURRENT INJECTIONS
         # Better variable names for sake of clarity
@@ -199,12 +223,14 @@ class AdexOptimizable(object):
         #     plt.show()
 
         # COMPUTE "FITNESS"
-        individual_values = efel.getFeatureValues(optimizable_traces, self.feature_names)
+        # raise_warning disabled to allow processing of non-spiking configs
+        individual_values = efel.getFeatureValues(optimizable_traces, self.feature_names, raise_warnings=False)
 
-        # Preprocess value lists (take means of arrays)
+        # Preprocess value lists (take first value or mean; change with handleList)
+        handle_list = lambda v: self._listMean(v)
         for step in range(0, n_steps - 1):
-            individual_values[step] = {k: self._listMean(v) for k, v in individual_values[step].items()}
-            self.target_values[step] = {k: self._listMean(v) for k, v in self.target_values[step].items()}
+            individual_values[step] = {k: handle_list(v) for k, v in individual_values[step].items()}
+            self.target_values[step] = {k: handle_list(v) for k, v in self.target_values[step].items()}
 
         # Calculate errors in extracted features by averaging over all current steps
         feature_errors=[]
@@ -212,12 +238,21 @@ class AdexOptimizable(object):
             abs_errors = [abs(individual_values[i][feature] - self.target_values[i][feature]) for i in range(0, n_steps - 1)]
             avg_errors = mean(abs_errors)
             feature_errors.append(avg_errors)
+            if verbose is True:
+                print '---'
+                print feature + ' current: ' + str([individual_values[i][feature] for i in range(0, n_steps-1)])
+                print feature + ' target:  ' + str([self.target_values[i][feature] for i in range(0, n_steps - 1)])
+                print feature + ' diff:    ' + str(abs_errors)
+
 
         # PLOT TRACES (if requested)
         if plot_traces is True:
             self.target.plotTraces(optimizable_traces)
 
-        print feature_errors
+        if verbose is True:
+            print 'Mean errors:'
+            print self.feature_names
+            print feature_errors
 
         return feature_errors
 
@@ -227,14 +262,22 @@ if __name__ == '__main__':
     current_steps = [-0.037109, 0.1291404, 0.1399021, 0.1506638]
     test_target = MarkramStepInjectionTraces('L5_MC_bAC217_1/hoc_recordings/', 'soma_voltage_step', current_steps)
 
-    MC_passive_params = {'C': 92.1*pF, 'gL': 4.2*nS, 'VT': -42.29*mV, 'DeltaT': 4*mV,
-                         'Vcut': 20*mV, 'EL': -60.38*mV, 'refr_time': 4*ms}
+    # MC_params_Heikkinen = {'C': 92.1*pF, 'gL': 4.2*nS, 'VT': -42.29*mV, 'DeltaT': 4*mV,
+    #                        'Vcut': 20*mV, 'EL': -60.38*mV, 'refr_time': 4*ms}
 
-    test_neuron = AdexOptimizable(MC_passive_params, test_target,
+    MC_params_Markram = {'C': 66.9*pF, 'gL': 3.04*nS, 'VT': -59*mV, 'DeltaT': 4*mV,
+                         'Vcut': 20*mV, 'EL': -72.3*mV, 'refr_time': 4*ms}
+
+    test_neuron = AdexOptimizable(MC_params_Markram, test_target,
                                   ['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI',
-                                  'inv_last_ISI'])
+                                   'inv_last_ISI', 'AHP_depth_abs', 'AP_duration'])
 
-    # Visualization of optimized parameters (after 100 generations)
+    # Visualization of optimized parameters (after 100 generations); Heikkinen params
     init_guess = [0.7199995715982088, 153.18939361105447, 62.88915388914671, -45.405472248324564]
-    print test_neuron.evaluateFitness(init_guess, plot_traces=True)
+
+    # Visualization of optimized parameters (after 100 generations); Markram params
+    init_guess = [1.408, 225, 91.4, -59.3]
+    init_guess = [1.966, 149, 108, -63]
+
+    test_neuron.evaluateFitness(init_guess, plot_traces=True, verbose=True)
 

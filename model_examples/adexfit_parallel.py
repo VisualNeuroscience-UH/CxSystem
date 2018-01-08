@@ -19,50 +19,51 @@ from deap import tools
 from deap import algorithms
 import random
 import numpy as np
-import brian2 as br2
+from brian2 import pF, nS, mV, ms
 import pathos.multiprocessing as mp
 
 import adexfit_eval
 
 
-# INITIALIZE OPTIMIZATION HERE!
+# SET NEURON & STIMULATION PARAMETERS HERE
 # Initialize the neuron to be fitted
 current_steps = [-0.037109, 0.1291404, 0.1399021, 0.1506638]
 test_target = adexfit_eval.MarkramStepInjectionTraces('L5_MC_bAC217_1/hoc_recordings/', 'soma_voltage_step', current_steps)
 
-MC_passive_params = {'C': 92.1 * br2.pF, 'gL': 4.2 * br2.nS, 'VT': -42.29 * br2.mV, 'DeltaT': 4 * br2.mV,
-                     'Vcut': 20 * br2.mV, 'EL': -60.38 * br2.mV, 'refr_time': 4 * br2.ms}
+MC_params_Markram = {'C': 66.9 * pF, 'gL': 3.04 * nS, 'VT': -59 * mV, 'DeltaT': 4 * mV,
+                     'Vcut': 20 * mV, 'EL': -72.3 * mV, 'refr_time': 4 * ms}
 
-feature_names = ['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI', 'inv_last_ISI']
-test_neuron = adexfit_eval.AdexOptimizable(MC_passive_params, test_target, feature_names)
+feature_names = ['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI', 'inv_last_ISI', 'min_voltage_between_spikes']
+test_neuron = adexfit_eval.AdexOptimizable(MC_params_Markram, test_target, feature_names)
 
 # Set bounds for values (a, tau_w, b, V_res)
 bounds = np.array([[0, 10], [0, 300], [0, 400], [-70, -40]])
 
-# Set number of generations here
-NGEN = 2
+# Set optimization parameters here
+NGEN = 10
+POP_SIZE = 25
+OFFSPRING_SIZE = 25
+CXPB = 0.7   # crossover fraction
+MUTPB = 0.3  # mutation frequency
+N_HALLOFFAME = 5
 
 
 # OPTIMIZATION ALGORITHM (probably no need to touch this)
-POP_SIZE = 25
-OFFSPRING_SIZE = 25
-
 ALPHA = POP_SIZE
 MU = OFFSPRING_SIZE
 LAMBDA = OFFSPRING_SIZE
-CXPB = 0.7
-MUTPB = 0.3
 ETA = 10.0
 
 SELECTOR = "NSGA2"
 
-IND_SIZE = 4  # number of AdEx parameters
+IND_SIZE = 4  # individual's size = number of AdEx parameters
 # LOWER = [0, 0, 0, -70]
 # UPPER = [10, 300, 400, -40]
 LOWER = list(bounds[:, 0])
 UPPER = list(bounds[:, 1])
 
-creator.create("Fitness", base.Fitness, weights=[-1.0] * 4)
+N_features = len(feature_names)
+creator.create("Fitness", base.Fitness, weights=[-1.0] * N_features)
 creator.create("Individual", list, fitness=creator.Fitness)
 
 
@@ -114,16 +115,27 @@ if __name__ == '__main__':
     toolbox.register("map", pool.map)
 
     pop = toolbox.population(n=MU)
-    hof = tools.HallOfFame(5)
+    hof = tools.HallOfFame(N_HALLOFFAME)
 
-    first_stats = tools.Statistics(key=lambda ind: ind.fitness.values[0])
-    second_stats = tools.Statistics(key=lambda ind: ind.fitness.values[1])
-    third_stats = tools.Statistics(key=lambda ind: ind.fitness.values[2])
-    fourth_stats = tools.Statistics(key=lambda ind: ind.fitness.values[3])
-    stats = tools.MultiStatistics(spikecount=first_stats, spikedelay=second_stats, first_isi=third_stats, last_isi=fourth_stats)
+    # For some reason this doesn't work...
+    # stats_dict = {}
+    # for i in range(N_features):
+    #     stats_dict[feature_names[i]] = tools.Statistics(key=lambda ind: ind.fitness.values[i])
+    #
+    # stats = tools.MultiStatistics(stats_dict)
+
+    # feature_names = ['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI', 'inv_last_ISI', 'AHP_depth_abs']
+    stats01 = tools.Statistics(key=lambda ind: ind.fitness.values[0])
+    stats02 = tools.Statistics(key=lambda ind: ind.fitness.values[1])
+    stats03 = tools.Statistics(key=lambda ind: ind.fitness.values[2])
+    stats04 = tools.Statistics(key=lambda ind: ind.fitness.values[3])
+    stats05 = tools.Statistics(key=lambda ind: ind.fitness.values[4])
+    stats = tools.MultiStatistics(spikecount=stats01, first_spike=stats02, first_isi=stats03, last_isi=stats04,
+                                  first_ahp_depth=stats05)
+
     stats.register("min", np.min, axis=0)
 
-    print "Running optimization with %d cores... please wait." % N_CPU
+    print "Running optimization with %d cores... please wait.\n" % N_CPU
     pop, logbook = algorithms.eaMuPlusLambda(
         pop,
         toolbox,
@@ -136,4 +148,10 @@ if __name__ == '__main__':
         halloffame=hof, verbose=True)
 
     pool.close()
-    print hof
+
+    print ''
+    print '================='
+    print 'TOP %d PARAMETERS' % N_HALLOFFAME
+    print '=================\n'
+    for params in hof:
+        print "a = %.3f nS\t tau_w = %.3f ms\t b = %.3f pA\t\t V_res = %.3f mV" % (params[0], params[1], params[2], params[3])
