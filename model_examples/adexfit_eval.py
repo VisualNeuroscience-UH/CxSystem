@@ -163,8 +163,14 @@ class AdexOptimizable(object):
 
         # PREPARE FOR RUNNING CURRENT INJECTIONS
         # Better variable names for sake of clarity
-        a, tau_w, b, V_res = individual
         neupar = self.adex_passive_params
+        if len(individual) == 4:
+            a, tau_w, b, V_res = individual
+        else:
+            a, tau_w, b, V_res, VT, DeltaT = individual
+            neupar['VT'] = VT*mV
+            neupar['DeltaT'] = DeltaT*mV
+
         n_steps = self.target.n_steps
         current_steps = self.target.current_steps
 
@@ -227,7 +233,7 @@ class AdexOptimizable(object):
         individual_values = efel.getFeatureValues(optimizable_traces, self.feature_names, raise_warnings=False)
 
         # Preprocess value lists (take first value or mean; change with handleList)
-        handle_list = lambda v: self._listMean(v)
+        handle_list = lambda v: self._listFirst(v)
         for step in range(0, n_steps - 1):
             individual_values[step] = {k: handle_list(v) for k, v in individual_values[step].items()}
             self.target_values[step] = {k: handle_list(v) for k, v in self.target_values[step].items()}
@@ -273,11 +279,10 @@ if __name__ == '__main__':
                                    'inv_last_ISI', 'AHP_depth_abs', 'AP_duration'])
 
     # Visualization of optimized parameters (after 100 generations); Heikkinen params
-    init_guess = [0.7199995715982088, 153.18939361105447, 62.88915388914671, -45.405472248324564]
+    # init_guess = [0.7199995715982088, 153.18939361105447, 62.88915388914671, -45.405472248324564]
 
     # Visualization of optimized parameters (after 100 generations); Markram params
-    init_guess = [1.408, 225, 91.4, -59.3]
-    init_guess = [1.966, 149, 108, -63]
+    init_guess = [2.2278445002270919, 162.43372483712233, 23.861384306019414, -58.235779695550065, -58.877534049585194, 3.2588649046444811]
 
     test_neuron.evaluateFitness(init_guess, plot_traces=True, verbose=True)
 

@@ -37,15 +37,18 @@ feature_names = ['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI
 test_neuron = adexfit_eval.AdexOptimizable(MC_params_Markram, test_target, feature_names)
 
 # Set bounds for values (a, tau_w, b, V_res)
-bounds = np.array([[0, 10], [0, 300], [0, 400], [-70, -40]])
+# IND_SIZE = 4  # individual's size = number of AdEx parameters
+# bounds = np.array([[0, 10], [0, 300], [0, 400], [-70, -40]])
+IND_SIZE = 6
+bounds = np.array([[0, 10], [0, 300], [0, 400], [-70, -40], [-60, -40], [0.2, 4]])
 
 # Set optimization parameters here
-NGEN = 10
-POP_SIZE = 25
-OFFSPRING_SIZE = 25
+NGEN = 200
+POP_SIZE = 100
+OFFSPRING_SIZE = 100
 CXPB = 0.7   # crossover fraction
 MUTPB = 0.3  # mutation frequency
-N_HALLOFFAME = 5
+N_HALLOFFAME = 10
 
 
 # OPTIMIZATION ALGORITHM (probably no need to touch this)
@@ -56,9 +59,6 @@ ETA = 10.0
 
 SELECTOR = "NSGA2"
 
-IND_SIZE = 4  # individual's size = number of AdEx parameters
-# LOWER = [0, 0, 0, -70]
-# UPPER = [10, 300, 400, -40]
 LOWER = list(bounds[:, 0])
 UPPER = list(bounds[:, 1])
 
@@ -155,3 +155,4 @@ if __name__ == '__main__':
     print '=================\n'
     for params in hof:
         print "a = %.3f nS\t tau_w = %.3f ms\t b = %.3f pA\t\t V_res = %.3f mV" % (params[0], params[1], params[2], params[3])
+        print "=> " + str(params)
