@@ -490,8 +490,8 @@ class synapse_reference(object):
         * _name_space: An instance of brian2_obj_namespaces() object which contains all the constant parameters for this synaptic equation.
 
         '''
-        synapse_reference.syntypes = array(['STDP', 'STDP_with_scaling', 'Fixed'])
-        assert syn_type in synapse_reference.syntypes, " -  Cell type '%s' is not defined" % syn_type
+        synapse_reference.syntypes = array(['STDP', 'STDP_with_scaling', 'Fixed', 'Fixed_calcium', 'Depressing', 'Facilitating'])
+        assert syn_type in synapse_reference.syntypes, " -  Synapse type '%s' is not defined" % syn_type
         self.output_synapse = {}
         self.output_synapse['type'] = syn_type
         self.output_synapse['receptor'] = receptor
