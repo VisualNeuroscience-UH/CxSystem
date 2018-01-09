@@ -43,13 +43,13 @@ class neuron_reference(object):
         '''
         self.physio_config_df = physio_config_df
         neuron_reference._celltypes = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM'])
-        assert general_grid_radius > min_distance , u'❌ The distance between cells should be less than the grid radius'
-        assert cell_type in neuron_reference._celltypes, u"❌ Cell type '%s' is not defined" % cell_type  # check cell type
-        assert len(layers_idx) < 3, u"❌ Length of layers_idx array is larger than 2"  # check layer index
+        assert general_grid_radius > min_distance , ' -  The distance between cells should be less than the grid radius'
+        assert cell_type in neuron_reference._celltypes, " -  Cell type '%s' is not defined" % cell_type  # check cell type
+        assert len(layers_idx) < 3, " -  Length of layers_idx array is larger than 2"  # check layer index
         if len(layers_idx) == 2:
-            assert layers_idx[1] < layers_idx[0], u"❌ Indices of the layer_idx array are not descending"
+            assert layers_idx[1] < layers_idx[0], " -  Indices of the layer_idx array are not descending"
         elif len(layers_idx) == 1:
-            assert cell_type != 'PC', u"❌ Cell type is PC but the start and end of the neuron is not defined in layers_idx"
+            assert cell_type != 'PC', " -  Cell type is PC but the start and end of the neuron is not defined in layers_idx"
         # final neuron is the output neuron containing equation, parameters
         self.output_neuron = {}
         self.output_neuron['idx'] = int(idx)
@@ -98,7 +98,7 @@ class neuron_reference(object):
                                                                 'fixed_grid', general_grid_radius,min_distance)
         # self.output_neuron['w_positions'] = 17 * log(self.output_neuron['z_positions'] + 1)
         self.output_neuron['z_positions'] =  map(lambda x: e ** (x/17) - 1,self.output_neuron['w_positions'] )
-        print u"✅ Customized " + str(cell_type) + " neuron in layer " + str(layers_idx) + " initialized with " + \
+        print " -  Customized " + str(cell_type) + " neuron in layer " + str(layers_idx) + " initialized with " + \
               str(self.output_neuron['number_of_neurons']) + " neurons."
 
 
@@ -182,16 +182,16 @@ class neuron_reference(object):
         '''
 
         # Used if conductance noise is injected into PC basal dendrites
-        eq_template_dend_basal = '''
-        dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) +I_dendr) / C : volt
-        dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
-        dgealpha/dt = (ge-gealpha)/tau_e : siemens
-        dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2: siemens
-        dgialpha/dt = (gi-gialpha)/tau_i : siemens
-        '''
+        # eq_template_dend_basal = '''
+        # dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) +I_dendr) / C : volt
+        # dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
+        # dgealpha/dt = (ge-gealpha)/tau_e : siemens
+        # dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2: siemens
+        # dgialpha/dt = (gi-gialpha)/tau_i : siemens
+        # '''
 
         # Setting Vm equations for soma and dendrite compartments
-        self.output_neuron['equation'] = Equations(eq_template_dend_basal, vm="vm_basal", ge="ge_basal",
+        self.output_neuron['equation'] = Equations(eq_template_dend, vm="vm_basal", ge="ge_basal",
                                                    gealpha="gealpha_basal",
                                                    C=self.output_neuron['namespace']['C'][0],
                                                    gL=self.output_neuron['namespace']['gL'][0],
@@ -490,8 +490,8 @@ class synapse_reference(object):
         * _name_space: An instance of brian2_obj_namespaces() object which contains all the constant parameters for this synaptic equation.
 
         '''
-        synapse_reference.syntypes = array(['STDP', 'STDP_with_scaling', 'Fixed', 'Fixed_calcium', 'Fixed_normal', 'Depressing', 'Facilitating'])
-        assert syn_type in synapse_reference.syntypes, "Synapse type '%s' is not defined" % syn_type
+        synapse_reference.syntypes = array(['STDP', 'STDP_with_scaling', 'Fixed'])
+        assert syn_type in synapse_reference.syntypes, " -  Cell type '%s' is not defined" % syn_type
         self.output_synapse = {}
         self.output_synapse['type'] = syn_type
         self.output_synapse['receptor'] = receptor

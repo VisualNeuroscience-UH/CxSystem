@@ -1,9 +1,11 @@
-﻿﻿.. _config_file:
+﻿.. _config_file:
 
 Configuration File Tutorial
 ===========================
 
-The configuration file is in .CSV format. There two categories of lines in the configuration file: 
+
+CxSystems are configured with two .csv files, namely Model & Network and Physiological configuration files.
+The Model & Network configuration file has two main types of lines:
 
 * **Titles-line**: These lines, starting with *row_type* keyword, defines the column titles for all the lines between the the next line and the next *Titles-line*:
 
@@ -30,7 +32,8 @@ These four values are in correspondence with the column titles of the previous T
 Currently there are three types of **row_type** implemented: 
 
 * params: defines the run-time parameters of the system run (partially equivalent to the VCxrun)
-* G: defines the NeuronGroup()s in the system 
+* IN: defines the input type in the system
+* G: defines the NeuronGroup()s in the system
 * S: defines the Synapses() connecting the NeuronGroup()s in the system
 
 In the next sections, each of these row_types has its own types of columns and are thoroughly explained with examples. Note that **mandatory** arguments are wrapped with **<>** whereas the **optional** ones are in **[]**. The corresponding **data type** is also presented using **{}**.
@@ -38,31 +41,100 @@ In the next sections, each of these row_types has its own types of columns and a
 params
 -------------------
 
-Currently there are three configurable run-time variables implemented in the system:
+This is the list of configurable run-time variables implemented in the system:
 
-	:params:  **<total_synapses>{int}:**  Defines the total number of synapses in the system.
-		  
+	:params:  **<runtime>{int*unit}:** Sets the duration of simulation in number of defined unit, e.g. 3000*ms.
+
+		**<device>{Python,Cpp,GeNN}:** Sets the simulation device for Brian2.
+
 		**<sys_mode>{local, expanded}:** The system can be run in two modes: **local** and **expanded** mode.
-	
-		**<do_optimize>{0,1}:** In Brian2, it is not possible to define number of synapses, but only the probability. An optimization mechanism is implemented for when the synaptic connections should be defined based on specific percentages of a total number of synapses in the system. This parameter defines whether or not the synaptic connection probabilities should be determined and optimized so that they reproduce approximately the same amount of connections in the system. 
 
-* Note1: The optimization should be used when the system is working in the **local** mode, as the catch is to determine the probabilities based on the percentages of the total number of synapses, and then expand the system to larger scales. 
+		**<scale>{int*unit}:** Sets the radius of cylindrical volume, e.g. 210*um.
 
-* Note2: using the system in the "local" mode whilst the "do_optimized" flag is enabled will **not** run the simulation. This will only determine the probability of each connection based on the percentages and total number of synapses and creating a new .CSV file based on the the optimized probabilities. 
+		**<grid_radius>{int*unit}:** Sets the grid radius on which the neurons are placed, e.g. 1*um.
+
+		**<minimum_distance>{int*unit}:** Sets the minimum distance between neurons, e.g. 1*um.
+
+		**<do_init_vms>{0,1}:** defines whether the membrane voltages are randomly initialized.
+
+		**<output_path_and_filename>:** sets the path for saving the output data.
+
+		**<connections_saving_path_and_filename>:** sets the path for saving the synaptic connection file.
+
+		**<connections_loading_path_and_filename>:** sets the path for the file from which the synaptic connection and positions are to be loaded.
+
+		**<load_positions_only>{1,0}:** Defines whether the positions are only to be loaded from the data file, i.e. flag set to 1, or both positions and synaptic connections, i.e. flag is set to 0.
+
+		**<do_benchmark>{1,0}:** Defines whether the benchmark is to be performed during the simulation.
+
+		**<save_generated_video_input_flag>{1,0}:** Defines whether the generated video input is to be saved or not.
+
+		**<number_of_process>{int}:** Defines the number of processes to be spawned for array run.
+
+		**<multidimension_array_run>{1,0}:** Defines whether the array run is multi-dimensional or single dimension.
+
+		**<trials_per_config>{int}:** Defines the number of trials for each simulation in the array run.
+
 
 Example of the params Titles & Values-lines: 
 
 ::
 
-	row_type,sys_mode,total_synapses,do_optimize
-	params,local,35000,0
+	row_type,sys_mode,sys_mode,scale,grid_radius
+	params,local,1,210*um
+
+Array Runs
+--------------
+Array run (Parallel runs) can be set using the curly braces around the target parameter. For instance, to run 3 separate simulations\
+with scale=1, scale=2 and scale=3, the parameter scale should be set to:
+
+::
+
+	...,scale,...
+	...,{1,2,3},...
+
+This parallel run will use the number of processes that is set using the number_of_process parameter, e.g. if number_of_process=3, \
+then 3 processes will be used to run the 3 simulations. However, if number_of_process=2, 2 processes are first used to run the \
+simulation for scale=1, and scale=2. The 3rd simulation with scale=3 will start when any of the first two simulations are completed.
+
+The array_run could also be set in range with defined step:
+
+::
+
+	...,scale,...
+	...,{1|5|1},...
+
+This parallel run will use 4 simulations with scale=1, scale=2, scale=3 and scale=4.
+
+When two or more parameters are set to use array runs, CxSystem can run the parallel runs either as multi-dimensional runs \
+or independent runs. For example: suppose a simulation is to be performed for scale {1,2,3} with do_init_vms set to {0,1}. \
+If multidimension_array_run flag is set to 1, the following 6 simulations will be run separately:
+
+::
+
+	{scale=1, do_init_vms=0}, {scale=1, do_init_vms=1}, {scale=2, do_init_vms=0}, {scale=2, do_init_vms=1}, {scale=3, do_init_vms=0}, {scale=3, do_init_vms=1}
+
+When multidimension_array_run flag is set to 0, howoever, the array_run pattern is different and 5 simulations will be run in parallel:
+
+::
+
+	{scale=1}, {scale=2}, {scale=3}, {do_init_vms=0}, {do_init_vms=1}
+
+One might want to run each of the parallel simulations several times, e.g. to observe an effect of a particular alteration in several runs.
+For this purpose the *trials_per_config* should be set to number of runs per configuration.
 
 Monitors
 --------------
 
-Before starting describing the different row_types in the .CSV files, it is important to understand how the monitors are defined in the system. In Brian2 monitors can be assigned to a NeuronGroup() or Synapses(). Similarly, when using the configuration file, you are able to set monitors for any target line, i.e. NeuronGroup()s or Synapses(). The monitors are defined in the following way: 
+Before starting describing the different row_types in the Model & Network configuration file, it is important to understand\
+how the monitors are defined in the system. In Brian2 monitors can be assigned to a NeuronGroup() or Synapses(). Similarly, \
+when using the configuration file, you are able to set monitors for any target line, i.e. NeuronGroup()s or Synapses(). \
+The monitors are defined in the following way:
 
-If the monitor column is present in a Titles-line and the value in Values-line is not 'N/A', a monitor object will be created for the NeuronGroup() or Synapses() of that specific line. Note that it is not possible to have different clocks for monitors in Brian2GeNN. Hence, try to use the monitors wisely to prevent generating bulk data. Following tags can be used for configuring a specific monitor: 
+If the monitor column is present in a Titles-line and the value in Values-line is not '--' (without single quotation marks), a monitor object will be \
+created for the NeuronGroup() or Synapses() of that specific line. Note that it is not possible to have different \
+clocks for monitors in Brian2GeNN. Hence, try to use the monitors wisely to prevent generating bulk data. Following \
+tags can be used for configuring a specific monitor:
 
  [Sp]:
   This tag defines the [Sp]ikeMonitor() in brian2. Example:
@@ -71,7 +143,7 @@ If the monitor column is present in a Titles-line and the value in Values-line i
 
 	  ...,[Sp]
 
-The ellipsis represents the predecessor kewords in the line. 
+The ellipsis represents the predecessor keywords in the line.
 
  [St]:
   This tag defines the [St]ateMonitor() in brian2. In this case, one should define the target variable in the following way: 
@@ -98,12 +170,12 @@ Occasionally, one might want to assign a specific type of monitor to several con
 ::
 
 	...,[St]ge_soma -->
-	...,N/A
+	...,--
 	...,  
 	...,[Sp] 
 	..., <--
 
-In this example, an StateMonitor() over *ge_soma* is assigned on lines 1,3,4,5 by using the **-->** and **<--** symbol. In the second line, the usage of default StateMonitor() is over-written by using the N/A keyword, indicating that the second line is not monitored. In the third line, however, this StateMonitor() is overwritten by a SpikeMonitor(). 
+In this example, an StateMonitor() over *ge_soma* is assigned on lines 1,3,4,5 by using the **-->** and **<--** symbol. In the second line, the usage of default StateMonitor() is over-written by using the -- keyword, indicating that the second line is not monitored. In the third line, however, this StateMonitor() is overwritten by a SpikeMonitor().
 
 
 
@@ -113,26 +185,63 @@ In this example, an StateMonitor() over *ge_soma* is assigned on lines 1,3,4,5 b
 Input
 ---------
 
-The input is defined with the "IN" keyword. Currently the video input in implemented in the cortical system. The stimuli is created using a *.mat* file. This stimuli is in form of spike and is fed to a SpikeGeneratorGroup() . This group is then connected to a relay NeuronGroup() with a synapses() object. The main purpose of the relay neurons is to have positions for input neurons (SpikeGeneratorGroup does not support positions). The input can be defined using the following keyword: 
+The input is defined with the "IN" keyword. Currently, three types of inputs are defined in the CxSystem, namely VPM, \
+video, and Spikes from file.  The stimuli is created using a *.mat* file. This stimuli is in form of spike and is fed \
+to a SpikeGeneratorGroup() . This group is then connected to a relay NeuronGroup() with a synapses() object. \
+The main purpose of the relay neurons is to have positions for input neurons (SpikeGeneratorGroup does not support \
+positions). Each of the inputs have their specific keywords in the configuration file:
 
-	:params: **<idx>{int}:** Index of the NeuronGroup().
+	:VPM params: **<idx>{int}:** Index of the NeuronGroup().
 
-		**<input file location>:** relative path to the input .mat file. 
+		**<type>:** VPM
 
-		**<frequency>** 
+		**<number_of_neurons>{int}:** number of thalamocortical micro-fibers.
+
+		**<radius>{int*unit}:** Total radius of all thalamocortical micro-fibers, e.g. 60*um.
+
+		**<spike_times>{int*unit}:** stimulation spike timing, e.g. 0.5*ms means a stimulation every 0.5ms.
+
+		**[net_center]:** defines the center of the network
+
+		**[monitors]**
+
+
+	:video params: **<idx>{int}:** Index of the NeuronGroup().
+
+		**<type>:** videos
+
+		**<path>:** relative path to the input .mat file.
+
+		**[freq]**
 
 		**[monitors]** 
 
 
-This is an example of defining an input for the system: 
+	:spikes params: **<idx>{int}:** Index of the NeuronGroup().
+
+		**<type>:** spikes
+
+		**<input_spikes_filename>:** path to the spike file.
+
+		**[monitors]**
+
+
+This is an example of defining a video input for the system:
 
 ::
-	
-	row_type,idx,path,freq,monitors	
-	IN,0, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]
 
+	row_type,idx,type,path,freq,monitors
+	IN,0,video, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]
 
 In this example an input NeuronGroup() with index 0 is created based on the *V1_inpu.mat* file with a frequency of 190*Hz and a SpikeMonitor() is set on it.
+Here's another example for VPM input for the system:
+
+::
+
+	row_type,idx,type,number_of_neurons,radius,spike_times,net_center,monitors
+	IN,0, VPM,60,92*um,[0.5]*second, -- ,[Sp]
+
+
 
 NeuronGroup()
 ---------------
@@ -143,7 +252,7 @@ The NeuronGroup()s are defined using the G (as in Group) keyword. This row_type 
 
 		**<number_of_neurons>{int}:** Number of neurons in the NeuronGroup(). 
 
-		**<neuron_type>{L1i,UMi,PC,BC,MC,SS}:** cell category of the NeuronGroup(). 
+		**<neuron_type>{L1i,PC,BC,MC,SS}:** cell category of the NeuronGroup().
 
 		**<layer_idx>:** Layer index of the cell groups. 
 
@@ -181,8 +290,6 @@ The *<neuron_type>* is the category of the cells of the group, which is one of t
 | MC   | Martinotti             |
 +------+------------------------+
 | L1i  | Layer 1 inhibitory     |
-+------+------------------------+
-| UMi  | Unassigned Markram cell|
 +------+------------------------+
 
 
@@ -253,19 +360,27 @@ S keyword (as in Synapses)  defines the brian2 Synapses() object.  Following par
 
 		**<syn_type>{Fixed,STDP}**
 
-		**[p]:** probability 
+		**[p]{float<=1}:** probability
 
-		**[n]:** number of synapses per connection
+		**[n]{int}:** number of synapses per connection
+
+		**[load_connection]{0,1}:**> determines whether this synaptic connection should be loaded from the file.
+
+		**[save_connection]{0,1}:**> determines whether this synaptic connection should be saved to the connection file.
 
 		**[monitors]**
 
- 		**[percentage]** percentage of the total synapses
 
 
 --------------
  
 
-where the *<receptor>* defines the receptor type, i.e. ge for excitatory and gi for inhibitory connections, *<presynaptic group index>* and *<postsynaptic group index>* defines the index of the presynaptic and postsynaptic group respectively. These indices should be determined using the *indexing tag* in the NeuronGroup()s lines. The next field defines the type of the synapse. Currently there are two types of Synapses() implemented: Fixed and STDP. The following example defines a excitatory STDP synaptic connection between NeuronGroup()s with indices of 2 and 4, in which the *ge* is the receptor: 
+where the *<receptor>* defines the receptor type, i.e. ge for excitatory and gi for inhibitory connections, \
+*<presynaptic group index>* and *<postsynaptic group index>* defines the index of the presynaptic and postsynaptic group\
+respectively. These indices should be determined using the *indexing tag* in the NeuronGroup()s lines. The next \
+field defines the type of the synapse. Currently there are three types of Synapses() implemented: Fixed and STDP and \
+STDP_with_scaling. The following example defines a excitatory STDP synaptic connection between NeuronGroup()s with
+\indices of 2 and 4, in which the *ge* is the receptor:
 
 ::
 

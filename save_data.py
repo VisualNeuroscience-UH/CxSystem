@@ -23,9 +23,10 @@ class save_data(object):
     '''
     def __init__(self,save_path,datetime_str):
         '''
-        The initialization method for save_data object.
+        Initializes the save_data object.
 
         :param save_path: The path for saving the data.
+        :param datetime_str: the string containing date and time that is supposed to be unique for each simulation and is used as a suffix for file names.
 
         Main internal variables:
 
@@ -40,7 +41,7 @@ class save_data(object):
         self.save_folder = ntpath.dirname(self.save_path)
         self.save_extension = os.path.splitext(self.save_path)[1]
         if os.getcwd() in self.save_path:
-            print u"ℹ️ The output of the system is saved in %s" %os.path.abspath(os.path.join(os.getcwd(), os.pardir))
+            print " -  The output of the system is saved in %s" %os.path.abspath(os.path.join(os.getcwd(), os.pardir))
             self.save_folder = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
             self.save_path = os.path.join(self.save_folder,self.save_filename)
         self.data = {}
@@ -55,13 +56,16 @@ class save_data(object):
         if not key in self.data:
             self.data[key] = {}
 
-    def gather_result(self,CxSystem):
+    def gather_result(self):
+        '''
+        Gather the result by running the syntaxes previously saved in the syntax bank before running the simulation.
+        '''
         for syntax in self.syntax_bank:
             exec syntax
         self.save_to_file()
 
     def save_to_file(self):
-        print u"⌛ Saving data to file ..."
+        print " -  Saving data to file ..."
         if not os.path.exists(self.save_folder):
             os.makedirs(self.save_folder)
         self.save_path = os.path.join(self.save_folder, self.save_pure_filename + self.datetime_str + self.save_extension)

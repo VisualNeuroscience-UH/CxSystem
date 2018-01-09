@@ -22,9 +22,18 @@ import shutil
 
 class stimuli(object):
     '''
-    [Extracted from VCxmodel] This is the stimulation object for applying the input to a particular NeuronGroup(). Currently only video input is supported.
+    [Extracted from VCXmodel] This is the stimulation object for applying the input to a particular NeuronGroup(). Currently only video input is supported.
     '''
     def __init__(self,duration,input_mat_path,output_folder,output_file_suffix,output_file_extension):
+        '''
+        Initializes the input module for and instance of CxSystem.
+
+        :param duration:
+        :param input_mat_path: .mat file location
+        :param output_folder: location of the saved output
+        :param output_file_suffix: suffix for the output file
+        :param output_file_extension: extension for the output file, i.e. gz, bz2, pickle
+        '''
         self.i_patterns = {}
         self.BaseLine= 0 * second
         self.input_mat_path = input_mat_path
@@ -40,15 +49,13 @@ class stimuli(object):
         '''
         The method for generating input based on the .mat file, using the internal _initialize_inputs() and _calculate_input_seqs() methods.
 
-        :param path: path to the input .mat file.
         :param freq: frequency.
-        :return:
         '''
         self.initialize_inputs(freq)
         self.calculate_input_seqs()
 
     def initialize_inputs(self,  freq):
-        print u"⌛ Initializing stimuli ..."
+        print " -  Initializing stimuli ..."
 
         #type : video
         _V1_mats = {}
@@ -59,7 +66,7 @@ class stimuli(object):
         # Fill ISI with N-1 times frameduration of zeros
         SOA = 60 # in ms
         stimulus_epoch_duration = 15 # in ms, duration of Burbank whole stimulus
-        assert np.mod(SOA, stimulus_epoch_duration) == 0, u'❌ Stimulus onset asynchrony (SOA) must be an integer times frameduration.'
+        assert np.mod(SOA, stimulus_epoch_duration) == 0, ' -  Stimulus onset asynchrony (SOA) must be an integer times frameduration.'
         SOA_in_N_frames = int(SOA / stimulus_epoch_duration)
         dense_stimulus = _V1_mats['stimulus']
         sparse_stimulus = np.tile(np.zeros_like(dense_stimulus), (1, SOA_in_N_frames))
@@ -78,9 +85,12 @@ class stimuli(object):
         _all_stim = squeeze(_V1_mats['stimulus'])
         if len(_all_stim.shape) == 2:
             slash_indices = [idx for idx, ltr in enumerate(self.input_mat_path) if ltr == '/']
-            print u'ℹ️ One video stimulus found in file ' + self.input_mat_path[slash_indices[-1]+1:]
+            print ' -  One video stimulus found in file ' + self.input_mat_path[slash_indices[-1]+1:]
 
     def calculate_input_seqs(self):
+        '''
+        Calculating input sequence based on the video input.
+        '''
         set_device('cpp_standalone', directory=os.path.join(self.output_folder,'Input_cpp_run'+ self.output_file_suffix ))
         inputdt = defaultclock.dt
         spikemons = []
@@ -102,7 +112,7 @@ class stimuli(object):
         shutil.rmtree(os.path.join(self.output_folder,'Input_cpp_run'+ self.output_file_suffix))
 
     def save_input_sequence(self,spike_mons, save_path):
-        print u"⌛ Saving the generated video input..."
+        print " -  Saving the generated video input..."
         self.generated_input_folder = save_path + self.output_file_extension
         data_to_save = {}
         for ii in range(len(spike_mons)):
@@ -115,6 +125,11 @@ class stimuli(object):
 
 
     def load_input_seq(self,input_spike_file_location):
+        '''
+        Loads spikes from file.
+
+        :param input_spike_file_location: Location of the file to load spikes.
+        '''
         if os.path.isfile(input_spike_file_location):
             input_spike_file_location = input_spike_file_location
         else:
@@ -123,15 +138,13 @@ class stimuli(object):
         new_spikes = self.loaded_data['spikes_0']
         neuron_positions_in_cortex = io.loadmat(self.input_mat_path, variable_names='w_coord')
         number_of_neurons = len(neuron_positions_in_cortex['w_coord'])
-        print u"✅ Video input loaded"
+        print " -  Video input loaded"
         return new_spikes[0], new_spikes[1], number_of_neurons
 
 
     def get_input_positions(self):
         '''
         Extract the positions from the .mat file.
-
-        :param path: Path to the .mat file.
         '''
         neuron_positions = io.loadmat(self.input_mat_path, variable_names='z_coord')
         return neuron_positions['z_coord']

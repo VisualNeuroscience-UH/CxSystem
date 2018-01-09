@@ -16,6 +16,7 @@ from matplotlib import pyplot
 import sys
 import pandas
 
+__author__ = 'V_AD'
 
 
 
@@ -38,7 +39,12 @@ class synapse_parser(object):
 
     '''
 
-
+    # For _change_calcium()
+    _excitatory_groups = ['PC', 'SS']
+    _steep_post_inhibitory_groups = ['MC']
+    _shallow_post_inhibitory_groups = ['BC']
+    _steep_post = _excitatory_groups + _steep_post_inhibitory_groups
+    _shallow_post = _shallow_post_inhibitory_groups
 
     def __init__(self,output_synapse,physio_config_df):
         '''
@@ -49,15 +55,15 @@ class synapse_parser(object):
         self.output_synapse = output_synapse
         self.physio_config_df = physio_config_df
 
-        synapse_parser.type_ref = array (['STDP','STDP_with_scaling', 'Fixed', 'Fixed_calcium', 'Fixed_normal', 'Depressing', 'Facilitating'])
-        assert output_synapse['type'] in synapse_parser.type_ref, u"❌ Synapse type '%s' is not defined." % output_synapse['type']
+        synapse_parser.type_ref = array (['STDP','STDP_with_scaling', 'Fixed'])
+        assert output_synapse['type'] in synapse_parser.type_ref, " -  Cell type '%s' is not defined." % output_synapse['type']
         self.output_namespace = {}
         self.output_namespace['Cp'] = self.value_extractor(self.physio_config_df,'Cp')
         self.output_namespace['Cd'] = self.value_extractor(self.physio_config_df,'Cd')
         self.sparseness = self.value_extractor(self.physio_config_df,'sp_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
         self.ilam = self.value_extractor(self.physio_config_df,'ilam_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
-        self.calcium_concentration = self.value_extractor(self.physio_config_df, 'calcium_concentration' )
 
+        self.calcium_concentration = self.value_extractor(self.physio_config_df, 'calcium_concentration' )
         self._set_calcium_dependency()
 
         # Set (initial) weights for chosen synapse type
@@ -133,7 +139,6 @@ class synapse_parser(object):
 
         return final_synapse_strength
 
-
     def _set_utilization_factor(self, is_facilitating=False, ca=2.0):
         excitatory_groups = ['PC', 'SS', 'in']
         inhibitory_groups = ['BC', 'MC', 'L1i']
@@ -197,10 +202,10 @@ class synapse_parser(object):
         min_delay = std_delay / 2.
         self.output_namespace['delay'] = '(%f * rand() + %f) * ms' % (std_delay, min_delay)
 
+
     def Fixed(self):
         '''
         The Fixed method for assigning the parameters for Fixed synaptic connection to the customized_synapses() object.
-        This synapse was used in the 1st submitted version, but was later deemed non-valid in terms of calcium scaling
 
         :param output_synapse: This is the dictionary created in neuron_reference() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: wght_max, wght0.
         '''
@@ -345,7 +350,7 @@ class neuron_parser (object):
     def __init__(self, output_neuron,physio_config_df):
         self.physio_config_df = physio_config_df
         neuron_parser.type_ref = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM'])
-        assert output_neuron['type'] in neuron_parser.type_ref, u"❌ Cell type '%s' is not defined." % output_neuron['category']
+        assert output_neuron['type'] in neuron_parser.type_ref, " -  Cell type '%s' is not defined." % output_neuron['category']
         self.output_namespace = {}
         variable_start_idx = self.physio_config_df['Variable'][self.physio_config_df['Variable'] == output_neuron['type']].index[0]
         try:
