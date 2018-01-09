@@ -153,6 +153,9 @@ if __name__ == '__main__':
     print '================='
     print 'TOP %d PARAMETERS' % N_HALLOFFAME
     print '=================\n'
+    i = 1
     for params in hof:
-        print "a = %.3f nS\t tau_w = %.3f ms\t b = %.3f pA\t\t V_res = %.3f mV" % (params[0], params[1], params[2], params[3])
-        print "=> " + str(params)
+        print "%d. a = %.3f nS\t tau_w = %.3f ms\t b = %.3f pA\t\t V_res = %.3f mV" % (i, params[0], params[1], params[2], params[3])
+
+    for params in hof:
+        print "%d. %s" % (i, str(params))
