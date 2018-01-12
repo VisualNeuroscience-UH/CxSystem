@@ -27,25 +27,37 @@ import adexfit_eval
 
 # SET NEURON & STIMULATION PARAMETERS HERE
 # Initialize the neuron to be fitted
-current_steps = [-0.037109, 0.1291404, 0.1399021, 0.1506638]
-test_target = adexfit_eval.MarkramStepInjectionTraces('L5_MC_bAC217_1/hoc_recordings/', 'soma_voltage_step', current_steps)
+# current_steps = [-0.037109, 0.1291404, 0.1399021, 0.1506638]
+# test_target = adexfit_eval.MarkramStepInjectionTraces('L5_MC_bAC217_1/hoc_recordings/', 'soma_voltage_step', current_steps)
+#
+# MC_params_Markram = {'C': 66.9 * pF, 'gL': 3.04 * nS, 'VT': -59 * mV, 'DeltaT': 4 * mV,
+#                      'Vcut': 20 * mV, 'EL': -72.3 * mV, 'refr_time': 4 * ms}
 
-MC_params_Markram = {'C': 66.9 * pF, 'gL': 3.04 * nS, 'VT': -59 * mV, 'DeltaT': 4 * mV,
-                     'Vcut': 20 * mV, 'EL': -72.3 * mV, 'refr_time': 4 * ms}
+# feature_names = ['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI', 'inv_last_ISI', 'min_voltage_between_spikes']
+# test_neuron = adexfit_eval.AdexOptimizable(MC_params_Markram, test_target, feature_names)
 
-feature_names = ['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI', 'inv_last_ISI', 'min_voltage_between_spikes']
-test_neuron = adexfit_eval.AdexOptimizable(MC_params_Markram, test_target, feature_names)
+# Initialize the neuron to be fitted
+current_steps = [-0.2, 0.169, 0.174, 0.179]
+test_target = adexfit_eval.MarkramStepInjectionTraces('COBAHH/recordings/', 'soma_voltage_step', current_steps)
+passive_params = {'C': 200 * pF, 'gL': 10 * nS, 'EL': -60 * mV,
+                  'VT': -63*mV, 'DeltaT': 4*mV,
+                  'Vcut': 20 * mV, 'refr_time': 4 * ms}
+
+feature_names = ['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI', 'inv_last_ISI',
+                 'min_voltage_between_spikes', 'prestim_waveform_diff', 'prespike_waveform_diff']
+test_neuron = adexfit_eval.AdexOptimizable(passive_params, test_target, feature_names)
+
 
 # Set bounds for values (a, tau_w, b, V_res)
-# IND_SIZE = 4  # individual's size = number of AdEx parameters
-# bounds = np.array([[0, 10], [0, 300], [0, 400], [-70, -40]])
-IND_SIZE = 6
-bounds = np.array([[0, 10], [0, 300], [0, 400], [-70, -40], [-60, -40], [0.2, 4]])
+IND_SIZE = 4  # individual's size = number of AdEx parameters
+bounds = np.array([[-15, 15], [0, 300], [0, 400], [-90, -60]])
+# IND_SIZE = 6
+# bounds = np.array([[-5, 5], [0, 300], [0, 400], [-70, -40], [-60, -40], [0.2, 4]])
 
 # Set optimization parameters here
-NGEN = 200
+NGEN = 30
 POP_SIZE = 100
-OFFSPRING_SIZE = 100
+OFFSPRING_SIZE = POP_SIZE
 CXPB = 0.7   # crossover fraction
 MUTPB = 0.3  # mutation frequency
 N_HALLOFFAME = 10
@@ -109,7 +121,7 @@ toolbox.register(
 # FOLLOWING RUN ONLY BY ROOT PROCESS
 if __name__ == '__main__':
 
-    random.seed(1)
+    random.seed()
     N_CPU = int(mp.cpu_count()*0.80)
     pool = mp.Pool(processes=N_CPU)
     toolbox.register("map", pool.map)
@@ -130,10 +142,16 @@ if __name__ == '__main__':
     stats03 = tools.Statistics(key=lambda ind: ind.fitness.values[2])
     stats04 = tools.Statistics(key=lambda ind: ind.fitness.values[3])
     stats05 = tools.Statistics(key=lambda ind: ind.fitness.values[4])
-    stats = tools.MultiStatistics(spikecount=stats01, first_spike=stats02, first_isi=stats03, last_isi=stats04,
-                                  first_ahp_depth=stats05)
+    stats06 = tools.Statistics(key=lambda ind: ind.fitness.values[5])
+    stats07 = tools.Statistics(key=lambda ind: ind.fitness.values[6])
+    stats = tools.MultiStatistics(spikecount=stats01,
+                                  first_spike_latency=stats02,
+                                  first_isi=stats03,
+                                  last_isi=stats04, min_volt=stats05,
+                                  prestim=stats06, prespike=stats07)
 
-    stats.register("min", np.min, axis=0)
+    # stats.register("min", np.min, axis=0)
+    stats.register("avg", np.mean, axis=0)
 
     print "Running optimization with %d cores... please wait.\n" % N_CPU
     pop, logbook = algorithms.eaMuPlusLambda(
@@ -156,6 +174,9 @@ if __name__ == '__main__':
     i = 1
     for params in hof:
         print "%d. a = %.3f nS\t tau_w = %.3f ms\t b = %.3f pA\t\t V_res = %.3f mV" % (i, params[0], params[1], params[2], params[3])
+        i += 1
 
+    i = 1
     for params in hof:
         print "%d. %s" % (i, str(params))
+        i += 1
