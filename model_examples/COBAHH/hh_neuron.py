@@ -266,7 +266,7 @@ def run_coba_stp(model='hh', coba_runtime=1.0 * second, coba_scale=1, k=1, repor
 
 if __name__ == '__main__':
 
-    # run_coba_stp(model='hh', coba_runtime=10 * second, show_traces=True)
+    # run_coba(model='eif', coba_runtime=10 * second, show_traces=False)
 
     # k_list = [0.5, 1.0, 1.5]
     # k_total = len(k_list)
@@ -286,5 +286,5 @@ if __name__ == '__main__':
 
     trials = 10
     for i in range(trials):
-        print '%d\t trial\t EIF+STP' % (i+1)
-        run_coba_stp(model='eif', coba_runtime=10*second, report='text')
+        print '%d\t trial\t HH' % (i+1)
+        run_coba_stp(model='hh', coba_runtime=10*second, report='text')

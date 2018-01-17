@@ -91,7 +91,7 @@ class AdexOptimizable(object):
     """
     Runs experiments on an AdEx neuron & evaluates fitness
     """
-    def __init__(self, passive_params, target_traces=MarkramStepInjectionTraces(), feature_names=None, stim_total=3000, stim_start=700, stim_end=2700):
+    def __init__(self, passive_params, target_traces=MarkramStepInjectionTraces(), efel_feature_names=None, custom_feature_names=[], stim_total=3000, stim_start=700, stim_end=2700):
         self.adex_passive_params = passive_params
         self.target = target_traces
 
@@ -108,17 +108,11 @@ class AdexOptimizable(object):
 
         # Objectives: number of spikes, first spike latency, first ISI, last ISI (...) => squared error
         # For possible features: efel.api.getFeatureNames()
-        self.custom_features = ['prestim_waveform_diff', 'prespike_waveform_diff']
-        self.all_features = efel.api.getFeatureNames().extend(self.custom_features)
+        self.all_custom_features = ['prestim_waveform_diff', 'prespike_waveform_diff']
 
-        if feature_names is None:
-            self.feature_names = ['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI',
-                                  'inv_last_ISI']
-        else:
-            self.feature_names = feature_names
-            self.efel_feature_names = list(set(self.feature_names) - set(self.custom_features))
-
-        # assert set(self.feature_names) < set(self.all_features), "Some requested feature(s) not supported"
+        # assert...
+        self.efel_feature_names = efel_feature_names
+        self.custom_feature_names = custom_feature_names
 
         self.target_values = self.target.getTargetValues(self.efel_feature_names)
         self.target_traces = self.target.traces
@@ -176,6 +170,7 @@ class AdexOptimizable(object):
         :param spike_latencies: latencies from stimulus start to first spike
         :return:
         """
+        infinity=10e9
         n_steps = self.target.n_steps
         stim_start_loc = self.stim_start * 10   # sampling is at 0.1ms intervals & stim_start given in ms
 
@@ -186,10 +181,13 @@ class AdexOptimizable(object):
 
         areas_btw_curves = []
         for step_number in range(0, n_steps-1):
-            diff_trace = np.array(self.target_traces[step_number]['V'][stim_start_loc:end_loc[step_number]]) - \
-                         np.array(optimizable_traces[step_number]['V'][stim_start_loc:end_loc[step_number]])
-            diff_trace = abs(diff_trace)
-            areas_btw_curves.append(trapz(diff_trace, dx=0.1))
+            try:
+                diff_trace = np.array(self.target_traces[step_number]['V'][stim_start_loc:end_loc[step_number]]) - \
+                             np.array(optimizable_traces[step_number]['V'][stim_start_loc:end_loc[step_number]])
+                diff_trace = abs(diff_trace)
+                areas_btw_curves.append(trapz(diff_trace, dx=0.1))
+            except:
+                areas_btw_curves.append(infinity)
 
         return areas_btw_curves
 
@@ -301,15 +299,15 @@ class AdexOptimizable(object):
 
         # 2.2. Custom features
         # Calculate errors in waveforms
-        if 'prestim_waveform_diff' in self.feature_names:
+        if 'prestim_waveform_diff' in self.custom_feature_names:
             prestim_waveform_diff = self.prestimulusWaveformDifference(optimizable_traces)
             feature_errors.append(prestim_waveform_diff)
             if verbose is True:
                 print '---'
                 print 'prestim_waveform_diff current: ' + str(prestim_waveform_diff)
 
-        if 'prespike_waveform_diff' in self.feature_names:
-            assert 'inv_time_to_first_spike' in self.feature_names, \
+        if 'prespike_waveform_diff' in self.custom_feature_names:
+            assert 'inv_time_to_first_spike' in self.efel_feature_names, \
                 "Cannot compute prespike waveform difference unless spike latencies are extracted"
 
             individual_latencies = [individual_values[i]['inv_time_to_first_spike'] for i in range(0, n_steps-1)]
@@ -322,7 +320,8 @@ class AdexOptimizable(object):
 
         if verbose is True:
             print 'Mean errors:'
-            print self.feature_names
+            print self.efel_feature_names
+            print self.custom_feature_names
             print feature_errors
 
         # 3. PLOT TRACES & RETURN ERRORS
@@ -333,18 +332,20 @@ class AdexOptimizable(object):
 
 
 if __name__ == '__main__':
-    current_steps = [-0.2, 0.169, 0.174, 0.179]
-    hh_target = MarkramStepInjectionTraces('COBAHH/recordings/', 'soma_voltage_step', current_steps)
-    passive_params = {'C': 200*pF, 'gL': 10*nS, 'EL': -60.38*mV,
-                      'VT': -63*mV, 'DeltaT': 4*mV,
-                      'Vcut': 20*mV, 'refr_time': 4*ms}
+    current_steps = [-0.020996, 0.047352, 0.051298, 0.055244]
+    test_target = MarkramStepInjectionTraces('L1_NGC-DA_cNAC187_1/hoc_recordings/', 'soma_voltage_step', current_steps)
+    passive_params = {'C': 30.5 * pF, 'gL': 1.49 * nS, 'EL': -69.8 * mV,
+                      'VT': -56 * mV, 'DeltaT': 4 * mV,
+                      'Vcut': 20 * mV, 'refr_time': 4 * ms}
 
-    adex_neuron = AdexOptimizable(passive_params, hh_target,
-                                  ['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI', 'inv_last_ISI',
-                                   'min_voltage_between_spikes', 'prestim_waveform_diff', 'prespike_waveform_diff'])
+    adex_neuron = AdexOptimizable(passive_params, test_target,
+                                  efel_feature_names=['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI', 'inv_last_ISI', 'min_voltage_between_spikes'],
+                                  custom_feature_names=['prestim_waveform_diff', 'prespike_waveform_diff'])
 
+    # adex_neuron = AdexOptimizable(passive_params, test_target,
+    #                               ['Spikecount_stimint'])
 
-    init_guess = [-7.2050613271940724, 2.8047615297652069, 298.87522157260906, -66.528640252995814]
+    init_guess =  [-0.52133001857174777, 29.577469234331346, 17.25725125842547, -74.337344857022217]
     adex_neuron.evaluateFitness(init_guess, plot_traces=True, verbose=True)
 
     # Example use of classes

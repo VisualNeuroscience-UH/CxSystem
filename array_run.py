@@ -296,7 +296,12 @@ class array_run(object):
             if type(var) == str :
                 var = var.strip()
             temp_df = original_df.copy()
-            temp_df.loc[index_of_array_variable[0][0]][index_of_array_variable[0][1]] = var
+            # temp_df.loc[index_of_array_variable[0][0]][index_of_array_variable[0][1]] = var
+            # This works sometimes but not always, for details see
+            # http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
+            # That's why I replaced it with:
+            temp_df.iloc[index_of_array_variable[0][0], index_of_array_variable[0][1]] = var
+
             if self.multidimension_array_run and len(index_of_array_variable)>1:
                 tmp_title,tmp_value,tmp_message = self.message_finder(temp_df, index_of_array_variable,df_type)
                 temp_df, messages = self.df_builder_for_array_run(temp_df, index_of_array_variable[1:],df_type,tmp_message,recursion_counter=recursion_counter+1)
@@ -320,7 +325,7 @@ class array_run(object):
         arrays_idx_ = [(df_search_result[0][i], df_search_result[1][i]) for i in range(len(df_search_result[0]))]
         for to_default_idx in arrays_idx_:
             value_to_default = df.loc[to_default_idx[0]][to_default_idx[1]]
-            assert ':' in value_to_default, " -  The default value should be defined for %s , or make sure multidimension_array_run in configuraiton file is set to 1." % value_to_default
+            assert ':' in value_to_default, " -  The default value should be defined for %s , or make sure multidimension_array_run in configuration file is set to 1." % value_to_default
             default = value_to_default[value_to_default.index('{')+1:value_to_default.index(':')]
             df.loc[to_default_idx[0]][to_default_idx[1]] = df.loc[to_default_idx[0]][to_default_idx[1]].replace(value_to_default[value_to_default.index('{'):value_to_default.index('}')+1],default)
         return df

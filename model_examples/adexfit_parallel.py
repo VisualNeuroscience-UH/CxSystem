@@ -22,7 +22,7 @@ import numpy as np
 from brian2 import pF, nS, mV, ms
 import pathos.multiprocessing as mp
 
-import adexfit_eval
+import adexfit_eval2 as adexeval
 
 
 # SET NEURON & STIMULATION PARAMETERS HERE
@@ -37,26 +37,33 @@ import adexfit_eval
 # test_neuron = adexfit_eval.AdexOptimizable(MC_params_Markram, test_target, feature_names)
 
 # Initialize the neuron to be fitted
-current_steps = [-0.2, 0.169, 0.174, 0.179]
-test_target = adexfit_eval.MarkramStepInjectionTraces('COBAHH/recordings/', 'soma_voltage_step', current_steps)
-passive_params = {'C': 200 * pF, 'gL': 10 * nS, 'EL': -60 * mV,
-                  'VT': -63*mV, 'DeltaT': 4*mV,
+current_steps = [-0.084106, 0.2073756, 0.2246569, 0.2419382]
+test_target = adexeval.MarkramStepInjectionTraces('L4_PC_cADpyr230_3/hoc_recordings/', 'soma_voltage_step', current_steps)
+passive_params = {'C': 1 * pF, 'gL': 1 * nS, 'EL': -72 * mV,
+                  'VT': -56 * mV, 'DeltaT': 4 * mV,
                   'Vcut': 20 * mV, 'refr_time': 4 * ms}
 
-feature_names = ['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI', 'inv_last_ISI',
-                 'min_voltage_between_spikes', 'prestim_waveform_diff', 'prespike_waveform_diff']
-test_neuron = adexfit_eval.AdexOptimizable(passive_params, test_target, feature_names)
+efel_features = ['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI', 'inv_last_ISI', 'min_voltage_between_spikes']
+custom_features = ['prestim_waveform_diff', 'prespike_waveform_diff']
+
+#N_features = len(feature_names)
+# feature_weights = [-0.5, -0.1, -0.1, -0.1,
+#                    -1, -0.01, -0.1]
+feature_weights = [-0.5, -1, -5, -0.1, -1,
+                   -5, -1]
+
+test_neuron = adexeval.AdexOptimizable(passive_params, test_target, efel_feature_names=efel_features, custom_feature_names=custom_features, dendritic_extent=2)
 
 
 # Set bounds for values (a, tau_w, b, V_res)
 IND_SIZE = 4  # individual's size = number of AdEx parameters
-bounds = np.array([[-15, 15], [0, 300], [0, 400], [-90, -60]])
+bounds = np.array([[-10, 10], [0, 300], [0, 400], [-70, -50]])
 # IND_SIZE = 6
 # bounds = np.array([[-5, 5], [0, 300], [0, 400], [-70, -40], [-60, -40], [0.2, 4]])
 
 # Set optimization parameters here
-NGEN = 30
-POP_SIZE = 100
+NGEN = 10
+POP_SIZE = 200
 OFFSPRING_SIZE = POP_SIZE
 CXPB = 0.7   # crossover fraction
 MUTPB = 0.3  # mutation frequency
@@ -74,8 +81,8 @@ SELECTOR = "NSGA2"
 LOWER = list(bounds[:, 0])
 UPPER = list(bounds[:, 1])
 
-N_features = len(feature_names)
-creator.create("Fitness", base.Fitness, weights=[-1.0] * N_features)
+
+creator.create("Fitness", base.Fitness, weights=feature_weights)
 creator.create("Individual", list, fitness=creator.Fitness)
 
 
@@ -129,29 +136,22 @@ if __name__ == '__main__':
     pop = toolbox.population(n=MU)
     hof = tools.HallOfFame(N_HALLOFFAME)
 
-    # For some reason this doesn't work...
-    # stats_dict = {}
-    # for i in range(N_features):
-    #     stats_dict[feature_names[i]] = tools.Statistics(key=lambda ind: ind.fitness.values[i])
-    #
-    # stats = tools.MultiStatistics(stats_dict)
-
     # feature_names = ['Spikecount_stimint', 'inv_time_to_first_spike', 'inv_first_ISI', 'inv_last_ISI', 'AHP_depth_abs']
     stats01 = tools.Statistics(key=lambda ind: ind.fitness.values[0])
     stats02 = tools.Statistics(key=lambda ind: ind.fitness.values[1])
     stats03 = tools.Statistics(key=lambda ind: ind.fitness.values[2])
     stats04 = tools.Statistics(key=lambda ind: ind.fitness.values[3])
     stats05 = tools.Statistics(key=lambda ind: ind.fitness.values[4])
-    stats06 = tools.Statistics(key=lambda ind: ind.fitness.values[5])
-    stats07 = tools.Statistics(key=lambda ind: ind.fitness.values[6])
+#    stats06 = tools.Statistics(key=lambda ind: ind.fitness.values[5])
+#    stats07 = tools.Statistics(key=lambda ind: ind.fitness.values[6])
     stats = tools.MultiStatistics(spikecount=stats01,
                                   first_spike_latency=stats02,
                                   first_isi=stats03,
-                                  last_isi=stats04, min_volt=stats05,
-                                  prestim=stats06, prespike=stats07)
+                                  last_isi=stats04, min_volt=stats05)
+#                                  prestim=stats06, prespike=stats07)
 
-    # stats.register("min", np.min, axis=0)
-    stats.register("avg", np.mean, axis=0)
+    stats.register("min", np.min, axis=0)
+    # stats.register("avg", np.mean, axis=0)
 
     print "Running optimization with %d cores... please wait.\n" % N_CPU
     pop, logbook = algorithms.eaMuPlusLambda(

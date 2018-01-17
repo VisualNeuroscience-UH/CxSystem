@@ -1161,6 +1161,7 @@ class CxSystem(object):
                 # If no connection probability is defined, then use "sparseness" values as connection probability and
                 # possibly scale with distance
                 except ValueError:
+                    print ' *  No predefined connection probability, using custom connection rule'
                     p_arg = self.customized_synapses_list[-1]['sparseness']
 
                     if '_relay_vpm' in self.neurongroups_list[int(current_pre_syn_idx)]:

@@ -76,11 +76,14 @@ class neuron_reference(object):
         self.output_neuron['namespace'] = neuron_parser(self.output_neuron, physio_config_df).output_namespace
         self.output_neuron['equation'] = ''
 
-        # BEGIN AdEx: Setting reset condition
-        self.flag_adex = self.value_extractor(self.physio_config_df, 'flag_adex')
-        if self.flag_adex == 1:
-            self.output_neuron['reset'] += '; w=w+'+repr(self.output_neuron['namespace']['b'])
-        # END AdEx
+        # // AdEx-specific code BEGINS //
+        try:
+            self.flag_adex = self.value_extractor(self.physio_config_df, 'flag_adex')
+            if self.flag_adex == 1:
+                self.output_neuron['reset'] += '; w=w+'+repr(self.output_neuron['namespace']['b'])
+        except:
+            pass
+        # // AdEx-specific code ENDS //
 
         variable_start_idx = self.physio_config_df['Variable'][self.physio_config_df['Variable'] == self.output_neuron['type']].index[0]
         try:
@@ -506,8 +509,11 @@ class synapse_reference(object):
         _name_space = synapse_parser(self.output_synapse, physio_config_df)
         self.output_synapse['namespace'] = {}
         self.output_synapse['namespace'] = _name_space.output_namespace
-        self.output_synapse['sparseness'] = _name_space.sparseness
-        self.output_synapse['ilam'] = _name_space.ilam
+        try:
+            self.output_synapse['sparseness'] = _name_space.sparseness
+        except:
+            pass
+        # self.output_synapse['ilam'] = _name_space.ilam
         getattr(self, self.output_synapse['type'])()
 
     def STDP(self):

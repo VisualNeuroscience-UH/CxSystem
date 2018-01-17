@@ -58,10 +58,13 @@ class synapse_parser(object):
         synapse_parser.type_ref = array (['STDP','STDP_with_scaling', 'Fixed', 'Fixed_calcium', 'Fixed_normal', 'Depressing', 'Facilitating'])
         assert output_synapse['type'] in synapse_parser.type_ref, " -  Synapse type '%s' is not defined." % output_synapse['type']
         self.output_namespace = {}
-        self.output_namespace['Cp'] = self.value_extractor(self.physio_config_df,'Cp')
-        self.output_namespace['Cd'] = self.value_extractor(self.physio_config_df,'Cd')
-        self.sparseness = self.value_extractor(self.physio_config_df,'sp_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
-        self.ilam = self.value_extractor(self.physio_config_df,'ilam_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
+        # self.output_namespace['Cp'] = self.value_extractor(self.physio_config_df,'Cp')
+        # self.output_namespace['Cd'] = self.value_extractor(self.physio_config_df,'Cd')
+        try:
+            self.sparseness = self.value_extractor(self.physio_config_df,'sp_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
+        except:
+            pass
+        # self.ilam = self.value_extractor(self.physio_config_df,'ilam_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
 
         self.calcium_concentration = self.value_extractor(self.physio_config_df, 'calcium_concentration' )
         self._set_calcium_dependency()
@@ -210,9 +213,9 @@ class synapse_parser(object):
         :param output_synapse: This is the dictionary created in neuron_reference() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: wght_max, wght0.
         '''
 
-        # TODO - Notation here a bit confusing and should be corrected (mu should be mean and std deviation, standard or other)
-        stdp_max_strength_coefficient = self.value_extractor(self.physio_config_df, 'stdp_max_strength_coefficient')
-        self.output_namespace['wght_max'] = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type']))* stdp_max_strength_coefficient
+        # Obviously you don't need STDP for a FIXED synapse
+        # stdp_max_strength_coefficient = self.value_extractor(self.physio_config_df, 'stdp_max_strength_coefficient')
+        self.output_namespace['wght_max'] = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) #* stdp_max_strength_coefficient
         std_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
         min_wght = std_wght / 2.
 
@@ -365,24 +368,26 @@ class neuron_parser (object):
 
         getattr(self, '_'+ output_neuron['type'])(output_neuron)
 
-        # Setting depolarization to p% of threshold
-        flag_adex = self.value_extractor(self.physio_config_df, 'flag_adex')
+        # // AdEx-specific code BEGINS //
+        try:
+            flag_adex = self.value_extractor(self.physio_config_df, 'flag_adex')
+            if flag_adex == 1:
+                rheobase = self.output_namespace['rheobase_adex']
+                depolarization_level = self.value_extractor(self.physio_config_df, 'depolarization_level')
 
-        if flag_adex == 1:
-            rheobase = self.output_namespace['rheobase_adex']
-            depolarization_level = self.value_extractor(self.physio_config_df, 'depolarization_level')
+                if output_neuron['type'] == 'PC':
+                    rheobase = rheobase[output_neuron['dend_comp_num']-1]
+                    # print '-> dend extent: '+str(output_neuron['dend_comp_num'])
 
-            if output_neuron['type'] == 'PC':
-                rheobase = rheobase[output_neuron['dend_comp_num']-1]
-                print '-> dend extent: '+str(output_neuron['dend_comp_num'])
+                self.output_namespace['adex_depolarization'] = rheobase * depolarization_level
+                # print 'Rheobase: '+str(rheobase)
+            else:
+                # print 'Using NON-adaptive EIF model'
+                self.output_namespace['adex_depolarization'] = 0*pA
+        except:
+            self.output_namespace['adex_depolarization'] = 0 * pA
+        # // AdEx-specific code ENDS //
 
-            self.output_namespace['adex_depolarization'] = rheobase * depolarization_level
-
-            print 'Rheobase: '+str(rheobase)
-
-        else:
-            # print 'Using NON-adaptive EIF model'
-            self.output_namespace['adex_depolarization'] = 0*pA
 
     def _compute_adex_rheobase(self):
         a = self.output_namespace['a']
