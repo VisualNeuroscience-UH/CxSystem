@@ -1093,6 +1093,7 @@ class CxSystem(object):
             ############### Connecting synapses
             ###############
 
+            # Technical preparations & parameter parsing first
             _syn_ref_name = self.neurongroups_list[int(current_pre_syn_idx)][self.neurongroups_list[int( \
                 current_pre_syn_idx)].index('_')+1:] + "__to__" + self.neurongroups_list[self.\
                 customized_synapses_list[-1]['post_group_idx']][self.neurongroups_list[self.\
@@ -1126,28 +1127,37 @@ class CxSystem(object):
                 _do_save = 0
                 pass
 
+            # Loading connections from file
             if (self.default_load_flag==1 or (self.default_load_flag==-1 and _do_load == 1 )) and \
                     hasattr(self,'loaded_brian_data') and not self.load_positions_only:
                 assert _syn_ref_name in self.loaded_brian_data.keys(), \
                     " -  The data for the following connection was not found in the loaded brian data: %s" % _syn_ref_name
-                eval(_dyn_syn_name).connect(i=self.loaded_brian_data[_syn_ref_name]['data'][0][0].tocoo().row, \
-                                     j=self.loaded_brian_data[_syn_ref_name]['data'][0][0].tocoo().col,\
-                                     n = int(self.loaded_brian_data[_syn_ref_name]['n']))
-                eval(_dyn_syn_name).wght = repeat(self.loaded_brian_data[_syn_ref_name]['data'][0][0].data/int(self.\
-                    loaded_brian_data[_syn_ref_name]['n']),int(self.loaded_brian_data[_syn_ref_name]['n'])) * siemens
-                _load_str = 'Connection loaded from '
+
+                try: # Try-except necessary; run fails if no connections exist from 1 group to another
+                    eval(_dyn_syn_name).connect(i=self.loaded_brian_data[_syn_ref_name]['data'][0][0].tocoo().row, \
+                                         j=self.loaded_brian_data[_syn_ref_name]['data'][0][0].tocoo().col,\
+                                         n = int(self.loaded_brian_data[_syn_ref_name]['n']))
+                    # Weight is redeclared later, see line ~1200.
+                    # Also, 1) "loading connections" leaves the impression of loading anatomical connections, not synaptic weights
+                    #       2) we do not have need for saving/loading synaptic weights at this point
+                    # Therefore I commented:
+                    # eval(_dyn_syn_name).wght = repeat(self.loaded_brian_data[_syn_ref_name]['data'][0][0].data/int(self.\
+                    #     loaded_brian_data[_syn_ref_name]['n']),int(self.loaded_brian_data[_syn_ref_name]['n'])) * siemens
+                    _load_str = 'Connection loaded from '
+                except ValueError:
+                    _load_str = ' ! No connections from '
 
             elif (self.default_load_flag==1 or (self.default_load_flag==-1 and _do_load == 1 )) and not \
                     hasattr(self,'loaded_brian_data') :
                 print " -  Synaptic connection is set to be loaded, however the load_brian_data_path is not defined in the parameters. The connection is being created."
 
+            # Generating new connections using
+            #  - connection probability ("local mode")
+            #  - connection probability scaled with distance ("expanded mode")
+            #  - custom connection rule
             else:
                 syn_con_str = "%s.connect(condition='i!=j', p= " % _dyn_syn_name
-                # Connecting the synapses based on either [the defined probability and the distance] or
-                # [only the distance] plus considering the number of connections
 
-                # See first if a connection probability is defined between neuron groups and
-                # then possibly scale with distance (if expanded mode)
                 try:
                     if self.sys_mode == 'local':
                         syn_con_str += "'%f'" % float(p_arg)
@@ -1161,7 +1171,7 @@ class CxSystem(object):
                 # If no connection probability is defined, then use "sparseness" values as connection probability and
                 # possibly scale with distance
                 except ValueError:
-                    print ' *  No predefined connection probability, using custom connection rule'
+                    print ' !  No predefined connection probability, using custom connection rule'
                     p_arg = self.customized_synapses_list[-1]['sparseness']
 
                     if '_relay_vpm' in self.neurongroups_list[int(current_pre_syn_idx)]:
@@ -1189,6 +1199,8 @@ class CxSystem(object):
                 except ValueError:
                     syn_con_str += ')'
                 exec syn_con_str
+
+            # Weight set again (overrided) here if connections were loaded
             exec "%s.wght=%s['init_wght']" % (_dyn_syn_name, _dyn_syn_namespace_name)  # set the weights
             if syn_type == 'STDP': # A more sophisticated if: 'wght0' in self.customized_synapses_list[-1]['equation']
                 exec "%s.wght0=%s['init_wght']" % (_dyn_syn_name, _dyn_syn_namespace_name)  # set the weights
