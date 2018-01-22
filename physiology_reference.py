@@ -82,7 +82,7 @@ class neuron_reference(object):
             if self.flag_adex == 1:
                 self.output_neuron['reset'] += '; w=w+'+repr(self.output_neuron['namespace']['b'])
         except:
-            pass
+            self.flag_adex = 0
         # // AdEx-specific code ENDS //
 
         variable_start_idx = self.physio_config_df['Variable'][self.physio_config_df['Variable'] == self.output_neuron['type']].index[0]

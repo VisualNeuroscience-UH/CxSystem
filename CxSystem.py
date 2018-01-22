@@ -1133,13 +1133,17 @@ class CxSystem(object):
                 assert _syn_ref_name in self.loaded_brian_data.keys(), \
                     " -  The data for the following connection was not found in the loaded brian data: %s" % _syn_ref_name
 
-                try: # Try-except necessary; run fails if no connections exist from 1 group to another
-                    eval(_dyn_syn_name).connect(i=self.loaded_brian_data[_syn_ref_name]['data'][0][0].tocoo().row, \
-                                         j=self.loaded_brian_data[_syn_ref_name]['data'][0][0].tocoo().col,\
+                # 1) Try-except necessary; run fails if no connections exist from 1 group to another
+                # 2) Indexing changed in pandas >0.19.1 and thus ...['data'][0][0].tocoo() --> ...['data'].tocoo()
+                #    Unfortunately pandas doesn't warn about this change in indexing
+                try:
+                    eval(_dyn_syn_name).connect(i=self.loaded_brian_data[_syn_ref_name]['data'].tocoo().row, \
+                                         j=self.loaded_brian_data[_syn_ref_name]['data'].tocoo().col,\
                                          n = int(self.loaded_brian_data[_syn_ref_name]['n']))
                     # Weight is redeclared later, see line ~1200.
                     # Also, 1) "loading connections" leaves the impression of loading anatomical connections, not synaptic weights
                     #       2) we do not have need for saving/loading synaptic weights at this point
+                    #       3) it doesn't work in pandas >0.19.1
                     # Therefore I commented:
                     # eval(_dyn_syn_name).wght = repeat(self.loaded_brian_data[_syn_ref_name]['data'][0][0].data/int(self.\
                     #     loaded_brian_data[_syn_ref_name]['n']),int(self.loaded_brian_data[_syn_ref_name]['n'])) * siemens

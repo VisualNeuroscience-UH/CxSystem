@@ -127,7 +127,8 @@ class SimulationData(object):
         :return: data
         """
         with bz2.BZ2File(filename, 'rb') as fb:
-            data = pickle.load(fb)
+            #data = pickle.load(fb)  <- due to pandas update; pandas.pydata.org/pandas-docs/stable/io.html#pickling
+            data = pd.read_pickle(fb)
 
         return data
 
@@ -1623,10 +1624,8 @@ def combined_metrics_plot():
 # MAIN
 if __name__ == '__main__':
 
-    # a = SimulationData('21_fixedcalcium_testruns_20171221_12274787_background_rate0.4H_k0.3_Cpp_3500ms.bz2')
-    # print a.global_osc_freq(t_limits=[500*ms, -1], plot=True)
-    # a._isi_cdf_group(8)
-    # a.rasterplot()
+    a = SimulationData('00_subm_repeat/00_eliyah_20171218_14072863_background_rate0.3H_k1.3_Cpp_3500ms.bz2')
+    a.rasterplot()
 
     ###### Depol x calcium plot ######
     # exp = ExperimentData('/opt3/tmp/bigrun/depolxcalcium/', 'fepol')
@@ -1650,9 +1649,9 @@ if __name__ == '__main__':
     # Seeing results in iPython for example:
     #  plt.figure(); a = data.pivot_table('irregularity_mean', index='background_rate', columns='k').sort_index(ascending=False); sns.heatmap(a, cmap='binary', vmax=1)
 
-    exp = ExperimentData('/opt3/tmp/01_cxs_rev1/', '22_fixedstp_testruns')
-    exp.computestats('stats_22_fixedstp_testruns.csv',
-                    ['calcium_concentration', 'J', 'k', 'background_rate'])
+    # exp = ExperimentData('/opt3/tmp/01_cxs_rev1/', '01_eifsquares')
+    # exp.computestats('stats_01_eifsquares.csv',
+    #                 ['calcium_concentration', 'J', 'k', 'background_rate'])
 
     ###### For creating side-by-side rasterplots ######
     # simulations = ['depol_37_calcium_concentration1.0_Cpp_3000ms.bz2', 'depol_37_calcium_concentration1.4_Cpp_3000ms.bz2',
