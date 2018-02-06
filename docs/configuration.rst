@@ -7,8 +7,7 @@ Configuration File Tutorial
 CxSystems are configured with two .csv files, namely Model & Network and Physiological configuration files.
 The Model & Network configuration file has two main types of lines:
 
-* **Titles-line**: These lines, starting with *row_type* keyword, defines the column titles for all the lines between the the next line and the next \
-*Titles-line*:
+* **Titles-line**: These lines, starting with *row_type* keyword, defines the column titles for all the lines between the the next line and the next *Titles-line*:
 
 ::
 
