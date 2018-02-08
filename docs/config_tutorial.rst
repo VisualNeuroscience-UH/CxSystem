@@ -1,7 +1,7 @@
 ﻿
 .. _config_file:
 
-Configuration Files Tutorial
+Configuration Files 
 =============================
 
 The two main interfaces of the CxSystem are two csv files: Network & Model configuration file and Physiological configuration file. 
