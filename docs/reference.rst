@@ -36,6 +36,7 @@ Physiology Reference module
 
     .. automethod:: physiology_reference.synapse_reference.__init__
 
+
 Array_run module
 ----------------
 .. module:: array_run
