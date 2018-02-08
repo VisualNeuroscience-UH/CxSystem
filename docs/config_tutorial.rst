@@ -1,9 +1,13 @@
 ﻿
 .. _config_file:
 
-Configuration File Tutorial
-===========================
+Configuration Files Tutorial
+=============================
 
+The two main interfaces of the CxSystem are two csv files: Network & Model configuration file and Physiological configuration file. 
+
+Network & Model Configuration File
+-----------------------------------
 
 CxSystem is configured with two csv files, namely Model & Network and Physiological configuration files.
 The Model & Network configuration file has two main types of lines:
@@ -43,7 +47,7 @@ In the next sections, each of these row_types has its own types of columns and a
 arguments are wrapped with **<>** whereas the **optional** ones are in **[]**. The corresponding **data type** is also presented using **{}**.
 
 params
--------------------
+........
 
 This is the list of configurable run-time variables implemented in the system:
 
@@ -92,7 +96,7 @@ Example of the params Titles & Values-lines:
 	params,local,1,210*um
 
 Monitors
---------------
+.........
 
 Before starting describing the different row_types in the Model & Network configuration file, it is important to understand how the monitors are defined in the system. In Brian2 monitors can be assigned to a NeuronGroup() or Synapses(). Similarly, when using the configuration file, you are able to set monitors for any target line, i.e. NeuronGroup()s or Synapses(). The monitors are defined in the following way:
 
@@ -154,7 +158,7 @@ however, this StateMonitor() is overwritten by a SpikeMonitor().
 
 
 Input
----------
+......
 
 The input is defined with the "IN" keyword. Currently, three types of inputs are defined in the CxSystem, namely VPM, \
 video, and Spikes from file.  The stimuli is created using a *.mat* file. This stimuli is in form of spike and is fed \
@@ -215,7 +219,7 @@ Here's another example for VPM input for the system:
 
 
 Neuron Group
----------------
+.............
 
 The NeuronGroup()s are defined using the G (as in Group) keyword. This row_type is basically used for defining the NeuronGroup()s in Brian2. Following parameters are implemented for defining the NeuronGroup(): 
 
@@ -237,7 +241,8 @@ The NeuronGroup()s are defined using the G (as in Group) keyword. This row_type 
 
  		**[monitors]:** center location of the NeuronGroup().
 
---------------
+Examples
+.........
 
 In this section, some of the above-mentioned parameters are clarified. 
 
@@ -318,7 +323,7 @@ The center of a NeuronGroup() can be defined with the net-center tag in the *Tit
 	G,2,75,BC,2,5+0j,[Sp]
 
 Synapses
----------------------
+.........
 
 S keyword (as in Synapses)  defines the Brian2 Synapses() object.  Following parameters are implemented for defining the Synapses():
 
@@ -343,7 +348,7 @@ S keyword (as in Synapses)  defines the Brian2 Synapses() object.  Following par
 
 
 
---------------
+...........
  
 
 where the *<receptor>* defines the receptor type, i.e. ge for excitatory and gi for inhibitory connections, \
@@ -459,4 +464,7 @@ This will optimize the probability of that synaptic connection in a way to have 
 
 This example will optimize the probability of the connection in a way that there are 0.2*10000/4 connections and there are 4 synapses for each connection between the NeuronGroup()s. 
  
+
+Physiological Configuration File
+---------------------------------
 

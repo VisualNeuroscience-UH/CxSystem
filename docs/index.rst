@@ -28,6 +28,7 @@ Contents:
    config_tutorial
    parallelism
    examples
+   developerguide
    reference
 
 
