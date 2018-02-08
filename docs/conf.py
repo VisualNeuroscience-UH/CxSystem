@@ -20,7 +20,7 @@ import sphinx_rtd_theme
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('..'))
-
+sys.path.insert(0,os.path.abspath('../..'))
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -296,3 +296,13 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
+import sys
+from unittest.mock import MagicMock
+
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+            return MagicMock()
+
+MOCK_MODULES = ['numpy', 'brian2', 'scipy.io', 'os', 'cPickle', 'zlib','bz2','shutil']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
