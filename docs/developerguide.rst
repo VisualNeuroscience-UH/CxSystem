@@ -21,6 +21,12 @@ Updating the Documentation
 
 Sphinx essentials
 ``````````````````
+Install the sphinx using:
+
+.. code-block:: bash
+
+   $ sudo apt-get install python-sphinx 
+   
 
 Adding mock modules
 ....................
