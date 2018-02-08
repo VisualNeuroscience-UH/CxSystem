@@ -10,6 +10,10 @@ Examples
 Building a new model
 ---------------------
 
+A new network can be designed by using a regular spreadsheet program, such as Excel, whose output is readable by everyone taking part in the research project. The idea is that a scientist leading the project can consult an electrophysiologist or an anatomist without referring to implementation-level code. |br|
+Practically, you first need to decide how many of the six cortical layers you are going to model, and which cell groups you need to include in each layer. Cell group definition takes a single row in the Model and Network file. Connectivity parameters (connection probability, synapse type, number of synapses per connection) can then be set in the same file, with a single row for a viable axonal pathway. In the Physiology file, you can then set the electrophysiological parameters corresponding to each neuron group. |br|
+Admittedly, a new project might need functionalities we have not implemented. New features can however be programmed in Python in the Physiology reference file (eg. synapse with STDP) and they can then be referenced in either of the two main configuration files. We try to hide away implementation details so that the complexity (amount of code) would not overwhelm project members, who are not familiar with programming. Thus, the configuration files themselves do not act as perfect blueprints of the new network. We believe such simple interfaces are necessary for fruitful interaction between scientists in any larger project. 
+
 
 
 Porting an existing model

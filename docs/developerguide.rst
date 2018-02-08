@@ -16,3 +16,13 @@ Adding Neuron Model
 Adding Synapse Model
 ---------------------
 
+Updating the Documentation
+---------------------------
+
+Sphinx essentials
+``````````````````
+
+Adding mock modules
+....................
+
+
