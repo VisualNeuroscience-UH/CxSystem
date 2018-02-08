@@ -1,4 +1,4 @@
-Cortical System Package
+Reference Documentation
 ====================================
 
 Cortical System module 

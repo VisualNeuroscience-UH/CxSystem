@@ -1,10 +1,11 @@
-﻿.. _config_file:
+﻿
+.. _config_file:
 
 Configuration File Tutorial
 ===========================
 
 
-CxSystems are configured with two .csv files, namely Model & Network and Physiological configuration files.
+CxSystem is configured with two csv files, namely Model & Network and Physiological configuration files.
 The Model & Network configuration file has two main types of lines:
 
 * **Titles-line**: These lines, starting with *row_type* keyword, defines the column titles for all the lines between the the next line and the next *Titles-line*:
@@ -78,6 +79,10 @@ This is the list of configurable run-time variables implemented in the system:
 
 		**<trials_per_config>{int}:** Defines the number of trials for each simulation in the array run.
 
+		**<run_in_cluster>{0,1}** Defines whether the current run is going to be submitted to the cluster (this parameter has several parameters associated with it, more details are available in parallelism section of the documentation).
+
+		**<profiling>{0,1}** Defines whether CxSystem should report the benchmark using the built-in Brian profiler.
+
 
 Example of the params Titles & Values-lines: 
 
@@ -86,61 +91,15 @@ Example of the params Titles & Values-lines:
 	row_type,sys_mode,scale,grid_radius
 	params,local,1,210*um
 
-Array Runs
---------------
-Array run (Parallel runs) can be set using the curly braces around the target parameter. For instance, to run 3 separate simulations\
-with scale=1, scale=2 and scale=3, the parameter scale should be set to:
-
-::
-
-	...,scale,...
-	...,{1,2,3},...
-
-This parallel run will use the number of processes (threads) that is set using the number_of_process parameter, e.g. if number_of_process=3, \
-then each of the 3 simulations runs in their own threads. However, if number_of_process=2, two processes run first the \
-simulation for scale=1, and scale=2. The third simulation with scale=3 will start when the first of the two simulations are completed.
-
-The array_run could also be set in range with defined step:
-
-::
-
-	...,scale,...
-	...,{1|5|1},...
-
-This parallel run will use four simulations with scale=1, scale=2, scale=3 and scale=4. Note the numpy style vector excluding the last index.
-
-When two or more parameters are set to use array runs, CxSystem can run the parallel runs either as multi-dimensional runs \
-or independent runs. For example: suppose a simulation is to be performed for scale {1,2,3} with do_init_vms set to {0,1}. \
-If multidimension_array_run flag is set to 1, the following 6 simulations will be run separately:
-
-::
-
-	{scale=1, do_init_vms=0}, {scale=1, do_init_vms=1}, {scale=2, do_init_vms=0}, {scale=2, do_init_vms=1}, {scale=3, do_init_vms=0}, {scale=3, do_init_vms=1}
-
-When multidimension_array_run flag is set to 0, howoever, the array_run pattern is different and 5 simulations will be run in parallel:
-
-::
-
-	{scale=1}, {scale=2}, {scale=3}, {do_init_vms=0}, {do_init_vms=1}
-
-One might want to run each of the parallel simulations several times, e.g. to observe an effect of a particular alteration in several runs.
-For this purpose the *trials_per_config* should be set to number of runs per configuration.
-
 Monitors
 --------------
 
-Before starting describing the different row_types in the Model & Network configuration file, it is important to understand\
-how the monitors are defined in the system. In Brian2 monitors can be assigned to a NeuronGroup() or Synapses(). Similarly, \
-when using the configuration file, you are able to set monitors for any target line, i.e. NeuronGroup()s or Synapses(). \
-The monitors are defined in the following way:
+Before starting describing the different row_types in the Model & Network configuration file, it is important to understand how the monitors are defined in the system. In Brian2 monitors can be assigned to a NeuronGroup() or Synapses(). Similarly, when using the configuration file, you are able to set monitors for any target line, i.e. NeuronGroup()s or Synapses(). The monitors are defined in the following way:
 
-If the monitor column is present in a Titles-line and the value in Values-line is not '--' (without single quotation marks), a monitor object will be \
-created for the NeuronGroup() or Synapses() of that specific line. Note that it is not possible to have different \
-clocks for monitors in Brian2GeNN. Hence, try to use the monitors wisely to prevent generating bulk data. Following \
-tags can be used for configuring a specific monitor:
+If the monitor column is present in a Titles-line and the value in Values-line is not '--' (without single quotation marks), a monitor object will be created for the NeuronGroup() or Synapses() of that specific line. Note that it is not possible to have different clocks for monitors in Brian2GeNN. Hence, try to use the monitors wisely to prevent generating bulk data. Following tags can be used for configuring a specific monitor:
 
  [Sp]:
-  This tag defines the [Sp]ikeMonitor() in brian2. Example:
+  This tag defines the [Sp]ikeMonitor() in Brian2. Example:
 
 ::
 
@@ -149,7 +108,7 @@ tags can be used for configuring a specific monitor:
 The ellipsis represents the predecessor keywords in the line.
 
  [St]:
-  This tag defines the [St]ateMonitor() in brian2. In this case, one should define the target variable in the following way: 
+  This tag defines the [St]ateMonitor() in Brian2. In this case, one should define the target variable in the following way: 
 
 ::
 
@@ -255,10 +214,10 @@ Here's another example for VPM input for the system:
 
 
 
-NeuronGroup()
+Neuron Group
 ---------------
 
-The NeuronGroup()s are defined using the G (as in Group) keyword. This row_type is basically used for defining the NeuronGroup()s in brian2. Following parameters are implemented for defining the NeuronGroup(): 
+The NeuronGroup()s are defined using the G (as in Group) keyword. This row_type is basically used for defining the NeuronGroup()s in Brian2. Following parameters are implemented for defining the NeuronGroup(): 
 
 	:param: **<idx>{int}:** Index of the NeuronGroup().
 
@@ -358,10 +317,10 @@ The center of a NeuronGroup() can be defined with the net-center tag in the *Tit
 	row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors
 	G,2,75,BC,2,5+0j,[Sp]
 
-Synapses()
+Synapses
 ---------------------
 
-S keyword (as in Synapses)  defines the brian2 Synapses() object.  Following parameters are implemented for defining the Synapses():
+S keyword (as in Synapses)  defines the Brian2 Synapses() object.  Following parameters are implemented for defining the Synapses():
 
 
 	:param: **<receptor>{ge,gi}** 
@@ -466,7 +425,7 @@ If both basal dendrite and apical dendrite[0] was being targeted, the syntax sho
 	row_type,receptor,pre_syn_idx,post_syn_idx,syn_type
 	S,ge,0,1[C]0ba,STDP
 
-By default the probability of the synaptic connections are determined based on the distance between the neurons, which depends on sparseness and ilam variables in the brian2_obj_namespaces module. In case the maximum probability of the connection should be overwritten, [p] tag can be used. In the following example the maximum probability of the connection is overwritten as 0.06 (6%): 
+By default the probability of the synaptic connections are determined based on the distance between the neurons, which depends on sparseness and ilam variables in the physiology configuration file. In case the maximum probability of the connection should be overwritten, [p] tag can be used. In the following example the maximum probability of the connection is overwritten as 0.06 (6%): 
 
 ::
 

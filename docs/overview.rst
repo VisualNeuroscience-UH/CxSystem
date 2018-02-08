@@ -3,24 +3,18 @@ Technical Overview
 
 **Selecting Python, C++ or GPU device:**
 
-The device is selected in the config csv file. Set the "device" to either "Python", "Cpp" or "GeNN". The C++ device is a safe bet for most applications.
+The device is selected in the model and network configuration file. Set the "device" to either "Python", "Cpp" or "GeNN" (case insensitive). The Cpp (C++) device is a safe bet for most applications.
 
 **How the CxSystem works:**
 
-One of the strengths of the CxSystem is the ability to dynamically compile the model. This bypasses the traditional way of hard coding much of\
-the model which would limit flexibility. This flexibility comes with some added complexity in the way the CxSystem builds the devices.
+One of the strengths of the CxSystem is the ability to dynamically compile the model. This bypasses the traditional way of hard coding much of the model which would limit flexibility. This flexibility comes with some added complexity in the way the CxSystem builds the devices.
 
-The implemented system employs the Brian2GeNN python module to generate GeNN (GPU enhanced Neuronal Network simulation environment) code \
-for eventually running the brian2 codes on GeNN. In order to understand how this system works, one should initially understand how Brian2GeNN \
-limits brian2. Most of the exclusions are presented in `Brian2GeNN documentation
-<http://brian2genn.readthedocs.io/en/latest/introduction/exclusions.html>`_. Perhaps the most effective limitation is lack of support for using \
-Multiple networks in brian2, i.e. only the *magic network* can be used. Using the *magic network*, only the "visible" objects, that are explicitly \
-defined in the code, will be collected. In other words, any brian2 object that is created in a custom class, will not be collected and will \
-eventually raise an error. We have used two solutions to address this issue, Syntax Bank and Global variables: 
+The implemented system employs the Brian2GeNN python module to generate GeNN (GPU enhanced Neuronal Network simulation environment) code for eventually running the Brian2 codes on GeNN. Note that using the GeNN device, CxSystem (via GeNN) only employs one of the GPUs in the system and therefore cannot be used in cluster. In order to understand how this system works, one should initially understand how Brian2GeNN limits Brian2. Most of the exclusions are presented in `Brian2GeNN documentation
+<http://brian2genn.readthedocs.io/en/latest/introduction/exclusions.html>`_. Perhaps the most effective limitation is lack of support for using Multiple networks in Brian2, i.e. only the *magic network* can be used. Using the *magic network*, only the "visible" objects, that are explicitly defined in the code, will be collected. In other words, any Brian2 object that is created in a custom class, will not be collected and will eventually raise an error. We have used two solutions to address this issue, Syntax Bank and Global variables: 
 
 **- Build a Syntax Bank:**
 
-In this method, a syntax string is built for all brian2 internal objects. These syntaxes are then run after the main object call. \
+In this method, a syntax string is built for all Brian2 internal objects. These syntaxes are then run after the main object call. \
 Suppose the cortical system object is named *CX* and a NeuronGroup() object called *NG* is created in a method inside the *CX*: 
 
 ::
@@ -78,7 +72,7 @@ the main object call. They can be implicitly executed inside the main object and
 in Globals(). Thus, the user does not have to face a manual syntax-executer outside of the main object call. 
 
 Accordingly, most of the *exec* commands inside the main object CxSystem() are creating the required variables and making them visible to \
-*magic network* of brian2 by updating the Globals(). In the following example, the NG0 is put into the Globals():
+*magic network* of Brian2 by updating the Globals(). In the following example, the NG0 is put into the Globals():
 
 ::
 
