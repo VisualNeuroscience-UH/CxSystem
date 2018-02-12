@@ -31,7 +31,7 @@ You also need to add the neuron type to the list of accepted types under the ini
 
 .. code-block:: python
 
-   neuron_reference._celltypes = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM', 'ChC'])
+   neuron_reference._celltypes = array([...existing neuron types..., 'ChC'])
 
 Similarly, add the neuron type also to the list of accepted types under the init of *neuron_parser* (in parameter_parser.py), and create a method for parameter processing. Often, parameters can be used as such in the equations, so the method becomes:
 
@@ -42,7 +42,7 @@ Similarly, add the neuron type also to the list of accepted types under the init
       
 Please note the underscore here before the neuron group name. Now, you can use the name 'ChC' to define the connectivity and biophysical parameters in the CSV configuration files.
 
-Adding an alternative neuron model to an existing group
+Adding alternative neuron models to existing groups
 ```````````````````````````````````````````````````````
 Typically you want to add an alternative neuron model to an existing neuron group. Suppose you wanted to have the adaptive exponential integrate-and-fire model (AdEx) alongside the regular exponential integrate-and-fire model (EIF). You want to flexibly switch between the models using a 0/1 flag in the physiological configuration file. First, you would add the AdEx equations to *neuron_reference*:
 
@@ -70,10 +70,42 @@ Make a similar change to all the neuron groups you want to be affected. Then, ex
    except:
       self.flag_adex = 0
 
-It is a good idea to extract any flag under *try* unless you want it to be always explicitly defined (will cause an error if not defined). In the case of AdEx, also the reset condition needs to be modified here as it is not a part of the equation templates.
+It is a good idea to extract any flag under *try* unless you want it to be always explicitly defined (will cause an error if not defined). In the case of AdEx, also the reset condition needs to be modified here as it is not a part of the equation templates. After these changes, you can use *flag_adex* in the physiological CSV file to switch between the two neuron models.
+
 
 Adding Synapse Model
 ---------------------
+Similarly to adding new neuron groups, you need to add the new synapse types to the lists of accepted types. Suppose you wanted to add a 'Depressing' synapse type (a form of short-term synaptic plasticity). First, in the init of *synapse_reference* (physiology_reference.py):
+
+.. code-block:: python
+
+   synapse_reference.syntypes = array([...existing synapse types..., 'Depressing'])
+
+Then similarly in the init of *synapse_parser* (parameter_parser.py):
+
+.. code-block:: python
+
+   synapse_parser.type_ref = array ([...existing synapse types..., 'Depressing'])
+   
+Equations for the new synapse type can then be added as a method under *synapse_reference*:
+
+.. code-block:: python
+
+    def Depressing(self):
+
+        self.output_synapse['equation'] = Equations('''
+        wght : siemens
+        R : 1
+        ''')
+
+        self.output_synapse['pre_eq'] = '''
+        R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_d))
+        %s += R * U * wght
+        R = R - U * R
+        ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
+
+After these changes, one can use the reference 'Depressing' in the anatomical CSV configuration file when defining connections between neuron groups. Definition of 'Facilitating' synapses could then be added in a similar way.
+
 
 Updating the Documentation
 ---------------------------
