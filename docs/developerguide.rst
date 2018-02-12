@@ -12,6 +12,65 @@ To add the parameters to the configuration files
 
 Adding Neuron Model
 --------------------
+Adding a new neuron group
+`````````````````````````
+Equations for different neuron types are in the class *neuron_reference* in physiology_reference.py. Under this class, there is a separate method for each neuron group containing equation templates. Adding a new neuron group can be done by copy-pasting the method of eg. the BC neuron group and renaming it (ChC for chandelier cell):
+
+.. code-block:: python
+
+   def ChC(self):
+      self.output_neuron['equation'] = Equations('''
+      dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) / C): volt (unless refractory)
+      dge/dt = -ge/tau_e : siemens
+      dgi/dt = -gi/tau_i : siemens
+      ''', ge='ge_soma', gi='gi_soma')
+      self.output_neuron['equation'] += Equations('''x : meter
+                                                     y : meter''')
+
+You also need to add the neuron type to the list of accepted types under the init of *neuron_reference*:
+
+.. code-block:: python
+
+   neuron_reference._celltypes = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM', 'ChC'])
+
+Similarly, add the neuron type also to the list of accepted types under the init of *neuron_parser* (in parameter_parser.py), and create a method for parameter processing. Often, parameters can be used as such in the equations, so the method becomes:
+
+.. code-block:: python
+
+   def _ChC(self, output_neuron):
+      pass
+      
+Please note the underscore here before the neuron group name. Now, you can use the name 'ChC' to define the connectivity and biophysical parameters in the CSV configuration files.
+
+Adding an alternative neuron model to an existing group
+```````````````````````````````````````````````````````
+Typically you want to add an alternative neuron model to an existing neuron group. Suppose you wanted to have the adaptive exponential integrate-and-fire model (AdEx) alongside the regular exponential integrate-and-fire model (EIF). You want to flexibly switch between the models using a 0/1 flag in the physiological configuration file. First, you would add the AdEx equations to *neuron_reference*:
+
+.. code-block:: python
+
+   def BC(self): 
+   
+       self.output_neuron['equation'] = ...default model definition here...
+
+       if self.flag_adex == 1:
+            self.output_neuron['equation'] = Equations('''
+                dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) -w) / C) : volt (unless refractory)
+                dge/dt = -ge/tau_e : siemens
+                dgi/dt = -gi/tau_i : siemens
+                dw/dt = (a*(vm - EL)-w)/tau_w : amp
+                ''', ge='ge_soma', gi='gi_soma')
+
+Make a similar change to all the neuron groups you want to be affected. Then, extract *flag_adex* in the init of *neuron_reference*:
+
+.. code-block:: python
+   try:
+      self.flag_adex = self.value_extractor(self.physio_config_df, 'flag_adex')
+      if self.flag_adex == 1:
+         self.output_neuron['reset'] += '; w=w+'+repr(self.output_neuron['namespace']['b'])
+   except:
+      self.flag_adex = 0
+
+It is a good idea to extract any flag under *try* unless you want it to be always explicitly defined (will cause an error if not defined). In the case of AdEx, also the reset condition needs to be modified here as it is not a part of the equation templates.
 
 Adding Synapse Model
 ---------------------
