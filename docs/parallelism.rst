@@ -40,7 +40,7 @@ When multidimension_array_run flag is set to 0, however, the array_run pattern i
 
 	{scale=1}, {scale=2}, {scale=3}, {do_init_vms=0}, {do_init_vms=1}
 
-One might want to run each of the parallel simulations several times, e.g. to observe an effect of a particular alteration in several runs.
+One might want to run each of the parallel simulations several times, e.g. to observe an effect of random initialization on a particular parameter set.
 For this purpose the *trials_per_config* should be set to number of runs per configuration.
 
 Cluster Run
@@ -51,7 +51,7 @@ In Cluster Run mode, CxSystem connects to a connection node of a cluster via SSH
 Setting up the environment
 ...........................
 
-Before submitting the batch jobs to the cluster with CxSystem, the cluster environment should be properly setup. This includes finding/copying/assigning the Anaconda folder in the Slurm file or environment. In case you are using a custom branch you should as well clone and checkout to that branch otherwise CxSystem will clone itself and try to spawn the processes using the master branch. The parameters that are used for cluster run are as follows:
+Before submitting the batch jobs to the cluster with CxSystem, the cluster environment should be properly set up. This includes finding/copying/assigning the Anaconda folder in the Slurm file or environment. In case you are using a custom branch you should as well clone and checkout to that branch otherwise CxSystem will clone itself and try to spawn the processes using the master branch. The parameters that are used for cluster run are as follows:
 
 ::
 
@@ -75,7 +75,7 @@ This parameter defines the address of the template workload management system fi
    10
 
 Defines how many nodes CxSystem can have access to in the cluster.
-**Important Note: the number of nodes in the cluster workload management system file should be set to 1 and instead the number of nodes should be defined here. The reason for this is that CxSystem submits separate jobs to the cluster. This has some advantages, including less waiting time, and some disadvantages, complexity.** 
+**Important Note: the number of nodes in the cluster workload management system file should be set to 1 and instead the number of nodes should be defined here. The reason for this is that CxSystem submits separate jobs to each node in the cluster. This has some advantages, including less waiting time, and some disadvantages, complexity.** 
 
 ::
 
@@ -109,4 +109,4 @@ Defines the folder in which the results will be copied. In this example, a new f
 Transferring the Results
 .........................
 
-Usually clusters have an option to send users an email when the job is finished and users can transfer the results to their local machine. CxSystem can do this automatically: When a batch job is submitted, beside generating several Slurm files, CxSystem creates a _tmp_checker_data file. This file, which contains information about the current cluster batch job, will be used to check the status of the results in the cluster. If the results are ready, they will be copied to the local result folder. This task can be done by directly running cluster_run.py.
+Usually clusters have an option to send users an email when the job is finished and users can transfer the results to their local machine. CxSystem can do this automatically: When a batch job is submitted, besides generating several Slurm files, CxSystem creates a _tmp_checker_data file. This file, which contains information about the current cluster batch job, will be used to check the status of the results in the cluster. If the results are ready, they will be copied to the local result folder. This task can be done by directly running cluster_run.py.
