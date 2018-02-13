@@ -7,7 +7,32 @@ This section provides a brief guideline for potential contributors.
 Adding parameters
 ------------------
 
-To add the parameters to the configuration files
+The parameters of the Model & Network configuration file are defined and deployed in the main module, i.e. CxSystem.py. There are two steps to add a new parameters:
+
+* **Defining a function:**
+  
+  This is usually a setter function that sets a module attribute using a given attribute:
+
+.. code-block:: python
+
+	def set_sample(self,*args):
+		self.sample = eval(args[0])
+
+In this example, set_sample() will set the sample attribute based on a given argument.
+
+* **Add the parameter name to "*parameter_to_method_mapping*" dictionary:**
+  
+This is where the defined function in the previous step is used: by just appending the variable and function name as a key:value pair to "*parameter_to_method_mapping*" dictionary:
+
+.. code-block:: python
+		
+	{
+	...,
+	'sample_parameter': [n,self.set_sample]}
+
+	
+Where n is the priority value in setting the parameter. The priority value is useful when one wants to define a parameter based on another but they might not be inputted in the correct order. By default, the priority value could follow the last number in the "*parameter_to_method_mapping*" dictionary.
+
 
 
 Adding Neuron Model
@@ -63,6 +88,7 @@ Typically you want to add an alternative neuron model to an existing neuron grou
 Make a similar change to all the neuron groups you want to be affected. Then, extract *flag_adex* in the init of *neuron_reference*:
 
 .. code-block:: python
+		
    try:
       self.flag_adex = self.value_extractor(self.physio_config_df, 'flag_adex')
       if self.flag_adex == 1:

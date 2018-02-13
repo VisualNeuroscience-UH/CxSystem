@@ -47,3 +47,7 @@ Note the following line in the above example:
 
 The key defines the Tau_m of the soma in the BC neuron. The value however, is a formula that uses the other keys of the BC neuron, i.e. C and gL.  
 
+* **comments**: any cell starting with # will be considered as a comment. We recommend to dedicate the fourth column to write a short description of the parameters, or key/value pairs.
+
+**Note:** Unlike network and model configuration file, the variable and key names in physiological configuration files could be set to any desired value that is used in the backend of the CxSystem. Attempts have been made to make the name of the current variable/keys descriptive so to make them understandable. All of the implemented variable/keys can be found in physiological configuration files in the `Github
+<https://github.com/sivanni/CxSystem/tree/master/config_files>`_ page. 
