@@ -138,7 +138,11 @@ Updating the Documentation
 
 Building the documentation locally 
 ````````````````````````````````````
-Building the documentation locally is essential to test the modifications while preventing redundant pushes to the repository. Sphinx is well documented, yet we will provide the essentials for improving the documentation of the CxSystem. First, install the sphinx using:
+Building the documentation locally is essential to test the modifications while preventing redundant pushes to the repository. Sphinx is well documented, yet we will provide the essentials for improving the documentation of the CxSystem. The documentation for reStructuredText is available `here`_.
+
+.. _here: http://www.sphinx-doc.org/en/stable/rest.html
+
+To build the documentation locally in Linux and Mac, first, install the sphinx using:
 
 .. code-block:: bash
 
@@ -151,6 +155,14 @@ When sphinx is installed, you can build the documentation using the following co
    $ cd ./CxSystem/docs && make html 
 
 The local documentation can then be find in *CxSystem/docs/_build/html/index.html*
+
+The procedure for windows systems is similar. First install the Sphinx using:
+
+::
+
+   C:\CxSystem> pip install sphinx
+
+and then :code:`make html` in the :code:`docs` folder will build the documentation locally. 
 
 Mocking modules
 ................
