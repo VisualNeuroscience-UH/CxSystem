@@ -12,7 +12,7 @@ The Model & Network configuration file has two main types of lines:
 
 	row_type,sys_mode,total_synapses
 
-This Titles-line indicates that all the lines between the next line and the next Titles-line have four types of columns:  row_type,sys_mode,\
+This Titles-line indicates that all the lines between the next line and the next Titles-line have three types of columns:  row_type,sys_mode,\
 total_synapses. In the next sections, all of these parameters will be described thoroughly. 
 
 * **Values-line**: These lines define the column values corresponding to column titles in the most recent Titles-line:
@@ -73,7 +73,7 @@ This is the list of configurable run-time variables implemented in the system:
 
 		**<number_of_process>{int}:** Defines the number of processes to be spawned for array run.
 
-		**<multidimension_array_run>{1,0}:** Defines whether the array run is multi-dimensional or single dimension.
+		**<multidimension_array_run>{1,0}:** Defines whether the array run is multi-dimensional or one-dimensional. In one-dimensional array run, each set of parameters is run separately, while the other set is fixed. In multidimensional run, the full matrix of parameter combinations are run.
 
 		**<trials_per_config>{int}:** Defines the number of trials for each simulation in the array run.
 
@@ -164,9 +164,9 @@ positions). Each of the inputs have their specific keywords in the configuration
 
 		**<type>:** VPM
 
-		**<number_of_neurons>{int}:** number of thalamocortical micro-fibers.
+		**<number_of_neurons>{int}:** number of thalamocortical fibers.
 
-		**<radius>{int*unit}:** Total radius of all thalamocortical micro-fibers, e.g. 60*um.
+		**<radius>{int*unit}:** Total radius of all thalamocortical fibers, e.g. 60*um.
 
 		**<spike_times>{int*unit}:** stimulation spike timing, e.g. 0.5*ms means a stimulation every 0.5ms.
 
@@ -202,7 +202,7 @@ This is an example of defining a video input for the system:
 	row_type,idx,type,path,freq,monitors
 	IN,0,video, ./V1_input_layer_2015_10_30_11_7_31.mat ,190*Hz ,[Sp]
 
-In this example an input NeuronGroup() with index 0 is created based on the *V1_inpu.mat* file with a frequency of 190*Hz and a SpikeMonitor() is set on it.
+In this example an input NeuronGroup() with index 0 is created based on the *V1_input_layer_2015_10_30_11_7_31.mat* file with a frequency of 190*Hz and a SpikeMonitor() is set on it.
 Here's another example for VPM input for the system:
 
 ::
@@ -221,7 +221,7 @@ The NeuronGroup()s are defined using the G (as in Group) keyword. This row_type 
 
 		**<number_of_neurons>{int}:** Number of neurons in the NeuronGroup(). 
 
-		**<neuron_type>{L1i,PC,BC,MC,SS}:** cell category of the NeuronGroup().
+		**<neuron_type>{L1i,PC,BC,MC,SS}:** basic biophysical neuron category of the NeuronGroup().
 
 		**<layer_idx>:** Layer index of the cell groups. 
 
@@ -229,11 +229,11 @@ The NeuronGroup()s are defined using the G (as in Group) keyword. This row_type 
 
 		**[reset]:** reset value for the neurons in the NeuronGroup().
 
- 		**[refractory]:** reset value for the neurons in the NeuronGroup().
+ 		**[refractory]:** refractory time for the neurons in the NeuronGroup().
 
  		**[net_center]:** center location of the NeuronGroup().
 
- 		**[monitors]:** center location of the NeuronGroup().
+ 		**[monitors]:** monitors of the NeuronGroup().
 
 Examples
 ~~~~~~~~~
@@ -255,7 +255,7 @@ The *<neuron_type>* is the category of the cells of the group, which is one of t
 +------+------------------------+
 | PC   | Pyramidal              |
 +------+------------------------+
-| BC   | Pyramidal              |
+| BC   | Basket                 |
 +------+------------------------+
 | MC   | Martinotti             |
 +------+------------------------+
@@ -270,7 +270,7 @@ The *<layer index>* argument defines the layer in which the NeuronGroup() is loc
 	row_type,idx,number_of_neurons,neuron_type,layer_idx
 	G,1,46,SS,2
 
-Currently PC cells are the only multi-compartmental neurons that could possibly cover more than one layer. In this case, the layer index should be defined as a list where the first element defines the soma location and the second element defines the farthest apical dendrite compartment. In the following example, a PC group of 55 neurons is defined in which the basal dendrites, soma and proximal apical dendrite is located in layer 6 and the apical dendrites covers layer layer 5 to 2: 
+Currently PC cells are the only multi-compartmental neurons that could possibly cover more than one layer. In this case, the layer index should be defined as a list where the first element defines the soma location and the second element defines the farthest apical dendrite compartment. In the following example, a PC group of 55 neurons is defined in which the basal dendrites, soma and proximal apical dendrite is located in layer 6 and the apical dendrites covers layer 5 to 2: 
 
 ::
 
@@ -344,9 +344,9 @@ S keyword (as in Synapses)  defines the Brian2 Synapses() object.  Following par
  
 
 where the *<receptor>* defines the receptor type, i.e. ge for excitatory and gi for inhibitory connections, \
-*<presynaptic group index>* and *<postsynaptic group index>* defines the index of the presynaptic and postsynaptic group\
+*<presynaptic group index>* and *<postsynaptic group index>* defines the index of the presynaptic and postsynaptic group \
 respectively. These indices should be determined using the *indexing tag* in the NeuronGroup()s lines. The next \
-field defines the type of the synapse. Currently there are three types of Synapses() implemented: Fixed and STDP and \
+field defines the type of the synapse. Currently there are three types of Synapses() implemented: Fixed, STDP and \
 STDP_with_scaling.
 
 Examples
@@ -378,7 +378,7 @@ Clearly NeuronGroup() 0 is group of 46 SS cells and NeuronGroup() 1 is a group o
 +======+===================+======+
 |  2   | Apical dendrite[2]| 1    |
 +------+-------------------+------+
-| 1    | Apical dendrite[1]|3/2   |
+| 1    | Apical dendrite[1]|2/3   |
 +------+-------------------+------+
 | 0    |Apical dendrite[0] | 4    |
 +------+-------------------+------+
@@ -427,14 +427,14 @@ If both basal dendrite and apical dendrite[0] was being targeted, the syntax sho
 	row_type,receptor,pre_syn_idx,post_syn_idx,syn_type
 	S,ge,0,1[C]0ba,STDP
 
-By default the probability of the synaptic connections are determined based on the distance between the neurons, which depends on sparseness and ilam variables in the physiology configuration file. In case the maximum probability of the connection should be overwritten, [p] tag can be used. In the following example the maximum probability of the connection is overwritten as 0.06 (6%): 
+By default the probability of the synaptic connections are determined based on the distance between the neurons, which depends on sparseness and ilam (space constant lambda) variables in the physiology configuration file. In case the maximum probability of the connection should be overwritten, [p] tag can be used. In the following example the maximum probability of the connection is overwritten as 0.06 (6%): 
 
 ::
 
 	row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p
 	S,ge,0,1[C]0ba,STDP,0.06
 
-By default the number of connections that happens between a pair of neurons is also equal to 1. This can also be overwritten to another integer value by using the [n] tag. So, for having a probability of 6% over 3 connection per pair of neuron: 
+By default there are only one synapse for each connection between neurons. This can also be overwritten to another integer value by using the [n] tag. So, for having a probability of 6% and 3 synapses per connection between two neurons: 
 
 ::
 
