@@ -25,7 +25,7 @@ Contents:
    introduction
    overview
    installation
-   config_tutorial
+   configs
    parallelism
    examples
    developerguide
