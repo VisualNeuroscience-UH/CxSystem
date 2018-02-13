@@ -3,9 +3,11 @@ Technical Overview
 
 **Selecting Python, C++ or GPU device:**
 
-The device is selected in the model and network configuration file. Set the "device" to either "Python", "Cpp" or "GeNN" (case insensitive). The Cpp (C++) device is a safe bet for most applications.
+The device is selected in the model and network configuration file. Set the "device" to either "Python", "Cpp" or "GeNN" (case insensitive). The Cpp (C++) device is a safe bet for most applications. Python skips compilation, and may be best for minor systems or when devices run into problems. GeNN may be beneficial for long non-array runs. 
 
 **How the CxSystem works:**
+
+The CxSystem starts by calling the main object CxSystem() in python 2.7 interpreter. At the end of this file, user can name the configuration files which are instructing the system. 
 
 One of the strengths of the CxSystem is the ability to dynamically compile the model. This bypasses the traditional way of hard coding much of the model which would limit flexibility. This flexibility comes with some added complexity in the way the CxSystem builds the devices.
 
@@ -67,8 +69,8 @@ And similar prefixes for monitors:
 **- Update Globals():**
 
 Although mentioned as a dangerous method in the literature, updating the Globals() directly, is a practical approach in our case. This method  \
-uses aforementioned prefixes and corresponding variables. However, the variables does not have to *wait* inside the syntax bank to be run after \
-the main object call. They can be implicitly executed inside the main object and still become "visible" to the magic network by putting them \
+uses aforementioned prefixes and corresponding variables. However, the variables do not need to *wait* inside the syntax bank to be run after \
+the main object, CxSystem(), call. They can be implicitly executed inside the main object and still become "visible" to the magic network because they are \
 in Globals(). Thus, the user does not have to face a manual syntax-executer outside of the main object call. 
 
 Accordingly, most of the *exec* commands inside the main object CxSystem() are creating the required variables and making them visible to \
