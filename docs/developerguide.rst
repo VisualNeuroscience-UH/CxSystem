@@ -7,7 +7,7 @@ This section provides a brief guideline for potential contributors.
 Adding parameters
 ------------------
 
-The parameters of the Model & Network configuration file are defined and deployed in the main module, i.e. CxSystem.py. There are two steps to add a new parameters:
+The parameters of the Model & Network configuration file are defined and deployed in the main module, i.e. CxSystem.py. There are two steps to add a new parameter:
 
 * **Defining a function:**
   
@@ -31,7 +31,7 @@ This is where the defined function in the previous step is used: by just appendi
 	'sample_parameter': [n,self.set_sample]}
 
 	
-Where n is the priority value in setting the parameter. The priority value is useful when one wants to define a parameter based on another but they might not be inputted in the correct order. By default, the priority value could follow the last number in the "*parameter_to_method_mapping*" dictionary.
+Where n is the priority value in setting the parameter. The priority value is useful when one wants to define a parameter based on another but they might not be inserted in the correct order. By default, the priority value could follow the last number in the "*parameter_to_method_mapping*" dictionary.
 
 
 
