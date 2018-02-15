@@ -7,7 +7,7 @@ This section provides a brief guideline for potential contributors.
 Adding parameters
 ------------------
 
-The parameters of the Model & Network configuration file are defined and deployed in the main module, i.e. CxSystem.py. There are two steps to add a new parameter:
+The parameters of the Model & Network configuration file are defined and deployed in the main module, i.e. :code:`CxSystem.py`. There are two steps to add a new parameter:
 
 * **Defining a function:**
   
@@ -18,11 +18,11 @@ The parameters of the Model & Network configuration file are defined and deploye
 	def set_sample(self,*args):
 		self.sample = eval(args[0])
 
-In this example, set_sample() will set the sample attribute based on a given argument.
+In this example, :code:`set_sample()` will set the sample attribute based on a given argument.
 
 * **Add the parameter name to "*parameter_to_method_mapping*" dictionary:**
   
-This is where the defined function in the previous step is used: by just appending the variable and function name as a key:value pair to "*parameter_to_method_mapping*" dictionary:
+This is where the defined function in the previous step is used: by just appending the variable and function name as a key:value pair to :code:`parameter_to_method_mapping` dictionary:
 
 .. code-block:: python
 		
@@ -31,9 +31,18 @@ This is where the defined function in the previous step is used: by just appendi
 	'sample_parameter': [n,self.set_sample]}
 
 	
-Where n is the priority value in setting the parameter. The priority value is useful when one wants to define a parameter based on another but they might not be inserted in the correct order. By default, the priority value could follow the last number in the "*parameter_to_method_mapping*" dictionary.
+Where :code:`n` is the priority value in setting the parameter. The priority value is useful when one wants to define a parameter based on another but they might not be inserted in the correct order. By default, the priority value could follow the last number in the :code:`parameter_to_method_mapping` dictionary. The priority value does not need to be unique, two values could have the same priority and they run one after another. For example:
 
+.. code-block:: python
 
+	    self.parameter_to_method_mapping = {
+	    'device': [0,self.set_device],
+            'save_generated_video_input_flag': [1,self.save_generated_video_input_flag],
+	    }
+
+	    
+Here, :code:`save_generated_Video_input_flag` will be set using :code:`self.save_generated_video_input_flag` after :code:`device`, that is set using :code:`self.set_device`. 
+	    
 
 Adding Neuron Model
 --------------------
@@ -58,7 +67,7 @@ You also need to add the neuron type to the list of accepted types under the ini
 
    neuron_reference._celltypes = array([...existing neuron types..., 'ChC'])
 
-Similarly, add the neuron type also to the list of accepted types under the init of *neuron_parser* (in parameter_parser.py), and create a method for parameter processing. Often, parameters can be used as such in the equations, so the method becomes:
+Similarly, add the neuron type also to the list of accepted types under the init of :code:`neuron_parser` (in :code:`parameter_parser.py`), and create a method for parameter processing. Often, parameters can be used as such in the equations, so the method becomes:
 
 .. code-block:: python
 
@@ -69,7 +78,7 @@ Please note the underscore here before the neuron group name. Now, you can use t
 
 Adding alternative neuron models to existing groups
 ```````````````````````````````````````````````````````
-Typically you want to add an alternative neuron model to an existing neuron group. Suppose you wanted to have the adaptive exponential integrate-and-fire model (AdEx) alongside the regular exponential integrate-and-fire model (EIF). You want to flexibly switch between the models using a 0/1 flag in the physiological configuration file. First, you would add the AdEx equations to *neuron_reference*:
+Typically you want to add an alternative neuron model to an existing neuron group. Suppose you wanted to have the adaptive exponential integrate-and-fire model (AdEx) alongside the regular exponential integrate-and-fire model (EIF). You want to flexibly switch between the models using a 0/1 flag in the physiological configuration file. First, you would add the AdEx equations to :code:`neuron_reference`:
 
 .. code-block:: python
 
@@ -85,7 +94,7 @@ Typically you want to add an alternative neuron model to an existing neuron grou
                 dw/dt = (a*(vm - EL)-w)/tau_w : amp
                 ''', ge='ge_soma', gi='gi_soma')
 
-Make a similar change to all the neuron groups you want to be affected. Then, extract *flag_adex* in the init of *neuron_reference*:
+Make a similar change to all the neuron groups you want to be affected. Then, extract :code:`flag_adex` in the init of :code:`neuron_reference`:
 
 .. code-block:: python
 		
@@ -96,12 +105,12 @@ Make a similar change to all the neuron groups you want to be affected. Then, ex
    except:
       self.flag_adex = 0
 
-It is a good idea to extract any flag under *try* unless you want it to be always explicitly defined (will cause an error if not defined). In the case of AdEx, also the reset condition needs to be modified here as it is not a part of the equation templates. After these changes, you can use *flag_adex* in the physiological CSV file to switch between the two neuron models.
+It is a good idea to extract any flag under :code:`try` unless you want it to be always explicitly defined (will cause an error if not defined). In the case of AdEx, also the reset condition needs to be modified here as it is not a part of the equation templates. After these changes, you can use :code:`flag_adex` in the physiological CSV file to switch between the two neuron models.
 
 
 Adding Synapse Model
 ---------------------
-Similarly to adding new neuron groups, you need to add the new synapse types to the lists of accepted types. Suppose you wanted to add a 'Depressing' synapse type (a form of short-term synaptic plasticity). First, in the init of *synapse_reference* (physiology_reference.py):
+Similarly to adding new neuron groups, you need to add the new synapse types to the lists of accepted types. Suppose you wanted to add a 'Depressing' synapse type (a form of short-term synaptic plasticity). First, in the init of :code:`synapse_reference` (:code:`physiology_reference.py`):
 
 .. code-block:: python
 
@@ -171,6 +180,6 @@ and then :code:`make html` in the :code:`docs` folder will build the documentati
 Mocking modules
 ```````````````
 
-The auto-generated API using Sphinx tries to import the entire module hierarchy. This is not an issue when the document is built locally. However, not all the modules are available online in readthedocs website and therefore the online build will fail to generate the reference documentation. To address this issue, any imported module which is not part of the CxSystem must be added to *autodoc_mock_imports* list in CxSystem/docs/conf.py. 
+The auto-generated API using Sphinx tries to import the entire module hierarchy. This is not an issue when the document is built locally. However, not all the modules are available online in readthedocs website and therefore the online build will fail to generate the reference documentation. To address this issue, any imported module which is not part of the CxSystem must be added to :code:`autodoc_mock_imports` list in :code:`CxSystem/docs/conf.py`. 
 
 

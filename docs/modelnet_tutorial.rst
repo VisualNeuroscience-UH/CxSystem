@@ -74,15 +74,15 @@ This is the list of configurable run-time variables implemented in the system:
 
 		:code:`load_positions_only{1,0}`: Defines whether the positions are only to be loaded from the data file, i.e. flag set to 1, or both positions and synaptic connections, i.e. flag is set to 0.
 
-		:code:`do_benchmark{1,0}`: Defines whether the benchmark is to be performed during the simulation.
+		:code:`do_benchmark{1,0}`: Defines whether the full benchmark is to be performed during the simulation. This benchmark, that was used for preparing the data for the CxSystem paper, is high probably not useful for non-developer users since it needs modified copy of brian2 library. 
 
-		:code:`save_generated_video_input_flag{1,0}`: Defines whether the generated video input is to be saved or not.
+		:code:`save_generated_video_input_flag{1,0}`: Defines whether the generated video input is to be saved or not. This is essential in case the users wants to use the identical input on different runs, so the input can be saved by setting this to 1 and used later. 
 
 		:code:`number_of_process{int}`: Defines the number of processes to be spawned for array run.
 
 		:code:`multidimension_array_run{1,0}`: Defines whether the array run is multi-dimensional or one-dimensional. In one-dimensional array run, each set of parameters is run separately, while the other set is fixed. In multidimensional run, the full matrix of parameter combinations are run.
 
-		:code:`trials_per_config{int}`: Defines the number of trials for each simulation in the array run.
+		:code:`trials_per_config{int}`: Defines the number of trials for each simulation. Both in array-runs and single runs, if this flag is set, each of the runs will be repeated that number of times.
 
 		:code:`run_in_cluster{0,1}` Defines whether the current run is going to be submitted to the cluster (this parameter has several parameters associated with it, more details are available in parallelism section of the documentation).
 
@@ -321,7 +321,13 @@ By default following values are assigned to threshold, reset and refractory of a
 - *reset*: :code:`vm=V_res`
 - *refractory*: :code:`4 * ms`
 
-Any of this variables can be overwritten by using the keyword arguments *threshold*, reset and *refractory*.  
+Any of these variables could be overwritten by using the keyword arguments *threshold*, reset and *refractory*: 
+
+ .. csv-table::
+    :widths: 10, 5, 10, 10, 10, 10
+
+	row_type,idx,number_of_neurons,neuron_type,layer_idx,refractory
+	G,2,75,BC,2,6*ms 
 
 
 :code:`[net_center]`:
@@ -364,8 +370,7 @@ S keyword (as in Synapses)  defines the Brian2 Synapses() object.  Following par
 where the :code:`receptor` defines the receptor type, i.e. ge for excitatory and gi for inhibitory connections, \
 *<presynaptic group index>* and *<postsynaptic group index>* defines the index of the presynaptic and postsynaptic group \
 respectively. These indices should be determined using the *indexing tag* in the :code:`NeuronGroup()`s lines. The next \
-field defines the type of the synapse. Currently there are three types of :code:`Synapses()` implemented: Fixed, STDP and \
-STDP_with_scaling.
+field defines the type of the synapse. Currently there are three types of :code:`Synapses()` implemented: Fixed, STDP, STDP_with_scaling and STP.
 
 Examples
 ~~~~~~~~
@@ -416,7 +421,7 @@ The :code:`synapses()` object is targeting the 1st compartment of the :code:`PC`
 	S,ge,0,1[C]0bsa,STDP
 
 
-As you can see, the compartment :code:`[C]0` is followed by three characters *bsa*. This indicates that the among the three sub-compartments inside the compartment number 0, i.e. Basal dendrite, Soma and Apical dendrite[0], letters of b,s and a are being targeted. Regardless of the layer, the indices of these three compartments are always as:
+As you can see, the compartment :code:`[C]0` is followed by three characters *bsa*. This indicates that the among the three sub-compartments inside the compartment number 0, i.e. Basal dendrite, Soma and Apical dendrite[0], letters of b,s and a are being targeted. Regardless of the layer, the indices of these three compartments are always as (case insensitive):
 
  .. csv-table::
     :widths: 5, 5
@@ -461,27 +466,4 @@ By default there are only one synapse for each connection between neurons. This 
 
 	row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p,n
 	S,ge,0,1[C]0ba,STDP,0.06,3 
-
-
-When the system is in :code:`local` mode and do_optimize flag is 1, it is needed to define the percentage of all synapses. For instance when the total number of synapses in the system is 10000 and a synaptic group takes 20% of the connections: 
-
- .. csv-table::
-    :widths: 5, 5, 5, 5, 5, 5
-
-	row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,percentage 
-	S,ge,0,1[C]0ba,STDP,0.2
-
-	
-This will optimize the probability of that synaptic connection in a way to have 0.2 * 10000 synapses. One might want to have multiple synapse per connection between two :code:`NeuronGroup()`s. This is defined in the following example using the 'n' keyword in the :code:`Titles-line`:
-
-
- .. csv-table::
-    :widths: 5, 5, 5, 5, 5, 5, 5
-
-	row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,n,percentage 
-	S,ge,0,1[C]0ba,STDP,4,0.2
-
-	
-This example will optimize the probability of the connection in a way that there are 0.2*10000/4 connections and there are 4 synapses for each connection between the :code:`NeuronGroup()` s. 
- 
 

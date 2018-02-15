@@ -859,13 +859,13 @@ class CxSystem(object):
                         if any(self.current_parameters_list.str.contains('n')):
                             tmp_args[index_of_n] = _current_ns[idx] if \
                                 str(tmp_args[index_of_n])!= '--' else '--'
-                        if tmp_idx == 'b':
+                        if tmp_idx.lower() == 'b':
                             tmp_args.append('_basal')
                             triple_args.append(tmp_args)
-                        elif tmp_idx == 's':
+                        elif tmp_idx.lower() == 's':
                             tmp_args.append('_soma')
                             triple_args.append(tmp_args)
-                        elif tmp_idx == 'a':
+                        elif tmp_idx.lower() == 'a':
                             tmp_args.append('_a0')
                             triple_args.append(tmp_args)
                     self.current_values_list = triple_args

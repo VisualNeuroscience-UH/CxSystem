@@ -8,6 +8,12 @@ under the terms of the GNU General Public License.
 Copyright 2017 Vafa Andalibi, Henri Hokkanen and Simo Vanni.
 '''
 
+def import_or_install(package):
+    try:
+        __import__(package)
+    except ImportError:
+        pip.main(['install', package])
+
 import pip
 import sys
 import CxSystem as CX
@@ -23,6 +29,8 @@ import cPickle as pickle
 import sys
 import itertools
 import getpass
+import_or_install('paramiko')
+import_or_install('scp')
 import paramiko
 from scp import SCPClient
 
@@ -53,6 +61,10 @@ class cluster_run(object):
         except NameError:
             self.username = raw_input('username: ')
         self.password = getpass.getpass('password: ')
+        try:
+            self.local_result_path = self.parameter_finder(array_run_obj.anatomy_df,'local_output_folder')
+        except NameError:
+            raise Exception("Local output folder must be define to transfer the result to local computer.")
 
         self.client = paramiko.SSHClient()
         self.client.load_system_host_keys()
