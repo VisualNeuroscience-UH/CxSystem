@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 __author__ = 'Andalibi, V., Hokkanen H., Vanni, S.'
 
@@ -7,12 +8,6 @@ and the full version at the University of Helsinki 2013-2017. The software is di
 under the terms of the GNU General Public License. 
 Copyright 2017 Vafa Andalibi, Henri Hokkanen and Simo Vanni.
 '''
-
-def import_or_install(package):
-    try:
-        __import__(package)
-    except ImportError:
-        pip.main(['install', package])
 
 import pip
 import sys
@@ -29,8 +24,6 @@ import cPickle as pickle
 import sys
 import itertools
 import getpass
-import_or_install('paramiko')
-import_or_install('scp')
 import paramiko
 from scp import SCPClient
 
@@ -39,33 +32,34 @@ class cluster_run(object):
     def __init__(self,array_run_obj, anat_file_address,physio_file_address):
         if not os.path.exists('./_cluster_tmp'.replace('/',os.sep)):
             os.mkdir('./_cluster_tmp'.replace('/',os.sep))
-        # with open('./_cluster_tmp/array_run_obj.pkl','wb') as fbb:
-        #     pickle.dump(array_run_obj,fbb,pickle.HIGHEST_PROTOCOL)
         self.output_path_and_filename = self.parameter_finder(array_run_obj.anatomy_df, 'output_path_and_filename')
         try:
             self.remote_output_folder = self.parameter_finder(array_run_obj.anatomy_df, 'remote_output_folder')
         except NameError:
-            print " -    remote_output_folder is not defined in the configuration file, the default path is ./results [in cluster]"
-            self.remote_output_folder = "./results"
+            # print " -    remote_output_folder is not defined in the configuration file, the default path is ./results [in cluster]"
+            raise Exception("remote_output_folder is not defined for running CxSystem on cluster")
+            # self.remote_output_folder = "./results"
+        assert not str.startswith(self.remote_output_folder,'.'),"remote_output_folder must be an absolute path"
         try:
             self.remote_repo_path = self.parameter_finder(array_run_obj.anatomy_df, 'remote_repo_path')
         except NameError:
-            print " -    remote_repo_path is not defined in the configuration file, the default value is home directory ~"
-            self.remote_repo_path = "."
+            # print " -    remote_repo_path is not defined in the configuration file, the default value is home directory ~"
+            # self.remote_repo_path = "."
+            raise Exception("remote_repo_path is not defined for running CxSystem on cluster")
+        assert not str.startswith(self.remote_repo_path,'.'),"remote_repo_path must be an apsolute path"
         try:
             self.cluster_address = self.parameter_finder(array_run_obj.anatomy_df, 'cluster_address')
         except NameError:
             raise Exception("cluster_address is not defined for running CxSystem on cluster")
         try:
+            self.local_result_path = self.parameter_finder(array_run_obj.anatomy_df,'local_output_folder')
+        except NameError:
+            raise Exception("Local output folder must be define to transfer the result to local computer.")
+        try:
             self.username = self.parameter_finder(array_run_obj.anatomy_df, 'username')
         except NameError:
             self.username = raw_input('username: ')
         self.password = getpass.getpass('password: ')
-        try:
-            self.local_result_path = self.parameter_finder(array_run_obj.anatomy_df,'local_output_folder')
-        except NameError:
-            raise Exception("Local output folder must be define to transfer the result to local computer.")
-
         self.client = paramiko.SSHClient()
         self.client.load_system_host_keys()
         self.client.set_missing_host_key_policy(paramiko.WarningPolicy)
@@ -103,7 +97,7 @@ class cluster_run(object):
                             item,array_run_obj.clipping_indices[item_idx+1]-array_run_obj.clipping_indices[item_idx]))
                     except IndexError:
                         sl2.write('python CxSystem.py _tmp_anat_config.csv _tmp_physio_config.csv %d %d\n' % (
-                        item, array_run_obj.total_configs - array_run_obj.clipping_indices[item_idx]))
+                            item, array_run_obj.total_configs - array_run_obj.clipping_indices[item_idx]))
                     # sl2.write('wait\n')
             scp.put('./_cluster_tmp/_tmp_slurm_%d.job'.replace('/',os.sep)%item_idx, self.remote_repo_path + '/_tmp_slurm_%d.job'%item_idx)
         print " -  Slurm file generated and copied to cluster"
