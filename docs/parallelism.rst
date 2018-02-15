@@ -8,10 +8,10 @@ Array Runs
 Array run (Parallel runs) can be set using the curly braces around the target parameter. For instance, to run 3 separate simulations\
 with scale=1, scale=2 and scale=3, the parameter scale should be set to:
 
-::
+ .. csv-table:: 
 
 	...,scale,...
-	...,{1,2,3},...
+	...,{1&2&3},...
 
 This parallel run will use the number of processes (threads) that is set using the number_of_process parameter, e.g. if number_of_process=3, \
 then each of the 3 simulations runs in their own threads. However, if number_of_process=2, two processes run first the \
@@ -19,7 +19,7 @@ simulation for scale=1, and scale=2. The third simulation with scale=3 will star
 
 The array_run could also be set in range with defined step:
 
-::
+ .. csv-table:: 
 
 	...,scale,...
 	...,{1|5|1},...
@@ -53,15 +53,15 @@ Setting up the environment
 
 Before submitting the batch jobs to the cluster with CxSystem, the cluster environment should be properly set up. This includes finding/copying/assigning the Anaconda folder in the Slurm file or environment. In case you are using a custom branch you should as well clone and checkout to that branch otherwise CxSystem will clone itself and try to spawn the processes using the master branch. The parameters that are used for cluster run are as follows:
 
-::
 
-  
+ .. csv-table::
+
    run_in_cluster
    1
 
 which triggers the cluster run. 
 
-::
+ .. csv-table::
    
    cluster_job_file_path
    ./slurm.job
@@ -69,7 +69,7 @@ which triggers the cluster run.
 This parameter defines the address of the template workload management system file. In this case the a template for Slurm system is made available in the Github page which can be used for any cluster that utilizes the Slurm. In case the cluster of choice uses another workload management system, the template file should be specified in the configuration file.
 
 
-::
+ .. csv-table:: 
    
    cluster_number_of_nodes
    10
@@ -77,28 +77,28 @@ This parameter defines the address of the template workload management system fi
 Defines how many nodes CxSystem can have access to in the cluster.
 **Important Note: the number of nodes in the cluster workload management system file should be set to 1 and instead the number of nodes should be defined here. The reason for this is that CxSystem submits separate jobs to each node in the cluster. This has some advantages, including less waiting time, and some disadvantages, complexity.** 
 
-::
+ .. csv-table:: 
 
    cluster_address
    taito.csc.fi
 
 Defines the URL of the cluster.
 
-::
+ .. csv-table:: 
 
    username
    johnsmith
 
 Defines the username for the SSH connection.
 
-::
+ .. csv-table:: 
 
    remote_repo_path
    ./CxSystem
 
 Defines the path of the CxSystem in the connection node of the cluster. In this example *./CxSystem* indicates that the CxSystem clone exists in the home folder, i.e. *~/*, in the connection node. If the repository clone does not exist there, then the latest version will be cloned and used. As mentioned earlier, in case the user is using a specific branch, CxSystem should be cloned and checked out manually. Otherwise the user can rely on CxSystem cloning itself in the connection node.
 
-::
+  .. csv-table:: 
 
    remote_output_folder
    ./results

@@ -154,7 +154,11 @@ When sphinx is installed, you can build the documentation using the following co
 
    $ cd ./CxSystem/docs && make html 
 
-The local documentation can then be find in *CxSystem/docs/_build/html/index.html*
+After compiling the documentation, you can open the updated local documentation by opening the following file in the browser:
+
+.. code-block:: bash 
+
+   ~/CxSystem/docs/_build/html/index.html
 
 The procedure for windows systems is similar. First install the Sphinx using:
 
@@ -165,7 +169,7 @@ The procedure for windows systems is similar. First install the Sphinx using:
 and then :code:`make html` in the :code:`docs` folder will build the documentation locally. 
 
 Mocking modules
-................
+```````````````
 
 The auto-generated API using Sphinx tries to import the entire module hierarchy. This is not an issue when the document is built locally. However, not all the modules are available online in readthedocs website and therefore the online build will fail to generate the reference documentation. To address this issue, any imported module which is not part of the CxSystem must be added to *autodoc_mock_imports* list in CxSystem/docs/conf.py. 
 
