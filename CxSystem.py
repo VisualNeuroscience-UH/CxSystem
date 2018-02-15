@@ -14,8 +14,8 @@ from brian2 import *
 import brian2genn
 import os
 import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
+# reload(sys)
+# sys.setdefaultencoding('utf-8')
 from physiology_reference import *
 from matplotlib.pyplot import  *
 from save_data import *

@@ -30,8 +30,7 @@ from scp import SCPClient
 class cluster_run(object):
 
     def __init__(self,array_run_obj, anat_file_address,physio_file_address):
-        if not os.path.exists('./_cluster_tmp'.replace('/',os.sep)):
-            os.mkdir('./_cluster_tmp'.replace('/',os.sep))
+
         self.output_path_and_filename = self.parameter_finder(array_run_obj.anatomy_df, 'output_path_and_filename')
         try:
             self.remote_output_folder = self.parameter_finder(array_run_obj.anatomy_df, 'remote_output_folder')
@@ -68,11 +67,13 @@ class cluster_run(object):
         scp = SCPClient(self.client.get_transport())
         if 'CxSystem.py' in self.ssh_commander('cd %s;ls'%self.remote_repo_path,0): # path is to CxSystem folder
             pass
-        elif 'CxSystem' in self.ssh_commander('cd %s;ls'%self.remote_repo_path,0): # path is to CxSystem root folder
+        elif 'CxSystem' in self.ssh_commander('cd %s;ls'%self.remote_repo_path,0) and not '/CxSystem' in self.ssh_commander('cd %s;ls'%self.remote_repo_path,0): # path is to CxSystem root folder
+            print " -  CxSystem folder confimed in the remote ..."
             self.remote_repo_path = os.path.join(self.remote_repo_path, 'CxSystem')
         else: # no CxSystem ==> cloning the repo
             if self.remote_repo_path.endswith('CxSystem'):
-                self.remote_repo_path = self.remote_repo_path.rstrip('/CxSystem')
+                self.remote_repo_path = self.remote_repo_path.rstrip('CxSystem')
+            print " -  Cloning the CxSystem in cluster ... "
             self.ssh_commander('mkdir %s;cd %s;git clone https://github.com/sivanni/CxSystem' % (self.remote_repo_path,self.remote_repo_path),0)
             self.remote_repo_path = self.remote_repo_path +  '/CxSystem'
             print " -  CxSystem cloned in cluster."
@@ -84,7 +85,9 @@ class cluster_run(object):
                   "\nNote that the number of nodes in default slurm file should always be set to 1. Instead you should enter the number of nodes in the CxSystem network config file. "
                   "\nAlso the default number of CPUs=16 does not need to be changed most of the times. "
                   "\nPress a key to contiue ...")
-
+        if not os.path.exists('./_cluster_tmp'.replace('/',os.sep)):
+            os.mkdir('./_cluster_tmp'.replace('/',os.sep))
+            print " -  _cluster_tmp folder created locally to keep the necessary information for retrieving the results in the future."
         # building slurm :
         for item_idx, item in enumerate(array_run_obj.clipping_indices):
             with open("./slurm.job".replace('/',os.sep),'r') as sl1:
