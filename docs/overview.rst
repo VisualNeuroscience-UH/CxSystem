@@ -7,7 +7,7 @@ The device is selected in the model and network configuration file. Set the "dev
 
 **How the CxSystem works:**
 
-The CxSystem starts by calling the main object CxSystem() in python 2.7 interpreter. At the end of this file, user can name the configuration files which are instructing the system. 
+The CxSystem starts by calling the main object :code:`CxSystem()` in python 2.7 interpreter. At the end of this file, user can name the configuration files which are instructing the system. 
 
 One of the strengths of the CxSystem is the ability to dynamically compile the model. This bypasses the traditional way of hard coding much of the model which would limit flexibility. This flexibility comes with some added complexity in the way the CxSystem builds the devices.
 
@@ -17,7 +17,7 @@ The implemented system employs the Brian2GeNN python module to generate GeNN (GP
 **- Build a Syntax Bank:**
 
 In this method, a syntax string is built for all Brian2 internal objects. These syntaxes are then run after the main object call. \
-Suppose the cortical system object is named *CX* and a NeuronGroup() object called *NG* is created in a method inside the *CX*: 
+Suppose the cortical system object is named *CX* and a :code:`NeuronGroup()` object called *NG* is created in a method inside the *CX*: 
 
 ::
 
@@ -36,45 +36,44 @@ objects of a syntax should be saved in syntax_bank as well. For instance, the la
 Hence, before running the *syn1*, one should initially run the syntax for *eqs* object. 
 
 This method has a fundamental limitation: first, the syntax bank should run in a hierarchical manner. In previous example, the syntax for *eqs* \
-should be run before *syn1*. Similarly, NeuronGroup() syntaxes should be run before Synapses() and synapses.connect() should be run after Synapses(). \
+should be run before *syn1*. Similarly, :code:`NeuronGroup()` syntaxes should be run before :code:`Synapses()` and :code:`synapses.connect()` should be run after :code:`Synapses()`. \
 This process was manually coded into the main file for running the codes in a hierarchical manner, which we consider an untidy solution.
 
-The syntax bank approach call for prefixes for object names. For instance, all of the NeuronGroup() should have a prefix of *NG* which is followed \
-by a number based on a running index of the neuron group. 
+The syntax bank approach call for prefixes for object names. For instance, all of the :code:`NeuronGroup()` have a prefix of *NG*.
 
 For each neuron group, similar prefixes are also needed for variables such as: 
 
-  + Number of neurons in each group: *NN*
-  + Equation: *NE*
-  + Threshold value: *NT*
-  + Reset value: *NRes*
-  + Refraction value: *NRef*
-  + Namespace: *NS*
+  + Number of neurons in each group: :code:`NN`
+  + Equation: :code:`NE`
+  + Threshold value: :code:`NT`
+  + Reset value: :code:`NRes`
+  + Refraction value: :code:`NRef`
+  + Namespace: :code:`NS`
 
-Several prefixes are also demanded for Synapses() objects:
+Several prefixes are also demanded for :code:`Synapses()` objects:
 
-  + Synaptic object: *S*
-  + Synaptic equation: *SE*
-  + Pre Synaptic group equation: *SPre*
-  + Post Synaptic group equation: *SPost*
-  + Namespace: *SNS*
-  + .connect(): *SC*
-  + weight: *SW*
+  + Synaptic object: :code:`S`
+  + Synaptic equation: :code:`SE`
+  + Pre Synaptic group equation: :code:`SPre`
+  + Post Synaptic group equation: :code:`SPost`
+  + Namespace: :code:`SNS`
+  + .connect(): :code:`SC`
+  + weight: :code:`SW`
 
 And similar prefixes for monitors: 
 
-  + Spike Monitors: *SpMon*
-  + State Monitors: *StMon* 
+  + Spike Monitors: :code:`SpMon`
+  + State Monitors: :code:`StMon`
 
 **- Update Globals():**
 
-Although mentioned as a dangerous method in the literature, updating the Globals() directly, is a practical approach in our case. This method  \
-uses aforementioned prefixes and corresponding variables. However, the variables do not need to *wait* inside the syntax bank to be run after \
-the main object, CxSystem(), call. They can be implicitly executed inside the main object and still become "visible" to the magic network because they are \
-in Globals(). Thus, the user does not have to face a manual syntax-executer outside of the main object call. 
+Although mentioned as a dangerous method in the literature, updating the :code:`Globals()` directly, is a practical approach in our case. This method  \
+uses aforementioned prefixes and corresponding variables. However, there is no need for the newly generated variables to  *wait* in the syntax bank so to be run after :code:`CxSystem()` module.
+They can be implicitly executed while CxSystem is running and still  magic network of Brian2 would be able to access them since they are \
+in :code:`Globals()`. Thus, the user does not have to face a manual syntax-executer outside of the main object call. 
 
-Accordingly, most of the *exec* commands inside the main object CxSystem() are creating the required variables and making them visible to \
-*magic network* of Brian2 by updating the Globals(). In the following example, the NG0 is put into the Globals():
+Accordingly, most of the *exec* commands inside the main object :code:`CxSystem()` are creating the required variables and making them visible to \
+*magic network* of Brian2 by updating the :code:`Globals()`. In the following example, the NG0 is put into the :code:`Globals()`:
 
 ::
 
