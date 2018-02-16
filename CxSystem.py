@@ -385,6 +385,7 @@ class CxSystem(object):
         else: # this means CxSystem is in running in cluster so the output path should be changed to remote_output_path
             try:
                 self.output_folder = self.parameter_finder(self.anat_and_sys_conf_df, 'remote_output_path')
+                print " -  CxSystem knows it's running in cluster and set the output folder properly. "
             except NameError:
                 print " -    remote_output_path is not defined in the configuration file, the default path is ./results [in cluster]"
                 self.output_folder = "./results"

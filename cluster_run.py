@@ -51,10 +51,6 @@ class cluster_run(object):
         except NameError:
             raise Exception("cluster_address is not defined for running CxSystem on cluster")
         try:
-            self.local_result_path = self.parameter_finder(array_run_obj.anatomy_df,'local_output_folder')
-        except NameError:
-            raise Exception("Local output folder must be define to transfer the result to local computer.")
-        try:
             self.username = self.parameter_finder(array_run_obj.anatomy_df, 'username')
         except NameError:
             self.username = raw_input('username: ')
