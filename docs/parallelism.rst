@@ -95,26 +95,18 @@ Defines the username for the SSH connection.
  .. csv-table:: 
 
    remote_repo_path
-   ./CxSystem
+   ~/CxSystem
 
-Defines the path of the CxSystem in the connection node of the cluster. In this example :code:`./CxSystem` indicates that the CxSystem clone exists in the home folder, i.e. :code:`~/`, in the connection node. If the repository clone does not exist there, then the latest version will be cloned and used. As mentioned earlier, in case the user is using a specific branch, CxSystem should be cloned and checked out manually. Otherwise the user can rely on CxSystem cloning itself in the connection node.
+Defines the path of the CxSystem in the connection node of the cluster. In this example :code:`~/CxSystem` indicates that the CxSystem clone exists in the home folder, i.e. :code:`~/`, in the connection node. If the repository clone does not exist there, then the latest version will be cloned and used. As mentioned earlier, in case the user is using a specific branch, CxSystem should be cloned and checked out manually. Otherwise the user can rely on CxSystem cloning itself in the connection node.
 
   .. csv-table:: 
 
    remote_output_folder
-   ./results
+   /Users/cxuser/results
 
-Defines the folder in which the results will be copied. In this example, a new folder :code:`results` will be created in the :code:`remote_repo_path` folder and the results will be saved there.
-
-  .. csv-table::
-
-     local_output_folder
-     ./results
-
-Defines the output folder for the results that are to be copied from the cluster to local. This parameter must be defined since the size of the result might be really large. 
-
+Defines the folder in which the results will be copied. In this example, a new folder :code:`results` will be created in the :code:`/Users/cxuser/` folder and the results will be saved there. Note that :code:`remote_output_folder` must be an absolute path and home folder path must as well be explicitly defined in it. 
 
 Transferring the Results
 .........................
 
-Usually clusters have an option to send users an email when the job is finished and users can transfer the results to their local machine. CxSystem can do this automatically: When a batch job is submitted, besides generating several Slurm files, CxSystem creates a :code:`_tmp_checker_data` file. This file, which contains information about the current cluster batch job, will be used to check the status of the results in the cluster. If the results are ready, they will be copied to the local result folder. This task can be done by directly running :code:`cluster_run.py`.
+Usually clusters have an option to send users an email when the job is finished and users can transfer the results to their local machine. CxSystem can do this automatically: When a batch job is submitted, besides generating several Slurm files, CxSystem creates a :code:`_tmp_checker_data` file. This file, which contains information about the current cluster batch job, will be used to check the status of the results in the cluster. If the results are ready, they will be copied to the local result folder defined using :code:`output_path_and_filename` attribute in the network and model configuration file. This task can be done by directly running :code:`cluster_run.py`.
