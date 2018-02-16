@@ -378,12 +378,14 @@ class CxSystem(object):
         self.min_distance = eval(args[0])
 
     def _set_output_path(self, *args):
+        print " -  setting output path ..."
         self.output_path = args[0]
         output_filename = ntpath.basename(self.output_path)
         assert os.path.splitext(self.output_path)[1], " -  The output_path_and_filename should contain file extension (.gz, .bz2 or .pickle)"
         if self.cluster_run_start_idx == -1 and self.cluster_run_step == -1 :
             self.output_folder = os.path.dirname(self.output_path)
         else: # this means CxSystem is in running in cluster so the output path should be changed to remote_output_path
+            print " -  CxSystem is running in Cluster ... "
             self.output_folder = self.parameter_finder(self.anat_and_sys_conf_df, 'remote_output_folder')
             self.output_path = os.path.join(self.output_folder,output_filename)
             print " -  CxSystem knows it's running in cluster and set the output folder to : %s"%self.output_path
