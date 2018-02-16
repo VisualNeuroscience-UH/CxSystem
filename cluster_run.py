@@ -38,7 +38,7 @@ class cluster_run(object):
             # print " -    remote_output_folder is not defined in the configuration file, the default path is ./results [in cluster]"
             raise Exception("remote_output_folder is not defined for running CxSystem on cluster")
             # self.remote_output_folder = "./results"
-        assert not str.startswith(self.remote_output_folder,'.'),"remote_output_folder must be an absolute path"
+        assert not str.startswith(self.remote_output_folder,'.') and not str.startswith(self.remote_output_folder,'~'),"remote_output_folder must be an absolute path with explicit home directory path"
         try:
             self.remote_repo_path = self.parameter_finder(array_run_obj.anatomy_df, 'remote_repo_path')
         except NameError:
