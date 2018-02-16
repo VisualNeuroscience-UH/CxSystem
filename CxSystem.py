@@ -379,16 +379,14 @@ class CxSystem(object):
 
     def _set_output_path(self, *args):
         self.output_path = args[0]
+        output_filename = ntpath.basename(self.output_path)
         assert os.path.splitext(self.output_path)[1], " -  The output_path_and_filename should contain file extension (.gz, .bz2 or .pickle)"
         if self.cluster_run_start_idx == -1 and self.cluster_run_step == -1 :
             self.output_folder = os.path.dirname(self.output_path)
         else: # this means CxSystem is in running in cluster so the output path should be changed to remote_output_path
-            try:
-                self.output_folder = self.parameter_finder(self.anat_and_sys_conf_df, 'remote_output_path')
-                print " -  CxSystem knows it's running in cluster and set the output folder properly. "
-            except NameError:
-                print " -    remote_output_path is not defined in the configuration file, the default path is ./results [in cluster]"
-                self.output_folder = "./results"
+            self.output_folder = self.parameter_finder(self.anat_and_sys_conf_df, 'remote_output_folder')
+            self.output_path = os.path.join(self.output_folder,output_filename)
+            print " -  CxSystem knows it's running in cluster and set the output folder to : %s"%self.output_path
         self.output_file_extension = '.'+self.output_path.split('.')[-1]
         self.StartTime_str += '_' + self.device.lower() + '_' + str(int((self.runtime / second) * 1000)) + 'ms'
         self.save_output_data = save_data(self.output_path,self.StartTime_str)  # This is for saving the output
