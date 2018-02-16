@@ -631,6 +631,8 @@ class CxSystem(object):
         exec "%s=self.customized_neurons_list[%d]['reset']" % (_dyn_neuron_reset_name, current_idx)
         exec "%s=self.customized_neurons_list[%d]['refractory']" % (_dyn_neuron_refra_name, current_idx)
         exec "%s=self.customized_neurons_list[%d]['namespace']" % (_dyn_neuron_namespace_name, current_idx)
+
+        # // Background input code BEGINS
         # Adding tonic current to namespace
         self.customized_neurons_list[current_idx]['namespace']['tonic_current'] = eval(tonic_current)
         # Adding the noise sigma to namespace
@@ -720,6 +722,8 @@ class CxSystem(object):
                 setattr(self.Cxmodule, poisson_target_inh, eval(poisson_target_inh))
             except AttributeError:
                 print 'Error in generating PoissonInput'
+
+        # // Background input code ENDS
 
 
         # trying to load the positions in the groups

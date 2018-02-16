@@ -47,27 +47,27 @@ class SimulationData(object):
     """
     # TODO - Make class agnostic about network structure, ie extract following constants from datafile
 
-    default_data_file_path = '/opt3/tmp/01_cxs_rev1/'
+    default_data_file_path = ''
     default_sampling_frequency = 1000
     defaultclock_dt = 0.1 * ms
 
-    group_numbering = {1: 'NG1_L1i_L1', 2: 'NG2_PC_L2toL1', 3: 'NG3_BC_L2', 4: 'NG4_MC_L2', 5: 'NG5_PC_L4toL2',
-                       6: 'NG6_PC_L4toL1', 7: 'NG7_SS_L4', 8: 'NG8_BC_L4', 9: 'NG9_MC_L4', 10: 'NG10_PC_L5toL1',
-                       11: 'NG11_BC_L5', 12: 'NG12_MC_L5', 13: 'NG13_PC_L6toL4', 14: 'NG14_PC_L6toL1',
-                       15: 'NG15_BC_L6', 16: 'NG16_MC_L6'}
+    default_group_numbering = {1: 'NG1_L1i_L1', 2: 'NG2_PC_L2toL1', 3: 'NG3_BC_L2', 4: 'NG4_MC_L2', 5: 'NG5_PC_L4toL2',
+                               6: 'NG6_PC_L4toL1', 7: 'NG7_SS_L4', 8: 'NG8_BC_L4', 9: 'NG9_MC_L4', 10: 'NG10_PC_L5toL1',
+                               11: 'NG11_BC_L5', 12: 'NG12_MC_L5', 13: 'NG13_PC_L6toL4', 14: 'NG14_PC_L6toL1',
+                               15: 'NG15_BC_L6', 16: 'NG16_MC_L6'}
 
-    neurons_in_group = {1: 338, 2: 5877, 3: 1198, 4: 425, 5: 2674, 6: 1098, 7: 406, 8: 329, 9: 137, 10: 5050,
-                        11: 558, 12: 491,  13: 9825, 14: 1637, 15: 813, 16: 372}
+    default_group_neuroncounts = {1: 338, 2: 5877, 3: 1198, 4: 425, 5: 2674, 6: 1098, 7: 406, 8: 329, 9: 137, 10: 5050,
+                                  11: 558, 12: 491, 13: 9825, 14: 1637, 15: 813, 16: 372}
 
-    group_number_to_type = {1: 'L1i', 2: 'PC', 3: 'BC', 4:'MC', 5: 'PC', 6:'PC', 7:'SS', 8:'BC', 9:'MC', 10: 'PC',
-                            11: 'BC', 12: 'MC', 13: 'PC', 14: 'PC', 15:'BC', 16:'MC'}
+    default_group_to_type = {1: 'L1i', 2: 'PC', 3: 'BC', 4: 'MC', 5: 'PC', 6: 'PC', 7: 'SS', 8: 'BC', 9: 'MC', 10: 'PC',
+                             11: 'BC', 12: 'MC', 13: 'PC', 14: 'PC', 15:'BC', 16:'MC'}
 
     layers = [2, 4, 5, 6]
 
     # Per group returns an array of [[excitatory] and [inhibitory]] groups
     groups_of_layer = {1: [[], [1]], 2: [[2], [3, 4]], 4: [[5, 6, 7], [8,9]], 5: [[10], [11,12]], 6:[[13, 14], [15, 16]]}
 
-    def __init__(self, data_file, data_path=default_data_file_path):
+    def __init__(self, data_file, data_path=default_data_file_path, group_numbering=None, group_neuroncounts=None, group_to_type=None):
         """
         :param data_file: filename to open from data_path (or default data path set in class constants)
         :param data_path: path where data_file is located (with trailing / included), optional
@@ -85,6 +85,21 @@ class SimulationData(object):
 
         self.datafile = data_file
 
+        # Let's make plotting agnostic about neuron groups! Will need changes in methods as well...
+        if group_numbering is None:
+            self.group_numbering = SimulationData.default_group_numbering
+        else:
+            self.group_numbering = group_numbering
+        if group_neuroncounts is None:
+            self.group_neuroncounts = SimulationData.default_group_neuroncounts
+        else:
+            self.group_neuroncounts = group_neuroncounts
+        if group_to_type is None:
+            self.group_to_type = SimulationData.default_group_to_type
+        else:
+            self.group_to_type = group_to_type
+
+        # Extract spike data
         try:
             self.spikedata = self.data['spikes_all']  # [group][0] -> neuron indices inside group, [group][1] -> spike times
             self.spikedata = OrderedDict(sorted(self.spikedata.items(), key=self._group_name_for_ordering ))
@@ -194,7 +209,7 @@ class SimulationData(object):
         :return: str, group name
         """
         if isinstance(group, int):
-            return SimulationData.group_numbering[group]
+            return SimulationData.default_group_numbering[group]
         else:
             return group
 
@@ -210,7 +225,7 @@ class SimulationData(object):
         number_of_rows = len(physio_config['Variable'])
 
         # Find in self.data['Physiology_configuration'] the line where group_id config starts
-        begin_ix = list(physio_config['Variable']).index(self.group_number_to_type[group_id])  # list() so that we can use index()
+        begin_ix = list(physio_config['Variable']).index(self.default_group_to_type[group_id])  # list() so that we can use index()
 
         # Find where the next group's config starts (or the config file ends)
         end_ix = 0
@@ -225,7 +240,7 @@ class SimulationData(object):
         # for i in range(begin_ix, end_ix):
         #     params[physio_config['Key'][i]] = physio_config['Value'][i]
 
-        if self.group_number_to_type[group_id] == 'PC':
+        if self.default_group_to_type[group_id] == 'PC':
             gL_index = list(physio_config['Key'][begin_ix:end_ix]).index('gL_soma')
         else:
             gL_index = list(physio_config['Key'][begin_ix:end_ix]).index('gL')
@@ -325,7 +340,7 @@ class SimulationData(object):
         window_duration = t_end - t_start
 
         allspikes = []
-        for group in self.group_numbering.values():
+        for group in self.default_group_numbering.values():
             spikes_gp = self.data['spikes_all'][group][1]
             allspikes.extend(spikes_gp)
         allspikes = np.array(allspikes)
@@ -430,7 +445,7 @@ class SimulationData(object):
         print 'Working on ' + self.datafile
         spike_dict = dict()
         indices_dict = dict()
-        number_of_group = {value: key for (key,value) in SimulationData.group_numbering.items()}
+        number_of_group = {value: key for (key,value) in SimulationData.default_group_numbering.items()}
 
         for group in self.neuron_groups:
             print '   Processing ' + group
@@ -478,7 +493,7 @@ class SimulationData(object):
             ax.scatter(spike_df.time, spike_df.neuron_index, s=0.6, c='gray')
 
 
-    def publicationplot(self, sampling_factor=30, time_limits=None, ax=None):
+    def publicationplot(self, sampling_factor=30, time_rounding=3, time_limits=None, plot_type=0, ax=None):
         """
         Plots a simplified rasterplot with only layers labeled, not neuron groups. Takes relative amount of
         neurons in each group into account. Possibly useful for publications.
@@ -494,9 +509,10 @@ class SimulationData(object):
         if time_limits is None:
             time_limits = [0, runtime]
 
-        number_of_group = {value: key for (key,value) in SimulationData.group_numbering.items()}
+        number_of_group = {value: key for (key,value) in self.group_numbering.items()}
+        N_neurongroups = len(self.group_numbering.keys())
 
-        max_neurons_per_group = [int(SimulationData.neurons_in_group[i]/sampling_factor) for i in range(1, 17)]
+        max_neurons_per_group = [int(self.group_neuroncounts[i] / sampling_factor) for i in range(1, N_neurongroups+1)]
 
         for group in self.neuron_groups:
             print '   Processing ' + group
@@ -510,6 +526,7 @@ class SimulationData(object):
 
                 neurons_per_group = max_neurons_per_group[number_of_group[group]-1]
 
+                # TODO - fails at plotting non-spiking neurons
                 if len(spikes.neuron_index.unique()) >= neurons_per_group:
                     indices = np.random.choice(spikes.neuron_index.unique(), neurons_per_group, replace=False)
                     spikes = spikes[spikes.neuron_index.isin(indices)]
@@ -529,40 +546,43 @@ class SimulationData(object):
 
         try:
             spike_df = pd.concat(spike_dict)
-            spike_df.time = numpy.round(spike_df.time, 3)  # Decrease time-resolution here
+            spike_df.time = numpy.round(spike_df.time, time_rounding)  # Decrease time-resolution here
         except:
             spike_df = pd.DataFrame(data={'time':[0], 'neuron_index':[0]})  # if there's nothing to concat, create an empty df
 
         #q = neurons_per_group
-        q1 = sum(max_neurons_per_group[13-1:16])
-        q2 = sum(max_neurons_per_group[10-1:16])
-        q3 = sum(max_neurons_per_group[5-1:16])
-        q4 = sum(max_neurons_per_group[2-1:16])
-        q5 = sum(max_neurons_per_group[0:16])
-
-
-
-        ticklabels = ['VI', 'V', 'IV', 'II/III', 'I']
+        if plot_type == 0:
+            q1 = sum(max_neurons_per_group[13-1:16])
+            q2 = sum(max_neurons_per_group[10-1:16])
+            q3 = sum(max_neurons_per_group[5-1:16])
+            q4 = sum(max_neurons_per_group[2-1:16])
+            q5 = sum(max_neurons_per_group[0:16])
+            ticklabels = ['VI', 'V', 'IV', 'II/III', 'I']
 
         if ax is None:
 
             plt.scatter(spike_df.time, spike_df.neuron_index, color='k', s=0.5)
 
-            plt.yticks([q1, q2, q3, q4, q5], ticklabels, fontsize=16)
+            if plot_type == 0:
+                plt.yticks([q1, q2, q3, q4, q5], ticklabels, fontsize=16)
+                plt.ylim([0, q5])
+
             plt.xticks(np.arange(runtime + 0.1, step=1), fontsize=12)
             plt.xlabel('Time (s)', fontsize=12)
             plt.xlim([time_limits[0], time_limits[1]])
-            plt.ylim([0, q5])
             plt.show()
 
         else:
             ax.scatter(spike_df.time, spike_df.neuron_index, color='k', s=0.5)
-            ax.set_yticks([q1, q2, q3, q4, q5])
-            ax.set_yticklabels(ticklabels, fontsize=12, fontweight='bold')
+            if plot_type == 0:
+                ax.set_yticks([q1, q2, q3, q4, q5])
+                ax.set_ylim([0, q5])
+                ax.set_yticklabels(ticklabels, fontsize=12, fontweight='bold')
+
             ax.set_xticks(np.arange(runtime + 0.1, step=1))
             ax.set_xlabel('Time [s]', fontsize=12, fontweight='bold')
             ax.set_xlim([time_limits[0], time_limits[1]])
-            ax.set_ylim([0, q5])
+
 
 
     def voltage_rasterplot(self, max_per_group=20, dt_downsampling_factor=10):
@@ -585,7 +605,7 @@ class SimulationData(object):
         # print 'Experiment sampling rate ' + str(self.defaultclock_dt)
         # print 'Downsampling by a factor of ' + str(dt_downsampling_factor)
 
-        N_groups = len(self.group_numbering)
+        N_groups = len(self.default_group_numbering)
 
         group_start_ix = [0]*(N_groups+2)
         yticklocations = [0]*(N_groups+1)
@@ -594,7 +614,7 @@ class SimulationData(object):
 
         # Run through groups to downsample and to select which neurons to show (if too many sampled)
         for i in np.arange(1, N_groups+1):
-            group_name = self.group_numbering[i]
+            group_name = self.default_group_numbering[i]
             # print 'Processing group ' + group_name + ', start index is ' + str(group_start_ix[i])
 
             group_neurons_vm = self.data['vm_all'][group_name]
@@ -639,7 +659,7 @@ class SimulationData(object):
         yticklocs = [y_limit - yticklocations[i] for i in range(1,N_groups+1)]
 
         ax.yaxis.set_major_locator(plt.FixedLocator(yticklocs))
-        ax.yaxis.set_major_formatter(plt.FixedFormatter(self.group_numbering.values()))
+        ax.yaxis.set_major_formatter(plt.FixedFormatter(self.default_group_numbering.values()))
         plt.yticks(rotation=0)
 
 
@@ -659,7 +679,7 @@ class SimulationData(object):
         :param group_id: int, group identifier
 
         """
-        group = self.group_numbering[group_id]
+        group = self.default_group_numbering[group_id]
         # Pick random neuron from group (assuming neuron indexing inside vm_all, ge_soma_all, gi_soma_all is the same
         # ie. that neurons have been sampled with same density for each status monitor)
         neuron_ix = np.random.randint(len(self.data['vm_all'][group]))
@@ -669,7 +689,7 @@ class SimulationData(object):
         vm = self.data['vm_all'][group][neuron_ix]
         ge = self.data['ge_soma_all'][group][neuron_ix]
         gi = self.data['gi_soma_all'][group][neuron_ix]
-        if self.group_number_to_type[group_id] == 'PC':
+        if self.default_group_to_type[group_id] == 'PC':
             Idendr = self.data['Idendr_soma_all'][group][neuron_ix]
             N_columns = 4
         else:
@@ -701,7 +721,7 @@ class SimulationData(object):
 
         ### PLOTTING BEGINS
         plt.subplots(1, N_columns)
-        plt.suptitle(self.group_numbering[group_id])
+        plt.suptitle(self.default_group_numbering[group_id])
 
         ### Membrane voltage plot
         plt.subplot(1, N_columns, 1)
@@ -722,7 +742,7 @@ class SimulationData(object):
         # ylim([0, 50e-9])
         plt.legend()
 
-        if self.group_number_to_type[group_id] == 'PC':
+        if self.default_group_to_type[group_id] == 'PC':
             plt.title('Dendritic current in soma')
             plt.subplot(1, N_columns, 3)
             plt.plot(t/ms, Idendr*pow(10,12), label='Idendr', c='blue')
@@ -764,7 +784,7 @@ class SimulationData(object):
         """
 
         ### Basic parameters
-        group = self.group_numbering[group_id]
+        group = self.default_group_numbering[group_id]
         gL = self._get_group_leak(group_id)
         Ee = 0*mV
         VT = -45*mV
@@ -780,7 +800,7 @@ class SimulationData(object):
         vm = self.data['vm_all'][group][neuron_ix]
         ge = self.data['ge_soma_all'][group][neuron_ix]
         gi = self.data['gi_soma_all'][group][neuron_ix]
-        if self.group_number_to_type[group_id] == 'PC':
+        if self.default_group_to_type[group_id] == 'PC':
             Idendr = self.data['Idendr_soma_all'][group][neuron_ix]
         else:
             Idendr = [0.0]*len(vm)
@@ -796,7 +816,7 @@ class SimulationData(object):
         _exc_current_mean = np.mean(exc_current_all, axis=0)
         _inh_current_mean = np.mean(inh_current_all, axis=0)
 
-        if self.group_number_to_type[group_id] == 'PC':
+        if self.default_group_to_type[group_id] == 'PC':
             Idendr_mean = np.mean(self.data['Idendr_soma_all'][group], axis=0)*amp
         else:
             Idendr_mean = [0.0*amp]*len(vm)
@@ -820,7 +840,7 @@ class SimulationData(object):
         x_params = [0*pA, max(exc_current_mean)]
 
         if ax is None:
-            plt.suptitle(self.group_numbering[group_id])
+            plt.suptitle(self.default_group_numbering[group_id])
             plt.title('Mean E/I current (trace of E/I of a random neuron)')
             plt.plot(exc_current/pA, inh_current/pA, c='g', alpha=0.1)
             plt.plot(exc_current_mean/pA, inh_current_mean/pA, c='black', lw=1)
@@ -846,7 +866,7 @@ class SimulationData(object):
 
         for group_id in range(1, 16 + 1):
             plt.subplot(4, 4, group_id)
-            plt.title(self.group_numbering[group_id])
+            plt.title(self.default_group_numbering[group_id])
             self._currentplot_group(group_id, plt.gca())
 
         plt.show()
@@ -861,7 +881,7 @@ class SimulationData(object):
             indices of spiking neurons (with at least 2 spikes)
         """
         # Get the group spikes. Remember: [0]->indices, [1]->spike times
-        spikes = self.spikedata[self.group_numbering[group_id]]
+        spikes = self.spikedata[self.default_group_numbering[group_id]]
 
         # Get indices of the neurons that are spiking
         spiking_neurons = unique(spikes[0])
@@ -914,7 +934,7 @@ class SimulationData(object):
 
         for group_id in range(1,16+1):
             plt.subplot(4, 4, group_id)
-            plt.title(self.group_numbering[group_id])
+            plt.title(self.default_group_numbering[group_id])
             self._isihistogram_group(group_id, plt.gca())
             plt.xlabel('ISI (ms)')
             plt.ylabel('Count')
@@ -960,7 +980,7 @@ class SimulationData(object):
 
         """
         for group_id in range(1,16+1):
-            print self.group_numbering[group_id] + ', mean of 1-neuron CoV of ISIs (irregularity): ' + str(self._isi_cv_group(group_id))
+            print self.default_group_numbering[group_id] + ', mean of 1-neuron CoV of ISIs (irregularity): ' + str(self._isi_cv_group(group_id))
 
     def _spikecounthistogram_group(self, group_id, bin_size=3 * ms, ax=None):
         """
@@ -977,7 +997,7 @@ class SimulationData(object):
 
         # Collect spike counts (of the group) into runtime divided by (time-)bin_size many bins
         timebin = bin_size/second
-        spikes = self.data['spikes_all'][self.group_numbering[group_id]]
+        spikes = self.data['spikes_all'][self.default_group_numbering[group_id]]
         n_bins = int(self.runtime/timebin)
         spike_counts, bin_edges = np.histogram(spikes[1], bins=n_bins)
         # Spike count divided by bin size could be called the "population firing rate", but we don't really need that here
@@ -1001,7 +1021,7 @@ class SimulationData(object):
 
         for group_id in range(1, 16 + 1):
             plt.subplot(4, 4, group_id)
-            plt.title(self.group_numbering[group_id])
+            plt.title(self.default_group_numbering[group_id])
             self._spikecounthistogram_group(group_id, ax=plt.gca())
             plt.xlabel('Spike count')
             plt.ylabel('Frequency (timebins)')
@@ -1021,7 +1041,7 @@ class SimulationData(object):
         """
         # Collect spike counts (of the group) into runtime divided by (time-)bin_size many bins
         timebin = bin_size/second
-        spikes = self.data['spikes_all'][self.group_numbering[group_id]]
+        spikes = self.data['spikes_all'][self.default_group_numbering[group_id]]
         n_bins = int(self.runtime/timebin)
         spike_counts, bin_edges = np.histogram(spikes[1], bins=n_bins)
 
@@ -1047,7 +1067,7 @@ class SimulationData(object):
         plt.ylabel('Group firing rate (spikes/s)')
         for group_id in groups:
             firing_rates, bin_edges = self._firingrates_group(group_id, bin_size)
-            plt.plot(bin_edges[:-1], firing_rates, label=self.group_numbering[group_id])
+            plt.plot(bin_edges[:-1], firing_rates, label=self.default_group_numbering[group_id])
 
         plt.legend()
         plt.show()
@@ -1138,8 +1158,8 @@ class SimulationData(object):
         i_groups = groups[1]
         bin_size = 3*ms  # Refractory time is 3ms so a single neuron can fire only once in time bin
 
-        e_pop_size = np.sum([self.neurons_in_group[e_group] for e_group in e_groups])
-        i_pop_size = np.sum([self.neurons_in_group[i_group] for i_group in i_groups])
+        e_pop_size = np.sum([self.default_group_neuroncounts[e_group] for e_group in e_groups])
+        i_pop_size = np.sum([self.default_group_neuroncounts[i_group] for i_group in i_groups])
 
 
         e_firing_counts = [self._firingrates_group(e_group, bin_size)[0] * bin_size for e_group in e_groups]
@@ -1178,7 +1198,7 @@ class SimulationData(object):
 
         # Go through every group
         # for group, neurons_and_spikes in self.spikedata:
-        for group in self.group_numbering.values():
+        for group in self.default_group_numbering.values():
             neurons_and_spikes = self.spikedata[group]
             neuron_ids = unique(neurons_and_spikes[0])
 
@@ -1189,7 +1209,7 @@ class SimulationData(object):
                     spiketrains.append(single_train)
 
         if fill_nonspiking:
-            n_neurons_total = sum(SimulationData.neurons_in_group.values())
+            n_neurons_total = sum(SimulationData.default_group_neuroncounts.values())
             n_nonspiking = n_neurons_total - len(spiketrains)
             spiketrains.extend([[]]*n_nonspiking)
 
@@ -1230,7 +1250,7 @@ class SimulationData(object):
         true_runtime = self.runtime * second - time_to_drop
 
         # Get spikes of the corresponding group with the beginning removed
-        spikes = self.spikedata[self.group_numbering[group_id]]  # [0]->indices, [1]->times
+        spikes = self.spikedata[self.default_group_numbering[group_id]]  # [0]->indices, [1]->times
         try:
             # We can do this because indexing is chronological
             true_begin_idx = min(where(spikes[1] > time_to_drop/second)[0])
@@ -1284,7 +1304,7 @@ class SimulationData(object):
         isicovs = dict()
         fanofactors = dict()
 
-        for group_id in self.group_numbering.keys():
+        for group_id in self.default_group_numbering.keys():
             n_spiking_gp, mean_firing_rates_gp, isicovs_gp, fanofactor_gp = self._pop_measures_group(group_id, time_to_drop)
             n_spiking[group_id] = n_spiking_gp
             mean_firing_rates[group_id] = mean_firing_rates_gp
@@ -1353,8 +1373,8 @@ class ExperimentData(object):
                         'isicov_max': 1.5, 'fanofactor_max': 10, 'active_group_min': 0.2, 'dec_places': 14}
 
         # BUILD DATAFRAME for collecting everything
-        group_measures = ['p_'+group_name for group_name in SimulationData.group_numbering.values()]
-        group_measures.extend(['mfr_'+group_name for group_name in SimulationData.group_numbering.values()])
+        group_measures = ['p_' + group_name for group_name in SimulationData.default_group_numbering.values()]
+        group_measures.extend(['mfr_' + group_name for group_name in SimulationData.default_group_numbering.values()])
         stats_to_compute = ['duration', 'n_spiking', 'p_spiking', 'n_firing_rate_normal', 'p_firing_rate_normal',
                             'n_irregular', 'p_irregular', 'irregularity_mean', 'n_groups_active',
                             'n_groups_asynchronous', 'n_groups_synchronous', 'mean_synchrony', 'mfr_all',
@@ -1391,13 +1411,13 @@ class ExperimentData(object):
 
             # -> Group activities (= n_spiking/n_total)
             group_activities = []
-            for group_id in SimulationData.group_numbering.keys():
-                activity = round(n_spiking[group_id] / SimulationData.neurons_in_group[group_id], settings['dec_places'])
+            for group_id in SimulationData.default_group_numbering.keys():
+                activity = round(n_spiking[group_id] / SimulationData.default_group_neuroncounts[group_id], settings['dec_places'])
                 group_activities.append(activity)
 
             # -> Firing rates
             group_firing_rates = []
-            for group_id in SimulationData.group_numbering.keys():
+            for group_id in SimulationData.default_group_numbering.keys():
                 with np.errstate(divide='raise'):
                     try:
                         firing_rate = round(mean(mean_firing_rates[group_id]), settings['dec_places'])
@@ -1409,7 +1429,7 @@ class ExperimentData(object):
                                         if settings['rate_min'] < rate < settings['rate_max']])
             n_firing_rate_normal = np.int32(n_firing_rate_normal)
 
-            neuron_count = sum(SimulationData.neurons_in_group.values())
+            neuron_count = sum(SimulationData.default_group_neuroncounts.values())
             try:
                 rates_sum = sum(rate for rate in flatten(mean_firing_rates.values()))
             except:
@@ -1436,7 +1456,7 @@ class ExperimentData(object):
             # Calculating the synchrony measure makes sense only if the group is active enough
             # So, first calculate n_groups_active and count asynchronous groups from those
             active_groups = [group_id for group_id, ng_spiking in n_spiking.items()
-                             if ng_spiking / sim.neurons_in_group[group_id] > settings['active_group_min']]
+                             if ng_spiking / sim.default_group_neuroncounts[group_id] > settings['active_group_min']]
             n_groups_active = len(active_groups)
             n_groups_asynchronous = len([group_id for group_id, fanofactor in fanofactors.items()
                                          if 0 < fanofactor < settings['fanofactor_max'] and group_id in active_groups])
@@ -1445,7 +1465,7 @@ class ExperimentData(object):
             mean_synchrony = sim.mean_synchrony(time_to_drop=settings['time_to_drop'])
 
             # Finally, transform numbers into frequencies
-            n_total_neurons = sum(sim.neurons_in_group.values())
+            n_total_neurons = sum(sim.default_group_neuroncounts.values())
             p_spiking = round(n_spiking_total / n_total_neurons, settings['dec_places'])
             if n_spiking_total > 0:
                 p_firing_rate_normal = round(n_firing_rate_normal / n_spiking_total, settings['dec_places'])
@@ -1624,8 +1644,8 @@ def combined_metrics_plot():
 # MAIN
 if __name__ == '__main__':
 
-    a = SimulationData('00_subm_repeat/00_eliyah_20171218_14072863_background_rate0.3H_k1.3_Cpp_3500ms.bz2')
-    a.rasterplot()
+    # a = SimulationData('00_subm_repeat/00_eliyah_20171218_14072863_background_rate0.3H_k1.3_Cpp_3500ms.bz2')
+    # a.rasterplot()
 
     ###### Depol x calcium plot ######
     # exp = ExperimentData('/opt3/tmp/bigrun/depolxcalcium/', 'fepol')
@@ -1649,8 +1669,8 @@ if __name__ == '__main__':
     # Seeing results in iPython for example:
     #  plt.figure(); a = data.pivot_table('irregularity_mean', index='background_rate', columns='k').sort_index(ascending=False); sns.heatmap(a, cmap='binary', vmax=1)
 
-    # exp = ExperimentData('/opt3/tmp/01_cxs_rev1/', '01_eifsquares')
-    # exp.computestats('stats_01_eifsquares.csv',
+    # exp = ExperimentData('/opt3/tmp/adexminimal/', '02_pc_only_square')
+    # exp.computestats('stats_02_pc_only_square.csv',
     #                 ['calcium_concentration', 'J', 'k', 'background_rate'])
 
     ###### For creating side-by-side rasterplots ######
@@ -1676,5 +1696,7 @@ if __name__ == '__main__':
     # # print a.show_spikes_at_t(ax,7, 0.0063*second)
     # plt.show()
 
-
-
+    a = SimulationData('/opt3/tmp/coba/01_testrun_20180216_11294826_k11.16_python_2000ms.bz2',
+                       group_numbering={1: 'NG1_SS_L4', 2: 'NG2_BC_L4'}, group_neuroncounts={1: 3200, 2: 800},
+                       group_to_type={1: 'SS', 2: 'BC'})
+    a.publicationplot(plot_type=1, sampling_factor=1, time_rounding=5)
