@@ -23,7 +23,7 @@ import itertools
 
 class array_run(object):
 
-    def __init__(self, anatomy_system_df, physiology_df, metadata_file_suffx,cluster_start_idx,cluster_step,anat_file_address,physio_file_address):
+    def __init__(self, anatomy_system_df, physiology_df, metadata_file_suffx,cluster_start_idx,cluster_step,anat_file_address,physio_file_address,array_run_in_cluster=0):
         '''
         Initialize the array_run for running several instances of CxSystem in parallel.
 
@@ -33,6 +33,7 @@ class array_run(object):
         '''
         self.cluster_start_idx = cluster_start_idx
         self.cluster_step = cluster_step
+        self.array_run_in_cluster = array_run_in_cluster
         if self.cluster_start_idx == -1 and self.cluster_step == -1:
             import cluster_run # import cluster run module only if CxSystem is not running on the cluster to prevent dependency issues
         if self.cluster_start_idx != -1 and self.cluster_step != -1 :
@@ -213,7 +214,7 @@ class array_run(object):
             print " -  scipy cache deleted to prevent benchmarking issues."
         print "################### Trial %d/%d started running for simulation number %d: %s ##########################" % (tr+1,self.trials_per_config,idx,self.final_messages[idx][1:])
         cm = CX.CxSystem(self.df_anat_final_array[idx], self.df_phys_final_array[idx], output_file_suffix = self.final_messages[idx],
-                         instantiated_from_array_run=1)
+                         instantiated_from_array_run=1,array_run_in_cluster=self.array_run_in_cluster)
         cm.run()
         paths[orig_idx] = cm.save_output_data.data['Full path']
         working.value -= 1

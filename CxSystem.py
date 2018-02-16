@@ -61,7 +61,7 @@ class CxSystem(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self, anatomy_and_system_config, physiology_config, output_file_suffix = "", instantiated_from_array_run = 0, cluster_run_start_idx=-1,cluster_run_step=-1):
+    def __init__(self, anatomy_and_system_config, physiology_config, output_file_suffix = "", instantiated_from_array_run = 0, cluster_run_start_idx=-1,cluster_run_step=-1, array_run_in_cluster =0):
         '''
         Initialize the cortical system by parsing both of the configuration files.
 
@@ -154,6 +154,7 @@ class CxSystem(object):
         self.do_save_connections = 0 # if there is at least one connection to save, this flag will be set to 1
         self.load_positions_only = 0
         self.profiling = 0
+        self.array_run_in_cluster = array_run_in_cluster
         self.awaited_conf_lines = []
         self.physio_config_df = pandas.read_csv(physiology_config) if type(physiology_config) == str else physiology_config
         self.physio_config_df = self.physio_config_df.applymap(lambda x: NaN if str(x)[0] == '#' else x)
@@ -195,8 +196,12 @@ class CxSystem(object):
             trials_per_config = 0
         # check for array_run and return
         if any(check_array_run_anatomy) or any(check_array_run_physiology) or (trials_per_config > 1 and not instantiated_from_array_run):
-            array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df,self.StartTime_str,int(cluster_run_start_idx),
-                                int(cluster_run_step),anatomy_and_system_config,physiology_config)
+            if self.cluster_run_start_idx != -1 and self.cluster_run_step != -1 : # this means CxSystem is running in cluster and is trying to spawn an array run on a node
+                array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df,self.StartTime_str,int(cluster_run_start_idx),
+                                int(cluster_run_step),anatomy_and_system_config,physiology_config,array_run_in_cluster=1)
+            else: # CxSystem not in cluster
+                array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df,self.StartTime_str,int(cluster_run_start_idx),
+                                int(cluster_run_step),anatomy_and_system_config,physiology_config,array_run_in_cluster=0)
             self.array_run = 1
             return
         try:
@@ -382,7 +387,7 @@ class CxSystem(object):
         self.output_path = args[0]
         output_filename = ntpath.basename(self.output_path)
         assert os.path.splitext(self.output_path)[1], " -  The output_path_and_filename should contain file extension (.gz, .bz2 or .pickle)"
-        if self.cluster_run_start_idx == -1 and self.cluster_run_step == -1 :
+        if self.cluster_run_start_idx == -1 and self.cluster_run_step == -1 and self.array_run_in_cluster==0 :
             self.output_folder = os.path.dirname(self.output_path)
         else: # this means CxSystem is in running in cluster so the output path should be changed to remote_output_path
             print " -  CxSystem is running in Cluster ... "
