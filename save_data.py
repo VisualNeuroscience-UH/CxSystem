@@ -38,7 +38,7 @@ class save_data(object):
         self.save_filename = ntpath.basename(self.save_path)
         self.save_pure_filename = os.path.basename(os.path.splitext(self.save_path)[0])
 
-        self.save_folder = ntpath.dirname(self.save_path)
+        self.save_folder = os.path.expanduser(ntpath.dirname(self.save_path))
         self.save_extension = os.path.splitext(self.save_path)[1]
         if os.getcwd() in self.save_path:
             print " -  The output of the system is saved in %s" %os.path.abspath(os.path.join(os.getcwd(), os.pardir))
