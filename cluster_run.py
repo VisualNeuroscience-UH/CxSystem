@@ -160,8 +160,8 @@ if __name__ == '__main__':
     time.sleep(1)
     if not os.path.isdir(checker_data['local_folder']):
         os.mkdir(checker_data['local_folder'])
-    remote_result_abs_path = ssh_commander(client,'cd %s;cd %s; pwd' % (checker_data['remote_repo_path'],
-                                                                     checker_data['remote_output_folder']), 0).rstrip('\r\n')
+   # remote_result_abs_path = ssh_commander(client,'cd %s;cd %s; pwd' % (checker_data['remote_repo_path'],checker_data['remote_output_folder']), 0).rstrip('\r\n')
+    remote_result_abs_path = checker_data['remote_output_folder']
 
     waiting_flag = True
     print " -  Waiting for the results ..."
