@@ -74,7 +74,7 @@ package "save_data module"{
 class save_data {
 data{}
 syntax_bank[]
-void creat_key()
+void create_key()
 void save_to_file()
 }
 CxSystem->save_data
