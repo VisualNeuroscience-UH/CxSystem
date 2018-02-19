@@ -17,6 +17,7 @@ import sys
 # reload(sys)
 # sys.setdefaultencoding('utf-8')
 from physiology_reference import *
+from parameter_parser import synapse_parser
 from matplotlib.pyplot import  *
 from save_data import *
 from stimuli import *
@@ -253,6 +254,32 @@ class CxSystem(object):
             return value
         else:
             raise NameError(' -  Variable %s not found in the configuration file.'%keyword)
+
+    def value_extractor(self, df, key_name):
+        non_dict_indices = df['Variable'].dropna()[df['Key'].isnull()].index.tolist()
+        for non_dict_idx in non_dict_indices:
+            exec "%s=%s" % (df['Variable'][non_dict_idx], df['Value'][non_dict_idx])
+        try:
+            return eval(key_name)
+        except (NameError, TypeError):
+            pass
+        try:
+            if type(key_name) == list:
+                variable_start_idx = df['Variable'][df['Variable'] == key_name[0]].index[0]
+                try:
+                    variable_end_idx = df['Variable'].dropna().index.tolist()[
+                        df['Variable'].dropna().index.tolist().index(variable_start_idx) + 1]
+                    cropped_df = df.loc[variable_start_idx:variable_end_idx-1]
+                except IndexError:
+                    cropped_df = df.loc[variable_start_idx:]
+                return eval(cropped_df['Value'][cropped_df['Key'] == key_name[1]].item())
+            else:
+                return eval(df['Value'][df['Key'] == key_name].item())
+        except NameError:
+            new_key = df['Value'][df['Key'] == key_name].item().replace("']", "").split("['")
+            return self.value_extractor(df,new_key)
+        except ValueError:
+            raise ValueError("Parameter %s not found in the configuration file."%key_name)
 
     def set_default_clock(self,*args):
         defaultclock.dt = eval(args[0])
@@ -502,7 +529,8 @@ class CxSystem(object):
         '''
         assert self.sys_mode != '', " -  System mode is not defined."
         _all_columns = ['idx', 'number_of_neurons', 'neuron_type', 'layer_idx', 'threshold',
-                        'reset', 'refractory', 'net_center','monitors','noise_sigma']
+                        'reset', 'refractory', 'net_center','monitors', 'tonic_current', 'n_background_inputs',
+                        'n_background_inhibition', 'noise_sigma', 'gemean', 'gestd', 'gimean', 'gistd']
         _obligatory_params = [0, 1, 2, 3]
         assert len(self.current_values_list) <= len(_all_columns), ' -  One or more of of the columns for NeuronGroups definition \
         is missing. Following obligatory columns should be defined:\n%s\n ' \
@@ -517,7 +545,14 @@ class CxSystem(object):
         idx = -1
         net_center = 0 + 0j
         number_of_neurons = 0
+        tonic_current = ''
+        n_background_inputs = ''
+        n_background_inhibition = ''
         noise_sigma = ''
+        gemean = ''
+        gestd = ''
+        gimean = ''
+        gistd = ''
         neuron_type = ''
         layer_idx = 0
         threshold = ''
@@ -538,9 +573,28 @@ class CxSystem(object):
             # description can be found in configuration file tutorial.
         net_center = complex(net_center)
         current_idx = len(self.customized_neurons_list)
+
+        if tonic_current == '--':
+            tonic_current = '0*pA'
+
         if noise_sigma == '--':
             noise_sigma = '0*mV'
         noise_sigma = eval(noise_sigma)
+
+        if gemean == '--':
+            gemean = '0*nS'
+        if gestd == '--':
+            gestd = '0*nS'
+        if gimean == '--':
+            gimean = '0*nS'
+        if gistd == '--':
+            gistd = '0*nS'
+
+        if n_background_inputs == '--':
+            n_background_inputs = '0'
+        if n_background_inhibition == '--':
+            n_background_inhibition = '0'
+
         assert 'V' in str(noise_sigma.get_best_unit()), ' -  The unit of noise_sigma should be volt'
         if neuron_type == 'PC':  # extract the layer index of PC neurons separately
             exec 'layer_idx = array(' + layer_idx.replace('->', ',') + ')'
@@ -580,11 +634,101 @@ class CxSystem(object):
         exec "%s=self.customized_neurons_list[%d]['reset']" % (_dyn_neuron_reset_name, current_idx)
         exec "%s=self.customized_neurons_list[%d]['refractory']" % (_dyn_neuron_refra_name, current_idx)
         exec "%s=self.customized_neurons_list[%d]['namespace']" % (_dyn_neuron_namespace_name, current_idx)
-        # Adding the noise sigma to the namespace
+
+        # // Background input code BEGINS
+        # Adding tonic current to namespace
+        self.customized_neurons_list[current_idx]['namespace']['tonic_current'] = eval(tonic_current)
+        # Adding the noise sigma to namespace
         self.customized_neurons_list[current_idx]['namespace']['noise_sigma'] = noise_sigma
+        # Adding ge/gi mean/std to namespace
+        self.customized_neurons_list[current_idx]['namespace']['gemean'] = eval(gemean)
+        self.customized_neurons_list[current_idx]['namespace']['gestd'] = eval(gestd)
+        self.customized_neurons_list[current_idx]['namespace']['gimean'] = eval(gimean)
+        self.customized_neurons_list[current_idx]['namespace']['gistd'] = eval(gistd)
+
         # Creating the actual NeuronGroup() using the variables in the previous 6 lines
         exec "%s= NeuronGroup(%s, model=%s, method='%s', threshold=%s, reset=%s,refractory = %s, namespace = %s)" \
              % (_dyn_neurongroup_name, _dyn_neuronnumber_name, _dyn_neuron_eq_name,self.numerical_integration_method ,_dyn_neuron_thres_name, _dyn_neuron_reset_name, _dyn_neuron_refra_name, _dyn_neuron_namespace_name)
+
+
+        # Add Poisson-distributed background input
+        background_rate = self.physio_config_df.ix[where(self.physio_config_df.values == 'background_rate')[0]]['Value'].item()
+        background_rate_inhibition = self.physio_config_df.ix[where(self.physio_config_df.values == 'background_rate_inhibition')[0]]['Value'].item()
+
+        # For changing connection weight of bg input according to calcium level
+        ca = self.value_extractor(self.physio_config_df, 'calcium_concentration')
+        bg_synapse = synapse_parser({'type': 'Fixed', 'pre_group_type': 'PC', 'post_group_type': neuron_type},
+                                    self.physio_config_df)
+        bg_synapse_inh = synapse_parser({'type': 'Fixed', 'pre_group_type': 'BC', 'post_group_type': neuron_type},
+                                        self.physio_config_df)
+
+        if neuron_type in ['L1i', 'BC', 'MC']:
+            background_weight = \
+            repr(bg_synapse._scale_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_E_I_weight')))
+
+            background_weight_inhibition = \
+            repr(bg_synapse_inh._scale_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_I_I_weight')))
+
+        else:
+            background_weight = \
+            repr(bg_synapse._scale_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_E_E_weight')))
+
+            background_weight_inhibition = \
+            repr(bg_synapse_inh._scale_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_I_E_weight')))
+
+
+        # print 'Adding Poisson background input with params: '+n_background_inputs+', '+background_rate+', '+background_weight
+        # print 'Poisson bg input with weights (exc/inh): %s / %s' % (background_weight, background_weight_inhibition)
+        if neuron_type != 'PC':
+            # Background excitation for non-PC neurons
+            poisson_target = 'bg_%s' % _dyn_neurongroup_name
+            exec "%s = PoissonInput(target=%s, target_var='ge_soma', N=%s, rate=%s, weight=%s)" \
+                 % (poisson_target, _dyn_neurongroup_name, n_background_inputs,
+                    background_rate, background_weight)
+            try:
+                setattr(self.Cxmodule, poisson_target, eval(poisson_target))
+            except AttributeError:
+                print 'Error in generating PoissonInput'
+
+            # Background inhibition for non-PC neurons
+            poisson_target_inh = 'bg_inh_%s' % _dyn_neurongroup_name
+            exec "%s = PoissonInput(target=%s, target_var='gi_soma', N=%s, rate=%s, weight=%s)" \
+                 % (poisson_target_inh, _dyn_neurongroup_name, n_background_inhibition,
+                    background_rate_inhibition, background_weight_inhibition)
+            try:
+                setattr(self.Cxmodule, poisson_target_inh, eval(poisson_target_inh))
+            except AttributeError:
+                print 'Error in generating PoissonInput'
+
+        else:
+            # Background excitation for PC neurons (targeting all dendrites equally)
+            n_target_compartments = int(self.customized_neurons_list[-1]['total_comp_num']) -1  # No excitatory input to soma
+            n_inputs_to_each_comp = int(int(n_background_inputs) / n_target_compartments)
+            target_comp_list = ['basal', 'a0']
+            target_comp_list.extend(['a'+str(i) for i in range(1, n_target_compartments-2+1)])
+            for target_comp in target_comp_list:
+                poisson_target = 'bg_%s_%s' % (_dyn_neurongroup_name, target_comp)
+                exec "bg_%s_%s = PoissonInput(target=%s, target_var='ge_%s', N=%s, rate=%s, weight=%s)" \
+                 % (_dyn_neurongroup_name, target_comp, _dyn_neurongroup_name, target_comp, n_inputs_to_each_comp,
+                    background_rate, background_weight)
+                try:
+                    setattr(self.Cxmodule, poisson_target, eval(poisson_target))
+                except AttributeError:
+                    print 'Error in generating PoissonInput'
+
+            # Background inhibition for PC neurons (targeting soma)
+            poisson_target_inh = 'bg_inh_%s' % _dyn_neurongroup_name
+            exec "%s = PoissonInput(target=%s, target_var='gi_soma', N=%s, rate=%s, weight=%s)" \
+                 % (poisson_target_inh, _dyn_neurongroup_name, n_background_inhibition,
+                    background_rate_inhibition, background_weight_inhibition)
+            try:
+                setattr(self.Cxmodule, poisson_target_inh, eval(poisson_target_inh))
+            except AttributeError:
+                print 'Error in generating PoissonInput'
+
+        # // Background input code ENDS
+
+
         # trying to load the positions in the groups
         if hasattr(self,'loaded_brian_data'):
             # in case the NG index are different.
@@ -993,37 +1137,67 @@ class CxSystem(object):
                     hasattr(self,'loaded_brian_data') and not self.load_positions_only:
                 assert _syn_ref_name in self.loaded_brian_data.keys(), \
                     " -  The data for the following connection was not found in the loaded brian data: %s" % _syn_ref_name
-                eval(_dyn_syn_name).connect(i=self.loaded_brian_data[_syn_ref_name]['data'][0][0].tocoo().row, \
-                                     j=self.loaded_brian_data[_syn_ref_name]['data'][0][0].tocoo().col,\
-                                     n = int(self.loaded_brian_data[_syn_ref_name]['n']))
-                eval(_dyn_syn_name).wght = repeat(self.loaded_brian_data[_syn_ref_name]['data'][0][0].data/int(self.\
-                    loaded_brian_data[_syn_ref_name]['n']),int(self.loaded_brian_data[_syn_ref_name]['n'])) * siemens
-                _load_str = 'Connection loaded from '
+
+                # 1) Try-except necessary; run fails if no connections exist from 1 group to another
+                # 2) Indexing changed in pandas >0.19.1 and thus ...['data'][0][0].tocoo() --> ...['data'].tocoo()
+                #    Unfortunately pandas doesn't warn about this change in indexing
+                try:
+                    eval(_dyn_syn_name).connect(i=self.loaded_brian_data[_syn_ref_name]['data'].tocoo().row, \
+                                         j=self.loaded_brian_data[_syn_ref_name]['data'].tocoo().col,\
+                                         n = int(self.loaded_brian_data[_syn_ref_name]['n']))
+                    # Weight is redeclared later, see line ~1200.
+                    # Also, 1) "loading connections" leaves the impression of loading anatomical connections, not synaptic weights
+                    #       2) we do not have need for saving/loading synaptic weights at this point
+                    #       3) it doesn't work in pandas >0.19.1
+                    # Therefore I commented:
+                    # eval(_dyn_syn_name).wght = repeat(self.loaded_brian_data[_syn_ref_name]['data'][0][0].data/int(self.\
+                    #     loaded_brian_data[_syn_ref_name]['n']),int(self.loaded_brian_data[_syn_ref_name]['n'])) * siemens
+                    _load_str = 'Connection loaded from '
+                except ValueError:
+                    _load_str = ' ! No connections from '
 
             elif (self.default_load_flag==1 or (self.default_load_flag==-1 and _do_load == 1 )) and not \
                     hasattr(self,'loaded_brian_data') :
                 print " -  Synaptic connection is set to be loaded, however the load_brian_data_path is not defined in the parameters. The connection is being created."
 
+            # Generating new connections using
+            #  - connection probability ("local mode")
+            #  - connection probability scaled with distance ("expanded mode")
+            #  - custom connection rule
             else:
                 syn_con_str = "%s.connect(condition='i!=j', p= " % _dyn_syn_name
-                # Connecting the synapses based on either [the defined probability and the distance] or
-                # [only the distance] plus considering the number of connections
+
                 try:
                     if self.sys_mode == 'local':
                         syn_con_str += "'%f'" % float(p_arg)
+
                     elif self.sys_mode == 'expanded':
                         # syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))/(sqrt((x_pre-x_post) \
                         #    **2+(y_pre-y_post)**2)/mm)'   " % (float(p_arg), self.customized_synapses_list[-1]['ilam'])
                         syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))'" % (
                         float(p_arg), self.customized_synapses_list[-1]['ilam']) # todo the divisoin by the distance is temporarily removed to avoid division by zeros, try to understand what is going on using Hanna's email and if it's needed, add a fixed version
 
+                # If no connection probability is defined, then use "sparseness" values as connection probability and
+                # possibly scale with distance
                 except ValueError:
+                    print ' !  No predefined connection probability, using custom connection rule'
                     p_arg = self.customized_synapses_list[-1]['sparseness']
+
                     if '_relay_vpm' in self.neurongroups_list[int(current_pre_syn_idx)]:
                         syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2)))/(2*0.025**2))'" \
                                        % (float(p_arg))
+
+                    elif '_relay_spikes' in self.neurongroups_list[int(current_pre_syn_idx)]:
+
+                        # Use exponential decay here
+                        print 'Exp decay here!'
+                        decay_const = 10/mm  # Unit important here to remind of scale
+                        syn_con_str += "'%f * exp(-%f * sqrt((x_pre-x_post)**2 + (y_pre-y_post)**2) )'" \
+                                       % (float(p_arg), float(decay_const) )
+
                     elif self.sys_mode == 'local':
                         syn_con_str += "'%f'" % p_arg
+
                     elif self.sys_mode == 'expanded':
                         # syn_con_str += "'%f*exp(-((sqrt((x_pre-x_post)**2+(y_pre-y_post)**2))*%f))/(sqrt((x_pre-x_post)\
                         # **2+(y_pre-y_post)**2)/mm)'   " % (p_arg, self.customized_synapses_list[-1]['ilam'])
@@ -1034,6 +1208,8 @@ class CxSystem(object):
                 except ValueError:
                     syn_con_str += ')'
                 exec syn_con_str
+
+            # Weight set again (overrided) here if connections were loaded
             exec "%s.wght=%s['init_wght']" % (_dyn_syn_name, _dyn_syn_namespace_name)  # set the weights
             if syn_type == 'STDP': # A more sophisticated if: 'wght0' in self.customized_synapses_list[-1]['equation']
                 exec "%s.wght0=%s['init_wght']" % (_dyn_syn_name, _dyn_syn_namespace_name)  # set the weights
@@ -1499,8 +1675,8 @@ if __name__ == '__main__' :
         except IndexError:
             CM = CxSystem(net_config, phys_config)
     except IndexError:
-        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/Markram_config_file.csv', \
-                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters.csv', )
+        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/COBA_config.csv', \
+                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_COBA.csv', )
     CM.run()
     # from data_visualizers.data_visualization import DataVisualization
     #

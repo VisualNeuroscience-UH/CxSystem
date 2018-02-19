@@ -1,0 +1,22 @@
+row_type,runtime,device,sys_mode,scale,grid_radius, min_distance,output_path_and_filename,,,,,,,
+params,2000*ms,Python,local,1,210*um, 1*um,./results/01_testrun.bz2,,,,,,,
+,,,,,,,,,,,,,,
+row_type,load_positions_only,do_benchmark,profiling,save_generated_video_input_flag,multidimension_array_run,number_of_process,trials_per_config, do_init_vms,,,,,,
+params,0,0,0,0,1,1,1,1,,,,,,
+,,,,,,,,,,,,,,
+row_type,idx,type,number_of_neurons,radius,spike_times,net_center,monitors,,,,,,,
+IN,0, VPM,60,92*um,[3.6]*second, -- ,[Sp],,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors,tonic_current,n_background_inputs,n_background_inhibition,noise_sigma,gemean,gestd,gimean,gistd
+G,1,3200,SS,4,--,[Sp],--,--,--,--,--,--,--,--
+G,2,800,BC,4,--,[Sp],--,--,--,--,--,--,--,--
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,
+row_type,receptor,pre_syn_idx,post_syn_idx,syn_type,p,n,monitors,load_connection,save_connection,,,,,
+S,ge,0,1,Fixed,--,1,--,0-->,0-->,,,,,
+S,ge,1,1,Fixed,0.02,1,--,1,1,,,,,
+S,ge,1,2,Fixed,0.02,1,--,1,1,,,,,
+S,gi,2,1,Fixed,0.02,1,--,1,1,,,,,
+S,gi,2,2,Fixed,0.02,1,--,1,1,,,,,
