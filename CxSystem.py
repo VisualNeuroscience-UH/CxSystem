@@ -1637,7 +1637,7 @@ class CxSystem(object):
         '''
         print " -  Generating the syntaxes for saving CX output:"
         for syntax in self.save_output_data.syntax_bank:
-            print syntax
+            # print syntax
             exec syntax
         self.save_output_data.save_to_file()
         if hasattr(self,'save_brian_data') and self.do_save_connections:

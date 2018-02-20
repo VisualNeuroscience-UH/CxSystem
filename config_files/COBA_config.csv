@@ -9,7 +9,7 @@ IN,0, VPM,60,92*um,[3.6]*second, -- ,[Sp],,,,,,,
 ,,,,,,,,,,,,,,
 ,,,,,,,,,,,,,,
 row_type,idx,number_of_neurons,neuron_type,layer_idx,net_center,monitors,tonic_current,n_background_inputs,n_background_inhibition,noise_sigma,gemean,gestd,gimean,gistd
-G,1,3200,SS,4,--,[St]vm [Sp],--,--,--,--,--,--,--,--
+G,1,3200,SS,4,--,[Sp],--,--,--,--,--,--,--,--
 G,2,800,BC,4,--,[Sp],--,--,--,--,--,--,--,--
 ,,,,,,,,,,,,,,
 ,,,,,,,,,,,,,,
