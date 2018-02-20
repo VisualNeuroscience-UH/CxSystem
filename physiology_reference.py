@@ -14,6 +14,7 @@ from brian2  import *
 from parameter_parser import *
 import random as rnd
 import operator
+import equation_templates as eqt
 
 
 class neuron_reference(object):
@@ -41,6 +42,8 @@ class neuron_reference(object):
 
         * output_neuron: the main dictionary containing all the data about current Customized_neuron_group including: number of neurons, threshold, reset, refractory, neuron type, soma position(layer), dendrites layer, total number of compartments, namespace, equation, positions (both in cortical and visual coordinates).
         '''
+
+        # <editor-fold desc="...General neuron model initialization">
         self.physio_config_df = physio_config_df
         neuron_reference._celltypes = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM'])
         assert general_grid_radius > min_distance , ' -  The distance between cells should be less than the grid radius'
@@ -75,16 +78,65 @@ class neuron_reference(object):
 
         self.output_neuron['namespace'] = neuron_parser(self.output_neuron, physio_config_df).output_namespace
         self.output_neuron['equation'] = ''
+        # </editor-fold>
 
-        # // AdEx-specific code BEGINS //
+        # <editor-fold desc="...Model variation setup">
         try:
-            self.flag_adex = self.value_extractor(self.physio_config_df, 'flag_adex')
-            if self.flag_adex == 1:
-                self.output_neuron['reset'] += '; w=w+'+repr(self.output_neuron['namespace']['b'])
-        except:
-            self.flag_adex = 0
-        # // AdEx-specific code ENDS //
+            self.model_variation = self.value_extractor(self.physio_config_df, 'model_variation')
 
+            if self.model_variation == 1:
+                print ' -  Model variation is set ON'
+                # For non-pyramidal groups
+                try:
+                    self.neuron_model = self.value_extractor(self.physio_config_df, 'neuron_model').upper()
+                    print ' -  Neuron model is %s ' % self.neuron_model
+                    if self.neuron_model == 'ADEX':
+                        self.output_neuron['reset'] += '; w=w+'+repr(self.output_neuron['namespace']['b'])
+                except:
+                    self.neuron_model = 'EIF'
+                    print ' !  No point neuron model defined, using EIF'
+
+                try:
+                    self.excitation_model = self.value_extractor(self.physio_config_df, 'excitation_model').upper()
+                except:
+                    self.excitation_model = 'SIMPLE_E'
+                    print ' !  No point neuron excitation model defined, using simple'
+
+                try:
+                    self.inhibition_model = self.value_extractor(self.physio_config_df, 'inhibition_model').upper()
+                except:
+                    self.inhibition_model = 'SIMPLE_I'
+                    print ' !  No point neuron inhibition model defined, using simple'
+
+                # For pyramidal groups
+                try:
+                    self.pc_neuron_model = self.value_extractor(self.physio_config_df, 'pc_neuron_model').upper()
+                    if self.pc_neuron_model == 'ADEX':
+                        self.output_neuron['reset'] += '; w=w+'+repr(self.output_neuron['namespace']['b'])
+                except:
+                    self.pc_neuron_model = self.neuron_model
+                    print ' !  No pyramidal cell neuron model defined, using %s' % self.neuron_model
+
+                try:
+                    self.pc_excitation_model = self.value_extractor(self.physio_config_df, 'pc_excitation_model').upper()
+                except:
+                    self.pc_excitation_model = self.excitation_model
+                    print ' !  No pyramidal cell excitation model defined, using %s' % self.excitation_model
+
+                try:
+                    self.pc_inhibition_model = self.value_extractor(self.physio_config_df, 'pc_inhibition_model').upper()
+                except:
+                    self.pc_inhibition_model = self.inhibition_model
+                    print ' !  No pyramidal cell inhibition model defined, using %s' % self.inhibition_model
+
+            else:
+                self.model_variation = False
+
+        except:
+            self.model_variation = False
+        # </editor-fold>
+
+        # <editor-fold desc="...Extracting parameters from physiological config file">
         variable_start_idx = self.physio_config_df['Variable'][self.physio_config_df['Variable'] == self.output_neuron['type']].index[0]
         try:
             variable_end_idx = self.physio_config_df['Variable'].dropna().index.tolist()[
@@ -93,8 +145,9 @@ class neuron_reference(object):
         except IndexError:
             self.cropped_df_for_current_type = self.physio_config_df.loc[variable_start_idx:]
         getattr(self, self.output_neuron['type'])()
+        # </editor-fold>
 
-
+        # <editor-fold desc="...Loading positions">
         self.output_neuron['z_center'] = network_center
         self.output_neuron['w_center'] = 17 * log(self.output_neuron['z_center']+ 1)
         self.output_neuron['w_positions'] = self._get_w_positions(self.output_neuron['number_of_neurons'],
@@ -103,7 +156,7 @@ class neuron_reference(object):
         self.output_neuron['z_positions'] =  map(lambda x: e ** (x/17) - 1,self.output_neuron['w_positions'] )
         print " -  Customized " + str(cell_type) + " neuron in layer " + str(layers_idx) + " initialized with " + \
               str(self.output_neuron['number_of_neurons']) + " neurons."
-
+        # </editor-fold>
 
 
     def _get_w_positions(self, N, layout,  general_grid_radius,min_distance):
@@ -153,47 +206,31 @@ class neuron_reference(object):
 
         '''
 
-        #: The template for the somatic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
-
-        # eq_template_soma = self.value_extractor(self.cropped_df_for_current_type,'eq_template_soma')
-        # eq_template_dend = self.value_extractor(self.cropped_df_for_current_type,'eq_template_dend')
-
-        eq_template_soma = '''
-        dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
-        dge/dt = -ge/tau_e : siemens
-        dgealpha/dt = (ge-gealpha)/tau_e : siemens
-        dgi/dt = -gi/tau_i : siemens
-        dgialpha/dt = (gi-gialpha)/tau_i : siemens
-        '''
-        if self.flag_adex == 1:
+        if self.model_variation is False:  # For backwards compatibility
             eq_template_soma = '''
-            dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr -w + adex_depolarization +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
+            dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
             dge/dt = -ge/tau_e : siemens
             dgealpha/dt = (ge-gealpha)/tau_e : siemens
             dgi/dt = -gi/tau_i : siemens
             dgialpha/dt = (gi-gialpha)/tau_i : siemens
-            dw/dt = (-a*(EL-vm)-w)/tau_w : amp
+            '''
+            eq_template_dend = '''
+            dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) +I_dendr) / C : volt
+            dge/dt = -ge/tau_e : siemens
+            dgealpha/dt = (ge-gealpha)/tau_e : siemens
+            dgi/dt = -gi/tau_i : siemens
+            dgialpha/dt = (gi-gialpha)/tau_i : siemens
             '''
 
-        #: The template for the dendritic equations used in multi compartmental neurons, the inside values could be replaced later using "Equation" function in brian2.
-        eq_template_dend = '''
-        dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) +I_dendr) / C : volt
-        dge/dt = -ge/tau_e : siemens
-        dgealpha/dt = (ge-gealpha)/tau_e : siemens
-        dgi/dt = -gi/tau_i : siemens
-        dgialpha/dt = (gi-gialpha)/tau_i : siemens
-        '''
+        else:
+            eq_template_soma = eqt.EquationHelper(neuron_model=self.neuron_model, is_pyramidal=True,
+                                                  compartment='soma', exc_model=self.excitation_model,
+                                                  inh_model=self.inhibition_model).getMembraneEquation(return_string=True)
+            eq_template_dend = eqt.EquationHelper(neuron_model=self.neuron_model, is_pyramidal=True,
+                                                  compartment='dend', exc_model=self.excitation_model,
+                                                  inh_model=self.inhibition_model).getMembraneEquation(return_string=True)
 
-        # Used if conductance noise is injected into PC basal dendrites
-        # eq_template_dend_basal = '''
-        # dvm/dt = (gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) +I_dendr) / C : volt
-        # dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
-        # dgealpha/dt = (ge-gealpha)/tau_e : siemens
-        # dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2: siemens
-        # dgialpha/dt = (gi-gialpha)/tau_i : siemens
-        # '''
-
-        # Setting Vm equations for soma and dendrite compartments
+        # <editor-fold desc="...Generation of membrane equations from templates">
         self.output_neuron['equation'] = Equations(eq_template_dend, vm="vm_basal", ge="ge_basal",
                                                    gealpha="gealpha_basal",
                                                    C=self.output_neuron['namespace']['C'][0],
@@ -214,6 +251,9 @@ class neuron_reference(object):
                                                         gealpha="gealpha_a%d" % _ii, gialpha="gialpha_a%d" % _ii,
                                                         gealphaX="gealphaX_a%d" % _ii, I_dendr="Idendr_a%d" % _ii)
 
+        # </editor-fold>
+
+        # <editor-fold desc="...Connecting PC compartments">
         # Defining decay between soma and basal dendrite & apical dendrites
         self.output_neuron['equation'] += Equations('I_dendr = gapre*(vmpre-vmself)  : amp',
                                                     gapre=1 / (self.output_neuron['namespace']['Ra'][0]),
@@ -241,6 +281,7 @@ class neuron_reference(object):
                                                     gapost=1 / (self.output_neuron['namespace']['Ra'][-1]),
                                                     vmself="vm_a%d" % self.output_neuron['dend_comp_num'],
                                                     vmpost="vm_a%d" % (self.output_neuron['dend_comp_num'] - 1))
+        # </editor-fold>
 
         self.output_neuron['equation'] += Equations('''x : meter
                             y : meter''')
@@ -259,31 +300,18 @@ class neuron_reference(object):
                 x : meter
                 y : meter
         '''
-        # eq_template = self.value_extractor(self.cropped_df_for_current_type,'eq_template')
-        # self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
 
-        # Diffusive noise model
-        self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
-            dge/dt = -ge/tau_e : siemens
-            dgi/dt = -gi/tau_i : siemens
-            ''', ge='ge_soma', gi='gi_soma')
-
-        if self.flag_adex == 1:
+        if self.model_variation is False:
             self.output_neuron['equation'] = Equations('''
-                dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) -w + adex_depolarization +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+                dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
                 dge/dt = -ge/tau_e : siemens
                 dgi/dt = -gi/tau_i : siemens
-                dw/dt = (-a*(EL-vm)-w)/tau_w : amp
                 ''', ge='ge_soma', gi='gi_soma')
 
-
-        # Conductance noise model
-        # self.output_neuron['equation'] = Equations('''
-        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) : volt (unless refractory)
-        #     dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
-        #     dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_e)*xi_2: siemens
-        #     ''', ge='ge_soma', gi='gi_soma')
+        else:
+            self.output_neuron['equation'] = eqt.EquationHelper(neuron_model=self.neuron_model,
+                                                                exc_model=self.excitation_model,
+                                                                inh_model=self.inhibition_model).getMembraneEquation()
 
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
@@ -305,31 +333,19 @@ class neuron_reference(object):
         # eq_template = self.value_extractor(self.cropped_df_for_current_type, 'eq_template')
         # self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
 
-        # Diffusive noise model
-        self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
-            dge/dt = -ge/tau_e : siemens
-            dgi/dt = -gi/tau_i : siemens
-            ''', ge='ge_soma', gi='gi_soma')
-
-        if self.flag_adex == 1:
+        if self.model_variation is False:
             self.output_neuron['equation'] = Equations('''
-                dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) -w + adex_depolarization +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+                dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
                 dge/dt = -ge/tau_e : siemens
                 dgi/dt = -gi/tau_i : siemens
-                dw/dt = (-a*(EL-vm)-w)/tau_w : amp
                 ''', ge='ge_soma', gi='gi_soma')
-
-        # Conductance noise model
-        # self.output_neuron['equation'] = Equations('''
-        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) : volt (unless refractory)
-        #     dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
-        #     dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2: siemens
-        #     ''', ge='ge_soma', gi='gi_soma')
+        else:
+            self.output_neuron['equation'] = eqt.EquationHelper(neuron_model=self.neuron_model,
+                                                                exc_model=self.excitation_model,
+                                                                inh_model=self.inhibition_model).getMembraneEquation()
 
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
-
 
     def MC(self):
         '''
@@ -348,28 +364,18 @@ class neuron_reference(object):
         # eq_template = self.value_extractor(self.cropped_df_for_current_type, 'eq_template')
         # self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
 
-        # Diffusive noise model
-        self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
-            dge/dt = -ge/tau_e : siemens
-            dgi/dt = -gi/tau_i : siemens
-            ''', ge='ge_soma', gi='gi_soma')
-
-        if self.flag_adex == 1:
+        if self.model_variation is False:
             self.output_neuron['equation'] = Equations('''
-                dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) -w + adex_depolarization +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+                dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
                 dge/dt = -ge/tau_e : siemens
                 dgi/dt = -gi/tau_i : siemens
-                dw/dt = (-a*(EL-vm)-w)/tau_w : amp
                 ''', ge='ge_soma', gi='gi_soma')
 
+        else:
+            self.output_neuron['equation'] = eqt.EquationHelper(neuron_model=self.neuron_model,
+                                                                exc_model=self.excitation_model,
+                                                                inh_model=self.inhibition_model).getMembraneEquation()
 
-        # Conductance noise model
-        # self.output_neuron['equation'] = Equations('''
-        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) : volt (unless refractory)
-        #     dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
-        #     dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2: siemens
-        #     ''', ge='ge_soma', gi='gi_soma')
 
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
@@ -389,31 +395,17 @@ class neuron_reference(object):
                     y : meter
             '''
 
-        # eq_template = self.value_extractor(self.cropped_df_for_current_type, 'eq_template')
-        # self.output_neuron['equation'] = Equations(eq_template, ge='ge_soma', gi='gi_soma')
-
-        # Diffusive noise model
-        self.output_neuron['equation'] = Equations('''
-            dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
-            dge/dt = -ge/tau_e : siemens
-            dgi/dt = -gi/tau_i : siemens
-            ''', ge='ge_soma', gi='gi_soma')
-
-        if self.flag_adex == 1:
+        if self.model_variation is False:
             self.output_neuron['equation'] = Equations('''
-                dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) -w + adex_depolarization +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
+                dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5: volt (unless refractory)
                 dge/dt = -ge/tau_e : siemens
                 dgi/dt = -gi/tau_i : siemens
-                dw/dt = (-a*(EL-vm)-w)/tau_w : amp
                 ''', ge='ge_soma', gi='gi_soma')
 
-
-        # Conductance noise model
-        # self.output_neuron['equation'] = Equations('''
-        #     dvm/dt = ((gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + ge * (Ee-vm) + gi * (Ei-vm) +tonic_current*(1-exp(-t/(50*msecond)))) / C) : volt (unless refractory)
-        #     dge/dt = -(ge-gemean)/tau_e + sqrt((2*gestd**2)/tau_e)*xi_1: siemens
-        #     dgi/dt = -(gi-gimean)/tau_i + sqrt((2*gistd**2)/tau_i)*xi_2: siemens
-        #     ''', ge='ge_soma', gi='gi_soma')
+        else:
+            self.output_neuron['equation'] = eqt.EquationHelper(neuron_model=self.neuron_model,
+                                                                exc_model=self.excitation_model,
+                                                                inh_model=self.inhibition_model).getMembraneEquation()
 
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
@@ -513,7 +505,58 @@ class synapse_reference(object):
             self.output_synapse['sparseness'] = _name_space.sparseness
         except:
             pass
-        # self.output_synapse['ilam'] = _name_space.ilam
+        # self.output_synapse['ilam'] = _name_space.ilam   # HH commented this, because it's not used right now
+
+        # <editor-fold desc="...Model variation setup">
+        try:
+            self.model_variation = self.value_extractor(physio_config_df, 'model_variation')
+            if self.model_variation == 1:
+                # <editor-fold desc="Extract model names">
+                # Just extract everything like in neuron_reference (otherwise many if-elses)
+                # For non-pyramidal groups
+                try:
+                    self.excitation_model = self.value_extractor(physio_config_df, 'excitation_model').upper()
+                except:
+                    self.excitation_model = 'SIMPLE_E'
+
+                try:
+                    self.inhibition_model = self.value_extractor(physio_config_df, 'inhibition_model').upper()
+                except:
+                    self.inhibition_model = 'SIMPLE_I'
+
+                # For pyramidal groups
+                try:
+                    self.pc_excitation_model = self.value_extractor(physio_config_df,
+                                                                    'pc_excitation_model').upper()
+                except:
+                    self.pc_excitation_model = self.excitation_model
+
+                try:
+                    self.pc_inhibition_model = self.value_extractor(physio_config_df,
+                                                                    'pc_inhibition_model').upper()
+                except:
+                    self.pc_inhibition_model = self.inhibition_model
+                # </editor-fold>
+
+                # NOW the if-else jungle
+                if self.output_synapse['post_group_type'] == 'PC':
+                    if self.output_synapse['receptor'] == 'ge':
+                        self.true_receptors = eqt.EquationHelper.Receptors[self.pc_excitation_model]
+                    else:
+                        self.true_receptors = eqt.EquationHelper.Receptors[self.pc_inhibition_model]
+                else:
+                    if self.output_synapse['receptor'] == 'ge':
+                        self.true_receptors = eqt.EquationHelper.Receptors[self.excitation_model]
+                    else:
+                        self.true_receptors = eqt.EquationHelper.Receptors[self.inhibition_model]
+
+            else:
+                self.model_variation = False
+
+        except:
+            self.model_variation = False
+        # </editor-fold>
+
         getattr(self, self.output_synapse['type'])()
 
     def STDP(self):
@@ -597,52 +640,71 @@ class synapse_reference(object):
         The method for implementing the Fixed synaptic connection.
 
         '''
+
         self.output_synapse['equation'] = Equations('''
             wght:siemens
             ''')
-        self.output_synapse['pre_eq'] = '''
-        %s+=wght
-        ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
+
+        if self.model_variation is False:
+            self.output_synapse['pre_eq'] = '''
+            %s+=wght
+            ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
+
+        else:
+            pre_eq_lines = ['%s += wght\n' % (true_receptor+self.output_synapse['post_comp_name'] + '_post')
+                            for true_receptor in self.true_receptors]
+            self.output_synapse['pre_eq'] = ''.join(pre_eq_lines).rstrip()
 
     def Fixed_calcium(self):
         '''
         The method for implementing the Fixed synaptic connection.
 
         '''
+
         self.output_synapse['equation'] = Equations('''
             wght:siemens
             ''')
-        self.output_synapse['pre_eq'] = '''
-        %s+=wght
-        ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
 
-    def Fixed_normal(self):
-        '''
-        The method for implementing the Fixed synaptic connection.
+        if self.model_variation is False:
+            self.output_synapse['pre_eq'] = '''
+            %s+=wght
+            ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
 
-        '''
-        self.output_synapse['equation'] = Equations('''
-            wght:siemens
-            ''')
-        self.output_synapse['pre_eq'] = '''
-        %s+=wght
-        ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
+        else:
+            pre_eq_lines = ['%s += wght\n' % (true_receptor+self.output_synapse['post_comp_name'] + '_post')
+                            for true_receptor in self.true_receptors]
+            self.output_synapse['pre_eq'] = ''.join(pre_eq_lines).rstrip()
 
     def Depressing(self):
+        """
+        Depressing non-stochastic Tsodyks-Markram synapse
+
+        """
 
         self.output_synapse['equation'] = Equations('''
         wght : siemens
         R : 1
         ''')
 
-        self.output_synapse['pre_eq'] = '''
-        R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_d))
-        %s += R * U * wght
-        R = R - U * R
-        ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
-
+        if self.model_variation is False:
+            self.output_synapse['pre_eq'] = '''
+            R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_d))
+            %s += R * U * wght
+            R = R - U * R
+            ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
+        else:
+            pre_eq = 'R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_d))\n'
+            for true_receptor in self.true_receptors:
+                new_line = '%s += R * U * wght\n' % (true_receptor + self.output_synapse['post_comp_name'] + '_post')
+                pre_eq.join(new_line)
+            pre_eq.join('R = R - U * R')
+            self.output_synapse['pre_eq'] = pre_eq
 
     def Facilitating(self):
+        """
+        Facilitating non-stochastic Tsodyks-Markram synapse
+
+        """
 
         self.output_synapse['equation'] = Equations('''
         wght : siemens
@@ -650,10 +712,59 @@ class synapse_reference(object):
         u : 1
         ''')
 
-        self.output_synapse['pre_eq'] = '''
-        R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_fd))
-        u = u + (U_f-u)*(1 - exp(-(t-lastupdate)/tau_f))
-        %s += R * u * wght
-        R = R - u * R
-        u = u + U_f * (1-u)
-        ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
+        if self.model_variation is False:
+            self.output_synapse['pre_eq'] = '''
+            R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_fd))
+            u = u + (U_f-u)*(1 - exp(-(t-lastupdate)/tau_f))
+            %s += R * u * wght
+            R = R - u * R
+            u = u + U_f * (1-u)
+            ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
+        else:
+            pre_eq = '''
+            R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_fd))
+            u = u + (U_f-u)*(1 - exp(-(t-lastupdate)/tau_f))
+            '''
+            for true_receptor in self.true_receptors:
+                new_line = '%s += R * u * wght\n' % (true_receptor + self.output_synapse['post_comp_name'] + '_post')
+                pre_eq.join(new_line)
+            pre_eq_end = '''
+            R = R - u * R
+            u = u + U_f * (1-u)
+            '''
+            self.output_synapse['pre_eq'] = pre_eq.join(pre_eq_end)
+
+    def value_extractor(self, df, key_name):
+        non_dict_indices = df['Variable'].dropna()[df['Key'].isnull()].index.tolist()
+        for non_dict_idx in non_dict_indices:
+            exec "%s=%s" % (df['Variable'][non_dict_idx], df['Value'][non_dict_idx])
+        try:
+            return eval(key_name)
+        except (NameError, TypeError):
+            pass
+        try:
+            if type(key_name) == list:
+                variable_start_idx = df['Variable'][df['Variable'] == key_name[0]].index[0]
+                try:
+                    variable_end_idx = df['Variable'].dropna().index.tolist()[
+                        df['Variable'].dropna().index.tolist().index(variable_start_idx) + 1]
+                    cropped_df = df.loc[variable_start_idx:variable_end_idx-1]
+                except IndexError:
+                    cropped_df = df.loc[variable_start_idx:]
+                return eval(cropped_df['Value'][cropped_df['Key'] == key_name[1]].item())
+            else:
+                try:
+                    return eval(df['Value'][df['Key'] == key_name].item())
+                except NameError:
+                    df_reset_index = df.reset_index(drop=True)
+                    df_reset_index = df_reset_index[0:df_reset_index[df_reset_index['Key'] == key_name].index[0]]
+                    for neural_parameter in df_reset_index['Key'].dropna():
+                        if neural_parameter  in df['Value'][df['Key'] == key_name].item():
+                            exec "%s =self.value_extractor(df,neural_parameter)" % (neural_parameter)
+                    return eval(df['Value'][df['Key'] == key_name].item())
+                else:
+                    raise('The syntax %s is not a valid syntax for physiological configuration file or the elements that comprise this syntax are not defined.'%df['Value'][df['Key'] == key_name].item())
+
+        except NameError:
+            new_key = df['Value'][df['Key'] == key_name].item().replace("']", "").split("['")
+            return self.value_extractor(df,new_key)

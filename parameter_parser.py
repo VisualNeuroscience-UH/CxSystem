@@ -258,31 +258,31 @@ class synapse_parser(object):
         min_delay = mean_delay / 2.
         self.output_namespace['delay'] = '(%f + %f * rand()) * ms' % (min_delay, mean_delay)
 
-    def Fixed_normal(self):
-        '''
-         The Fixed method for assigning the parameters for Fixed synaptic connection to the customized_synapses() object.
-
-         :param output_synapse: This is the dictionary created in neuron_reference() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: wght_max, wght0.
-         '''
-
-        mean_wght = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
-        sd_wght = mean_wght / 2.
-
-        # SCALE mean & SD of weight wrt calcium level
-        # Calcium scaling is just multiplication by a constant so we can scale mean and SD wght
-        # instead of scaling individual weights separately after randomization (change of variables of the Gaussian PDF)
-        if self.calcium_concentration > 0:
-            mean_wght = self._scale_by_calcium(self.calcium_concentration, mean_wght)
-            sd_wght  = self._scale_by_calcium(self.calcium_concentration, sd_wght) # we don't want to prescribe SDs separately in this model
-
-        # SET the weight
-        self.output_namespace['init_wght'] = '(%f + %f*randn()) * nS' % (mean_wght, sd_wght)
-        # Note that we don't scale randomized weights individually, but the parameters going into the randomization
-
-        # SET synaptic delay
-        mean_delay = self.value_extractor(self.physio_config_df, 'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
-        sd_delay = mean_delay / 2.
-        self.output_namespace['delay'] = '(%f + %f*randn()) * ms' % (mean_delay, sd_delay)
+    # def Fixed_normal(self):
+    #     '''
+    #      The Fixed method for assigning the parameters for Fixed synaptic connection to the customized_synapses() object.
+    #
+    #      :param output_synapse: This is the dictionary created in neuron_reference() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: wght_max, wght0.
+    #      '''
+    #
+    #     mean_wght = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+    #     sd_wght = mean_wght / 2.
+    #
+    #     # SCALE mean & SD of weight wrt calcium level
+    #     # Calcium scaling is just multiplication by a constant so we can scale mean and SD wght
+    #     # instead of scaling individual weights separately after randomization (change of variables of the Gaussian PDF)
+    #     if self.calcium_concentration > 0:
+    #         mean_wght = self._scale_by_calcium(self.calcium_concentration, mean_wght)
+    #         sd_wght  = self._scale_by_calcium(self.calcium_concentration, sd_wght) # we don't want to prescribe SDs separately in this model
+    #
+    #     # SET the weight
+    #     self.output_namespace['init_wght'] = '(%f + %f*randn()) * nS' % (mean_wght, sd_wght)
+    #     # Note that we don't scale randomized weights individually, but the parameters going into the randomization
+    #
+    #     # SET synaptic delay
+    #     mean_delay = self.value_extractor(self.physio_config_df, 'delay_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / ms
+    #     sd_delay = mean_delay / 2.
+    #     self.output_namespace['delay'] = '(%f + %f*randn()) * ms' % (mean_delay, sd_delay)
 
     def Depressing(self):
         '''
@@ -368,50 +368,6 @@ class neuron_parser (object):
 
         getattr(self, '_'+ output_neuron['type'])(output_neuron)
 
-        # // AdEx-specific code BEGINS //
-        try:
-            flag_adex = self.value_extractor(self.physio_config_df, 'flag_adex')
-            if flag_adex == 1:
-                rheobase = self.output_namespace['rheobase_adex']
-                depolarization_level = self.value_extractor(self.physio_config_df, 'depolarization_level')
-
-                if output_neuron['type'] == 'PC':
-                    rheobase = rheobase[output_neuron['dend_comp_num']-1]
-                    # print '-> dend extent: '+str(output_neuron['dend_comp_num'])
-
-                self.output_namespace['adex_depolarization'] = rheobase * depolarization_level
-                # print 'Rheobase: '+str(rheobase)
-            else:
-                # print 'Using NON-adaptive EIF model'
-                self.output_namespace['adex_depolarization'] = 0*pA
-        except:
-            self.output_namespace['adex_depolarization'] = 0 * pA
-        # // AdEx-specific code ENDS //
-
-
-    def _compute_adex_rheobase(self):
-        a = self.output_namespace['a']
-        gL = np.sum(self.output_namespace['gL'])
-        tau_w = self.output_namespace['tau_w']
-        tau_m = self.output_namespace['taum_soma']
-        VT = self.output_namespace['VT']
-        EL = self.output_namespace['EL']
-        DeltaT = self.output_namespace['DeltaT']
-
-        bif_type = (a / gL) * (tau_w / tau_m)
-
-        if bif_type < 1:  # saddle-node bifurcation
-            rheobase = (gL + a) * (VT - EL - DeltaT + DeltaT * log(1 + a / gL))
-
-        elif bif_type > 1:  # Andronov-Hopf bifurcation
-            rheobase = (gL + a) * (VT - EL - DeltaT + DeltaT * log(1 + tau_m / tau_w)) + DeltaT * gL * (
-            (a / gL) - (tau_m / tau_w))
-
-        else:
-            print 'Unable to compute rheobase!'
-            rheobase = 0 * pA
-
-        return rheobase
 
     def _PC(self,output_neuron):
         '''
@@ -422,7 +378,10 @@ class neuron_parser (object):
         '''
 
         # total capacitance in compartments. The *2 comes from Markram et al Cell 2015: corrects for the dendritic spine area
-        self.output_namespace['C']= self.output_namespace['fract_areas'][output_neuron['dend_comp_num']] * self.output_namespace['Cm'] * self.output_namespace['Area_tot_pyram'] *2
+        if 'spine_factor' not in self.output_namespace:
+            self.output_namespace['spine_factor'] = 2
+
+        self.output_namespace['C']= self.output_namespace['fract_areas'][output_neuron['dend_comp_num']] * self.output_namespace['Cm'] * self.output_namespace['Area_tot_pyram'] * self.output_namespace['spine_factor']
         # if output_neuron['soma_layer'] in [6]: # neuroelectro portal layer5/6 capacitance ??????
         #     self.output_namespace['C'] = self.output_namespace['fract_areas'][output_neuron['dend_comp_num']] * self.output_namespace['Cm'] * self.output_namespace['Area_tot_pyram']
         # total g_leak in compartments
