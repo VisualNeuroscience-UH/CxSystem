@@ -868,7 +868,7 @@ class CxSystem(object):
                     # self.save_output_data.syntax_bank.append(
                     #     "self.save_output_data.data['spikes_all']['%s'] = asarray(%s.it)" % (object_name, Mon_name))
                     self.save_output_data.syntax_bank.append(
-                        "self.save_output_data.data['spikes_all']['%s'] = asarray(%s.get_states)" % (object_name, Mon_name))
+                        "self.save_output_data.data['spikes_all']['%s'] = %s.get_states()" % (object_name, Mon_name))
                     Mon_str = Mon_name + Mon_str
                 else:
                     self.save_output_data.create_key('%s_all' % sub_mon_arg[0])  # Create a key in save_data()
