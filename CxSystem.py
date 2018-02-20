@@ -865,10 +865,10 @@ class CxSystem(object):
                     self.save_output_data.create_key('spikes_all')  # Create a key in save_data() object
                     # for that specific StateMonitor variable.
                     Mon_name = monitor_options[mon_tag][0] + str(self.monitor_idx) + '_' + object_name
-                    self.save_output_data.syntax_bank.append(
-                        "self.save_output_data.data['spikes_all']['%s'] = asarray(%s.it)" % (object_name, Mon_name))
                     # self.save_output_data.syntax_bank.append(
-                    #     "self.save_output_data.data['spikes_all']['%s'] = asarray(%s.get_states)" % (object_name, Mon_name))
+                    #     "self.save_output_data.data['spikes_all']['%s'] = asarray(%s.it)" % (object_name, Mon_name))
+                    self.save_output_data.syntax_bank.append(
+                        "self.save_output_data.data['spikes_all']['%s'] = asarray(%s.get_states)" % (object_name, Mon_name))
                     Mon_str = Mon_name + Mon_str
                 else:
                     self.save_output_data.create_key('%s_all' % sub_mon_arg[0])  # Create a key in save_data()
@@ -876,12 +876,12 @@ class CxSystem(object):
                     Mon_name = monitor_options[mon_tag][0] + \
                         str(self.monitor_idx) + '_' + object_name + '__' + sub_mon_arg[0]
                     # After simulation, the following syntax will be used to save this specific monitor's result:
-                    self.save_output_data.syntax_bank.append("self.save_output_data.data['%s_all']"
-                                                             "['%s'] = %s.%s"
-                                                             %(sub_mon_arg[0], object_name, Mon_name, sub_mon_arg[0]))
                     # self.save_output_data.syntax_bank.append("self.save_output_data.data['%s_all']"
-                    #                                          "['%s'] = %s.get_states()"
-                    #                                          %(sub_mon_arg[0], object_name, Mon_name))
+                    #                                          "['%s'] = %s.%s"
+                    #                                          %(sub_mon_arg[0], object_name, Mon_name, sub_mon_arg[0]))
+                    self.save_output_data.syntax_bank.append("self.save_output_data.data['%s_all']"
+                                                             "['%s'] = %s.get_states()"
+                                                             %(sub_mon_arg[0], object_name, Mon_name))
                     Mon_str = Mon_name + Mon_str + ",'" + sub_mon_arg[0] + "'"
                     del (sub_mon_arg[0])
                     # add each of the tag and their argument,
