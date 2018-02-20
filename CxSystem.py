@@ -14,8 +14,6 @@ from brian2 import *
 import brian2genn
 import os
 import sys
-# reload(sys)
-# sys.setdefaultencoding('utf-8')
 from physiology_reference import *
 from parameter_parser import synapse_parser
 from matplotlib.pyplot import  *
@@ -292,7 +290,7 @@ class CxSystem(object):
     def set_device(self,*args):
         self.device = args[0]
         assert self.device.lower() in ['genn', 'cpp',
-                               'python'], ' -  Device %s is not defined. Check capital letters in device name.' % self.device
+                               'python'], ' -  Device %s is not defined. ' % self.device
         if self.device.lower() == 'genn':
             print " -  System is going to be run using GeNN devices, " \
                   "Errors may rise if Brian2/Brian2GeNN/GeNN is not installed correctly or the limitations are not " \
@@ -869,6 +867,8 @@ class CxSystem(object):
                     Mon_name = monitor_options[mon_tag][0] + str(self.monitor_idx) + '_' + object_name
                     self.save_output_data.syntax_bank.append(
                         "self.save_output_data.data['spikes_all']['%s'] = asarray(%s.it)" % (object_name, Mon_name))
+                    # self.save_output_data.syntax_bank.append(
+                    #     "self.save_output_data.data['spikes_all']['%s'] = asarray(%s.get_states)" % (object_name, Mon_name))
                     Mon_str = Mon_name + Mon_str
                 else:
                     self.save_output_data.create_key('%s_all' % sub_mon_arg[0])  # Create a key in save_data()
@@ -877,8 +877,11 @@ class CxSystem(object):
                         str(self.monitor_idx) + '_' + object_name + '__' + sub_mon_arg[0]
                     # After simulation, the following syntax will be used to save this specific monitor's result:
                     self.save_output_data.syntax_bank.append("self.save_output_data.data['%s_all']"
-                                                             "['%s'] = asarray(%s.%s)"
+                                                             "['%s'] = %s.%s"
                                                              %(sub_mon_arg[0], object_name, Mon_name, sub_mon_arg[0]))
+                    # self.save_output_data.syntax_bank.append("self.save_output_data.data['%s_all']"
+                    #                                          "['%s'] = %s.get_states()"
+                    #                                          %(sub_mon_arg[0], object_name, Mon_name))
                     Mon_str = Mon_name + Mon_str + ",'" + sub_mon_arg[0] + "'"
                     del (sub_mon_arg[0])
                     # add each of the tag and their argument,
@@ -1632,8 +1635,9 @@ class CxSystem(object):
         After the simulation and using the syntaxes that are previously prepared in the syntax_bank of save_data() object, this method saves the collected data to a file.
 
         '''
-        print " -  Generating the syntaxes for saving CX output ..."
+        print " -  Generating the syntaxes for saving CX output:"
         for syntax in self.save_output_data.syntax_bank:
+            print syntax
             exec syntax
         self.save_output_data.save_to_file()
         if hasattr(self,'save_brian_data') and self.do_save_connections:
