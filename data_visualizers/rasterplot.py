@@ -1669,9 +1669,9 @@ if __name__ == '__main__':
     # Seeing results in iPython for example:
     #  plt.figure(); a = data.pivot_table('irregularity_mean', index='background_rate', columns='k').sort_index(ascending=False); sns.heatmap(a, cmap='binary', vmax=1)
 
-    # exp = ExperimentData('/opt3/tmp/adexminimal/', '02_pc_only_square')
-    # exp.computestats('stats_02_pc_only_square.csv',
-    #                 ['calcium_concentration', 'J', 'k', 'background_rate'])
+    exp = ExperimentData('/opt3/tmp/DataRepo/2017-12_Submitted_repeat/', '00_')
+    exp.computestats('stats_eif_rerun2018.csv',
+                    ['calcium_concentration', 'J', 'k', 'background_rate'])
 
     ###### For creating side-by-side rasterplots ######
     # simulations = ['depol_37_calcium_concentration1.0_Cpp_3000ms.bz2', 'depol_37_calcium_concentration1.4_Cpp_3000ms.bz2',
@@ -1696,7 +1696,7 @@ if __name__ == '__main__':
     # # print a.show_spikes_at_t(ax,7, 0.0063*second)
     # plt.show()
 
-    a = SimulationData('/opt3/tmp/coba/01_testrun_20180216_11294826_k11.16_python_2000ms.bz2',
-                       group_numbering={1: 'NG1_SS_L4', 2: 'NG2_BC_L4'}, group_neuroncounts={1: 3200, 2: 800},
-                       group_to_type={1: 'SS', 2: 'BC'})
-    a.publicationplot(plot_type=1, sampling_factor=1, time_rounding=5)
+    # a = SimulationData('/opt3/tmp/coba/01_testrun_20180216_11294826_k11.16_python_2000ms.bz2',
+    #                    group_numbering={1: 'NG1_SS_L4', 2: 'NG2_BC_L4'}, group_neuroncounts={1: 3200, 2: 800},
+    #                    group_to_type={1: 'SS', 2: 'BC'})
+    # a.publicationplot(plot_type=1, sampling_factor=1, time_rounding=5)

@@ -77,13 +77,13 @@ class EquationHelper(object):
     # Simple alpha synapses
     SynapticExcInhModels['E_ALPHA'] = {'I_SYNAPTIC_EXC': 'gealpha * (Ee - vm)',
                                        'SYNAPTIC_EXC_EQ':
-                                           '''dge/dt = -ge/tau_alpha_e : siemens
-                                              dgealpha/dt = (ge-gealpha)/tau_alpha_e : siemens'''}
+                                           '''dge/dt = -ge/tau_e_alpha : siemens
+                                              dgealpha/dt = (ge-gealpha)/tau_e_alpha : siemens'''}
 
     SynapticExcInhModels['I_ALPHA'] = {'I_SYNAPTIC_INH': 'gialpha * (Ei - vm)',
                                        'SYNAPTIC_INH_EQ':
-                                           '''dgi/dt = -gi/tau_alpha_i : siemens
-                                              dgialpha/dt = (gi-gialpha)/tau_alpha_i : siemens'''}
+                                           '''dgi/dt = -gi/tau_i_alpha : siemens
+                                              dgialpha/dt = (gi-gialpha)/tau_i_alpha : siemens'''}
 
     # Single-exponential AMPA+NMDA and GABA-A+GABA-B
     SynapticExcInhModels['AMPA_NMDA'] = {'I_SYNAPTIC_EXC': 'g_ampa*(E_ampa - vm) + g_nmda*(E_nmda - vm)*(1/(1+exp(-0.062*vm)*(1/3.57)))',

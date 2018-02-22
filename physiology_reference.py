@@ -223,12 +223,12 @@ class neuron_reference(object):
             '''
 
         else:
-            eq_template_soma = eqt.EquationHelper(neuron_model=self.neuron_model, is_pyramidal=True,
-                                                  compartment='soma', exc_model=self.excitation_model,
-                                                  inh_model=self.inhibition_model).getMembraneEquation(return_string=True)
-            eq_template_dend = eqt.EquationHelper(neuron_model=self.neuron_model, is_pyramidal=True,
-                                                  compartment='dend', exc_model=self.excitation_model,
-                                                  inh_model=self.inhibition_model).getMembraneEquation(return_string=True)
+            eq_template_soma = eqt.EquationHelper(neuron_model=self.pc_neuron_model, is_pyramidal=True,
+                                                  compartment='soma', exc_model=self.pc_excitation_model,
+                                                  inh_model=self.pc_inhibition_model).getMembraneEquation(return_string=True)
+            eq_template_dend = eqt.EquationHelper(neuron_model=self.pc_neuron_model, is_pyramidal=True,
+                                                  compartment='dend', exc_model=self.pc_excitation_model,
+                                                  inh_model=self.pc_inhibition_model).getMembraneEquation(return_string=True)
 
         # <editor-fold desc="...Generation of membrane equations from templates">
         self.output_neuron['equation'] = Equations(eq_template_dend, vm="vm_basal", ge="ge_basal",
@@ -653,7 +653,8 @@ class synapse_reference(object):
         else:
             pre_eq_lines = ['%s += wght\n' % (true_receptor+self.output_synapse['post_comp_name'] + '_post')
                             for true_receptor in self.true_receptors]
-            self.output_synapse['pre_eq'] = ''.join(pre_eq_lines).rstrip()
+            pre_eq = ''.join(pre_eq_lines).rstrip()
+            self.output_synapse['pre_eq'] = pre_eq
 
     def Fixed_calcium(self):
         '''
@@ -673,7 +674,8 @@ class synapse_reference(object):
         else:
             pre_eq_lines = ['%s += wght\n' % (true_receptor+self.output_synapse['post_comp_name'] + '_post')
                             for true_receptor in self.true_receptors]
-            self.output_synapse['pre_eq'] = ''.join(pre_eq_lines).rstrip()
+            pre_eq = ''.join(pre_eq_lines).rstrip()
+            self.output_synapse['pre_eq'] = pre_eq
 
     def Depressing(self):
         """
@@ -693,11 +695,12 @@ class synapse_reference(object):
             R = R - U * R
             ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
         else:
-            pre_eq = 'R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_d))\n'
+            pre_eq_lines = ['R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_d))\n']
             for true_receptor in self.true_receptors:
                 new_line = '%s += R * U * wght\n' % (true_receptor + self.output_synapse['post_comp_name'] + '_post')
-                pre_eq.join(new_line)
-            pre_eq.join('R = R - U * R')
+                pre_eq_lines.append(new_line)
+            pre_eq_lines.append('R = R - U * R')
+            pre_eq = ''.join(pre_eq_lines).rstrip()
             self.output_synapse['pre_eq'] = pre_eq
 
     def Facilitating(self):
@@ -721,18 +724,19 @@ class synapse_reference(object):
             u = u + U_f * (1-u)
             ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
         else:
-            pre_eq = '''
+            pre_eq_lines = ['''
             R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_fd))
             u = u + (U_f-u)*(1 - exp(-(t-lastupdate)/tau_f))
-            '''
+            ''']
             for true_receptor in self.true_receptors:
                 new_line = '%s += R * u * wght\n' % (true_receptor + self.output_synapse['post_comp_name'] + '_post')
-                pre_eq.join(new_line)
-            pre_eq_end = '''
+                pre_eq_lines.append(new_line)
+            pre_eq_lines.append('''
             R = R - u * R
             u = u + U_f * (1-u)
-            '''
-            self.output_synapse['pre_eq'] = pre_eq.join(pre_eq_end)
+            ''')
+            pre_eq = ''.join(pre_eq_lines).strip()
+            self.output_synapse['pre_eq'] = pre_eq
 
     def value_extractor(self, df, key_name):
         non_dict_indices = df['Variable'].dropna()[df['Key'].isnull()].index.tolist()
