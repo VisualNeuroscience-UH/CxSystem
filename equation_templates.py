@@ -86,14 +86,14 @@ class EquationHelper(object):
                                        'SYNAPTIC_EXC_EQ':
                                            '''dge/dt = -ge/tau_e_alpha : siemens
                                               dgealpha1/dt = (ge-gealpha1)/tau_e_alpha : siemens
-                                              gealpha = exp(1)*gealpha1 : siemens
+                                              gealpha = scaling_alpha*exp(1)*gealpha1 : siemens
                                               '''}
 
     SynapticExcInhModels['I_ALPHA'] = {'I_SYNAPTIC_INH': 'gialpha * (Ei - vm)',
                                        'SYNAPTIC_INH_EQ':
                                            '''dgi/dt = -gi/tau_i_alpha : siemens
                                               dgialpha1/dt = (gi-gialpha1)/tau_i_alpha : siemens
-                                              gialpha = exp(1)*gealpha1 : siemens
+                                              gialpha = scaling_alpha*exp(1)*gialpha1 : siemens
                                               '''}
 
     SynapticExcInhModels['E_ALPHA_NONSCALED'] = {'I_SYNAPTIC_EXC': 'gealpha * (Ee - vm)',
@@ -148,10 +148,10 @@ class EquationHelper(object):
     # Variables that are compartment-specific; will have compartment name attached to them
     CompSpecificVariables = {'SIMPLE_E': ['ge'],
                              'SIMPLE_I': ['gi'],
-                             'E_ALPHA': ['ge', 'gealpha'],
-                             'I_ALPHA': ['gi', 'gialpha'],
-                             'E_ALPHA_NONSCALED': ['ge', 'gealpha', 'gealpha1'],
-                             'I_ALPHA_NONSCALED': ['gi', 'gialpha', 'gialpha1'],
+                             'E_ALPHA': ['ge', 'gealpha', 'gealpha1'],
+                             'I_ALPHA': ['gi', 'gialpha', 'gialpha1'],
+                             'E_ALPHA_NONSCALED': ['ge', 'gealpha'],
+                             'I_ALPHA_NONSCALED': ['gi', 'gialpha'],
                              'AMPA_NMDA': ['g_ampa', 'g_nmda'],
                              'GABAA_GABAB': ['g_gabaa', 'g_gabab'],
                              'AMPA_NMDA_BIEXP': ['g_ampa', 'g_nmda', 'g_ampa_alpha', 'g_nmda_alpha','g_ampa_alpha1', 'g_nmda_alpha1'],
@@ -216,7 +216,7 @@ class EquationHelper(object):
         self.comp_specific_vars = EquationHelper.CompSpecificVariables[exc_model] + \
                                   EquationHelper.CompSpecificVariables[inh_model]
 
-    def getMembraneEquation(self, return_string=False):
+    def getMembraneEquation(self, base_dict=None, return_string=False):
 
         membrane_equation = Template(EquationHelper.membrane_eq_template)
         all_membrane_model_strings = dict(self.neuron_model_strings)
@@ -243,7 +243,15 @@ class EquationHelper(object):
 
             return compartment_eq
 
+    def getDict(self, base_dict=None, specific_compartment='XX'):
+
+        compartment_dict = dict(base_dict)
+        substitutables = {k: k + '_' + specific_compartment for k in self.comp_specific_vars}
+        compartment_dict.update(substitutables)
+
+        return compartment_dict
+
 
 if __name__ == '__main__':
-    x = EquationHelper(neuron_model='EIF', is_pyramidal=True, compartment='dend', exc_model='AMPA_NMDA_BIEXP')
-    print x.getMembraneEquation(return_string=False)
+    x = EquationHelper(neuron_model='EIF', is_pyramidal=True, compartment='a0', exc_model='AMPA_NMDA_BIEXP', inh_model='I_ALPHA')
+    print x.getMembraneEquation(return_string=True)

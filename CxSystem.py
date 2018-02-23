@@ -780,6 +780,9 @@ class CxSystem(object):
         self.save_output_data.data['positions_all']['w_coord'][_dyn_neurongroup_name] = \
             self.customized_neurons_list[current_idx]['w_positions']
         self.save_output_data.data['number_of_neurons'][_dyn_neurongroup_name] = eval(_dyn_neuronnumber_name)
+        # </editor-fold>
+
+        # <editor-fold desc="Initialization of neuron group compartment potentials and conductances">
         # NeuronGroups() should be initialized with a random vm, ge and gi values.
         # To address this, a 6-line code is generated and put in NG_init variable,
         # the running of which will lead to initialization of current NeuronGroup().
@@ -789,22 +792,27 @@ class CxSystem(object):
             NG_init += "\tif _key.find('vm')>=0:\n"
             NG_init += "\t\tsetattr(%s,_key,%s['Vr']+Vr_offset * (%s['VT']-%s['Vr']))\n" % \
                        (_dyn_neurongroup_name, _dyn_neuron_namespace_name, _dyn_neuron_namespace_name, _dyn_neuron_namespace_name)
-            NG_init += "\telif ((_key.find('ge')>=0) or (_key.find('gi')>=0)):\n"
-            NG_init += "\t\tsetattr(%s,_key,0)" % _dyn_neurongroup_name
+
+            # Commented out (didn't work with receptors) /HH
+            # NG_init += "\telif ((_key.find('ge')>=0) or (_key.find('gi')>=0)):\n"
+            # NG_init += "\t\tsetattr(%s,_key,0)" % _dyn_neurongroup_name
             exec NG_init
         else:
             NG_init = "for _key in %s.variables.keys():\n" % _dyn_neurongroup_name
             NG_init += "\tif _key.find('vm')>=0:\n"
             NG_init += "\t\tsetattr(%s,_key,%s['Vr'])\n" % (_dyn_neurongroup_name, _dyn_neuron_namespace_name)
-            NG_init += "\telif ((_key.find('ge')>=0) or (_key.find('gi')>=0)):\n"
-            NG_init += "\t\tsetattr(%s,_key,0)" % _dyn_neurongroup_name
+
+            # Commented out (didn't work with receptors) /HH
+            # NG_init += "\telif ((_key.find('ge')>=0) or (_key.find('gi')>=0)):\n"
+            # NG_init += "\t\tsetattr(%s,_key,0)" % _dyn_neurongroup_name
             exec NG_init
+        # </editor-fold>
+
         setattr(self.main_module, _dyn_neurongroup_name, eval(_dyn_neurongroup_name))
         try:
             setattr(self.Cxmodule, _dyn_neurongroup_name, eval(_dyn_neurongroup_name))
         except AttributeError:
             pass
-        #</editor-fold>
 
         # passing remainder of the arguments to monitors() method to take care of the arguments.
         self.monitors(str(monitors).split(' '), _dyn_neurongroup_name, self.customized_neurons_list[-1]['equation'])

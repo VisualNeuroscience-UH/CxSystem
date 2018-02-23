@@ -207,6 +207,8 @@ class neuron_reference(object):
         '''
 
         if self.model_variation is False:  # For backwards compatibility
+
+            # <editor-fold desc="...Fixed equations">
             eq_template_soma = '''
             dvm/dt = ((gL*(EL-vm) + gealpha * (Ee-vm) + gialpha * (Ei-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) +I_dendr +tonic_current*(1-exp(-t/(50*msecond)))) / C) + noise_sigma*xi*taum_soma**-0.5 : volt (unless refractory)
             dge/dt = -ge/tau_e : siemens
@@ -222,7 +224,65 @@ class neuron_reference(object):
             dgialpha/dt = (gi-gialpha)/tau_i : siemens
             '''
 
+            self.output_neuron['equation'] = Equations(eq_template_dend, vm="vm_basal", ge="ge_basal",
+                                                       gealpha="gealpha_basal",
+                                                       C=self.output_neuron['namespace']['C'][0],
+                                                       gL=self.output_neuron['namespace']['gL'][0],
+                                                       gi="gi_basal", geX="geX_basal", gialpha="gialpha_basal",
+                                                       gealphaX="gealphaX_basal", I_dendr="Idendr_basal")
+            self.output_neuron['equation'] += Equations(eq_template_soma, gL=self.output_neuron['namespace']['gL'][1],
+                                                        ge='ge_soma', geX='geX_soma', gi='gi_soma',
+                                                        gealpha='gealpha_soma',
+                                                        gealphaX='gealphaX_soma',
+                                                        gialpha='gialpha_soma',
+                                                        C=self.output_neuron['namespace']['C'][1],
+                                                        I_dendr='Idendr_soma',
+                                                        taum_soma=self.output_neuron['namespace']['taum_soma'])
+            for _ii in range(
+                    self.output_neuron['dend_comp_num'] + 1):  # extra dendritic compartment in the same level of soma
+                self.output_neuron['equation'] += Equations(eq_template_dend, vm="vm_a%d" % _ii,
+                                                            C=self.output_neuron['namespace']['C'][_ii],
+                                                            gL=self.output_neuron['namespace']['gL'][_ii],
+                                                            ge="ge_a%d" % _ii,
+                                                            gi="gi_a%d" % _ii, geX="geX_a%d" % _ii,
+                                                            gealpha="gealpha_a%d" % _ii, gialpha="gialpha_a%d" % _ii,
+                                                            gealphaX="gealphaX_a%d" % _ii, I_dendr="Idendr_a%d" % _ii)
+
+            # Defining decay between soma and basal dendrite & apical dendrites
+            self.output_neuron['equation'] += Equations('I_dendr = gapre*(vmpre-vmself)  : amp',
+                                                        gapre=1 / (self.output_neuron['namespace']['Ra'][0]),
+                                                        I_dendr="Idendr_basal", vmself="vm_basal", vmpre="vm")
+            self.output_neuron['equation'] += Equations(
+                'I_dendr = gapre*(vmpre-vmself)  + gapost*(vmpost-vmself) : amp',
+                gapre=1 / (self.output_neuron['namespace']['Ra'][1]),
+                gapost=1 / (self.output_neuron['namespace']['Ra'][0]),
+                I_dendr="Idendr_soma", vmself="vm",
+                vmpre="vm_a0", vmpost="vm_basal")
+            self.output_neuron['equation'] += Equations('I_dendr = gapre*(vmpre-vmself) + gapost*(vmpost-vmself) : amp',
+                                                        gapre=1 / (self.output_neuron['namespace']['Ra'][2]),
+                                                        gapost=1 / (self.output_neuron['namespace']['Ra'][1]),
+                                                        I_dendr="Idendr_a0", vmself="vm_a0", vmpre="vm_a1", vmpost="vm")
+
+            # Defining decay between apical dendrite compartments
+            for _ii in arange(1, self.output_neuron['dend_comp_num']):
+                self.output_neuron['equation'] += Equations(
+                    'I_dendr = gapre*(vmpre-vmself) + gapost*(vmpost-vmself) : amp',
+                    gapre=1 / (self.output_neuron['namespace']['Ra'][_ii]),
+                    gapost=1 / (self.output_neuron['namespace']['Ra'][_ii - 1]),
+                    I_dendr="Idendr_a%d" % _ii, vmself="vm_a%d" % _ii,
+                    vmpre="vm_a%d" % (_ii + 1), vmpost="vm_a%d" % (_ii - 1))
+
+            self.output_neuron['equation'] += Equations('I_dendr = gapost*(vmpost-vmself) : amp',
+                                                        I_dendr="Idendr_a%d" % self.output_neuron['dend_comp_num'],
+                                                        gapost=1 / (self.output_neuron['namespace']['Ra'][-1]),
+                                                        vmself="vm_a%d" % self.output_neuron['dend_comp_num'],
+                                                        vmpost="vm_a%d" % (self.output_neuron['dend_comp_num'] - 1))
+            # </editor-fold>
+
         else:
+
+            # <editor-fold desc="...Model variation equations">
+            # TODO - Incorporate into equation_templates
             eq_template_soma = eqt.EquationHelper(neuron_model=self.pc_neuron_model, is_pyramidal=True,
                                                   compartment='soma', exc_model=self.pc_excitation_model,
                                                   inh_model=self.pc_inhibition_model).getMembraneEquation(return_string=True)
@@ -230,61 +290,105 @@ class neuron_reference(object):
                                                   compartment='dend', exc_model=self.pc_excitation_model,
                                                   inh_model=self.pc_inhibition_model).getMembraneEquation(return_string=True)
 
-        # <editor-fold desc="...Generation of membrane equations from templates">
-        self.output_neuron['equation'] = Equations(eq_template_dend, vm="vm_basal", ge="ge_basal",
-                                                   gealpha="gealpha_basal",
-                                                   C=self.output_neuron['namespace']['C'][0],
-                                                   gL=self.output_neuron['namespace']['gL'][0],
-                                                   gi="gi_basal", geX="geX_basal", gialpha="gialpha_basal",
-                                                   gealphaX="gealphaX_basal", I_dendr="Idendr_basal")
-        self.output_neuron['equation'] += Equations(eq_template_soma, gL=self.output_neuron['namespace']['gL'][1],
-                                                    ge='ge_soma', geX='geX_soma', gi='gi_soma', gealpha='gealpha_soma',
-                                                    gealphaX='gealphaX_soma',
-                                                    gialpha='gialpha_soma', C=self.output_neuron['namespace']['C'][1],
-                                                    I_dendr='Idendr_soma',taum_soma=self.output_neuron['namespace']['taum_soma'])
-        for _ii in range(self.output_neuron['dend_comp_num'] + 1):  # extra dendritic compartment in the same level of soma
-            self.output_neuron['equation'] += Equations(eq_template_dend, vm="vm_a%d" % _ii,
-                                                        C=self.output_neuron['namespace']['C'][_ii],
-                                                        gL=self.output_neuron['namespace']['gL'][_ii],
-                                                        ge="ge_a%d" % _ii,
-                                                        gi="gi_a%d" % _ii, geX="geX_a%d" % _ii,
-                                                        gealpha="gealpha_a%d" % _ii, gialpha="gialpha_a%d" % _ii,
-                                                        gealphaX="gealphaX_a%d" % _ii, I_dendr="Idendr_a%d" % _ii)
 
-        # </editor-fold>
+            self.output_neuron['equation'] = Equations(eq_template_dend, vm="vm_basal", ge="ge_basal",
+                                                       gealpha="gealpha_basal",
+                                                       C=self.output_neuron['namespace']['C'][0],
+                                                       gL=self.output_neuron['namespace']['gL'][0],
+                                                       gi="gi_basal", geX="geX_basal", gialpha="gialpha_basal",
+                                                       gealphaX="gealphaX_basal", I_dendr="Idendr_basal",
+                                                       gealpha1="gealpha1_basal", gialpha1="gialpha1_basal",
+                                                       ge_ampa="ge_ampa_basal", ge_ampa_alpha="ge_ampa_alpha_basal", ge_ampa_alpha1="ge_ampa_alpha1_basal",
+                                                       ge_nmda="ge_nmda_basal", ge_nmda_alpha="ge_nmda_alpha_basal", ge_nmda_alpha1="ge_nmda_alpha1_basal",
+                                                       ge_gabaa="ge_gabaa_basal", ge_gabaa_alpha="ge_gabaa_alpha_basal", ge_gabaa_alpha1="ge_gabaa_alpha1_basal",
+                                                       ge_gabab="ge_gabab_basal", ge_gabab_alpha="ge_gabab_alpha_basal", ge_gabab_alpha1="ge_gabab_alpha1_basal")
 
-        # <editor-fold desc="...Connecting PC compartments">
-        # Defining decay between soma and basal dendrite & apical dendrites
-        self.output_neuron['equation'] += Equations('I_dendr = gapre*(vmpre-vmself)  : amp',
-                                                    gapre=1 / (self.output_neuron['namespace']['Ra'][0]),
-                                                    I_dendr="Idendr_basal", vmself="vm_basal", vmpre="vm")
-        self.output_neuron['equation'] += Equations('I_dendr = gapre*(vmpre-vmself)  + gapost*(vmpost-vmself) : amp',
-                                                    gapre=1 / (self.output_neuron['namespace']['Ra'][1]),
-                                                    gapost=1 / (self.output_neuron['namespace']['Ra'][0]),
-                                                    I_dendr="Idendr_soma", vmself="vm",
-                                                    vmpre="vm_a0", vmpost="vm_basal")
-        self.output_neuron['equation'] += Equations('I_dendr = gapre*(vmpre-vmself) + gapost*(vmpost-vmself) : amp',
-                                                    gapre=1 / (self.output_neuron['namespace']['Ra'][2]),
-                                                    gapost=1 / (self.output_neuron['namespace']['Ra'][1]),
-                                                    I_dendr="Idendr_a0", vmself="vm_a0", vmpre="vm_a1", vmpost="vm")
+            self.output_neuron['equation'] += Equations(eq_template_soma, gL=self.output_neuron['namespace']['gL'][1],
+                                                        ge='ge_soma', geX='geX_soma', gi='gi_soma',
+                                                        gealpha='gealpha_soma',
+                                                        gealphaX='gealphaX_soma',
+                                                        gialpha='gialpha_soma',
+                                                        C=self.output_neuron['namespace']['C'][1],
+                                                        I_dendr='Idendr_soma',
+                                                        taum_soma=self.output_neuron['namespace']['taum_soma'],
+                                                        gealpha1="gealpha1_soma", gialpha1="gialpha1_soma",
+                                                        ge_ampa="ge_ampa_soma", ge_ampa_alpha="ge_ampa_alpha_soma",
+                                                        ge_ampa_alpha1="ge_ampa_alpha1_soma",
+                                                        ge_nmda="ge_nmda_soma", ge_nmda_alpha="ge_nmda_alpha_soma",
+                                                        ge_nmda_alpha1="ge_nmda_alpha1_soma",
+                                                        ge_gabaa="ge_gabaa_soma", ge_gabaa_alpha="ge_gabaa_alpha_soma",
+                                                        ge_gabaa_alpha1="ge_gabaa_alpha1_soma",
+                                                        ge_gabab="ge_gabab_soma", ge_gabab_alpha="ge_gabab_alpha_soma",
+                                                        ge_gabab_alpha1="ge_gabab_alpha1_soma")
 
-        # Defining decay between apical dendrite compartments
-        for _ii in arange(1, self.output_neuron['dend_comp_num']):
+            # TODO - Build PC equations dynamically (under construction)
+            # basal_dict = eq_template_dend.getDict(base_dict={'C': self.output_neuron['namespace']['C'][0],
+            #                                                  'gL': self.output_neuron['namespace']['gL'][0]},
+            #                                       specific_compartment='basal')
+            # basal_dict = eq_template_soma.getDict(base_dict={'C': self.output_neuron['namespace']['C'][1],
+            #                                                  'gL': self.output_neuron['namespace']['gL'][1]},
+            #                                       specific_compartment='soma')
+
+            for _ii in range(
+                    self.output_neuron['dend_comp_num'] + 1):  # extra dendritic compartment in the same level of soma
+                self.output_neuron['equation'] += Equations(eq_template_dend, vm="vm_a%d" % _ii,
+                                                            C=self.output_neuron['namespace']['C'][_ii],
+                                                            gL=self.output_neuron['namespace']['gL'][_ii],
+                                                            ge="ge_a%d" % _ii,
+                                                            gi="gi_a%d" % _ii, geX="geX_a%d" % _ii,
+                                                            gealpha="gealpha_a%d" % _ii, gialpha="gialpha_a%d" % _ii,
+                                                            gealphaX="gealphaX_a%d" % _ii, I_dendr="Idendr_a%d" % _ii,
+                                                            gealpha1="gealpha1_a%d" % _ii,
+                                                            gialpha1="gialpha1_a%d" % _ii,
+                                                            ge_ampa="ge_ampa_a%d" % _ii,
+                                                            ge_ampa_alpha="ge_ampa_alpha_a%d" % _ii,
+                                                            ge_ampa_alpha1="ge_ampa_alpha1_a%d" % _ii,
+                                                            ge_nmda="ge_nmda_a%d" % _ii,
+                                                            ge_nmda_alpha="ge_nmda_alpha_a%d" % _ii,
+                                                            ge_nmda_alpha1="ge_nmda_alpha1_a%d" % _ii,
+                                                            ge_gabaa="ge_gabaa_a%d" % _ii,
+                                                            ge_gabaa_alpha="ge_gabaa_alpha_a%d" % _ii,
+                                                            ge_gabaa_alpha1="ge_gabaa_alpha1_a%d" % _ii,
+                                                            ge_gabab="ge_gabab_a%d" % _ii,
+                                                            ge_gabab_alpha="ge_gabab_alpha_a%d" % _ii,
+                                                            ge_gabab_alpha1="ge_gabab_alpha1_a%d" % _ii)
+
+            # Defining decay between soma and basal dendrite & apical dendrites
+            self.output_neuron['equation'] += Equations('I_dendr = gapre*(vmpre-vmself)  : amp',
+                                                        gapre=1 / (self.output_neuron['namespace']['Ra'][0]),
+                                                        I_dendr="Idendr_basal", vmself="vm_basal", vmpre="vm")
+            self.output_neuron['equation'] += Equations(
+                'I_dendr = gapre*(vmpre-vmself)  + gapost*(vmpost-vmself) : amp',
+                gapre=1 / (self.output_neuron['namespace']['Ra'][1]),
+                gapost=1 / (self.output_neuron['namespace']['Ra'][0]),
+                I_dendr="Idendr_soma", vmself="vm",
+                vmpre="vm_a0", vmpost="vm_basal")
             self.output_neuron['equation'] += Equations('I_dendr = gapre*(vmpre-vmself) + gapost*(vmpost-vmself) : amp',
-                                                        gapre=1 / (self.output_neuron['namespace']['Ra'][_ii]),
-                                                        gapost=1 / (self.output_neuron['namespace']['Ra'][_ii - 1]),
-                                                        I_dendr="Idendr_a%d" % _ii, vmself="vm_a%d" % _ii,
-                                                        vmpre="vm_a%d" % (_ii + 1), vmpost="vm_a%d" % (_ii - 1))
+                                                        gapre=1 / (self.output_neuron['namespace']['Ra'][2]),
+                                                        gapost=1 / (self.output_neuron['namespace']['Ra'][1]),
+                                                        I_dendr="Idendr_a0", vmself="vm_a0", vmpre="vm_a1", vmpost="vm")
 
-        self.output_neuron['equation'] += Equations('I_dendr = gapost*(vmpost-vmself) : amp',
-                                                    I_dendr="Idendr_a%d" % self.output_neuron['dend_comp_num'],
-                                                    gapost=1 / (self.output_neuron['namespace']['Ra'][-1]),
-                                                    vmself="vm_a%d" % self.output_neuron['dend_comp_num'],
-                                                    vmpost="vm_a%d" % (self.output_neuron['dend_comp_num'] - 1))
-        # </editor-fold>
+            # Defining decay between apical dendrite compartments
+            for _ii in arange(1, self.output_neuron['dend_comp_num']):
+                self.output_neuron['equation'] += Equations(
+                    'I_dendr = gapre*(vmpre-vmself) + gapost*(vmpost-vmself) : amp',
+                    gapre=1 / (self.output_neuron['namespace']['Ra'][_ii]),
+                    gapost=1 / (self.output_neuron['namespace']['Ra'][_ii - 1]),
+                    I_dendr="Idendr_a%d" % _ii, vmself="vm_a%d" % _ii,
+                    vmpre="vm_a%d" % (_ii + 1), vmpost="vm_a%d" % (_ii - 1))
+
+            self.output_neuron['equation'] += Equations('I_dendr = gapost*(vmpost-vmself) : amp',
+                                                        I_dendr="Idendr_a%d" % self.output_neuron['dend_comp_num'],
+                                                        gapost=1 / (self.output_neuron['namespace']['Ra'][-1]),
+                                                        vmself="vm_a%d" % self.output_neuron['dend_comp_num'],
+                                                        vmpost="vm_a%d" % (self.output_neuron['dend_comp_num'] - 1))
+
+            #</editor-fold>
 
         self.output_neuron['equation'] += Equations('''x : meter
                             y : meter''')
+
+
 
     def BC(self):
         '''
