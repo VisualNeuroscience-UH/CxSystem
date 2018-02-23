@@ -58,12 +58,15 @@ class synapse_parser(object):
         synapse_parser.type_ref = array (['STDP','STDP_with_scaling', 'Fixed', 'Fixed_calcium', 'Fixed_normal', 'Depressing', 'Facilitating'])
         assert output_synapse['type'] in synapse_parser.type_ref, " -  Synapse type '%s' is not defined." % output_synapse['type']
         self.output_namespace = {}
+        # Commeted Cp and Cd out because not used in this branch /HH
         # self.output_namespace['Cp'] = self.value_extractor(self.physio_config_df,'Cp')
         # self.output_namespace['Cd'] = self.value_extractor(self.physio_config_df,'Cd')
         try:
             self.sparseness = self.value_extractor(self.physio_config_df,'sp_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
         except:
             pass
+
+        # Commeted ilam out because not used in this branch /HH
         # self.ilam = self.value_extractor(self.physio_config_df,'ilam_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
 
         self.calcium_concentration = self.value_extractor(self.physio_config_df, 'calcium_concentration' )

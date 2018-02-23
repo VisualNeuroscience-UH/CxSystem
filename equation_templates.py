@@ -23,7 +23,7 @@ class EquationHelper(object):
     """
 
     membrane_eq_template = '''
-    dvm/dt = (($I_NEURON_MODEL + $I_SYNAPTIC_EXC + $I_SYNAPTIC_INH $I_TONIC)/C) $VM_NOISE : volt (unless refractory)
+    dvm/dt = (($I_NEURON_MODEL + $I_SYNAPTIC_EXC + $I_SYNAPTIC_INH $I_TONIC)/C) $VM_NOISE : volt $BRIAN2_FLAGS
     $NEURON_MODEL_EQ
     $SYNAPTIC_EXC_EQ
     $SYNAPTIC_INH_EQ
@@ -34,10 +34,12 @@ class EquationHelper(object):
     # General strings will be added to all models
     default_soma_strings = {'I_TONIC': '+ tonic_current*(1-exp(-t/(50*msecond)))',
                             'TONIC_EQ': '',
-                            'VM_NOISE': '+ noise_sigma*xi*taum_soma**-0.5'}
+                            'VM_NOISE': '+ noise_sigma*xi*taum_soma**-0.5',
+                            'BRIAN2_FLAGS': '(unless refractory)'}
     default_dendrite_strings = {'I_TONIC': '',
                                 'TONIC_EQ': '',
-                                'VM_NOISE': ''}
+                                'VM_NOISE': '',
+                                'BRIAN2_FLAGS': ''}   # Be careful! "Unless refractory" in dendrites will not cause an error, but behavior is WRONG
 
 
     NeuronModels = dict()
@@ -59,13 +61,16 @@ class EquationHelper(object):
     NeuronModels['ADEX_PC'] = {'soma': {'I_NEURON_MODEL': 'gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT) + I_dendr',
                                         'NEURON_MODEL_EQ': ''},
 
-                              'dendrite': {'I_NEURON_MODEL': 'gL*(EL-vm) + I_dendr',
-                                           'NEURON_MODEL_EQ': ''}
+                               'dendrite': {'I_NEURON_MODEL': 'gL*(EL-vm) + I_dendr',
+                                            'NEURON_MODEL_EQ': ''}
                                }
     #</editor-fold>
 
     # <editor-fold desc="SYNAPTIC EXC/INH MODEL COMPONENTS">
     default_synaptic_excinh_strings = {}
+
+    ExcModelNames = ['SIMPLE_E', 'E_ALPHA', 'E_ALPHA_NONSCALED', 'AMPA_NMDA', 'AMPA_NMDA_BIEXP']
+    InhModelNames = ['SIMPLE_I', 'I_ALPHA', 'I_ALPHA_NONSCALED', 'GABAA_GABAB', 'GABAA_GABAB_BIEXP']
 
     SynapticExcInhModels = dict()
     # Simple synaptic current models
@@ -74,50 +79,96 @@ class EquationHelper(object):
     SynapticExcInhModels['SIMPLE_I'] = {'I_SYNAPTIC_INH': 'gi * (Ei - vm)',
                                         'SYNAPTIC_INH_EQ': 'dgi/dt = -gi/tau_i : siemens'}
 
-    # Simple alpha synapses
+    # Alpha synapses
+    # Non-scaled versions provided for backwards compatibility (were used in VCX model);
+    # reach only 1/e = 37% of given peak conductance
     SynapticExcInhModels['E_ALPHA'] = {'I_SYNAPTIC_EXC': 'gealpha * (Ee - vm)',
                                        'SYNAPTIC_EXC_EQ':
                                            '''dge/dt = -ge/tau_e_alpha : siemens
-                                              dgealpha/dt = (ge-gealpha)/tau_e_alpha : siemens'''}
+                                              dgealpha1/dt = (ge-gealpha1)/tau_e_alpha : siemens
+                                              gealpha = exp(1)*gealpha1 : siemens
+                                              '''}
 
     SynapticExcInhModels['I_ALPHA'] = {'I_SYNAPTIC_INH': 'gialpha * (Ei - vm)',
                                        'SYNAPTIC_INH_EQ':
                                            '''dgi/dt = -gi/tau_i_alpha : siemens
-                                              dgialpha/dt = (gi-gialpha)/tau_i_alpha : siemens'''}
+                                              dgialpha1/dt = (gi-gialpha1)/tau_i_alpha : siemens
+                                              gialpha = exp(1)*gealpha1 : siemens
+                                              '''}
+
+    SynapticExcInhModels['E_ALPHA_NONSCALED'] = {'I_SYNAPTIC_EXC': 'gealpha * (Ee - vm)',
+                                                 'SYNAPTIC_EXC_EQ':
+                                                     '''dge/dt = -ge/tau_e_alpha : siemens
+                                                        dgealpha/dt = (ge-gealpha)/tau_e_alpha : siemens
+                                                 '''}
+
+    SynapticExcInhModels['I_ALPHA_NONSCALED'] = {'I_SYNAPTIC_INH': 'gialpha * (Ei - vm)',
+                                                 'SYNAPTIC_INH_EQ':
+                                                     '''dgi/dt = -gi/tau_i_alpha : siemens
+                                                        dgialpha/dt = (gi-gialpha)/tau_i_alpha : siemens
+                                                 '''}
 
     # Single-exponential AMPA+NMDA and GABA-A+GABA-B
-    SynapticExcInhModels['AMPA_NMDA'] = {'I_SYNAPTIC_EXC': 'g_ampa*(E_ampa - vm) + g_nmda*(E_nmda - vm)*(1/(1+exp(-0.062*vm)*(1/3.57)))',
+    SynapticExcInhModels['AMPA_NMDA'] = {'I_SYNAPTIC_EXC': 'g_ampa*(E_ampa - vm) + g_nmda*B*(E_nmda - vm)',
                                          'SYNAPTIC_EXC_EQ':
                                              '''dg_ampa/dt = -g_ampa/tau_decay_ampa : siemens
-                                                dg_nmda/dt = -g_nmda/tau_decay_nmda : siemens'''}
+                                                dg_nmda/dt = -g_nmda/tau_decay_nmda : siemens
+                                                B = (1/(1+exp(-62*(vm/volt))*(1/3.57))) : 1
+                                                '''}
 
     SynapticExcInhModels['GABAA_GABAB'] = {'I_SYNAPTIC_INH': 'g_gabaa*(E_gabaa - vm) + g_gabab*(E_gabab - vm)',
                                            'SYNAPTIC_INH_EQ':
                                            '''dg_gabaa/dt = -g_gabaa/tau_decay_gabaa : siemens
-                                              dg_gabab/dt = -g_gabab/tau_decay_gabab : siemens'''}
+                                              dg_gabab/dt = -g_gabab/tau_decay_gabab : siemens
+                                              '''}
 
-    # Difference of exponentials AMPA+NMDA and GABA-A+GABA-B
-    SynapticExcInhModels['AMPA_NMDA_DIFFEXP'] = {'I_SYNAPTIC_EXC': 'g_ampa*(E_ampa - vm) + g_nmda*(E_nmda - vm)*(1/(1+exp(-0.062*vm)*(1/3.57)))',
+    # Bi-exponential  AMPA+NMDA and GABA-A+GABA-B
+    # Conductances scaled by (tau_e_decay/tau_e_rise)**(tau_e_rise/(tau_e_decay-tau_e_rise)) to normalize
+    SynapticExcInhModels['AMPA_NMDA_BIEXP'] = {'I_SYNAPTIC_EXC': 'g_ampa_alpha*(E_ampa - vm) + g_nmda_alpha*(E_nmda - vm)',
                                                  'SYNAPTIC_EXC_EQ':
                                                      '''dg_ampa/dt = -g_ampa/tau_decay_ampa : siemens
-                                                        dg_nmda/dt = -g_nmda/tau_decay_nmda : siemens'''}
+                                                        dg_nmda/dt = -g_nmda/tau_decay_nmda : siemens
+                                                        dg_ampa_alpha1/dt = (g_ampa - g_ampa_alpha1)/tau_rise_ampa : siemens
+                                                        dg_nmda_alpha1/dt = (g_nmda - g_nmda_alpha1)/tau_rise_nmda : siemens
+                                                        g_ampa_alpha = (tau_decay_ampa/tau_rise_ampa)**(tau_rise_ampa/(tau_decay_ampa-tau_rise_ampa)) * g_ampa_alpha1 : siemens
+                                                        g_nmda_alpha = (tau_decay_nmda/tau_rise_nmda)**(tau_rise_nmda/(tau_decay_nmda-tau_rise_nmda)) * B * g_nmda_alpha1 : siemens
+                                                        B = (1/(1+exp(-62*(vm/volt))*(1/3.57))) : 1
+                                                        '''}
 
-    SynapticExcInhModels['GABAA_GABAB_DIFFEXP'] = {'I_SYNAPTIC_INH': 'g_gabaa*(E_gabaa - vm) + g_gabab*(E_gabab - vm)',
+    SynapticExcInhModels['GABAA_GABAB_BIEXP'] = {'I_SYNAPTIC_INH': 'g_gabaa_alpha*(E_gabaa - vm) + g_gabab_alpha*(E_gabab - vm)',
                                                    'SYNAPTIC_INH_EQ':
                                                        '''dg_gabaa/dt = -g_gabaa/tau_decay_gabaa : siemens
-                                                          dg_gabab/dt = -g_gabab/tau_decay_gabab : siemens'''}
-
-
+                                                          dg_gabab/dt = -g_gabab/tau_decay_gabab : siemens
+                                                          dg_gabaa_alpha1/dt = (g_gabaa - g_gabaa_alpha1)/tau_rise_gabaa : siemens
+                                                          dg_gabab_alpha1/dt = (g_gabab - g_gabab_alpha1)/tau_rise_gabab : siemens
+                                                          g_gabaa_alpha = (tau_decay_gabaa/tau_rise_gabaa)**(tau_rise_gabaa/(tau_decay_gabaa-tau_rise_gabaa)) * g_gabaa_alpha1 : siemens
+                                                          g_gabab_alpha = (tau_decay_gabab/tau_rise_gabab)**(tau_rise_gabab/(tau_decay_gabab-tau_rise_gabab)) * g_gabab_alpha1 : siemens
+                                                          '''}
 
     # Variables that are compartment-specific; will have compartment name attached to them
-    CompSpecificVariables = {'SIMPLE_E': ['ge'], 'SIMPLE_I': ['gi'],
-                             'AMPA_NMDA': ['g_ampa', 'g_nmda'], 'GABAA_GABAB': ['g_gabaa', 'g_gabab'],
-                             'E_ALPHA': ['ge', 'gealpha'], 'I_ALPHA': ['gi', 'gialpha']}
+    CompSpecificVariables = {'SIMPLE_E': ['ge'],
+                             'SIMPLE_I': ['gi'],
+                             'E_ALPHA': ['ge', 'gealpha'],
+                             'I_ALPHA': ['gi', 'gialpha'],
+                             'E_ALPHA_NONSCALED': ['ge', 'gealpha', 'gealpha1'],
+                             'I_ALPHA_NONSCALED': ['gi', 'gialpha', 'gialpha1'],
+                             'AMPA_NMDA': ['g_ampa', 'g_nmda'],
+                             'GABAA_GABAB': ['g_gabaa', 'g_gabab'],
+                             'AMPA_NMDA_BIEXP': ['g_ampa', 'g_nmda', 'g_ampa_alpha', 'g_nmda_alpha','g_ampa_alpha1', 'g_nmda_alpha1'],
+                             'GABAA_GABAB_BIEXP': ['g_gabaa', 'g_gabab', 'g_gabaa_alpha', 'g_gabab_alpha', 'g_gabaa_alpha1', 'g_gabab_alpha1']}
 
     # Receptors that need to be incremented in response to presynaptic spikes
-    Receptors = {'SIMPLE_E': ['ge'], 'SIMPLE_I': ['gi'],
-                             'AMPA_NMDA': ['g_ampa', 'g_nmda'], 'GABAA_GABAB': ['g_gabaa', 'g_gabab'],
-                             'E_ALPHA': ['ge'], 'I_ALPHA': ['gi']}
+    Receptors = {'SIMPLE_E': ['ge'],
+                 'SIMPLE_I': ['gi'],
+                 'E_ALPHA': ['ge'],
+                 'I_ALPHA': ['gi'],
+                 'E_ALPHA_NONSCALED': ['ge'],
+                 'I_ALPHA_NONSCALED': ['gi'],
+                 'AMPA_NMDA': ['g_ampa', 'g_nmda'],
+                 'GABAA_GABAB': ['g_gabaa', 'g_gabab'],
+                 'AMPA_NMDA_BIEXP': ['g_ampa', 'g_nmda'],
+                 'GABAA_GABAB_BIEXP': ['g_gabaa', 'g_gabab']
+                 }
 
     # </editor-fold>
 
@@ -136,10 +187,10 @@ class EquationHelper(object):
 
         assert neuron_model in EquationHelper.NeuronModels.keys(), \
             "Neuron model must be defined in NeuronModels"
-        assert exc_model in EquationHelper.SynapticExcInhModels.keys(), \
-            "Excitation model must be defined in SynapticExcInhModels"
-        assert inh_model in EquationHelper.SynapticExcInhModels.keys(), \
-            "Inhibition model must be defined in SynapticExcInhModels"
+        assert exc_model in EquationHelper.ExcModelNames, \
+            "Undefined excitation model!"
+        assert inh_model in EquationHelper.InhModelNames, \
+            "Undefined inhibition model!"
 
         # Add neuron model specific keys&strings to default strings; overlapping definitions will be taken
         # from model specific dict
@@ -177,6 +228,7 @@ class EquationHelper(object):
             membrane_equation = membrane_equation.substitute(all_membrane_model_strings)
         except KeyError:
             print 'Undefined key in membrane equation'
+        membrane_equation = str(membrane_equation)
 
         eq_lines = membrane_equation.splitlines()
         eq_lines = [line.strip()+'\n' for line in eq_lines if len(line.strip()) > 0]
@@ -193,5 +245,5 @@ class EquationHelper(object):
 
 
 if __name__ == '__main__':
-    x = EquationHelper(neuron_model='EIF', is_pyramidal=True, compartment='soma', exc_model='E_ALPHA')
+    x = EquationHelper(neuron_model='EIF', is_pyramidal=True, compartment='dend', exc_model='AMPA_NMDA_BIEXP')
     print x.getMembraneEquation(return_string=False)
