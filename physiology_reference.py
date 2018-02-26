@@ -298,10 +298,11 @@ class neuron_reference(object):
                                                        gi="gi_basal", geX="geX_basal", gialpha="gialpha_basal",
                                                        gealphaX="gealphaX_basal", I_dendr="Idendr_basal",
                                                        gealpha1="gealpha1_basal", gialpha1="gialpha1_basal",
-                                                       ge_ampa="ge_ampa_basal", ge_ampa_alpha="ge_ampa_alpha_basal", ge_ampa_alpha1="ge_ampa_alpha1_basal",
-                                                       ge_nmda="ge_nmda_basal", ge_nmda_alpha="ge_nmda_alpha_basal", ge_nmda_alpha1="ge_nmda_alpha1_basal",
-                                                       ge_gabaa="ge_gabaa_basal", ge_gabaa_alpha="ge_gabaa_alpha_basal", ge_gabaa_alpha1="ge_gabaa_alpha1_basal",
-                                                       ge_gabab="ge_gabab_basal", ge_gabab_alpha="ge_gabab_alpha_basal", ge_gabab_alpha1="ge_gabab_alpha1_basal")
+                                                       g_ampa="g_ampa_basal", g_ampa_alpha="g_ampa_alpha_basal", g_ampa_alpha1="g_ampa_alpha1_basal",
+                                                       g_nmda="g_nmda_basal", g_nmda_alpha="g_nmda_alpha_basal", g_nmda_alpha1="g_nmda_alpha1_basal",
+                                                       g_gabaa="g_gabaa_basal", g_gabaa_alpha="g_gabaa_alpha_basal", g_gabaa_alpha1="g_gabaa_alpha1_basal",
+                                                       g_gabab="g_gabab_basal", g_gabab_alpha="g_gabab_alpha_basal", g_gabab_alpha1="g_gabab_alpha1_basal",
+                                                       B="B_basal")
 
             self.output_neuron['equation'] += Equations(eq_template_soma, gL=self.output_neuron['namespace']['gL'][1],
                                                         ge='ge_soma', geX='geX_soma', gi='gi_soma',
@@ -312,14 +313,14 @@ class neuron_reference(object):
                                                         I_dendr='Idendr_soma',
                                                         taum_soma=self.output_neuron['namespace']['taum_soma'],
                                                         gealpha1="gealpha1_soma", gialpha1="gialpha1_soma",
-                                                        ge_ampa="ge_ampa_soma", ge_ampa_alpha="ge_ampa_alpha_soma",
-                                                        ge_ampa_alpha1="ge_ampa_alpha1_soma",
-                                                        ge_nmda="ge_nmda_soma", ge_nmda_alpha="ge_nmda_alpha_soma",
-                                                        ge_nmda_alpha1="ge_nmda_alpha1_soma",
-                                                        ge_gabaa="ge_gabaa_soma", ge_gabaa_alpha="ge_gabaa_alpha_soma",
-                                                        ge_gabaa_alpha1="ge_gabaa_alpha1_soma",
-                                                        ge_gabab="ge_gabab_soma", ge_gabab_alpha="ge_gabab_alpha_soma",
-                                                        ge_gabab_alpha1="ge_gabab_alpha1_soma")
+                                                        g_ampa="g_ampa_soma", g_ampa_alpha="g_ampa_alpha_soma",
+                                                        g_ampa_alpha1="g_ampa_alpha1_soma",
+                                                        g_nmda="g_nmda_soma", g_nmda_alpha="g_nmda_alpha_soma",
+                                                        g_nmda_alpha1="g_nmda_alpha1_soma",
+                                                        g_gabaa="g_gabaa_soma", g_gabaa_alpha="g_gabaa_alpha_soma",
+                                                        g_gabaa_alpha1="g_gabaa_alpha1_soma",
+                                                        g_gabab="g_gabab_soma", g_gabab_alpha="g_gabab_alpha_soma",
+                                                        g_gabab_alpha1="g_gabab_alpha1_soma", B="B_soma")
 
             # TODO - Build PC equations dynamically (under construction)
             # basal_dict = eq_template_dend.getDict(base_dict={'C': self.output_neuron['namespace']['C'][0],
@@ -340,18 +341,19 @@ class neuron_reference(object):
                                                             gealphaX="gealphaX_a%d" % _ii, I_dendr="Idendr_a%d" % _ii,
                                                             gealpha1="gealpha1_a%d" % _ii,
                                                             gialpha1="gialpha1_a%d" % _ii,
-                                                            ge_ampa="ge_ampa_a%d" % _ii,
-                                                            ge_ampa_alpha="ge_ampa_alpha_a%d" % _ii,
-                                                            ge_ampa_alpha1="ge_ampa_alpha1_a%d" % _ii,
-                                                            ge_nmda="ge_nmda_a%d" % _ii,
-                                                            ge_nmda_alpha="ge_nmda_alpha_a%d" % _ii,
-                                                            ge_nmda_alpha1="ge_nmda_alpha1_a%d" % _ii,
-                                                            ge_gabaa="ge_gabaa_a%d" % _ii,
-                                                            ge_gabaa_alpha="ge_gabaa_alpha_a%d" % _ii,
-                                                            ge_gabaa_alpha1="ge_gabaa_alpha1_a%d" % _ii,
-                                                            ge_gabab="ge_gabab_a%d" % _ii,
-                                                            ge_gabab_alpha="ge_gabab_alpha_a%d" % _ii,
-                                                            ge_gabab_alpha1="ge_gabab_alpha1_a%d" % _ii)
+                                                            g_ampa="g_ampa_a%d" % _ii,
+                                                            g_ampa_alpha="g_ampa_alpha_a%d" % _ii,
+                                                            g_ampa_alpha1="g_ampa_alpha1_a%d" % _ii,
+                                                            g_nmda="g_nmda_a%d" % _ii,
+                                                            g_nmda_alpha="g_nmda_alpha_a%d" % _ii,
+                                                            g_nmda_alpha1="g_nmda_alpha1_a%d" % _ii,
+                                                            g_gabaa="g_gabaa_a%d" % _ii,
+                                                            g_gabaa_alpha="g_gabaa_alpha_a%d" % _ii,
+                                                            g_gabaa_alpha1="g_gabaa_alpha1_a%d" % _ii,
+                                                            g_gabab="g_gabab_a%d" % _ii,
+                                                            g_gabab_alpha="g_gabab_alpha_a%d" % _ii,
+                                                            g_gabab_alpha1="g_gabab_alpha1_a%d" % _ii,
+                                                            B="B_a%d" % _ii)
 
             # Defining decay between soma and basal dendrite & apical dendrites
             self.output_neuron['equation'] += Equations('I_dendr = gapre*(vmpre-vmself)  : amp',

@@ -130,8 +130,8 @@ class EquationHelper(object):
                                                         dg_nmda/dt = -g_nmda/tau_decay_nmda : siemens
                                                         dg_ampa_alpha1/dt = (g_ampa - g_ampa_alpha1)/tau_rise_ampa : siemens
                                                         dg_nmda_alpha1/dt = (g_nmda - g_nmda_alpha1)/tau_rise_nmda : siemens
-                                                        g_ampa_alpha = (tau_decay_ampa/tau_rise_ampa)**(tau_rise_ampa/(tau_decay_ampa-tau_rise_ampa)) * g_ampa_alpha1 : siemens
-                                                        g_nmda_alpha = (tau_decay_nmda/tau_rise_nmda)**(tau_rise_nmda/(tau_decay_nmda-tau_rise_nmda)) * B * g_nmda_alpha1 : siemens
+                                                        g_ampa_alpha = scaling_ampa * (tau_decay_ampa/tau_rise_ampa)**(tau_rise_ampa/(tau_decay_ampa-tau_rise_ampa)) * g_ampa_alpha1 : siemens
+                                                        g_nmda_alpha = scaling_nmda * (tau_decay_nmda/tau_rise_nmda)**(tau_rise_nmda/(tau_decay_nmda-tau_rise_nmda)) * B * g_nmda_alpha1 : siemens
                                                         B = (1/(1+exp(-62*(vm/volt))*(1/3.57))) : 1
                                                         '''}
 
@@ -152,9 +152,9 @@ class EquationHelper(object):
                              'I_ALPHA': ['gi', 'gialpha', 'gialpha1'],
                              'E_ALPHA_NONSCALED': ['ge', 'gealpha'],
                              'I_ALPHA_NONSCALED': ['gi', 'gialpha'],
-                             'AMPA_NMDA': ['g_ampa', 'g_nmda'],
+                             'AMPA_NMDA': ['g_ampa', 'g_nmda', 'B'],
                              'GABAA_GABAB': ['g_gabaa', 'g_gabab'],
-                             'AMPA_NMDA_BIEXP': ['g_ampa', 'g_nmda', 'g_ampa_alpha', 'g_nmda_alpha','g_ampa_alpha1', 'g_nmda_alpha1'],
+                             'AMPA_NMDA_BIEXP': ['g_ampa', 'g_nmda', 'g_ampa_alpha', 'g_nmda_alpha','g_ampa_alpha1', 'g_nmda_alpha1', 'B'],
                              'GABAA_GABAB_BIEXP': ['g_gabaa', 'g_gabab', 'g_gabaa_alpha', 'g_gabab_alpha', 'g_gabaa_alpha1', 'g_gabab_alpha1']}
 
     # Receptors that need to be incremented in response to presynaptic spikes

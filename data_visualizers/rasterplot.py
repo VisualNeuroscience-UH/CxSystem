@@ -1669,8 +1669,8 @@ if __name__ == '__main__':
     # Seeing results in iPython for example:
     #  plt.figure(); a = data.pivot_table('irregularity_mean', index='background_rate', columns='k').sort_index(ascending=False); sns.heatmap(a, cmap='binary', vmax=1)
 
-    exp = ExperimentData('/opt3/tmp/DataRepo/2017-12_Submitted_repeat/', '00_')
-    exp.computestats('stats_eif_rerun2018.csv',
+    exp = ExperimentData('/opt3/tmp/modvartests/', '12_eif_scaledalpha')
+    exp.computestats('stats_12_eif_scaledalpha.csv',
                     ['calcium_concentration', 'J', 'k', 'background_rate'])
 
     ###### For creating side-by-side rasterplots ######

@@ -341,7 +341,7 @@ class CxSystem(object):
                         w.writeheader()
                     w.writerow(self.benchmarking_data)
                     print " -  Benchmarking data saved"
-            print " -  Simulating %s took in total %d s" % (str(self.runtime),self.end_time-self.start_time)
+            print " -  Simulating %s took in total %d s\t\t%s" % (str(self.runtime),self.end_time-self.start_time, self.StartTime_str[1:])
             if self.device.lower() == 'genn':
                 shutil.rmtree(os.path.join(self.output_folder, self.StartTime_str[1:]))
             elif self.device.lower() == 'cpp':
