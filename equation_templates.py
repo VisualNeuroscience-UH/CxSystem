@@ -73,6 +73,9 @@ class EquationHelper(object):
     InhModelNames = ['SIMPLE_I', 'I_ALPHA', 'I_ALPHA_NONSCALED', 'GABAA_GABAB', 'GABAA_GABAB_BIEXP', 'SIMPLE_I_GABAB', 'I_ALPHA_GABAB']
 
     SynapticExcInhModels = dict()
+
+    # <editor-fold desc="...NeCo excitation/inhibition models">
+
     # Simple synaptic current models
     SynapticExcInhModels['SIMPLE_E'] = {'I_SYNAPTIC_EXC': 'ge * (Ee - vm)',
                                         'SYNAPTIC_EXC_EQ': 'dge/dt = -ge/tau_e : siemens'}
@@ -141,7 +144,9 @@ class EquationHelper(object):
                                                   '''dgi/dt = -gi/tau_i : siemens
                                                      dg_gabab/dt = -g_gabab/tau_decay_gabab : siemens
                                                   '''}
+    # </editor-fold>
 
+    # <editor-fold desc="...Other excitation/inhibition models">
 
     # Single-exponential AMPA+NMDA and GABA-A+GABA-B
     SynapticExcInhModels['AMPA_NMDA'] = {'I_SYNAPTIC_EXC': 'g_ampa*(E_ampa - vm) + scaling_nmda*g_nmda*B*(E_nmda - vm)',
@@ -179,6 +184,7 @@ class EquationHelper(object):
                                                           g_gabaa_alpha = (tau_decay_gabaa/tau_rise_gabaa)**(tau_rise_gabaa/(tau_decay_gabaa-tau_rise_gabaa)) * g_gabaa_alpha1 : siemens
                                                           g_gabab_alpha = (tau_decay_gabab/tau_rise_gabab)**(tau_rise_gabab/(tau_decay_gabab-tau_rise_gabab)) * g_gabab_alpha1 : siemens
                                                           '''}
+    #</editor-fold>
 
     # Variables that are compartment-specific; will have compartment name attached to them
     CompSpecificVariables = {'SIMPLE_E': ['ge'],
