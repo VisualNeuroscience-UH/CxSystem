@@ -696,8 +696,8 @@ class CxSystem(object):
         if neuron_type != 'PC':
             excitation_model = self.value_extractor(self.physio_config_df, 'excitation_model')
             inhibition_model = self.value_extractor(self.physio_config_df, 'inhibition_model')
-            exc_receptors = eqt.EquationHelper.Receptors[excitation_model]
-            inh_receptors = eqt.EquationHelper.Receptors[inhibition_model]
+            exc_receptors = eqt.EquationHelper.BackgroundReceptors[excitation_model]
+            inh_receptors = eqt.EquationHelper.BackgroundReceptors[inhibition_model]
 
             # Background excitation for non-PC neurons
             # Go through all excitatory receptors (unfortunately different binomial distrib for every receptor)
@@ -726,8 +726,8 @@ class CxSystem(object):
         else:
             pc_excitation_model = self.value_extractor(self.physio_config_df, 'pc_excitation_model')
             pc_inhibition_model = self.value_extractor(self.physio_config_df, 'pc_inhibition_model')
-            exc_receptors = eqt.EquationHelper.Receptors[pc_excitation_model]
-            inh_receptors = eqt.EquationHelper.Receptors[pc_inhibition_model]
+            exc_receptors = eqt.EquationHelper.BackgroundReceptors[pc_excitation_model]
+            inh_receptors = eqt.EquationHelper.BackgroundReceptors[pc_inhibition_model]
 
             # Background excitation for PC neurons (targeting all dendrite compartments equally)
             n_target_compartments = int(self.customized_neurons_list[-1]['total_comp_num']) -1  # No excitatory input to soma

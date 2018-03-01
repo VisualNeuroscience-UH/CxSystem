@@ -1669,8 +1669,10 @@ if __name__ == '__main__':
     # Seeing results in iPython for example:
     #  plt.figure(); a = data.pivot_table('irregularity_mean', index='background_rate', columns='k').sort_index(ascending=False); sns.heatmap(a, cmap='binary', vmax=1)
 
-    exp = ExperimentData('/opt3/tmp/modvartests/', '12_eif_scaledalpha')
-    exp.computestats('stats_12_eif_scaledalpha.csv',
+    exp = ExperimentData('/opt3/tmp/receptors_eifstp/', 'eif-stp-nmdagababnonpc')
+    # custom_settings = {'time_to_drop': 0 * ms, 'rate_min': 0 * Hz, 'rate_max': 30 * Hz, 'isicov_min': 0.5,
+    #             'isicov_max': 1.5, 'fanofactor_max': 10, 'active_group_min': 0.2, 'dec_places': 14}
+    exp.computestats('stats_eif-stp-nmdagababnonpc.csv',
                     ['calcium_concentration', 'J', 'k', 'background_rate'])
 
     ###### For creating side-by-side rasterplots ######
