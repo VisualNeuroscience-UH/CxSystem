@@ -20,6 +20,32 @@ Porting an existing model
 --------------------------
 
 The first steps to port an existing model to CxSystem is to identify the required type of the target network and as well as define the cell group characteristics. CxSystem already has one type of multi-compartmental neuron and four types of point neurons built in which can be used as templates to replicate the neuron types in the target model. Each of the neuron groups will take a single line in the Model and Network file. The physiological parameters of the neurons should also be modified in the physiological file. In the next step, the type and direction of synaptic connections between the neuron groups should be determined. Finally, the required model and simulation parameters can be imported from one of the currently available Model and Network files in the github, or from other existing model (after filter construction) and the initial simulations can be run. |br|
-As an example, we have ported the CUBA example from Brian2 documentation originally described in a review paper (Brette et al., 2007). In the brian2 implementation, this example was implemented with only a single neuron group containing 4000 neurons. We implemented this into two groups: a group containing 3200 SS cells (excitatory) and a second group containing 800 BC cells (inhibitory). 
+As an example, we have ported the COBAHH example from Brian2 documentation originally described in a review paper by Brette et al. [1]_. In the brian2 implementation, this example was implemented with only a single neuron group containing 4000 neurons. We implemented this into two groups: a group containing 3200 SS cells (excitatory) and a second group containing 800 BC cells (inhibitory). 
 Both excitatory and inhibitory cell sub-groups were fully connected to all the other cells. 
-Next, we created a copy of physiological parameters and modified the SS and BC neuron parameters, e.g. Vr, El, Vt, etc., according to the CUBA example. The synaptic weights were also set accordingly. Finally, the essential network parameters, e.g. simulation duration, device, system mode, output folder, was set and the CxSystem was run using the two new csv files. 
+Next, we created a copy of physiological parameters and modified the SS and BC neuron parameters, e.g. Vr, El, Vt, etc., according to the COBAHH example. The synaptic weights were also set accordingly. Finally, the essential network parameters, e.g. simulation duration, device, system mode, output folder, was set and the CxSystem was run using the two new csv files. The physiological configuration file for COBAHH example is available in CxSystem Github page. The following table is the network and model configuration file for COBAHH example:  
+
+
+  .. csv-table::
+     
+     row_type,runtime,profiling,default_clock,do_init_vms,min_distance
+     params	,2000 \* ms,	1,	0.1 \* ms,	1,	1*um
+     row_type	,sys_mode	,grid_radius,	load_positions_only,	output_path_and_filename,	multidimension_array_run
+     params	,local	,210*um	,1	,./output.gz	,0
+     row_type	,device,	scale,	number_of_processes
+     params	,cpp	,1	,1
+     row_type	,idx,	type,	number_of_neurons,	radius,	spike_times,	monitors
+     IN	,0	,VPM	,60,	92*um	,[3.6]*second	,[Sp]
+     row_type,	idx	,number_of_neurons,	neuron_type,	layer_idx,	net_center,	monitors
+     G	,1	,3200	,SS	,4,	--	,[Sp]
+     G	,2,	800	,BC,	4	,--,	[Sp]						
+     row_type	,receptor	,pre_syn_idx,	post_syn_idx,	syn_type,	p,	n
+     S,	ge,	0,	1,	Fixed,	--,	1 
+     S,	ge,	1,	1,	Fixed,	0.02,	1
+     S,	ge,	1,	2,	Fixed,	0.02,	1
+     S,	gi,	2,	1,	Fixed,	0.02,	1
+     S,	gi,	2,	2,	Fixed,	0.02,	1
+
+
+In this example, we used the built-in neurons types of CxSystem. In the next section, we have provided a guidelne for users who want to build a new type of neuron/synapse and use them in a network model file.
+
+.. [1] Brette, R., Rudolph, M., Carnevale, T., Hines, M., Beeman, D., Bower, J.M., Diesmann, M., Morrison, A., Goodman, P.H., Harris, F.C. and Zirpe, M., 2007. Simulation of networks of spiking neurons: a review of tools and strategies. Journal of computational neuroscience, 23(3), pp.349-398.
