@@ -53,7 +53,8 @@ class cluster_run(object):
         except NameError:
             self.username = raw_input('username: ')
         self.password = getpass.getpass('password: ')
-
+        self.suffix =  '_' + str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '')[0:str(datetime.now()).replace('-', '').replace(' ', '_').replace(':', '').index('.')+3].replace('.','')
+        print " -  temp file suffix is %s" %self.suffix
         self.client = paramiko.SSHClient()
         self.client.load_system_host_keys()
         self.client.set_missing_host_key_policy(paramiko.WarningPolicy)
@@ -70,8 +71,8 @@ class cluster_run(object):
             self.ssh_commander('mkdir %s;cd %s;git clone https://github.com/sivanni/CxSystem' % (self.remote_repo_path,self.remote_repo_path),0)
             self.remote_repo_path = self.remote_repo_path +  '/CxSystem'
             print " -  CxSystem cloned in cluster."
-        scp.put(anat_file_address, self.remote_repo_path+ '/_tmp_anat_config.csv')
-        scp.put(physio_file_address, self.remote_repo_path + '/_tmp_physio_config.csv')
+        scp.put(anat_file_address, self.remote_repo_path+ '/_tmp_anat_config%s.csv'%self.suffix)
+        scp.put(physio_file_address, self.remote_repo_path + '/_tmp_physio_config%s.csv'%self.suffix)
         print " -  config files transfered to cluster"
         # ask user to set the number of nodes, time and memory:
         raw_input(" -  Please check the default slurm.job file and set the time, memory and uncomment and enter email address if you wish."
@@ -87,11 +88,11 @@ class cluster_run(object):
                         sl2.write(line)
                     # for item_idx,item in enumerate(array_run_obj.clipping_indices):
                     try:
-                        sl2.write('python CxSystem.py _tmp_anat_config.csv _tmp_physio_config.csv %d %d\n'%(
-                            item,array_run_obj.clipping_indices[item_idx+1]-array_run_obj.clipping_indices[item_idx]))
+                        sl2.write('python CxSystem.py _tmp_anat_config%s.csv _tmp_physio_config%s.csv %d %d\n'%(
+                            self.suffix,self.suffix,item,array_run_obj.clipping_indices[item_idx+1]-array_run_obj.clipping_indices[item_idx]))
                     except IndexError:
-                        sl2.write('python CxSystem.py _tmp_anat_config.csv _tmp_physio_config.csv %d %d\n' % (
-                        item, array_run_obj.total_configs - array_run_obj.clipping_indices[item_idx]))
+                        sl2.write('python CxSystem.py _tmp_anat_config%s.csv _tmp_physio_config%s.csv %d %d\n' % (
+                        self.suffix,self.suffixitem, array_run_obj.total_configs - array_run_obj.clipping_indices[item_idx]))
                     # sl2.write('wait\n')
             scp.put('./_cluster_tmp/_tmp_slurm_%d.job'.replace('/',os.sep)%item_idx, self.remote_repo_path + '/_tmp_slurm_%d.job'%item_idx)
         print " -  Slurm file generated and copied to cluster"

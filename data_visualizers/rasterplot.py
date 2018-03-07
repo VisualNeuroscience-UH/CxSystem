@@ -34,7 +34,7 @@ from matplotlib.animation import FuncAnimation
 matplotlib.rcParams['pdf.fonttype'] = 42
 matplotlib.rcParams['ps.fonttype'] = 42
 
-mycmap = 'jet'
+mycmap = 'binary'
 
 
 class SimulationData(object):
@@ -1539,6 +1539,49 @@ class ExperimentData(object):
         sim.publicationplot(sampling_factor=sampling_factor, time_limits=time_limits, ax=ax)
 
 
+class ExperimentStats(object):
+
+    def __init__(self, csv_file_path):
+
+        self.csv_file_path = csv_file_path
+        self.stats = pd.read_csv(self.csv_file_path)
+
+    def plot_ratesyncfano(self, y_var='background_rate', x_var='k', mfr_max=15, sync_max=0.05, irreg_max=1.0, plot_save_path=None):
+
+        sns.set_style('whitegrid')
+        plt.subplots(3,1)
+
+        plt.subplot(311)
+        a = self.stats.pivot_table('mfr_all', index=y_var, columns=x_var).sort_index(ascending=False)
+        sns.heatmap(a, cmap=mycmap, vmin=0, vmax=mfr_max)
+        plt.title('Mean firing rate')
+        ax = plt.gca()
+        ax.set_aspect('equal')
+
+        plt.subplot(312)
+        b = self.stats.pivot_table('mean_synchrony', index=y_var, columns=x_var).sort_index(ascending=False)
+        sns.heatmap(b, cmap=mycmap, vmin=0, vmax=sync_max)
+        plt.title('Synchrony')
+        ax = plt.gca()
+        ax.set_aspect('equal')
+
+        plt.subplot(313)
+        c = self.stats.pivot_table('irregularity_mean', index=y_var, columns=x_var).sort_index(ascending=False)
+        sns.heatmap(c, cmap=mycmap, vmin=0, vmax=irreg_max)
+        plt.title('Irregularity')
+        ax = plt.gca()
+        ax.set_aspect('equal')
+
+
+        # plt.tight_layout()
+
+        if plot_save_path is None:
+            plt.show()
+        else:
+            plt.savefig(plot_save_path)
+
+
+
 def calciumplot(sim_files, sim_titles, runtime, neurons_per_group=20, suptitle='Effect of increased $Ca^{2+}$ concentration (mM)'):
     """
     Plots simplified rasterplots of simulations next to each other. For publications.
@@ -1669,11 +1712,13 @@ if __name__ == '__main__':
     # Seeing results in iPython for example:
     #  plt.figure(); a = data.pivot_table('irregularity_mean', index='background_rate', columns='k').sort_index(ascending=False); sns.heatmap(a, cmap='binary', vmax=1)
 
-    exp = ExperimentData('/opt3/tmp/receptors_eifstp/', 'eif-stp-nmdagababnonpc')
+    exp = ExperimentData('/opt3/tmp/modvartests2/', 'eifstp_excweights_pcinhsimple_40nmda_20gabab_17tauealpha')
     # custom_settings = {'time_to_drop': 0 * ms, 'rate_min': 0 * Hz, 'rate_max': 30 * Hz, 'isicov_min': 0.5,
     #             'isicov_max': 1.5, 'fanofactor_max': 10, 'active_group_min': 0.2, 'dec_places': 14}
-    exp.computestats('stats_eif-stp-nmdagababnonpc.csv',
-                    ['calcium_concentration', 'J', 'k', 'background_rate'])
+    exp.computestats('stats_eifstp_excweights_pcinhsimple_40nmda_20gabab_17tauealpha_taito.csv',
+                    ['pc_inhibition_model', 'calcium_concentration', 'J', 'J_I', 'background_rate'])
+
+    # ExperimentStats('/opt3/tmp/modvartests2/stats_eifstp_110depol_20gabab_40nmda_17tauealpha_pcinhalpha_taito.csv').plot_ratesyncfano(mfr_max=2)
 
     ###### For creating side-by-side rasterplots ######
     # simulations = ['depol_37_calcium_concentration1.0_Cpp_3000ms.bz2', 'depol_37_calcium_concentration1.4_Cpp_3000ms.bz2',
