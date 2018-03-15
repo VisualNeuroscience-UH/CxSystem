@@ -42,7 +42,7 @@ class neuron_reference(object):
         * output_neuron: the main dictionary containing all the data about current Customized_neuron_group including: number of neurons, threshold, reset, refractory, neuron type, soma position(layer), dendrites layer, total number of compartments, namespace, equation, positions (both in cortical and visual coordinates).
         '''
         self.physio_config_df = physio_config_df
-        neuron_reference._celltypes = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM'])
+        neuron_reference._celltypes = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM','HH_I','HH_E'])
         assert general_grid_radius > min_distance , ' -  The distance between cells should be less than the grid radius'
         assert cell_type in neuron_reference._celltypes, " -  Cell type '%s' is not defined" % cell_type  # check cell type
         assert len(layers_idx) < 3, " -  Length of layers_idx array is larger than 2"  # check layer index
@@ -417,6 +417,92 @@ class neuron_reference(object):
 
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
+    def HH_E(self):
+        '''
+        Builds up the equation for excitatory hodgkin huxley neuron. The final equation is then saved in output_neuron['equation'].
+
+            * The equation of the neuron is as follows:
+
+            ::
+
+                dv/dt = (gL*(EL-v)+ge*(Ee-v)+gi*(Ei-v)-g_na*(m*m*m)*h*(v-ENa)-g_kd*(n*n*n*n)*(v-EK))/C : volt
+                dm/dt = alpha_m*(1-m)-beta_m*m : 1
+                dn/dt = alpha_n*(1-n)-beta_n*n : 1
+                dh/dt = alpha_h*(1-h)-beta_h*h : 1
+                dge/dt = -ge*(1./tau_e) : siemens
+                dgi/dt = -gi*(1./tau_i) : siemens
+                alpha_m = 0.32*(mV**-1)*(13*mV-v+VT)/
+                         (exp((13*mV-v+VT)/(4*mV))-1.)/ms : Hz
+                beta_m = 0.28*(mV**-1)*(v-VT-40*mV)/
+                        (exp((v-VT-40*mV)/(5*mV))-1)/ms : Hz
+                alpha_h = 0.128*exp((17*mV-v+VT)/(18*mV))/ms : Hz
+                beta_h = 4./(1+exp((40*mV-v+VT)/(5*mV)))/ms : Hz
+                alpha_n = 0.032*(mV**-1)*(15*mV-v+VT)/
+                         (exp((15*mV-v+VT)/(5*mV))-1.)/ms : Hz
+                beta_n = .5*exp((10*mV-v+VT)/(40*mV))/ms : Hz
+        :return:
+        '''
+        self.output_neuron['equation'] = Equations('''
+                dvm/dt = (gL*(EL-vm)+ge*(Ee-vm)+gi*(Ei-vm)-g_na*(m*m*m)*h*(vm-ENa)-g_kd*(n*n*n*n)*(vm-EK))/C : volt
+                dm/dt = alpha_m*(1-m)-beta_m*m : 1
+                dn/dt = alpha_n*(1-n)-beta_n*n : 1
+                dh/dt = alpha_h*(1-h)-beta_h*h : 1
+                dge/dt = -ge*(1./tau_e) : siemens
+                dgi/dt = -gi*(1./tau_i) : siemens
+                alpha_m = 0.32*(mV**-1)*(13*mV-vm+VT)/(exp((13*mV-vm+VT)/(4*mV))-1.)/ms : Hz
+                beta_m = 0.28*(mV**-1)*(vm-VT-40*mV)/(exp((vm-VT-40*mV)/(5*mV))-1)/ms : Hz
+                alpha_h = 0.128*exp((17*mV-vm+VT)/(18*mV))/ms : Hz
+                beta_h = 4./(1+exp((40*mV-vm+VT)/(5*mV)))/ms : Hz
+                alpha_n = 0.032*(mV**-1)*(15*mV-vm+VT)/(exp((15*mV-vm+VT)/(5*mV))-1.)/ms : Hz
+                beta_n = .5*exp((10*mV-vm+VT)/(40*mV))/ms : Hz
+                ''', ge='ge_soma', gi='gi_soma')
+
+        self.output_neuron['equation'] += Equations('''x : meter
+            y : meter''')
+
+    def HH_I(self):
+        '''
+        Builds up the equation for inhibitory hodgkin huxley neuron. The final equation is then saved in output_neuron['equation'].
+
+            * The equation of the neuron is as follows:
+
+            ::
+
+                dv/dt = (gL*(EL-v)+ge*(Ee-v)+gi*(Ei-v)-g_na*(m*m*m)*h*(v-ENa)-g_kd*(n*n*n*n)*(v-EK))/C : volt
+                dm/dt = alpha_m*(1-m)-beta_m*m : 1
+                dn/dt = alpha_n*(1-n)-beta_n*n : 1
+                dh/dt = alpha_h*(1-h)-beta_h*h : 1
+                dge/dt = -ge*(1./tau_e) : siemens
+                dgi/dt = -gi*(1./tau_i) : siemens
+                alpha_m = 0.32*(mV**-1)*(13*mV-v+VT)/
+                         (exp((13*mV-v+VT)/(4*mV))-1.)/ms : Hz
+                beta_m = 0.28*(mV**-1)*(v-VT-40*mV)/
+                        (exp((v-VT-40*mV)/(5*mV))-1)/ms : Hz
+                alpha_h = 0.128*exp((17*mV-v+VT)/(18*mV))/ms : Hz
+                beta_h = 4./(1+exp((40*mV-v+VT)/(5*mV)))/ms : Hz
+                alpha_n = 0.032*(mV**-1)*(15*mV-v+VT)/
+                         (exp((15*mV-v+VT)/(5*mV))-1.)/ms : Hz
+                beta_n = .5*exp((10*mV-v+VT)/(40*mV))/ms : Hz
+        :return:
+        '''
+        self.output_neuron['equation'] = Equations('''
+                dvm/dt = (gL*(EL-vm)+ge*(Ee-vm)+gi*(Ei-vm)-g_na*(m*m*m)*h*(vm-ENa)-g_kd*(n*n*n*n)*(vm-EK))/C : volt
+                dm/dt = alpha_m*(1-m)-beta_m*m : 1
+                dn/dt = alpha_n*(1-n)-beta_n*n : 1
+                dh/dt = alpha_h*(1-h)-beta_h*h : 1
+                dge/dt = -ge*(1./tau_e) : siemens
+                dgi/dt = -gi*(1./tau_i) : siemens
+                alpha_m = 0.32*(mV**-1)*(13*mV-vm+VT)/(exp((13*mV-vm+VT)/(4*mV))-1.)/ms : Hz
+                beta_m = 0.28*(mV**-1)*(vm-VT-40*mV)/(exp((vm-VT-40*mV)/(5*mV))-1)/ms : Hz
+                alpha_h = 0.128*exp((17*mV-vm+VT)/(18*mV))/ms : Hz
+                beta_h = 4./(1+exp((40*mV-vm+VT)/(5*mV)))/ms : Hz
+                alpha_n = 0.032*(mV**-1)*(15*mV-vm+VT)/(exp((15*mV-vm+VT)/(5*mV))-1.)/ms : Hz
+                beta_n = .5*exp((10*mV-vm+VT)/(40*mV))/ms : Hz
+                ''', ge='ge_soma', gi='gi_soma')
+
+        self.output_neuron['equation'] += Equations('''x : meter
+            y : meter''')
+
 
     def VPM(self):
         '''

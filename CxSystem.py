@@ -34,7 +34,7 @@ import pandas
 import threading
 import array_run
 import multiprocessing
-
+prefs.codegen.target = 'numpy'
 
 class CxSystem(object):
     '''
@@ -114,6 +114,7 @@ class CxSystem(object):
             'username':[22,self.passer],
             'remote_repo_path': [23,self.passer],
             'remote_output_folder': [24,self.passer],
+            'integration': [25,self.integration],
             ####
             #### Line definitions:
             'G': [nan,self.neuron_group],
@@ -126,8 +127,6 @@ class CxSystem(object):
         print " -  Current run filename suffix is: %s"%self.StartTime_str[1:]
         self.scale = 1
         self.do_benchmark = 0
-        self.numerical_integration_method = 'euler'
-        print " -  The system is running with %s integration method"%self.numerical_integration_method
         self.cluster_run_start_idx = cluster_run_start_idx
         self.cluster_run_step = cluster_run_step
         self.current_parameters_list = []
@@ -187,6 +186,13 @@ class CxSystem(object):
         self.conf_df_to_save = self.anat_and_sys_conf_df
         self.physio_df_to_save =  self.physio_config_df
         self.array_run = 0
+        try:
+            self.numerical_integration_method = self.parameter_finder(self.anat_and_sys_conf_df, 'integration')
+        except NameError:
+            self.numerical_integration_method = 'euler'
+        print " -  The system is running with %s integration method"%self.numerical_integration_method
+
+
         check_array_run_anatomy = self.anat_and_sys_conf_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)
         check_array_run_physiology = self.physio_config_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)
         try:
@@ -286,6 +292,11 @@ class CxSystem(object):
 
     def passer(self,*args):
         pass
+
+    def integration(self,*args):
+        self.numerical_integration_method = args[0].lower()
+        assert self.numerical_integration_method in ['exact','exponential_euler','euler','rk2','rk4','heun','milstein']
+
 
     def set_device(self,*args):
         self.device = args[0]

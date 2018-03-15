@@ -351,7 +351,7 @@ class neuron_parser (object):
     'This class embeds all parameter sets associated to all neuron types and will return it as a namespace in form of dictionary'
     def __init__(self, output_neuron,physio_config_df):
         self.physio_config_df = physio_config_df
-        neuron_parser.type_ref = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM'])
+        neuron_parser.type_ref = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM','HH_E','HH_I'])
         assert output_neuron['type'] in neuron_parser.type_ref, " -  Cell type '%s' is not defined." % output_neuron['category']
         self.output_namespace = {}
         variable_start_idx = self.physio_config_df['Variable'][self.physio_config_df['Variable'] == output_neuron['type']].index[0]
@@ -441,6 +441,11 @@ class neuron_parser (object):
         pass
 
     def _SS(self,output_neuron):
+        pass
+
+    def _HH_E(self, output_neuron):
+        pass
+    def _HH_I(self, output_neuron):
         pass
 
     def value_extractor(self, df, key_name):

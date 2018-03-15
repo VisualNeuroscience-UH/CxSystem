@@ -76,6 +76,15 @@ Similarly, add the neuron type also to the list of accepted types under the init
       
 Please note the underscore here before the neuron group name. Now, you can use the name 'ChC' to define the connectivity and biophysical parameters in the CSV configuration files.
 
+Note that you might need to add connection weights and delays in physiological configuration file based on the synapses you are going to use with your new neuron model. Also, neuron group equations in CxSystem must have x and y coordinates, so adding the following at the end of the equation block is neccessary:
+
+.. code-block:: python
+		
+		self.output_neuron['equation'] += Equations('''x : meter
+		y : meter''')
+
+After this, the neuron equation parameters should be added to Physiological configuration file. 
+
 Adding alternative neuron models to existing groups
 ```````````````````````````````````````````````````````
 Typically you want to add an alternative neuron model to an existing neuron group. Suppose you wanted to have the adaptive exponential integrate-and-fire model (AdEx) alongside the regular exponential integrate-and-fire model (EIF). You want to flexibly switch between the models using a 0/1 flag in the physiological configuration file. First, you would add the AdEx equations to :code:`neuron_reference`:
