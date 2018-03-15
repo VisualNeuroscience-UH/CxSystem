@@ -202,6 +202,7 @@ class CxSystem(object):
         # check for array_run and return
         if any(check_array_run_anatomy) or any(check_array_run_physiology) or (trials_per_config > 1 and not instantiated_from_array_run):
             if self.cluster_run_start_idx != -1 and self.cluster_run_step != -1 : # this means CxSystem is running in cluster and is trying to spawn an array run on a node
+                print "spawning index: %d, step: %d" %(int(cluster_run_start_idx),int(cluster_run_step))
                 array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df,self.StartTime_str,int(cluster_run_start_idx),
                                 int(cluster_run_step),anatomy_and_system_config,physiology_config,array_run_in_cluster=1)
             else: # CxSystem not in cluster
@@ -287,8 +288,7 @@ class CxSystem(object):
 
     def set_default_clock(self,*args):
         defaultclock.dt = eval(args[0])
-        if defaultclock.dt/second != 1e-4:
-            print " -  Default clock is set to %s" %str(defaultclock.dt)
+        print " -  Default clock is set to %s" %str(defaultclock.dt)
 
     def passer(self,*args):
         pass
@@ -352,7 +352,7 @@ class CxSystem(object):
                         w.writeheader()
                     w.writerow(self.benchmarking_data)
                     print " -  Benchmarking data saved"
-            print " -  Simulating %s took in total %d s" % (str(self.runtime),self.end_time-self.start_time)
+            print " -  Simulating %s took in total %f s" % (str(self.runtime),self.end_time-self.start_time)
             if self.device.lower() == 'genn':
                 shutil.rmtree(os.path.join(self.output_folder, self.StartTime_str[1:]))
             elif self.device.lower() == 'cpp':
@@ -390,7 +390,7 @@ class CxSystem(object):
 #            if 'linux' in sys.platform and self.device.lower() == 'cpp':
 #                print " -  parallel compile flag set"
 #                prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j']
-            prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
+#            prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
 
     def _set_runtime(self,*args):
         assert '*' in args[0], ' -  Please specify the unit for the runtime parameter, e.g. um , mm '
@@ -661,79 +661,84 @@ class CxSystem(object):
 
 
         # Add Poisson-distributed background input
-        background_rate = self.physio_config_df.ix[where(self.physio_config_df.values == 'background_rate')[0]]['Value'].item()
-        background_rate_inhibition = self.physio_config_df.ix[where(self.physio_config_df.values == 'background_rate_inhibition')[0]]['Value'].item()
+        try:
+            background_rate = self.physio_config_df.ix[where(self.physio_config_df.values == 'background_rate')[0]]['Value'].item()
+            background_rate_inhibition = self.physio_config_df.ix[where(self.physio_config_df.values == 'background_rate_inhibition')[0]]['Value'].item()
+            background_noise_flag = 1
+        except ValueError:
+            background_noise_flag = 0
 
-        # For changing connection weight of bg input according to calcium level
-        ca = self.value_extractor(self.physio_config_df, 'calcium_concentration')
-        bg_synapse = synapse_parser({'type': 'Fixed', 'pre_group_type': 'PC', 'post_group_type': neuron_type},
-                                    self.physio_config_df)
-        bg_synapse_inh = synapse_parser({'type': 'Fixed', 'pre_group_type': 'BC', 'post_group_type': neuron_type},
+        if background_noise_flag == 1: # run background noise code only if the parameters exist in physio file
+            # For changing connection weight of bg input according to calcium level
+            ca = self.value_extractor(self.physio_config_df, 'calcium_concentration')
+            bg_synapse = synapse_parser({'type': 'Fixed', 'pre_group_type': 'PC', 'post_group_type': neuron_type},
                                         self.physio_config_df)
+            bg_synapse_inh = synapse_parser({'type': 'Fixed', 'pre_group_type': 'BC', 'post_group_type': neuron_type},
+                                            self.physio_config_df)
 
-        if neuron_type in ['L1i', 'BC', 'MC']:
-            background_weight = \
-            repr(bg_synapse._scale_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_E_I_weight')))
+            if neuron_type in ['L1i', 'BC', 'MC']:
+                background_weight = \
+                repr(bg_synapse._scale_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_E_I_weight')))
 
-            background_weight_inhibition = \
-            repr(bg_synapse_inh._scale_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_I_I_weight')))
+                background_weight_inhibition = \
+                repr(bg_synapse_inh._scale_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_I_I_weight')))
 
-        else:
-            background_weight = \
-            repr(bg_synapse._scale_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_E_E_weight')))
+            else:
+                background_weight = \
+                repr(bg_synapse._scale_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_E_E_weight')))
 
-            background_weight_inhibition = \
-            repr(bg_synapse_inh._scale_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_I_E_weight')))
+                background_weight_inhibition = \
+                repr(bg_synapse_inh._scale_by_calcium(ca, self.value_extractor(self.physio_config_df, 'background_I_E_weight')))
 
 
         # print 'Adding Poisson background input with params: '+n_background_inputs+', '+background_rate+', '+background_weight
         # print 'Poisson bg input with weights (exc/inh): %s / %s' % (background_weight, background_weight_inhibition)
-        if neuron_type != 'PC':
-            # Background excitation for non-PC neurons
-            poisson_target = 'bg_%s' % _dyn_neurongroup_name
-            exec "%s = PoissonInput(target=%s, target_var='ge_soma', N=%s, rate=%s, weight=%s)" \
-                 % (poisson_target, _dyn_neurongroup_name, n_background_inputs,
-                    background_rate, background_weight)
-            try:
-                setattr(self.Cxmodule, poisson_target, eval(poisson_target))
-            except AttributeError:
-                print 'Error in generating PoissonInput'
-
-            # Background inhibition for non-PC neurons
-            poisson_target_inh = 'bg_inh_%s' % _dyn_neurongroup_name
-            exec "%s = PoissonInput(target=%s, target_var='gi_soma', N=%s, rate=%s, weight=%s)" \
-                 % (poisson_target_inh, _dyn_neurongroup_name, n_background_inhibition,
-                    background_rate_inhibition, background_weight_inhibition)
-            try:
-                setattr(self.Cxmodule, poisson_target_inh, eval(poisson_target_inh))
-            except AttributeError:
-                print 'Error in generating PoissonInput'
-
-        else:
-            # Background excitation for PC neurons (targeting all dendrites equally)
-            n_target_compartments = int(self.customized_neurons_list[-1]['total_comp_num']) -1  # No excitatory input to soma
-            n_inputs_to_each_comp = int(int(n_background_inputs) / n_target_compartments)
-            target_comp_list = ['basal', 'a0']
-            target_comp_list.extend(['a'+str(i) for i in range(1, n_target_compartments-2+1)])
-            for target_comp in target_comp_list:
-                poisson_target = 'bg_%s_%s' % (_dyn_neurongroup_name, target_comp)
-                exec "bg_%s_%s = PoissonInput(target=%s, target_var='ge_%s', N=%s, rate=%s, weight=%s)" \
-                 % (_dyn_neurongroup_name, target_comp, _dyn_neurongroup_name, target_comp, n_inputs_to_each_comp,
-                    background_rate, background_weight)
+            if neuron_type != 'PC':
+                # Background excitation for non-PC neurons
+                poisson_target = 'bg_%s' % _dyn_neurongroup_name
+                exec "%s = PoissonInput(target=%s, target_var='ge_soma', N=%s, rate=%s, weight=%s)" \
+                     % (poisson_target, _dyn_neurongroup_name, n_background_inputs,
+                        background_rate, background_weight)
                 try:
                     setattr(self.Cxmodule, poisson_target, eval(poisson_target))
                 except AttributeError:
                     print 'Error in generating PoissonInput'
 
-            # Background inhibition for PC neurons (targeting soma)
-            poisson_target_inh = 'bg_inh_%s' % _dyn_neurongroup_name
-            exec "%s = PoissonInput(target=%s, target_var='gi_soma', N=%s, rate=%s, weight=%s)" \
-                 % (poisson_target_inh, _dyn_neurongroup_name, n_background_inhibition,
-                    background_rate_inhibition, background_weight_inhibition)
-            try:
-                setattr(self.Cxmodule, poisson_target_inh, eval(poisson_target_inh))
-            except AttributeError:
-                print 'Error in generating PoissonInput'
+                # Background inhibition for non-PC neurons
+                poisson_target_inh = 'bg_inh_%s' % _dyn_neurongroup_name
+                exec "%s = PoissonInput(target=%s, target_var='gi_soma', N=%s, rate=%s, weight=%s)" \
+                     % (poisson_target_inh, _dyn_neurongroup_name, n_background_inhibition,
+                        background_rate_inhibition, background_weight_inhibition)
+                try:
+                    setattr(self.Cxmodule, poisson_target_inh, eval(poisson_target_inh))
+                except AttributeError:
+                    print 'Error in generating PoissonInput'
+
+            else:
+                # Background excitation for PC neurons (targeting all dendrites equally)
+                n_target_compartments = int(self.customized_neurons_list[-1]['total_comp_num']) -1  # No excitatory input to soma
+                n_inputs_to_each_comp = int(int(n_background_inputs) / n_target_compartments)
+                target_comp_list = ['basal', 'a0']
+                target_comp_list.extend(['a'+str(i) for i in range(1, n_target_compartments-2+1)])
+                for target_comp in target_comp_list:
+                    poisson_target = 'bg_%s_%s' % (_dyn_neurongroup_name, target_comp)
+                    exec "bg_%s_%s = PoissonInput(target=%s, target_var='ge_%s', N=%s, rate=%s, weight=%s)" \
+                     % (_dyn_neurongroup_name, target_comp, _dyn_neurongroup_name, target_comp, n_inputs_to_each_comp,
+                        background_rate, background_weight)
+                    try:
+                        setattr(self.Cxmodule, poisson_target, eval(poisson_target))
+                    except AttributeError:
+                        print 'Error in generating PoissonInput'
+
+                # Background inhibition for PC neurons (targeting soma)
+                poisson_target_inh = 'bg_inh_%s' % _dyn_neurongroup_name
+                exec "%s = PoissonInput(target=%s, target_var='gi_soma', N=%s, rate=%s, weight=%s)" \
+                     % (poisson_target_inh, _dyn_neurongroup_name, n_background_inhibition,
+                        background_rate_inhibition, background_weight_inhibition)
+                try:
+                    setattr(self.Cxmodule, poisson_target_inh, eval(poisson_target_inh))
+                except AttributeError:
+                    print 'Error in generating PoissonInput'
 
         # // Background input code ENDS
 
@@ -1691,8 +1696,8 @@ if __name__ == '__main__' :
         except IndexError:
             CM = CxSystem(net_config, phys_config)
     except IndexError:
-        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/COBAHH_config.csv', \
-                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_COBAHH.csv', )
+        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/Markram_config_file.csv', \
+                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters.csv', )
     CM.run()
     # from data_visualizers.data_visualization import DataVisualization
     #

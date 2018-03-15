@@ -5,7 +5,7 @@ row_type, #connections_saving_path_and_filename , #connections_loading_path_and_
 params,../CX_Output/brian_data.bz2, ../CX_Output/brian_data_for_positions.bz2,1,0,1,1,1,1,,,,,,,,
 ,,,,,,,,,,,,,,,,
 row_type,run_in_cluster,cluster_job_file_path,cluster_number_of_nodes,cluster_address,username,remote_repo_path,remote_output_folder,,,,,,,,,
-params,0,./slurm.job,2,taito.csc.fi,andalibi ,./CxSystem,./results,,,,,,,,,
+params,0,./slurm.job,1,taito.csc.fi,andalibi ,/homeappl/home/andalibi/CxSystem,/homeappl/home/andalibi/results,,,,,,,,,
 ,,,,,,,,,,,,,,,,
 # This is an example of using array runs:,,,,,,,,,,,,,,,,
 # params,1000*ms,{ Python & Cpp & GeNN },expanded,{1|6|1},210*um, 1*um,1,/opt2/Vafa/CX_Output/CX_Output.bz2,/opt2/Vafa/CX_Output/brian_data.bz2, /opt2/Vafa/CX_Output/brian_data_for_positions.bz2,1,1,1,1,1,3
