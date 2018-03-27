@@ -14,3 +14,7 @@ To access the documentation of the CxSystem, please check out the [readthedocs p
 
 <sub>[2]Heikkinen, H., Sharifian, F., Vigário, R., & Vanni, S. (2015). Feedback to distal dendrites links fMRI signals to neural receptive fields in a spiking network model of the visual cortex. Journal of Neurophysiology, 114(1), 57–69. http://doi.org/10.1152/jn.00169.2015</sub>
 
+# Documentation Status
+
+[![Documentation Status](https://readthedocs.org/projects/cxsystem/badge/?version=master)](http://cxsystem.readthedocs.io/en/master/?badge=master)
+
