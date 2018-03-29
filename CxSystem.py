@@ -34,7 +34,7 @@ import pandas
 import threading
 import array_run
 import multiprocessing
-prefs.codegen.target = 'numpy'
+#prefs.codegen.target = 'numpy'
 
 class CxSystem(object):
     '''

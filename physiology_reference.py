@@ -440,7 +440,6 @@ class neuron_reference(object):
                 alpha_n = 0.032*(mV**-1)*(15*mV-v+VT)/
                          (exp((15*mV-v+VT)/(5*mV))-1.)/ms : Hz
                 beta_n = .5*exp((10*mV-v+VT)/(40*mV))/ms : Hz
-        :return:
         '''
         self.output_neuron['equation'] = Equations('''
                 dvm/dt = (gL*(EL-vm)+ge*(Ee-vm)+gi*(Ei-vm)-g_na*(m*m*m)*h*(vm-ENa)-g_kd*(n*n*n*n)*(vm-EK))/C : volt
@@ -483,7 +482,6 @@ class neuron_reference(object):
                 alpha_n = 0.032*(mV**-1)*(15*mV-v+VT)/
                          (exp((15*mV-v+VT)/(5*mV))-1.)/ms : Hz
                 beta_n = .5*exp((10*mV-v+VT)/(40*mV))/ms : Hz
-        :return:
         '''
         self.output_neuron['equation'] = Equations('''
                 dvm/dt = (gL*(EL-vm)+ge*(Ee-vm)+gi*(Ei-vm)-g_na*(m*m*m)*h*(vm-ENa)-g_kd*(n*n*n*n)*(vm-EK))/C : volt
