@@ -45,7 +45,7 @@ Next, we created a copy of physiological parameters and modified the `HH_E` and 
 
      Variable,Key,Value
      calcium_concentration,,2
-     ## Connection weights ##,,
+     # Connection weights #,,
      _weights,w_All_other_E-E_connections,6*nS
      ,w_All_other_E-I_connections,6\*nS
      ,w_All_other_I-E_connections,11 \* 6*nS
@@ -54,12 +54,12 @@ Next, we created a copy of physiological parameters and modified the `HH_E` and 
      ,cw_HH_E_HH_I,_weights['w_All_other_E-I_connections']
      ,cw_HH_I_HH_E,_weights['w_All_other_I-E_connections']
      ,cw_HH_I_HH_I,_weights['w_All_I-I_connections']
-     ## SYNAPTIC DELAYS ##,,
+     # SYNAPTIC DELAYS #,,
      delay,delay_HH_E_HH_E,3.0\*ms
      ,delay_HH_E_HH_I,3.0\*ms
      ,delay_HH_I_HH_E,3.0\*ms
      ,delay_HH_I_HH_I,3.0\*ms
-     ## Parameters ##,,
+     # Parameters #,,
      HH_E,C,200\*pF
      ,gL,10\*nS
      ,g_na,20. \* usiemens
