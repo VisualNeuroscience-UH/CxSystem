@@ -527,7 +527,7 @@ class CxSystem(object):
         assert self.sys_mode != '', " -  System mode is not defined."
         _all_columns = ['idx', 'number_of_neurons', 'neuron_type', 'layer_idx', 'threshold',
                         'reset', 'refractory', 'net_center','monitors', 'tonic_current', 'n_background_inputs',
-                        'n_background_inhibition', 'noise_sigma', 'gemean', 'gestd', 'gimean', 'gistd']
+                        'n_background_inhibition', 'noise_sigma', 'gemean', 'gestd', 'gimean', 'gistd', 'neuron_type_ref']
         _obligatory_params = [0, 1, 2, 3]
         assert len(self.current_values_list) <= len(_all_columns), ' -  One or more of of the columns for NeuronGroups definition \
         is missing. Following obligatory columns should be defined:\n%s\n ' \
@@ -550,6 +550,7 @@ class CxSystem(object):
         gestd = ''
         gimean = ''
         gistd = ''
+        neuron_type_ref = ''
         neuron_type = ''
         layer_idx = 0
         threshold = ''
@@ -615,8 +616,13 @@ class CxSystem(object):
         if refractory != '--':
             self.customized_neurons_list[-1]['refractory'] = refractory
         # Generating variable names for Groups, NeuronNumbers, Equations, Threshold, Reset, Refractory and Namespace
-        _dyn_neurongroup_name = self._NeuronGroup_prefix + str(current_idx) + '_' + neuron_type + '_L' + str(layer_idx).replace\
-            (' ', 'toL').replace('[', '').replace(']', '')
+        if neuron_type_ref == '':
+            _dyn_neurongroup_name = self._NeuronGroup_prefix + str(current_idx) + '_' + neuron_type + '_L' + str(layer_idx).replace\
+                (' ', 'toL').replace('[', '').replace(']', '')
+        else:
+            _dyn_neurongroup_name = self._NeuronGroup_prefix + str(current_idx) + '_' + neuron_type_ref + '_L' + str(layer_idx).replace\
+                (' ', 'toL').replace('[', '').replace(']', '')
+
         self.neurongroups_list.append(_dyn_neurongroup_name)
         _dyn_neuronnumber_name = self._NeuronNumber_prefix + str(current_idx)
         _dyn_neuron_eq_name = self._NeuronEquation_prefix + str(current_idx)
@@ -1150,7 +1156,7 @@ class CxSystem(object):
                     self.default_load_flag = int(syn[index_of_load_connection ].replace('-->',''))
                 elif '<--' in syn[index_of_load_connection ]:
                     self.default_load_flag = -1
-                    _do_load = int(syn[index_of_load_connection ].replace('<--', ''))
+                    _do_load = int(syn[index_of_load_connection].replace('<--', ''))
                     if _do_load ==1:
                         assert hasattr(self,'loaded_brian_data'), " -  Synaptic connection in the following line is set to be loaded, however the load_brian_data_path is not defined in the parameters. The connection is being created:\n%s"%str(self.anat_and_sys_conf_df.loc[self.value_line_idx].to_dict().values())
                 else:
