@@ -362,8 +362,12 @@ class neuron_parser (object):
         except IndexError:
             cropped_df = self.physio_config_df.loc[variable_start_idx:]
 
+        root_variables = self.physio_config_df[self.physio_config_df['Key'].isnull()].dropna(subset=['Variable'])
+        cropped_with_root = root_variables.append(cropped_df)
+
+
         for neural_parameter in cropped_df['Key'].dropna():
-            self.output_namespace[neural_parameter] = self.value_extractor(cropped_df,neural_parameter)
+            self.output_namespace[neural_parameter] = self.value_extractor(cropped_with_root,neural_parameter)
 
         getattr(self, '_'+ output_neuron['type'])(output_neuron)
 
