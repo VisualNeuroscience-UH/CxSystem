@@ -12,9 +12,7 @@ Copyright 2017 Vafa Andalibi, Henri Hokkanen and Simo Vanni.
 
 from brian2  import *
 import numpy as np
-from matplotlib import pyplot
-import sys
-import pandas
+
 
 __author__ = 'V_AD'
 
