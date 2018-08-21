@@ -24,7 +24,7 @@ class neuron_reference(object):
     New types of neurons should be implemented in this class.
     '''
 
-    def __init__(self,idx, number_of_neurons, cell_type, layers_idx, general_grid_radius ,min_distance, physio_config_df, network_center=0 + 0j):
+    def __init__(self,idx, number_of_neurons, cell_type, layers_idx, general_grid_radius ,min_distance, physio_config_df, network_center=0 + 0j, cell_subtype='--'):
         '''
         initialize the neuron_reference based on the arguments.
 
@@ -61,6 +61,7 @@ class neuron_reference(object):
         self.output_neuron['reset'] = 'vm=V_res'
         self.output_neuron['refractory'] = '4 * ms'
         self.output_neuron['type'] = cell_type
+        self.output_neuron['subtype'] = cell_subtype
         self.output_neuron['soma_layer'] = int(layers_idx[0])
         # _comparts_tmp1 & 2 are for extracting the layer of the compartments if applicable
         if self.output_neuron['type'] == 'PC':
@@ -70,6 +71,7 @@ class neuron_reference(object):
             self.output_neuron['dends_layer'] = self._comparts_tmp2
             self.output_neuron['dend_comp_num'] = len(self.output_neuron['dends_layer'])
             self.output_neuron['total_comp_num'] = self.output_neuron['dend_comp_num'] + 3
+
         else:
             self.output_neuron['dends_layer'] = self.output_neuron['soma_layer']
             self.output_neuron['dend_comp_num'] = array([0])

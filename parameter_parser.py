@@ -357,8 +357,15 @@ class neuron_parser (object):
         self.physio_config_df = physio_config_df
         neuron_parser.type_ref = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM'])
         assert output_neuron['type'] in neuron_parser.type_ref, " -  Cell type '%s' is not defined." % output_neuron['category']
+
+        # Handling of "neuron subtype" parameters; new since Aug 2018
+        if output_neuron['subtype'] == '--':
+            neuron_type_to_find = output_neuron['type']
+        else:
+            neuron_type_to_find = output_neuron['subtype']
+
         self.output_namespace = {}
-        variable_start_idx = self.physio_config_df['Variable'][self.physio_config_df['Variable'] == output_neuron['type']].index[0]
+        variable_start_idx = self.physio_config_df['Variable'][self.physio_config_df['Variable'] == neuron_type_to_find].index[0]
         try:
             variable_end_idx = self.physio_config_df['Variable'].dropna().index.tolist()[
                 self.physio_config_df['Variable'].dropna().index.tolist().index(variable_start_idx) + 1]
@@ -366,8 +373,13 @@ class neuron_parser (object):
         except IndexError:
             cropped_df = self.physio_config_df.loc[variable_start_idx:]
 
+        # "Root variables" extracted so that neuron parameters can refer to variables globals in physio config
+        root_variables = self.physio_config_df[self.physio_config_df['Key'].isnull()].dropna(subset=['Variable'])
+        cropped_with_root = root_variables.append(cropped_df)
+
         for neural_parameter in cropped_df['Key'].dropna():
-            self.output_namespace[neural_parameter] = self.value_extractor(cropped_df,neural_parameter)
+            self.output_namespace[neural_parameter] = self.value_extractor(cropped_with_root, neural_parameter)
+
 
         getattr(self, '_'+ output_neuron['type'])(output_neuron)
 
@@ -390,6 +402,8 @@ class neuron_parser (object):
         # total g_leak in compartments
         self.output_namespace['gL']= self.output_namespace['fract_areas'][output_neuron['dend_comp_num']] * self.output_namespace['gL'] * self.output_namespace['Area_tot_pyram']
         self.output_namespace['taum_soma'] = self.output_namespace['C'][1] / self.output_namespace['gL'][1]
+
+        self.output_namespace['tonic_current'] = self.output_namespace['tonic_current'][output_neuron['dend_comp_num'] -1]
 
     def _BC(self,output_neuron):
         pass

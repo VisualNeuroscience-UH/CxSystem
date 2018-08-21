@@ -527,7 +527,7 @@ class CxSystem(object):
         assert self.sys_mode != '', " -  System mode is not defined."
         _all_columns = ['idx', 'number_of_neurons', 'neuron_type', 'layer_idx', 'threshold',
                         'reset', 'refractory', 'net_center','monitors', 'tonic_current', 'n_background_inputs',
-                        'n_background_inhibition', 'noise_sigma', 'gemean', 'gestd', 'gimean', 'gistd', 'neuron_type_ref']
+                        'n_background_inhibition', 'noise_sigma', 'gemean', 'gestd', 'gimean', 'gistd', 'neuron_subtype']
         _obligatory_params = [0, 1, 2, 3]
         assert len(self.current_values_list) <= len(_all_columns), ' -  One or more of of the columns for NeuronGroups definition \
         is missing. Following obligatory columns should be defined:\n%s\n ' \
@@ -550,7 +550,7 @@ class CxSystem(object):
         gestd = ''
         gimean = ''
         gistd = ''
-        neuron_type_ref = ''
+        neuron_subtype = ''
         neuron_type = ''
         layer_idx = 0
         threshold = ''
@@ -605,7 +605,7 @@ class CxSystem(object):
         # <editor-fold desc="...Generation of neuron reference">
         self.customized_neurons_list.append(neuron_reference(idx, number_of_neurons, neuron_type,
                                                              layer_idx, self.general_grid_radius, self.min_distance, self.physio_config_df,
-                                                             network_center=net_center).output_neuron)  # creating a
+                                                             net_center, neuron_subtype).output_neuron)  # creating a
         # neuron_reference() object and passing the positional arguments to it. The main member of the class called
         # output_neuron is then appended to customized_neurons_list.
         # in case of threshold/reset/refractory overwrite
@@ -616,11 +616,11 @@ class CxSystem(object):
         if refractory != '--':
             self.customized_neurons_list[-1]['refractory'] = refractory
         # Generating variable names for Groups, NeuronNumbers, Equations, Threshold, Reset, Refractory and Namespace
-        if neuron_type_ref == '':
+        if neuron_subtype == '--':
             _dyn_neurongroup_name = self._NeuronGroup_prefix + str(current_idx) + '_' + neuron_type + '_L' + str(layer_idx).replace\
                 (' ', 'toL').replace('[', '').replace(']', '')
         else:
-            _dyn_neurongroup_name = self._NeuronGroup_prefix + str(current_idx) + '_' + neuron_type_ref + '_L' + str(layer_idx).replace\
+            _dyn_neurongroup_name = self._NeuronGroup_prefix + str(current_idx) + '_' + neuron_subtype + '_L' + str(layer_idx).replace\
                 (' ', 'toL').replace('[', '').replace(']', '')
 
         self.neurongroups_list.append(_dyn_neurongroup_name)
@@ -641,10 +641,9 @@ class CxSystem(object):
         exec "%s=self.customized_neurons_list[%d]['refractory']" % (_dyn_neuron_refra_name, current_idx)
         exec "%s=self.customized_neurons_list[%d]['namespace']" % (_dyn_neuron_namespace_name, current_idx)
 
+        print self.customized_neurons_list[current_idx]['namespace']['tonic_current']
+        #print self.customized_neurons_list[current_idx]['namespace']['dend_comp_num']
 
-
-        # Adding tonic current to namespace
-        self.customized_neurons_list[current_idx]['namespace']['tonic_current'] = eval(tonic_current)
         # Adding the noise sigma to namespace
         self.customized_neurons_list[current_idx]['namespace']['noise_sigma'] = noise_sigma
         # Adding ge/gi mean/std to namespace
