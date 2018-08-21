@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH -N 1
 #SBATCH -c 16
-#SBATCH -t 02:00:00
+#SBATCH -t 01:00:00
 #SBATCH -J auto_cluster_job
 #SBATCH -o auto_cluster_job.out.%j
 #SBATCH -e auto_cluster_job.er.%j
-#SBATCH --mem-per-cpu=4000
+#SBATCH --mem-per-cpu=14000
 #SBATCH --mail-type=END
 #SBATCH --mail-user=shohok@gmail.com
 

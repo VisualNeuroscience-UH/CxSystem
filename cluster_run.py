@@ -93,7 +93,7 @@ class cluster_run(object):
                             self.suffix,self.suffix,item,array_run_obj.clipping_indices[item_idx+1]-array_run_obj.clipping_indices[item_idx]))
                     except IndexError:
                         sl2.write('python CxSystem.py _tmp_anat_config%s.csv _tmp_physio_config%s.csv %d %d\n' % (
-                        self.suffix,self.suffixitem, array_run_obj.total_configs - array_run_obj.clipping_indices[item_idx]))
+                        self.suffix,self.suffix,item, array_run_obj.total_configs - array_run_obj.clipping_indices[item_idx]))
                     # sl2.write('wait\n')
             scp.put('./_cluster_tmp/_tmp_slurm_%d.job'.replace('/',os.sep)%item_idx, self.remote_repo_path + '/_tmp_slurm_%d.job'%item_idx)
         print " -  Slurm file generated and copied to cluster"
