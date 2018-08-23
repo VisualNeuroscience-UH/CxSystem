@@ -13,8 +13,6 @@ from brian2 import *
 import brian2genn
 import os
 import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
 from physiology_reference import *
 from parameter_parser import synapse_parser
 from matplotlib.pyplot import  *
@@ -61,7 +59,7 @@ class CxSystem(object):
     _SpikeMonitor_prefix = 'SpMon'
     _StateMonitor_prefix = 'StMon'
 
-    def __init__(self, anatomy_and_system_config, physiology_config, output_file_suffix = "", instantiated_from_array_run = 0, cluster_run_start_idx=-1,cluster_run_step=-1):
+    def __init__(self, anatomy_and_system_config, physiology_config, output_file_suffix = "", instantiated_from_array_run = 0, cluster_run_start_idx=-1,cluster_run_step=-1, array_run_in_cluster =0):
         '''
         Initialize the cortical system by parsing both of the configuration files.
 
@@ -115,6 +113,7 @@ class CxSystem(object):
             'username':[22,self.passer],
             'remote_repo_path': [23,self.passer],
             'remote_output_folder': [24,self.passer],
+            'integration': [25,self.integration],
             ####
             #### Line definitions:
             'G': [nan,self.neuron_group],
@@ -127,11 +126,6 @@ class CxSystem(object):
         print " -  Current run filename suffix is: %s"%self.StartTime_str[1:]
         self.scale = 1
         self.do_benchmark = 0
-        # defaultclock.dt = 0.01 * ms
-        # if defaultclock.dt/second != 1e-4:
-        #     print "\nWarning: default clock is %s\n" %str(defaultclock.dt)
-        self.numerical_integration_method = 'euler'
-        print " -  The system is running with %s integration method"%self.numerical_integration_method
         self.cluster_run_start_idx = cluster_run_start_idx
         self.cluster_run_step = cluster_run_step
         self.current_parameters_list = []
@@ -157,6 +151,7 @@ class CxSystem(object):
         self.do_save_connections = 0 # if there is at least one connection to save, this flag will be set to 1
         self.load_positions_only = 0
         self.profiling = 0
+        self.array_run_in_cluster = array_run_in_cluster
         self.awaited_conf_lines = []
         self.physio_config_df = pandas.read_csv(physiology_config) if type(physiology_config) == str else physiology_config
         self.physio_config_df = self.physio_config_df.applymap(lambda x: NaN if str(x)[0] == '#' else x)
@@ -190,6 +185,13 @@ class CxSystem(object):
         self.conf_df_to_save = self.anat_and_sys_conf_df
         self.physio_df_to_save =  self.physio_config_df
         self.array_run = 0
+        try:
+            self.numerical_integration_method = self.parameter_finder(self.anat_and_sys_conf_df, 'integration')
+        except NameError:
+            self.numerical_integration_method = 'euler'
+        print " -  The system is running with %s integration method"%self.numerical_integration_method
+
+
         check_array_run_anatomy = self.anat_and_sys_conf_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)
         check_array_run_physiology = self.physio_config_df.applymap(lambda x: True if ('|' in str(x) or '&' in str(x)) else False)
         try:
@@ -198,8 +200,13 @@ class CxSystem(object):
             trials_per_config = 0
         # check for array_run and return
         if any(check_array_run_anatomy) or any(check_array_run_physiology) or (trials_per_config > 1 and not instantiated_from_array_run):
-            array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df,self.StartTime_str,int(cluster_run_start_idx),
-                                int(cluster_run_step),anatomy_and_system_config,physiology_config)
+            if self.cluster_run_start_idx != -1 and self.cluster_run_step != -1 : # this means CxSystem is running in cluster and is trying to spawn an array run on a node
+                print "spawning index: %d, step: %d" %(int(cluster_run_start_idx),int(cluster_run_step))
+                array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df,self.StartTime_str,int(cluster_run_start_idx),
+                                int(cluster_run_step),anatomy_and_system_config,physiology_config,array_run_in_cluster=1)
+            else: # CxSystem not in cluster
+                array_run.array_run(self.anat_and_sys_conf_df,self.physio_config_df,self.StartTime_str,int(cluster_run_start_idx),
+                                int(cluster_run_step),anatomy_and_system_config,physiology_config,array_run_in_cluster=0)
             self.array_run = 1
             return
         try:
@@ -215,7 +222,6 @@ class CxSystem(object):
            self.configuration_executor()
         print " -  Cortical Module initialization Done."
 
-        print "Cortical Module initialization Done."
 
     def configuration_executor(self):
         definition_lines_idx = self.anat_and_sys_conf_df.loc[:,0][self.anat_and_sys_conf_df.loc[:,0]=='row_type'].index
@@ -281,16 +287,20 @@ class CxSystem(object):
 
     def set_default_clock(self,*args):
         defaultclock.dt = eval(args[0])
-        if defaultclock.dt/second != 1e-4:
-            print " -  Default clock is set to %s" %str(defaultclock.dt)
+        print " -  Default clock is set to %s" %str(defaultclock.dt)
 
     def passer(self,*args):
         pass
 
+    def integration(self,*args):
+        self.numerical_integration_method = args[0].lower()
+        assert self.numerical_integration_method in ['exact','exponential_euler','euler','rk2','rk4','heun','milstein']
+
+
     def set_device(self,*args):
         self.device = args[0]
         assert self.device.lower() in ['genn', 'cpp',
-                               'python'], ' -  Device %s is not defined. Check capital letters in device name.' % self.device
+                               'python'], ' -  Device %s is not defined. ' % self.device
         if self.device.lower() == 'genn':
             print " -  System is going to be run using GeNN devices, " \
                   "Errors may rise if Brian2/Brian2GeNN/GeNN is not installed correctly or the limitations are not " \
@@ -341,7 +351,7 @@ class CxSystem(object):
                         w.writeheader()
                     w.writerow(self.benchmarking_data)
                     print " -  Benchmarking data saved"
-            print " -  Simulating %s took in total %d s\t\t%s" % (str(self.runtime),self.end_time-self.start_time, self.StartTime_str[1:])
+            print " -  Simulating %s took in total %f s" % (str(self.runtime),self.end_time-self.start_time)
             if self.device.lower() == 'genn':
                 shutil.rmtree(os.path.join(self.output_folder, self.StartTime_str[1:]))
             elif self.device.lower() == 'cpp':
@@ -376,7 +386,10 @@ class CxSystem(object):
             prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
         elif self.device.lower() == 'cpp':
             set_device('cpp_standalone', directory=os.path.join(self.output_folder, self.StartTime_str[1:]))
-            prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
+#            if 'linux' in sys.platform and self.device.lower() == 'cpp':
+#                print " -  parallel compile flag set"
+#                prefs['devices.cpp_standalone.extra_make_args_unix'] = ['-j']
+#            prefs.codegen.cpp.extra_compile_args_gcc = ['-O3', '-pipe']
 
     def _set_runtime(self,*args):
         assert '*' in args[0], ' -  Please specify the unit for the runtime parameter, e.g. um , mm '
@@ -408,16 +421,17 @@ class CxSystem(object):
         self.min_distance = eval(args[0])
 
     def _set_output_path(self, *args):
+        print " -  setting output path ..."
         self.output_path = args[0]
+        output_filename = ntpath.basename(self.output_path)
         assert os.path.splitext(self.output_path)[1], " -  The output_path_and_filename should contain file extension (.gz, .bz2 or .pickle)"
-        if self.cluster_run_start_idx == -1 and self.cluster_run_step == -1 :
+        if self.cluster_run_start_idx == -1 and self.cluster_run_step == -1 and self.array_run_in_cluster==0 :
             self.output_folder = os.path.dirname(self.output_path)
         else: # this means CxSystem is in running in cluster so the output path should be changed to remote_output_path
-            try:
-                self.output_folder = self.parameter_finder(self.anat_and_sys_conf_df, 'remote_output_path')
-            except NameError:
-                print " -    remote_output_path is not defined in the configuration file, the default path is ./results [in cluster]"
-                self.output_folder = "./results"
+            print " -  CxSystem is running in Cluster ... "
+            self.output_folder = self.parameter_finder(self.anat_and_sys_conf_df, 'remote_output_folder')
+            self.output_path = os.path.join(self.output_folder,output_filename)
+            print " -  CxSystem knows it's running in cluster and set the output folder to : %s"%self.output_path
         self.output_file_extension = '.'+self.output_path.split('.')[-1]
         self.StartTime_str += '_' + self.device.lower() + '_' + str(int((self.runtime / second) * 1000)) + 'ms'
         self.save_output_data = save_data(self.output_path,self.StartTime_str)  # This is for saving the output
@@ -605,7 +619,7 @@ class CxSystem(object):
         # <editor-fold desc="...Generation of neuron reference">
         self.customized_neurons_list.append(neuron_reference(idx, number_of_neurons, neuron_type,
                                                              layer_idx, self.general_grid_radius, self.min_distance, self.physio_config_df,
-                                                             net_center, neuron_subtype).output_neuron)  # creating a
+                                                              neuron_subtype,network_center=net_center).output_neuron)  # creating a
         # neuron_reference() object and passing the positional arguments to it. The main member of the class called
         # output_neuron is then appended to customized_neurons_list.
         # in case of threshold/reset/refractory overwrite
@@ -641,9 +655,9 @@ class CxSystem(object):
         exec "%s=self.customized_neurons_list[%d]['refractory']" % (_dyn_neuron_refra_name, current_idx)
         exec "%s=self.customized_neurons_list[%d]['namespace']" % (_dyn_neuron_namespace_name, current_idx)
 
-        print self.customized_neurons_list[current_idx]['namespace']['tonic_current']
-        #print self.customized_neurons_list[current_idx]['namespace']['dend_comp_num']
-
+        # // Background input code BEGINS
+        # Adding tonic current to namespace
+        # self.customized_neurons_list[current_idx]['namespace']['tonic_current'] = eval(tonic_current)
         # Adding the noise sigma to namespace
         self.customized_neurons_list[current_idx]['namespace']['noise_sigma'] = noise_sigma
         # Adding ge/gi mean/std to namespace
@@ -911,7 +925,7 @@ class CxSystem(object):
                     # for that specific StateMonitor variable.
                     Mon_name = monitor_options[mon_tag][0] + str(self.monitor_idx) + '_' + object_name
                     self.save_output_data.syntax_bank.append(
-                        "self.save_output_data.data['spikes_all']['%s'] = asarray(%s.it)" % (object_name, Mon_name))
+                        "self.save_output_data.data['spikes_all']['%s'] = %s.get_states()" % (object_name, Mon_name))
                     Mon_str = Mon_name + Mon_str
                 else:
                     self.save_output_data.creat_key('%s_all' % sub_mon_arg[0])  # Create a key in save_data()
@@ -920,8 +934,8 @@ class CxSystem(object):
                         str(self.monitor_idx) + '_' + object_name + '__' + sub_mon_arg[0]
                     # After simulation, the following syntax will be used to save this specific monitor's result:
                     self.save_output_data.syntax_bank.append("self.save_output_data.data['%s_all']"
-                                                             "['%s'] = asarray(%s.%s)"
-                                                             %(sub_mon_arg[0], object_name, Mon_name, sub_mon_arg[0]))
+                                                             "['%s'] = %s.get_states()"
+                                                             %(sub_mon_arg[0], object_name, Mon_name))
                     Mon_str = Mon_name + Mon_str + ",'" + sub_mon_arg[0] + "'"
                     del (sub_mon_arg[0])
                     # add each of the tag and their argument,
@@ -1056,13 +1070,13 @@ class CxSystem(object):
                         if any(self.current_parameters_list.str.contains('n')):
                             tmp_args[index_of_n] = _current_ns[idx] if \
                                 str(tmp_args[index_of_n])!= '--' else '--'
-                        if tmp_idx == 'b':
+                        if tmp_idx.lower() == 'b':
                             tmp_args.append('_basal')
                             triple_args.append(tmp_args)
-                        elif tmp_idx == 's':
+                        elif tmp_idx.lower() == 's':
                             tmp_args.append('_soma')
                             triple_args.append(tmp_args)
-                        elif tmp_idx == 'a':
+                        elif tmp_idx.lower() == 'a':
                             tmp_args.append('_a0')
                             triple_args.append(tmp_args)
                     self.current_values_list = triple_args
@@ -1678,6 +1692,8 @@ class CxSystem(object):
         '''
         print " -  Generating the syntaxes for saving CX output ..."
         for syntax in self.save_output_data.syntax_bank:
+            tmp_monitor = syntax.split(' ')[-1]
+            print "     -> Gathering data for " + tmp_monitor.split('.')[0]
             exec syntax
         self.save_output_data.save_to_file()
         if hasattr(self,'save_brian_data') and self.do_save_connections:
