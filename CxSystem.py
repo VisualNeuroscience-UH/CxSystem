@@ -619,7 +619,7 @@ class CxSystem(object):
         # <editor-fold desc="...Generation of neuron reference">
         self.customized_neurons_list.append(neuron_reference(idx, number_of_neurons, neuron_type,
                                                              layer_idx, self.general_grid_radius, self.min_distance, self.physio_config_df,
-                                                              neuron_subtype,network_center=net_center).output_neuron)  # creating a
+                                                              network_center=net_center,cell_subtype=neuron_subtype).output_neuron)  # creating a
         # neuron_reference() object and passing the positional arguments to it. The main member of the class called
         # output_neuron is then appended to customized_neurons_list.
         # in case of threshold/reset/refractory overwrite
@@ -1735,8 +1735,10 @@ if __name__ == '__main__' :
         except IndexError:
             CM = CxSystem(net_config, phys_config)
     except IndexError:
-        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/CUBA_config.csv', \
-                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_CUBA.csv', )
+        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/Rev2_Step1alpha_Anatomy_config_taito.csv', \
+                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Rev2_Step1alpha_Physiology_config.csv', )
+    #    CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/CUBA_config.csv', \
+    #                 os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_CUBA.csv', )
     CM.run()
     # from data_visualizers.data_visualization import DataVisualization
     #

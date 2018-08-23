@@ -54,9 +54,10 @@ class cluster_run(object):
             self.remote_branch = self.parameter_finder(array_run_obj.anatomy_df, 'remote_branch')
         except NameError:
             print " -    remote_branch is not defined in the configuration file, the default value is master"
-            self.remote_repo_path = "master"
+            self.remote_branch = "master"
         try:
             self.username = self.parameter_finder(array_run_obj.anatomy_df, 'username')
+            print "Loggin in with user %s"%self.username
         except NameError:
             self.username = raw_input('username: ')
         self.password = getpass.getpass('password: ')
