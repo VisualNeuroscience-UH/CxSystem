@@ -51,6 +51,11 @@ class cluster_run(object):
         except NameError:
             raise Exception("cluster_address is not defined for running CxSystem on cluster")
         try:
+            self.remote_branch = self.parameter_finder(array_run_obj.anatomy_df, 'remote_branch')
+        except NameError:
+            print " -    remote_branch is not defined in the configuration file, the default value is master"
+            self.remote_repo_path = "master"
+        try:
             self.username = self.parameter_finder(array_run_obj.anatomy_df, 'username')
         except NameError:
             self.username = raw_input('username: ')
@@ -61,16 +66,15 @@ class cluster_run(object):
         self.client.connect(self.cluster_address, port=22, username=self.username, password=self.password)
         print " -  Connected to %s"%self.cluster_address
         scp = SCPClient(self.client.get_transport())
-        if 'CxSystem.py' in self.ssh_commander('cd %s;ls'%self.remote_repo_path,0): # path is to CxSystem folder
+        ls_result = self.ssh_commander('cd %s;ls'%self.remote_repo_path,0)
+        if 'CxSystem.py' in ls_result: # path is to CxSystem folder
             pass
-        elif 'CxSystem' in self.ssh_commander('cd %s;ls'%self.remote_repo_path,0) and not '/CxSystem' in self.ssh_commander('cd %s;ls'%self.remote_repo_path,0): # path is to CxSystem root folder
-            print " -  CxSystem folder confimed in the remote ..."
+        elif 'CxSystem' in ls_result and "No such file or directory" not in ls_result: # path is to CxSystem root folder
             self.remote_repo_path = os.path.join(self.remote_repo_path, 'CxSystem')
         else: # no CxSystem ==> cloning the repo
             if self.remote_repo_path.endswith('CxSystem'):
-                self.remote_repo_path = self.remote_repo_path.rstrip('CxSystem')
-            print " -  Cloning the CxSystem in cluster ... "
-            self.ssh_commander('mkdir %s;cd %s;git clone https://github.com/sivanni/CxSystem' % (self.remote_repo_path,self.remote_repo_path),0)
+                self.remote_repo_path = self.remote_repo_path.rstrip('/CxSystem')
+            self.ssh_commander('mkdir %s;cd %s;git clone https://github.com/VisualNeuroscience-UH/CxSystem;cd CxSystem; git checkout %s' % (self.remote_repo_path,self.remote_repo_path,self.remote_branch),0)
             self.remote_repo_path = self.remote_repo_path +  '/CxSystem'
             print " -  CxSystem cloned in cluster."
         scp.put(anat_file_address, self.remote_repo_path+ '/_tmp_anat_config.csv')
