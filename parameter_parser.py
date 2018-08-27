@@ -14,8 +14,6 @@ from brian2  import *
 import numpy as np
 
 
-__author__ = 'V_AD'
-
 
 
 class synapse_parser(object):
