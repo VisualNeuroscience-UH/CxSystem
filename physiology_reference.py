@@ -139,7 +139,11 @@ class neuron_reference(object):
         # </editor-fold>
 
         # <editor-fold desc="...Extracting parameters from physiological config file">
-        variable_start_idx = self.physio_config_df['Variable'][self.physio_config_df['Variable'] == self.output_neuron['type']].index[0]
+        try:
+            variable_start_idx = self.physio_config_df['Variable'][self.physio_config_df['Variable'] == self.output_neuron['subtype']].index[0]
+        except: # falling back to general cell type
+            variable_start_idx = self.physio_config_df['Variable'][self.physio_config_df['Variable'] == self.output_neuron['type']].index[0]
+
         try:
             variable_end_idx = self.physio_config_df['Variable'].dropna().index.tolist()[
                 self.physio_config_df['Variable'].dropna().index.tolist().index(variable_start_idx) + 1]
