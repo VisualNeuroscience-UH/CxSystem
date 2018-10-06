@@ -219,7 +219,7 @@ class SimulationData(object):
         :return: str, group name
         """
         if isinstance(group, int):
-            return SimulationData.default_group_numbering[group]
+            return self.group_numbering[group]
         else:
             return group
 
@@ -350,8 +350,8 @@ class SimulationData(object):
         window_duration = t_end - t_start
 
         allspikes = []
-        for group in self.default_group_numbering.values():
-            spikes_gp = self.data['spikes_all'][group][1]
+        for group in self.group_numbering.values():
+            spikes_gp = self.data['spikes_all'][group]['t'] / second
             allspikes.extend(spikes_gp)
         allspikes = np.array(allspikes)
         allspikes.sort()
@@ -893,23 +893,23 @@ class SimulationData(object):
             indices of spiking neurons (with at least 2 spikes)
         """
         # Get the group spikes. Remember: [0]->indices, [1]->spike times
-        spikes = self.spikedata[self.default_group_numbering[group_id]]
+        spikes = self.spikedata[self.group_numbering[group_id]]
 
         # Get indices of the neurons that are spiking
-        spiking_neurons = unique(spikes[0])
+        spiking_neurons = unique(spikes['i'])
 
         # Pick each neuron and go through the times it has spiked
         spikeintervals = dict()
         spiking_neurons_2 = []  # Those with at least 2 spikes
         for neuron in spiking_neurons:
-            spike_idx = sort(where(spikes[0] == neuron)[0])
+            spike_idx = sort(where(spikes['i'] == neuron)[0])
 
             if len(spike_idx) >= 2:
                 spikeintervals[neuron] = []
                 spiking_neurons_2.append(neuron)
                 # Begin counting from 2nd spike and for each step calculate the duration between jth - (j-1)th spike time
                 for j in range(1, len(spike_idx)):
-                    interval = (spikes[1][spike_idx[j]] - spikes[1][spike_idx[j-1]]) * 1000  # x1000 s->ms
+                    interval = (spikes['t'][spike_idx[j]] - spikes['t'][spike_idx[j-1]])/second * 1000  # x1000 s->ms
                     spikeintervals[neuron].append(interval)
 
         return spikeintervals, spiking_neurons_2
@@ -1009,9 +1009,9 @@ class SimulationData(object):
 
         # Collect spike counts (of the group) into runtime divided by (time-)bin_size many bins
         timebin = bin_size/second
-        spikes = self.data['spikes_all'][self.default_group_numbering[group_id]]
+        spikes = self.data['spikes_all'][self.group_numbering[group_id]]
         n_bins = int(self.runtime/timebin)
-        spike_counts, bin_edges = np.histogram(spikes[1], bins=n_bins)
+        spike_counts, bin_edges = np.histogram(spikes['t'], bins=n_bins)
         # Spike count divided by bin size could be called the "population firing rate", but we don't really need that here
 
         # Count how many time-bins with each firing rate/spike count -> spike count histogram
@@ -1053,9 +1053,9 @@ class SimulationData(object):
         """
         # Collect spike counts (of the group) into runtime divided by (time-)bin_size many bins
         timebin = bin_size/second
-        spikes = self.data['spikes_all'][self.default_group_numbering[group_id]]
+        spikes = self.data['spikes_all'][self.group_numbering[group_id]]
         n_bins = int(self.runtime/timebin)
-        spike_counts, bin_edges = np.histogram(spikes[1], bins=n_bins)
+        spike_counts, bin_edges = np.histogram(spikes['t'], bins=n_bins)
 
         # Count instantaneous firing rates in spikes/s
         group_firing_rates = [count/timebin for count in spike_counts]
@@ -1210,13 +1210,13 @@ class SimulationData(object):
 
         # Go through every group
         # for group, neurons_and_spikes in self.spikedata:
-        for group in self.default_group_numbering.values():
+        for group in self.group_numbering.values():
             neurons_and_spikes = self.spikedata[group]
-            neuron_ids = unique(neurons_and_spikes[0])
+            neuron_ids = unique(neurons_and_spikes['i'])
 
             # Add each sampled spike train as a separate array
             for nid in neuron_ids:
-                single_train = neurons_and_spikes[1][np.where(neurons_and_spikes[0] == nid)]
+                single_train = neurons_and_spikes['t'][np.where(neurons_and_spikes['i'] == nid)] / second
                 if len(np.where(single_train > time_to_drop/second)[0]) > 0:  # ...if there is at least 1 spike after time_to_drop
                     spiketrains.append(single_train)
 
@@ -1262,17 +1262,17 @@ class SimulationData(object):
         true_runtime = self.runtime * second - time_to_drop
 
         # Get spikes of the corresponding group with the beginning removed
-        spikes = self.spikedata[self.default_group_numbering[group_id]]  # [0]->indices, [1]->times
+        spikes = self.spikedata[self.group_numbering[group_id]]  # [0]->indices, [1]->times
         try:
             # We can do this because indexing is chronological
-            true_begin_idx = min(where(spikes[1] > time_to_drop/second)[0])
+            true_begin_idx = min(where(spikes['t']/second > time_to_drop/second)[0])
         except ValueError:
             # If no spikes, then return an "empty" measures array
             return [0, [], [], -1]
 
         spikes_new = []
-        spikes_new.append(spikes[0][true_begin_idx:])
-        spikes_new.append(spikes[1][true_begin_idx:])
+        spikes_new.append(spikes['i'][true_begin_idx:])
+        spikes_new.append(spikes['t'][true_begin_idx:]/second)
 
         # Count how many neurons are spiking (at least 1 spike)
         spiking_neurons = unique(spikes_new[0])
@@ -1316,7 +1316,7 @@ class SimulationData(object):
         isicovs = dict()
         fanofactors = dict()
 
-        for group_id in self.default_group_numbering.keys():
+        for group_id in self.group_numbering.keys():
             n_spiking_gp, mean_firing_rates_gp, isicovs_gp, fanofactor_gp = self._pop_measures_group(group_id, time_to_drop)
             n_spiking[group_id] = n_spiking_gp
             mean_firing_rates[group_id] = mean_firing_rates_gp
@@ -1341,8 +1341,8 @@ class SimulationData(object):
         # group_name = self.group_numbering[group_id]
         group_name = 'NG0_relay_spikes'
         w_coord = self.data['positions_all']['w_coord'][group_name]
-        spikes_i = self.data['spikes_all'][group_name][0].astype(int)
-        spikes_t = self.data['spikes_all'][group_name][1]
+        spikes_i = self.data['spikes_all'][group_name]['i'].astype(int)
+        spikes_t = self.data['spikes_all'][group_name]['t']
 
         who_are_spiking = np.unique(spikes_i[np.where(abs(spikes_t - t_abs) < t_res)])
         spikers_coord = np.array([w_coord[i] for i in who_are_spiking])
@@ -1384,9 +1384,12 @@ class ExperimentData(object):
             settings = {'time_to_drop': 500*ms, 'rate_min': 0*Hz, 'rate_max': 30*Hz, 'isicov_min': 0.5,
                         'isicov_max': 1.5, 'fanofactor_max': 10, 'active_group_min': 0.2, 'dec_places': 14}
 
+        # OPEN simulation results file
+        sim = SimulationData(sim_file, data_path=self.experiment_path)
+
         # BUILD DATAFRAME for collecting everything
-        group_measures = ['p_' + group_name for group_name in SimulationData.default_group_numbering.values()]
-        group_measures.extend(['mfr_' + group_name for group_name in SimulationData.default_group_numbering.values()])
+        group_measures = ['p_' + group_name for group_name in sim.group_numbering.values()]
+        group_measures.extend(['mfr_' + group_name for group_name in sim.group_numbering.values()])
         stats_to_compute = ['duration', 'n_spiking', 'p_spiking', 'n_firing_rate_normal', 'p_firing_rate_normal',
                             'n_irregular', 'p_irregular', 'irregularity_mean', 'n_groups_active',
                             'n_groups_asynchronous', 'n_groups_synchronous', 'mean_synchrony', 'mfr_all',
@@ -1398,8 +1401,6 @@ class ExperimentData(object):
 
 
         try:
-            # OPEN simulation results file
-            sim = SimulationData(sim_file, data_path=self.experiment_path)
 
             # EXTRACT specified simulation parameters
             duration = (sim.runtime * second - settings['time_to_drop']) / second
@@ -1417,19 +1418,19 @@ class ExperimentData(object):
             n_spiking, mean_firing_rates, isicovs, fanofactors = sim.pop_measures(settings['time_to_drop'])
             n_spiking_total = sum(n_spiking.values())
             osc_freq_ft = sim.global_osc_freq(t_limits=[settings['time_to_drop'], -1])
-            osc_freq_ac = sim.global_osc_freq_autocorr()
+            osc_freq_ac = 0 #sim.global_osc_freq_autocorr()
 
             # TRANSFORM results into a readable form
 
             # -> Group activities (= n_spiking/n_total)
             group_activities = []
-            for group_id in SimulationData.default_group_numbering.keys():
-                activity = round(n_spiking[group_id] / SimulationData.default_group_neuroncounts[group_id], settings['dec_places'])
+            for group_id in sim.group_numbering.keys():
+                activity = round(n_spiking[group_id] / sim.group_neuroncounts[group_id], settings['dec_places'])
                 group_activities.append(activity)
 
             # -> Firing rates
             group_firing_rates = []
-            for group_id in SimulationData.default_group_numbering.keys():
+            for group_id in sim.group_numbering.keys():
                 with np.errstate(divide='raise'):
                     try:
                         firing_rate = round(mean(mean_firing_rates[group_id]), settings['dec_places'])
@@ -1441,7 +1442,7 @@ class ExperimentData(object):
                                         if settings['rate_min'] < rate < settings['rate_max']])
             n_firing_rate_normal = np.int32(n_firing_rate_normal)
 
-            neuron_count = sum(SimulationData.default_group_neuroncounts.values())
+            neuron_count = sum(sim.group_neuroncounts.values())
             try:
                 rates_sum = sum(rate for rate in flatten(mean_firing_rates.values()))
             except:
@@ -1468,7 +1469,7 @@ class ExperimentData(object):
             # Calculating the synchrony measure makes sense only if the group is active enough
             # So, first calculate n_groups_active and count asynchronous groups from those
             active_groups = [group_id for group_id, ng_spiking in n_spiking.items()
-                             if ng_spiking / sim.default_group_neuroncounts[group_id] > settings['active_group_min']]
+                             if ng_spiking / sim.group_neuroncounts[group_id] > settings['active_group_min']]
             n_groups_active = len(active_groups)
             n_groups_asynchronous = len([group_id for group_id, fanofactor in fanofactors.items()
                                          if 0 < fanofactor < settings['fanofactor_max'] and group_id in active_groups])
@@ -1477,7 +1478,7 @@ class ExperimentData(object):
             mean_synchrony = sim.mean_synchrony(time_to_drop=settings['time_to_drop'])
 
             # Finally, transform numbers into frequencies
-            n_total_neurons = sum(sim.default_group_neuroncounts.values())
+            n_total_neurons = sum(sim.group_neuroncounts.values())
             p_spiking = round(n_spiking_total / n_total_neurons, settings['dec_places'])
             if n_spiking_total > 0:
                 p_firing_rate_normal = round(n_firing_rate_normal / n_spiking_total, settings['dec_places'])
@@ -1700,9 +1701,13 @@ def combined_metrics_plot():
 if __name__ == '__main__':
 
 
-    #a = SimulationData('/opt3/tmp/rev2_test/eifstp_networkgen_20180821_19565483_python_5000ms.bz2')
-    a = SimulationData('/opt3/tmp/rev2_test/betaconfig_test_20180919_17183215_background_rate0.2H_k0.2_python_5000ms.bz2')
-    a.publicationplot()
+    # a = SimulationData('/opt3/tmp/rev2_test/betaconfig_test_20180919_17183215_background_rate0.2H_k0.2_python_5000ms.bz2')
+    #a = SimulationData('/opt3/tmp/rev2_test/betaconfig_test2_20180919_19332474_background_rate0.6H_k1.4_python_5000ms.bz2')
+    #a.publicationplot()
+
+    exp = ExperimentData('/opt3/tmp/rev2_test/', 'customweights_test02_eifstp_40nmda_20gabab_allcustoms')
+    exp.computestats('stats_customweights_test02_eifstp_40nmda_20gabab_allcustoms.csv', ['calcium_concentration', 'J', 'k', 'background_rate'])
+
 
     ###### Depol x calcium plot ######
     # exp = ExperimentData('/opt3/tmp/bigrun/depolxcalcium/', 'fepol')

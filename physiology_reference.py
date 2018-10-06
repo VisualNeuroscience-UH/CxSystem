@@ -579,7 +579,7 @@ class synapse_reference(object):
         building the cortical module. New types of synapses should be implemented in this class.
     '''
 
-    def __init__(self, receptor, pre_group_idx, post_group_idx, syn_type, pre_type, post_type,physio_config_df,post_comp_name='_soma'):
+    def __init__(self, receptor, pre_group_idx, post_group_idx, syn_type, pre_type, post_type,physio_config_df,post_comp_name='_soma', custom_weight='--'):
         '''
         initializes the synapse_reference based on its arguments.
 
@@ -610,6 +610,7 @@ class synapse_reference(object):
         self.output_synapse['post_group_idx'] = int(post_group_idx)
         self.output_synapse['post_group_type'] = post_type
         self.output_synapse['post_comp_name'] = post_comp_name
+        self.output_synapse['custom_weight'] = custom_weight
         _name_space = synapse_parser(self.output_synapse, physio_config_df)
         self.output_synapse['namespace'] = {}
         self.output_synapse['namespace'] = _name_space.output_namespace

@@ -972,7 +972,7 @@ class CxSystem(object):
         * syn_con_str: The string containing the syntax for connect() method of a current Synapses() object. This string changes depending on using the [p] and [n] tags in the configuration file.
         '''
         _all_columns = ['receptor', 'pre_syn_idx', 'post_syn_idx', 'syn_type', 'p', 'n', 'monitors','load_connection',\
-                        'save_connection']
+                        'save_connection', 'custom_weight']
         _obligatory_params = [0, 1, 2, 3]
         assert len(self.current_values_list) <= len(_all_columns), \
             ' -  One or more of the obligatory columns for input definition is missing. Obligatory columns are:\n%s\n ' \
@@ -1121,12 +1121,20 @@ class CxSystem(object):
             pre_type = syn[self.current_parameters_list[self.current_parameters_list=='pre_type'].index.item()]
             post_type = syn[self.current_parameters_list[self.current_parameters_list=='post_type'].index.item()]
             post_comp_name= syn[self.current_parameters_list[self.current_parameters_list=='post_comp_name'].index.item()]
+
+            # Get custom weight if defined
+            try:
+                custom_weight = syn[self.current_parameters_list[self.current_parameters_list=='custom_weight'].index.item()]
+            except (ValueError, NameError):
+                custom_weight = '--'
+
+
             # check monitors in line:
             current_idx = len(self.customized_synapses_list)
             # creating a synapse_reference object and passing the positional arguments to it. The main member of
             # the class called output_synapse is then appended to customized_synapses_list:
             self.customized_synapses_list.append(synapse_reference(receptor, pre_syn_idx, post_syn_idx, syn_type,
-                                                                   pre_type, post_type, self.physio_config_df, post_comp_name).output_synapse)
+                                                                   pre_type, post_type, self.physio_config_df, post_comp_name, custom_weight).output_synapse)
             _pre_group_idx = self.neurongroups_list[self.customized_synapses_list[-1]['pre_group_idx']]
             _post_group_idx = self.neurongroups_list[self.customized_synapses_list[-1]['post_group_idx']]
             # Generated variable name for the Synapses(), equation, pre_synaptic and post_synaptic equation and Namespace

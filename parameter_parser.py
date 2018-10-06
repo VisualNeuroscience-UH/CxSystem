@@ -236,8 +236,15 @@ class synapse_parser(object):
         :param output_synapse: This is the dictionary created in neuron_reference() in brian2_obj_namespaces module. This contains all the information about the synaptic connection. In this method, STDP parameters are directly added to this variable. Following STDP values are set in this method: wght_max, wght0.
         '''
 
-        mean_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+        try:
+            mean_wght = eval(self.output_synapse['custom_weight']) /nS
+            print ' ! Using custom weight: %f nS' % mean_wght
+        except:
+            mean_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+
         min_wght = mean_wght / 2.
+
+
 
         # SCALE the weight parameters wrt calcium
         # Calcium scaling is just multiplication by a constant so we can scale min and mean wght
@@ -290,7 +297,12 @@ class synapse_parser(object):
          '''
 
         # GET weight params
-        mean_wght = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+        try:
+            mean_wght = eval(self.output_synapse['custom_weight']) /nS
+            print ' ! Using custom weight: %f nS' % mean_wght
+        except:
+            mean_wght = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+
         min_wght = mean_wght / 2.
 
         # GET time constant
@@ -318,7 +330,12 @@ class synapse_parser(object):
 
          '''
         # GET weight params
-        mean_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+        try:
+            mean_wght = eval(self.output_synapse['custom_weight']) /nS
+            print ' ! Using custom weight: %f nS' % mean_wght
+        except:
+            mean_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
+
         min_wght = mean_wght / 2.
 
         # GET time constants
