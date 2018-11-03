@@ -1705,8 +1705,8 @@ if __name__ == '__main__':
     #a = SimulationData('/opt3/tmp/rev2_test/betaconfig_test2_20180919_19332474_background_rate0.6H_k1.4_python_5000ms.bz2')
     #a.publicationplot()
 
-    exp = ExperimentData('/opt3/tmp/rev2_test/', 'customweights_test02_eifstp_40nmda_20gabab_allcustoms')
-    exp.computestats('stats_customweights_test02_eifstp_40nmda_20gabab_allcustoms.csv', ['calcium_concentration', 'J', 'k', 'background_rate'])
+    exp = ExperimentData('/opt3/tmp/rev2_test3/', 'step1_17taue_eifstp_40nmda_20gabab_Jallcustom')
+    exp.computestats('stats_step1_17taue_eifstp_40nmda_20gabab_Jallcustom.csv', ['calcium_concentration', 'J', 'k', 'background_rate'])
 
 
     ###### Depol x calcium plot ######

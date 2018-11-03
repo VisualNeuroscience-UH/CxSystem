@@ -289,6 +289,7 @@ class neuron_reference(object):
 
             # <editor-fold desc="...Model variation equations">
             # TODO - Incorporate into equation_templates
+            # Last modified 3 Nov 2018
             eq_template_soma = eqt.EquationHelper(neuron_model=self.pc_neuron_model, is_pyramidal=True,
                                                   compartment='soma', exc_model=self.pc_excitation_model,
                                                   inh_model=self.pc_inhibition_model).getMembraneEquation(return_string=True)
@@ -296,6 +297,7 @@ class neuron_reference(object):
                                                   compartment='dend', exc_model=self.pc_excitation_model,
                                                   inh_model=self.pc_inhibition_model).getMembraneEquation(return_string=True)
 
+            dendritic_extent = self.output_neuron['dend_comp_num']
 
             self.output_neuron['equation'] = Equations(eq_template_dend, vm="vm_basal", ge="ge_basal",
                                                        gealpha="gealpha_basal",
@@ -371,25 +373,36 @@ class neuron_reference(object):
                 gapost=1 / (self.output_neuron['namespace']['Ra'][0]),
                 I_dendr="Idendr_soma", vmself="vm",
                 vmpre="vm_a0", vmpost="vm_basal")
-            self.output_neuron['equation'] += Equations('I_dendr = gapre*(vmpre-vmself) + gapost*(vmpost-vmself) : amp',
-                                                        gapre=1 / (self.output_neuron['namespace']['Ra'][2]),
-                                                        gapost=1 / (self.output_neuron['namespace']['Ra'][1]),
-                                                        I_dendr="Idendr_a0", vmself="vm_a0", vmpre="vm_a1", vmpost="vm")
 
-            # Defining decay between apical dendrite compartments
-            for _ii in arange(1, self.output_neuron['dend_comp_num']):
-                self.output_neuron['equation'] += Equations(
-                    'I_dendr = gapre*(vmpre-vmself) + gapost*(vmpost-vmself) : amp',
-                    gapre=1 / (self.output_neuron['namespace']['Ra'][_ii]),
-                    gapost=1 / (self.output_neuron['namespace']['Ra'][_ii - 1]),
-                    I_dendr="Idendr_a%d" % _ii, vmself="vm_a%d" % _ii,
-                    vmpre="vm_a%d" % (_ii + 1), vmpost="vm_a%d" % (_ii - 1))
+            # If there's more than one apical dendrite compartment
+            if dendritic_extent > 0:
 
-            self.output_neuron['equation'] += Equations('I_dendr = gapost*(vmpost-vmself) : amp',
-                                                        I_dendr="Idendr_a%d" % self.output_neuron['dend_comp_num'],
-                                                        gapost=1 / (self.output_neuron['namespace']['Ra'][-1]),
-                                                        vmself="vm_a%d" % self.output_neuron['dend_comp_num'],
-                                                        vmpost="vm_a%d" % (self.output_neuron['dend_comp_num'] - 1))
+                self.output_neuron['equation'] += Equations('I_dendr = gapre*(vmpre-vmself) + gapost*(vmpost-vmself) : amp',
+                                                            gapre=1 / (self.output_neuron['namespace']['Ra'][2]),
+                                                            gapost=1 / (self.output_neuron['namespace']['Ra'][1]),
+                                                            I_dendr="Idendr_a0", vmself="vm_a0", vmpre="vm_a1", vmpost="vm")
+
+                # Defining decay between apical dendrite compartments
+                for _ii in arange(1, self.output_neuron['dend_comp_num']):
+                    self.output_neuron['equation'] += Equations(
+                        'I_dendr = gapre*(vmpre-vmself) + gapost*(vmpost-vmself) : amp',
+                        gapre=1 / (self.output_neuron['namespace']['Ra'][_ii]),
+                        gapost=1 / (self.output_neuron['namespace']['Ra'][_ii - 1]),
+                        I_dendr="Idendr_a%d" % _ii, vmself="vm_a%d" % _ii,
+                        vmpre="vm_a%d" % (_ii + 1), vmpost="vm_a%d" % (_ii - 1))
+
+                self.output_neuron['equation'] += Equations('I_dendr = gapost*(vmpost-vmself) : amp',
+                                                            I_dendr="Idendr_a%d" % self.output_neuron['dend_comp_num'],
+                                                            gapost=1 / (self.output_neuron['namespace']['Ra'][-1]),
+                                                            vmself="vm_a%d" % self.output_neuron['dend_comp_num'],
+                                                            vmpost="vm_a%d" % (self.output_neuron['dend_comp_num'] - 1))
+
+            # If dendritic_extent is zero ie. there's only one apical dendrite compartment
+            else:
+                self.output_neuron['equation'] += Equations('I_dendr = gapre*(vmpre-vmself)  : amp',
+                                                            gapre=1 / (self.output_neuron['namespace']['Ra'][1]),
+                                                            I_dendr="Idendr_a0", vmself="vm_a0", vmpre="vm")
+
 
             #</editor-fold>
 
