@@ -50,7 +50,7 @@ class neuron_reference(object):
         assert cell_type in neuron_reference._celltypes, " -  Cell type '%s' is not defined" % cell_type  # check cell type
         assert len(layers_idx) < 3, " -  Length of layers_idx array is larger than 2"  # check layer index
         if len(layers_idx) == 2:
-            assert layers_idx[1] < layers_idx[0], " -  Indices of the layer_idx array are not descending"
+            assert layers_idx[1] <= layers_idx[0], " -  Indices of the layer_idx array are not descending"
         elif len(layers_idx) == 1:
             assert cell_type != 'PC', " -  Cell type is PC but the start and end of the neuron is not defined in layers_idx"
         # final neuron is the output neuron containing equation, parameters
@@ -393,7 +393,7 @@ class neuron_reference(object):
 
                 self.output_neuron['equation'] += Equations('I_dendr = gapost*(vmpost-vmself) : amp',
                                                             I_dendr="Idendr_a%d" % self.output_neuron['dend_comp_num'],
-                                                            gapost=1 / (self.output_neuron['namespace']['Ra'][-1]),
+                                                            gapost=1 / (self.output_neuron['namespace']['Ra'][dendritic_extent-1]),
                                                             vmself="vm_a%d" % self.output_neuron['dend_comp_num'],
                                                             vmpost="vm_a%d" % (self.output_neuron['dend_comp_num'] - 1))
 

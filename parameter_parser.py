@@ -416,7 +416,8 @@ class neuron_parser (object):
         self.output_namespace['gL']= self.output_namespace['fract_areas'][output_neuron['dend_comp_num']] * self.output_namespace['gL'] * self.output_namespace['Area_tot_pyram']
         self.output_namespace['taum_soma'] = self.output_namespace['C'][1] / self.output_namespace['gL'][1]
 
-        self.output_namespace['tonic_current'] = self.output_namespace['tonic_current'][output_neuron['dend_comp_num'] -1]
+        # self.output_namespace['tonic_current'] = self.output_namespace['tonic_current'][output_neuron['dend_comp_num'] -1]
+        self.output_namespace['tonic_current'] = self.output_namespace['tonic_current']
 
     def _BC(self,output_neuron):
         pass
