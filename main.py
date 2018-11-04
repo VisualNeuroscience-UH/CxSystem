@@ -6,8 +6,11 @@ import datetime
 
 time_start = datetime.datetime.now()
 
-CM = cxs.CxSystem(anatomy_and_system_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/Rev2_Step1beta_Anatomy_config_customweights.csv',
-                        physiology_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/Rev2_Step1beta_Physiology_config_customweights.csv')
+# CM = cxs.CxSystem(anatomy_and_system_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/Rev2_Step1gamma_Anatomy_config_customweights_slurm.csv',
+#                         physiology_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/Rev2_Step1gamma_Physiology_config.csv')
+
+CM = cxs.CxSystem(anatomy_and_system_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/Rev2_Step2gamma_Anatomy_config.csv',
+                        physiology_config = os.path.dirname(os.path.realpath(__file__)) + '/config_files/Rev2_Step2gamma_Physiology_config.csv')
 
 time_before_run = datetime.datetime.now()
 CM.run()
