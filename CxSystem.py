@@ -10,7 +10,7 @@ Copyright 2017 Vafa Andalibi, Henri Hokkanen and Simo Vanni.
 
 
 from brian2 import *
-import brian2genn
+#import brian2genn
 import os
 import sys
 reload(sys)
@@ -1489,8 +1489,9 @@ if __name__ == '__main__' :
         except IndexError:
             CM = CxSystem(net_config, phys_config)
     except IndexError:
-        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/CUBA_config.csv', \
-                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_CUBA.csv', )
+       CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/test.csv', \
+        # CM=CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/CUBA_config.csv', \
+                os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_CUBA.csv', )
     CM.run()
     # from data_visualizers.data_visualization import DataVisualization
     #
