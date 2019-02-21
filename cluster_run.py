@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 __author__ = 'Andalibi, V., Hokkanen H., Vanni, S.'
 
@@ -29,21 +30,22 @@ from scp import SCPClient
 class cluster_run(object):
 
     def __init__(self,array_run_obj, anat_file_address,physio_file_address):
-        if not os.path.exists('./_cluster_tmp'.replace('/',os.sep)):
-            os.mkdir('./_cluster_tmp'.replace('/',os.sep))
-        # with open('./_cluster_tmp/array_run_obj.pkl','wb') as fbb:
-        #     pickle.dump(array_run_obj,fbb,pickle.HIGHEST_PROTOCOL)
+
         self.output_path_and_filename = self.parameter_finder(array_run_obj.anatomy_df, 'output_path_and_filename')
         try:
             self.remote_output_folder = self.parameter_finder(array_run_obj.anatomy_df, 'remote_output_folder')
         except NameError:
-            print " -    remote_output_folder is not defined in the configuration file, the default path is ./results [in cluster]"
-            self.remote_output_folder = "./results"
+            # print " -    remote_output_folder is not defined in the configuration file, the default path is ./results [in cluster]"
+            raise Exception("remote_output_folder is not defined for running CxSystem on cluster")
+            # self.remote_output_folder = "./results"
+        assert not str.startswith(self.remote_output_folder,'.') and not str.startswith(self.remote_output_folder,'~'),"remote_output_folder must be an absolute path with explicit home directory path"
         try:
             self.remote_repo_path = self.parameter_finder(array_run_obj.anatomy_df, 'remote_repo_path')
         except NameError:
-            print " -    remote_repo_path is not defined in the configuration file, the default value is home directory ~"
-            self.remote_repo_path = "."
+            # print " -    remote_repo_path is not defined in the configuration file, the default value is home directory ~"
+            # self.remote_repo_path = "."
+            raise Exception("remote_repo_path is not defined for running CxSystem on cluster")
+        assert not str.startswith(self.remote_repo_path,'.'),"remote_repo_path must be an apsolute path"
         try:
             self.cluster_address = self.parameter_finder(array_run_obj.anatomy_df, 'cluster_address')
         except NameError:
@@ -53,7 +55,6 @@ class cluster_run(object):
         except NameError:
             self.username = raw_input('username: ')
         self.password = getpass.getpass('password: ')
-
         self.client = paramiko.SSHClient()
         self.client.load_system_host_keys()
         self.client.set_missing_host_key_policy(paramiko.WarningPolicy)
@@ -62,11 +63,13 @@ class cluster_run(object):
         scp = SCPClient(self.client.get_transport())
         if 'CxSystem.py' in self.ssh_commander('cd %s;ls'%self.remote_repo_path,0): # path is to CxSystem folder
             pass
-        elif 'CxSystem' in self.ssh_commander('cd %s;ls'%self.remote_repo_path,0): # path is to CxSystem root folder
+        elif 'CxSystem' in self.ssh_commander('cd %s;ls'%self.remote_repo_path,0) and not '/CxSystem' in self.ssh_commander('cd %s;ls'%self.remote_repo_path,0): # path is to CxSystem root folder
+            print " -  CxSystem folder confimed in the remote ..."
             self.remote_repo_path = os.path.join(self.remote_repo_path, 'CxSystem')
         else: # no CxSystem ==> cloning the repo
             if self.remote_repo_path.endswith('CxSystem'):
-                self.remote_repo_path = self.remote_repo_path.rstrip('/CxSystem')
+                self.remote_repo_path = self.remote_repo_path.rstrip('CxSystem')
+            print " -  Cloning the CxSystem in cluster ... "
             self.ssh_commander('mkdir %s;cd %s;git clone https://github.com/sivanni/CxSystem' % (self.remote_repo_path,self.remote_repo_path),0)
             self.remote_repo_path = self.remote_repo_path +  '/CxSystem'
             print " -  CxSystem cloned in cluster."
@@ -78,7 +81,9 @@ class cluster_run(object):
                   "\nNote that the number of nodes in default slurm file should always be set to 1. Instead you should enter the number of nodes in the CxSystem network config file. "
                   "\nAlso the default number of CPUs=16 does not need to be changed most of the times. "
                   "\nPress a key to contiue ...")
-
+        if not os.path.exists('./_cluster_tmp'.replace('/',os.sep)):
+            os.mkdir('./_cluster_tmp'.replace('/',os.sep))
+            print " -  _cluster_tmp folder created locally to keep the necessary information for retrieving the results in the future."
         # building slurm :
         for item_idx, item in enumerate(array_run_obj.clipping_indices):
             with open("./slurm.job".replace('/',os.sep),'r') as sl1:
@@ -91,7 +96,7 @@ class cluster_run(object):
                             item,array_run_obj.clipping_indices[item_idx+1]-array_run_obj.clipping_indices[item_idx]))
                     except IndexError:
                         sl2.write('python CxSystem.py _tmp_anat_config.csv _tmp_physio_config.csv %d %d\n' % (
-                        item, array_run_obj.total_configs - array_run_obj.clipping_indices[item_idx]))
+                            item, array_run_obj.total_configs - array_run_obj.clipping_indices[item_idx]))
                     # sl2.write('wait\n')
             scp.put('./_cluster_tmp/_tmp_slurm_%d.job'.replace('/',os.sep)%item_idx, self.remote_repo_path + '/_tmp_slurm_%d.job'%item_idx)
         print " -  Slurm file generated and copied to cluster"
@@ -155,8 +160,8 @@ if __name__ == '__main__':
     time.sleep(1)
     if not os.path.isdir(checker_data['local_folder']):
         os.mkdir(checker_data['local_folder'])
-    remote_result_abs_path = ssh_commander(client,'cd %s;cd %s; pwd' % (checker_data['remote_repo_path'],
-                                                                     checker_data['remote_output_folder']), 0).rstrip('\r\n')
+   # remote_result_abs_path = ssh_commander(client,'cd %s;cd %s; pwd' % (checker_data['remote_repo_path'],checker_data['remote_output_folder']), 0).rstrip('\r\n')
+    remote_result_abs_path = checker_data['remote_output_folder']
 
     waiting_flag = True
     print " -  Waiting for the results ..."

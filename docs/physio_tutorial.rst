@@ -8,9 +8,10 @@ The format of the physiological configuration file is different from that of the
 
 * **Variables**: is the first column and contains the name of the variable. Some values are in form of key:value pairs and others are just a regular variable with a value. 
 
-::
-
-   calcium_concentration,  ,1
+  .. csv-table::
+     :widths: 7, 2, 2
+	      
+     calcium_concentration,  ,1
 
 This line defines a variable called calcium_concentration and sets its value to 1. Note that the key is empty.
 
@@ -18,8 +19,8 @@ This line defines a variable called calcium_concentration and sets its value to 
   
 * **Values**: Value will be set for either a variable with no keys, or for keys of a variable where the variable itself does not have a value, i.e. is in form of a key:value pairs.
 
-::
-
+ .. csv-table::
+   :widths: 2, 5, 5
 
    BC	,C		,100 * pF
    	,gL		,10 * nS
@@ -40,9 +41,10 @@ This example defines the different parameters and corresponding values for a BC 
 
 Note the following line in the above example:
 
-::
-
-    	taum_soma	,C/gL
+.. csv-table::
+   :widths: 2, 1
+	    
+   taum_soma , C/gL
 
 
 The key defines the Tau_m of the soma in the BC neuron. The value however, is a formula that uses the other keys of the BC neuron, i.e. C and gL.  
