@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+##! /usr/bin/env python
 # -*- coding: utf-8 -*-
 __author__ = 'Andalibi, V., Hokkanen H., Vanni, S.'
 
@@ -11,7 +11,7 @@ Copyright 2017 Vafa Andalibi, Henri Hokkanen and Simo Vanni.
 
 
 from brian2 import *
-import brian2genn
+# import brian2genn # pytest tmp mod
 import os
 import sys
 from physiology_reference import *
@@ -35,6 +35,7 @@ import threading
 import array_run
 import multiprocessing
 #prefs.codegen.target = 'numpy'
+import pdb
 
 class CxSystem(object):
     '''
@@ -154,10 +155,10 @@ class CxSystem(object):
         self.profiling = 0
         self.array_run_in_cluster = array_run_in_cluster
         self.awaited_conf_lines = []
-        self.physio_config_df = pandas.read_csv(physiology_config) if type(physiology_config) == str else physiology_config
+        self.physio_config_df = pandas.read_csv(physiology_config) if any(type(physiology_config) == str  or type(physiology_config) == unicode) else physiology_config # pytest mod unicode
         self.physio_config_df = self.physio_config_df.applymap(lambda x: NaN if str(x)[0] == '#' else x)
-        self.anat_and_sys_conf_df = pandas.read_csv(anatomy_and_system_config,header=None) if type(anatomy_and_system_config) == str else anatomy_and_system_config
-        self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.applymap(lambda x: x.strip() if type(x) == str else x)
+        self.anat_and_sys_conf_df = pandas.read_csv(anatomy_and_system_config,header=None) if any(type(anatomy_and_system_config) == str or type(anatomy_and_system_config) == unicode) else anatomy_and_system_config # pytest mod unicode
+        self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.applymap(lambda x: x.strip() if any(type(x) == str or type(x) == unicode) else x) # pytest mod unicode
         ## dropping the commented lines :
         self.anat_and_sys_conf_df =  self.anat_and_sys_conf_df.drop(self.anat_and_sys_conf_df[0].index[self.anat_and_sys_conf_df[0][self.anat_and_sys_conf_df[0].str.contains('#') == True].index.tolist()]).reset_index(drop=True)
         self.physio_config_df = self.physio_config_df.drop(self.physio_config_df['Variable'].index[self.physio_config_df['Variable'][self.physio_config_df['Variable'].str.contains('#') == True].index.tolist()]).reset_index(drop=True)
@@ -229,6 +230,7 @@ class CxSystem(object):
         order_of_lines = ['params','IN','G','S']
         for value_line_title in order_of_lines:
             for def_idx in definition_lines_idx:
+                # pdb.set_trace()
                 if value_line_title in self.anat_and_sys_conf_df.loc[def_idx+1,0]:
                     self.current_parameters_list = self.anat_and_sys_conf_df.loc[def_idx,1:].dropna()
                     self.current_parameters_list = self.current_parameters_list[~self.current_parameters_list.str.contains('#')]
@@ -394,8 +396,8 @@ class CxSystem(object):
 
     def _set_runtime(self,*args):
         assert '*' in args[0], ' -  Please specify the unit for the runtime parameter, e.g. um , mm '
-        self.runtime = eval(args[0])
-
+        self.runtime = eval(args[0]) 
+		
     def _set_sys_mode(self, *args):
         assert args[0] in ['local','expanded'], " -  System mode should be either local or expanded. "
         self.sys_mode = args[0]
@@ -1696,9 +1698,9 @@ if __name__ == '__main__' :
         except IndexError:
             CM = CxSystem(net_config, phys_config)
     except IndexError:
-        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/COBAHH_config.csv', \
-                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_COBAHH.csv', )
-    CM.run()
+        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/pytest_COBAEIF_config.csv', \
+                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_COBAEIF.csv', )
+	CM.run()
     # from data_visualizers.data_visualization import DataVisualization
     #
     # dv = DataVisualization()

@@ -1,0 +1,6 @@
+Notes for CxSystem
+
+Better to keep csv/xlsx as middle step, rather than make parallel GUI-> simulation API
+-saving the dataframe -> csv/xlsx keeps record of the simulation.
+-no need to reprogram the CxSystem.__init__() method
+-just make the filter from GUI -> csv/xlsx
