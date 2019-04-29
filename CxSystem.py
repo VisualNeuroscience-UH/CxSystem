@@ -230,7 +230,6 @@ class CxSystem(object):
         order_of_lines = ['params','IN','G','S']
         for value_line_title in order_of_lines:
             for def_idx in definition_lines_idx:
-                # pdb.set_trace()
                 if value_line_title in self.anat_and_sys_conf_df.loc[def_idx+1,0]:
                     self.current_parameters_list = self.anat_and_sys_conf_df.loc[def_idx,1:].dropna()
                     self.current_parameters_list = self.current_parameters_list[~self.current_parameters_list.str.contains('#')]
@@ -362,7 +361,7 @@ class CxSystem(object):
 
     def set_runtime_parameters(self):
         if not any(self.current_parameters_list.str.contains('runtime')):
-            print " -  Runtime duration is not defined in the configuration file. The default runtime duratoin is 500*ms"
+            print " -  Runtime duration is not defined in the configuration file. The default runtime duration is 500*ms"
             self.runtime = 500*ms
         if not any(self.current_parameters_list.str.contains('device')):
             print " -  Device is not defined in the configuration file. The default device is Python."
@@ -397,7 +396,7 @@ class CxSystem(object):
     def _set_runtime(self,*args):
         assert '*' in args[0], ' -  Please specify the unit for the runtime parameter, e.g. um , mm '
         self.runtime = eval(args[0]) 
-		
+        
     def _set_sys_mode(self, *args):
         assert args[0] in ['local','expanded'], " -  System mode should be either local or expanded. "
         self.sys_mode = args[0]
@@ -1698,9 +1697,9 @@ if __name__ == '__main__' :
         except IndexError:
             CM = CxSystem(net_config, phys_config)
     except IndexError:
-        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/pytest_COBAEIF_config.csv', \
-                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_COBAEIF.csv', )
-	CM.run()
+        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/tests/config_files/pytest_COBAEIF_config.csv', \
+                      os.path.dirname(os.path.realpath(__file__)) + '/tests/config_files/pytest_Physiological_Parameters_for_COBAEIF.csv', )
+    CM.run()
     # from data_visualizers.data_visualization import DataVisualization
     #
     # dv = DataVisualization()

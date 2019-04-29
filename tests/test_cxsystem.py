@@ -4,14 +4,14 @@ import sys
 import CxSystem as cx
 import numpy as np
 import pdb
-from mock import Mock
+from mock import MagicMock
 import inspect
+from brian2.units import *
 
 '''
-In windows I had problems with CxSystem import. I had to run pytest in shell: python -m pytest.
-This will add the current directory to sys.path. If you get tired doing this, add
-the repo to your pythonpath by adding PYTHONPATH environmental variable. 
 Run pytest at CxSystem root, such as git repo root.
+Only Python device is tested currently, cpp and GeNN devices are not tested.
+Defaultclock cannot be tested, because I dont know how to access defaultclock.dt in CxSystem.set_default_clock
 '''
 
 cwd = os.getcwd()
@@ -65,20 +65,71 @@ class TestConfigurationExecutor:
 		'''Test that indeces are the same given the constant configuration file'''
 		assert all(CM.anat_and_sys_conf_df.loc[:,0][CM.anat_and_sys_conf_df.loc[:,0]=='row_type'].index \
 				== np.array([1, 5, 8, 12]))
-	# def test_method_mapping(self):
-		# 'device': [0,self.set_device],
-		# 'save_generated_video_input_flag': [1,self.save_generated_video_input_flag],
-		# 'runtime': [2,self._set_runtime],
-		# 'sys_mode': [3,self._set_sys_mode],  # either "local" or "expanded"
-		# 'scale': [4,self._set_scale],
-		# 'grid_radius': [5,self._set_grid_radius],
-		# 'min_distance': [6,self._set_min_distance],
-		# 'do_init_vms': [7,self.do_init_vms],
-		# 'default_clock': [8, self.set_default_clock],
-		# 'output_path_and_filename': [9,self._set_output_path],
+	
+	def test_set_runtime_parameters(self):
+		'''Note, cpp and GeNN devices are not tested '''
+		assert CM.runtime == 2000*ms
+		assert CM.device.lower() == 'python'
+		assert CM.sys_mode == 'local'
+		
+	def test_relay(self):
+		''' This is expected to fail if the configuration file changes'''
+		assert len(CM.customized_neurons_list) == 3
+		assert len(CM.customized_neurons_list[0]['z_positions']) == 60
+		assert len(CM.customized_neurons_list[1]['z_positions']) == 3200
+		assert len(CM.customized_neurons_list[2]['z_positions']) == 800
+		assert type(CM.customized_neurons_list[0]['z_positions'][0]) == np.complex128
+		assert CM.customized_neurons_list[0].keys() == [
+			'z_positions', 'w_positions', 'equation', 'type', 'idx']
+		assert CM.customized_neurons_list[1].keys() == [
+			'reset', 'w_positions', 'total_comp_num', 'soma_layer', 
+			'idx', 'dends_layer', 'z_positions', 'equation', 
+			'namespace', 'refractory', 'object_name', 'dend_comp_num', 
+			'w_center', 'threshold', 'number_of_neurons', 'type', 'z_center']
+		assert CM.customized_neurons_list[2].keys() == [
+			'reset', 'w_positions', 'total_comp_num', 'soma_layer', 
+			'idx', 'dends_layer', 'z_positions', 'equation', 
+			'namespace', 'refractory', 'object_name', 'dend_comp_num', 
+			'w_center', 'threshold', 'number_of_neurons', 'type', 'z_center']
+
+	def test__set_scale(self):
+		# assert CM.scale == 1
+		assert isinstance(CM.scale, float)
+
+	def test__set_grid_radius(self):
+		# pdb.set_trace()
+		assert CM.general_grid_radius.dim.__str__() == 'm'
+
+	def test__set_min_distance(self):
+		assert CM.min_distance.dim.__str__() == 'm'
+
+	def test_do_init_vms(self):
+		assert isinstance(CM.do_init_vms, int)
+
 		# 'connections_saving_path_and_filename': [10,self._set_save_brian_data_path],
 		# 'connections_loading_path_and_filename': [11,self._set_load_brian_data_path],
 		# 'load_positions_only': [12,self.load_positions_only],
 		# 'do_benchmark': [13,self.set_do_benchmark],
 		# 'profiling': [14, self.set_profiling],
+		# 'G': [nan,self.neuron_group],
+		# 'S': [nan,self.synapse],
+		# 'IN': [nan,self.relay],
+		# 'params': [nan,self.set_runtime_parameters],
+
+# Integration tests
+@pytest.fixture
+def cxsystem_run_fixture():
+	#Executing setup code
+	CM.run()
+	yield
+	#Executing teardown code
+	[os.remove(item) for item in os.listdir(CM.output_folder) if item.startswith('output')]
+	
+
+def test_outputfile(cxsystem_run_fixture):
+	'''Test for existing outputfile'''
+	outputfilelist = [item for item in os.listdir(CM.output_folder) if item.startswith('output')]
+	assert os.access(outputfilelist[0], os.W_OK)
+		
+
  
