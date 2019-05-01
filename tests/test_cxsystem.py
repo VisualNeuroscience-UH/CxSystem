@@ -16,7 +16,8 @@ Defaultclock cannot be tested, because I dont know how to access defaultclock.dt
 
 cwd = os.getcwd()
 path, file = os.path.split(cx.__file__)
-anatomy_and_system_config = os.path.join(path, 'tests', 'config_files', 'pytest_COBAEIF_config.csv')
+# anatomy_and_system_config = os.path.join(path, 'tests', 'config_files', 'pytest_COBAEIF_config.csv')
+anatomy_and_system_config = os.path.join(path, 'tests', 'config_files', 'pytest_COBAEIF_config_make_connection.csv')
 physiology_config = os.path.join(path, 'tests', 'config_files', 'pytest_Physiological_Parameters_for_COBAEIF.csv')
 CM = cx.CxSystem(anatomy_and_system_config, physiology_config, instantiated_from_array_run=0)
 
@@ -29,15 +30,17 @@ def test_anatomy_and_system_config_file_exist():
 def test_physiology_config_file_exist():
 	assert os.path.isfile(physiology_config)
 	
-	
+def test_dataframe_delimiters():
+	# Comma is the delimiter in csv and should not remain in dataframe
+	assert not ',' in CM.anat_and_sys_conf_df.to_string() 
+	# Windows local settings may save csv with semicolons
+	assert not ';' in CM.anat_and_sys_conf_df.to_string() 
+		
 class TestInit:
 
 	def test_csv_shape(self):
-		assert CM.anat_and_sys_conf_df.shape[1] == 28
+		assert CM.anat_and_sys_conf_df.shape[1] == 36
 		
-	def test_dataframe_delimiters(self):
-		assert not ',' in CM.anat_and_sys_conf_df.to_string() # Comma is the delimiter in csv and should not remain in dataframe
-		assert not ';' in CM.anat_and_sys_conf_df.to_string() # Windows local settings may save csv with semicolons
 
 	def test_number_of_input_arguments(self):
 		assert CM.__init__.__code__.co_argcount==8, "Number of arguments have changed"
@@ -61,8 +64,10 @@ class TestInit:
 		
 class TestConfigurationExecutor:
 
+	# @pytest.mark.xfail(reason='changes in csv file cause this to fail')
 	def test_definition_lines_idx(self):
-		'''Test that indeces are the same given the constant configuration file'''
+		'''Test that indeces are the same given the constant configuration file.
+			If you add/remove items in the conf file, this is expected to fail.'''
 		assert all(CM.anat_and_sys_conf_df.loc[:,0][CM.anat_and_sys_conf_df.loc[:,0]=='row_type'].index \
 				== np.array([1, 5, 8, 12]))
 	
@@ -73,11 +78,12 @@ class TestConfigurationExecutor:
 		assert CM.sys_mode == 'local'
 		
 	def test_relay(self):
-		''' This is expected to fail if the configuration file changes'''
+		''' This is expected to fail if corresponding parameters in the 
+			configuration file changes'''
 		assert len(CM.customized_neurons_list) == 3
 		assert len(CM.customized_neurons_list[0]['z_positions']) == 60
-		assert len(CM.customized_neurons_list[1]['z_positions']) == 3200
-		assert len(CM.customized_neurons_list[2]['z_positions']) == 800
+		assert len(CM.customized_neurons_list[1]['z_positions']) == 320
+		assert len(CM.customized_neurons_list[2]['z_positions']) == 80
 		assert type(CM.customized_neurons_list[0]['z_positions'][0]) == np.complex128
 		assert CM.customized_neurons_list[0].keys() == [
 			'z_positions', 'w_positions', 'equation', 'type', 'idx']
@@ -106,8 +112,12 @@ class TestConfigurationExecutor:
 	def test_do_init_vms(self):
 		assert isinstance(CM.do_init_vms, int)
 
-		# 'connections_saving_path_and_filename': [10,self._set_save_brian_data_path],
-		# 'connections_loading_path_and_filename': [11,self._set_load_brian_data_path],
+	def test__set_save_brian_data_path(self):
+		assert isinstance(CM.save_brian_data_path, basestring) 
+		
+	def test__set_load_brian_data_path(self):
+		assert isinstance(CM.load_brian_data_path, basestring) 
+
 		# 'load_positions_only': [12,self.load_positions_only],
 		# 'do_benchmark': [13,self.set_do_benchmark],
 		# 'profiling': [14, self.set_profiling],
@@ -116,20 +126,36 @@ class TestConfigurationExecutor:
 		# 'IN': [nan,self.relay],
 		# 'params': [nan,self.set_runtime_parameters],
 
+
+###################
 # Integration tests
-@pytest.fixture
+###################
+
+# @pytest.mark.skip(reason="too slow")
+@pytest.fixture(scope='module')
 def cxsystem_run_fixture():
+
 	#Executing setup code
 	CM.run()
-	yield
-	#Executing teardown code
-	[os.remove(item) for item in os.listdir(CM.output_folder) if item.startswith('output')]
 	
-
+	yield
+	
+	#Executing teardown code
+	[os.remove(os.path.join(CM.output_folder,item)) for item in os.listdir(CM.output_folder) if item.startswith('output')]
+	os.rmdir(CM.output_folder)
+	
+# @pytest.mark.skip(reason="too slow")
 def test_outputfile(cxsystem_run_fixture):
 	'''Test for existing outputfile'''
 	outputfilelist = [item for item in os.listdir(CM.output_folder) if item.startswith('output')]
-	assert os.access(outputfilelist[0], os.W_OK)
-		
+	assert os.access(os.path.join(CM.output_folder,outputfilelist[0]), os.W_OK)
+
+# # @pytest.mark.xfail(reason='not implemented yet')		
+# def test__set_save_brian_data_path(cxsystem_run_fixture):
+	# assert isinstance(CM.save_brian_data_path, basestring) 
+	
+# def test__set_load_brian_data_path(cxsystem_run_fixture):
+	# assert isinstance(CM.load_brian_data_path, basestring) 
+# @pytest.mark.xfail(reason='not implemented yet')		
 
  

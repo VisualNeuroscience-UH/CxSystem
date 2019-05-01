@@ -1697,7 +1697,8 @@ if __name__ == '__main__' :
         except IndexError:
             CM = CxSystem(net_config, phys_config)
     except IndexError:
-        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/tests/config_files/pytest_COBAEIF_config.csv', \
+        # CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/tests/config_files/pytest_COBAEIF_config.csv', \
+        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/tests/config_files/pytest_COBAEIF_config_make_connection.csv', \
                       os.path.dirname(os.path.realpath(__file__)) + '/tests/config_files/pytest_Physiological_Parameters_for_COBAEIF.csv', )
     CM.run()
     # from data_visualizers.data_visualization import DataVisualization
