@@ -7,11 +7,19 @@ import pdb
 from mock import MagicMock
 import inspect
 from brian2.units import *
+import brian2
 
 '''
 Run pytest at CxSystem root, such as git repo root.
 Only Python device is tested currently, cpp and GeNN devices are not tested.
 Defaultclock cannot be tested, because I dont know how to access defaultclock.dt in CxSystem.set_default_clock
+data_loader not tested
+visualise_connectivity not tested
+multi_y_plotter not tested
+
+in physiology_reference.py
+_get_w_positions not tested
+value_extractor not tested -- the example conf file simulation never goes there
 '''
 
 cwd = os.getcwd()
@@ -37,7 +45,7 @@ def test_dataframe_delimiters():
 	assert not ';' in CM.anat_and_sys_conf_df.to_string() 
 		
 class TestInit:
-
+	# @pytest.mark.xfail()
 	def test_csv_shape(self):
 		assert CM.anat_and_sys_conf_df.shape[1] == 36
 		
@@ -111,34 +119,90 @@ class TestConfigurationExecutor:
 
 	def test_do_init_vms(self):
 		assert isinstance(CM.do_init_vms, int)
-
+	
+	# @pytest.mark.xfail()
 	def test__set_save_brian_data_path(self):
 		assert isinstance(CM.save_brian_data_path, basestring) 
-		
+
+	# @pytest.mark.xfail()	
 	def test__set_load_brian_data_path(self):
 		assert isinstance(CM.load_brian_data_path, basestring) 
 
-		# 'load_positions_only': [12,self.load_positions_only],
-		# 'do_benchmark': [13,self.set_do_benchmark],
-		# 'profiling': [14, self.set_profiling],
-		# 'G': [nan,self.neuron_group],
-		# 'S': [nan,self.synapse],
-		# 'IN': [nan,self.relay],
-		# 'params': [nan,self.set_runtime_parameters],
+	def test_load_positions_only(self):
+		assert isinstance(CM.load_positions_only, int)
 
+	def test_set_profiling(self):
+		assert isinstance(CM.profiling, int)
+		
+	def test_neuron_group(self):
+		'''
+		Test the types of obligatory neuron group variables 
+		'''
+		assert all(isinstance(x, np.complex128) for x in CM.customized_neurons_list[0]['z_positions'])
+		assert all(isinstance(x, np.complex128) for x in CM.customized_neurons_list[0]['w_positions'])
+		assert isinstance(CM.customized_neurons_list[0]['equation'],basestring)
+		assert isinstance(CM.customized_neurons_list[0]['type'],basestring)
+		assert isinstance(CM.customized_neurons_list[0]['idx'],int)
+
+	def test_monitors(self):
+		'''
+		Test the monitor names. Expected to fail if the neurongroups are modified.
+		'''
+		assert CM.monitor_name_bank['NG2_BC_L4'] == ['SpMon2_NG2_BC_L4']
+		assert CM.monitor_name_bank['NG1_SS_L4'] == ['SpMon1_NG1_SS_L4']
+		assert CM.monitor_name_bank['NG0_relay_vpm'] == ['SpMon0_NG0_relay_vpm']
+		
+	def test_synapse(self):
+		'''
+		Test the types of obligatory synapse parameters. 
+		'''
+		assert isinstance(CM.customized_synapses_list[0]['pre_eq'],basestring)
+		assert isinstance(CM.customized_synapses_list[0]['pre_group_type'],basestring)
+		assert isinstance(CM.customized_synapses_list[0]['equation'],brian2.equations.equations.Equations)
+		assert isinstance(CM.customized_synapses_list[0]['namespace'],dict)
+		assert isinstance(CM.customized_synapses_list[0]['post_group_idx'],int)
+		assert isinstance(CM.customized_synapses_list[0]['sparseness'],float)
+		assert isinstance(CM.customized_synapses_list[0]['receptor'],basestring)
+		assert isinstance(CM.customized_synapses_list[0]['pre_group_idx'],int)
+		assert isinstance(CM.customized_synapses_list[0]['post_comp_name'],basestring)
+		assert isinstance(CM.customized_synapses_list[0]['type'],basestring)
+		assert isinstance(CM.customized_synapses_list[0]['post_group_type'],basestring)
+		
+class TestPhysiologyReference:
+	
+	def test_neuron_reference_init(self):
+		assert CM.customized_neurons_list[0]['z_positions'] == map(
+			lambda x: np.e ** (x/17) - 1,CM.customized_neurons_list[0]['w_positions'] )
+		assert CM.customized_neurons_list[1]['z_positions'] == map(
+			lambda x: np.e ** (x/17) - 1,CM.customized_neurons_list[1]['w_positions'] )
+		assert CM.customized_neurons_list[2]['z_positions'] == map(
+			lambda x: np.e ** (x/17) - 1,CM.customized_neurons_list[2]['w_positions'] )
+			
+	def test_BC(self):
+		'''Testing only some parts'''
+		assert 'BC' in CM.customized_neurons_list[2]['object_name']
+		assert '-ge_soma/tau_e' in \
+			str(CM.customized_neurons_list[2]['equation'].eq_expressions)
+
+	def test_SS(self):
+		'''Testing only some parts'''
+		assert 'SS' in CM.customized_neurons_list[1]['object_name']
+		assert '-ge_soma/tau_e' in \
+			str(CM.customized_neurons_list[1]['equation'].eq_expressions)
+			
+#TAHAN JAIT TEST SYNAPSE REFERENCE
 
 ###################
 # Integration tests
 ###################
 
-# @pytest.mark.skip(reason="too slow")
 @pytest.fixture(scope='module')
 def cxsystem_run_fixture():
 
 	#Executing setup code
 	CM.run()
 	
-	yield
+	yield # Run the tests here
 	
 	#Executing teardown code
 	[os.remove(os.path.join(CM.output_folder,item)) for item in os.listdir(CM.output_folder) if item.startswith('output')]
