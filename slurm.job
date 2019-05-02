@@ -1,7 +1,8 @@
 #!/bin/bash
 #SBATCH -N 1
 #SBATCH -c 16
-#SBATCH -t 6:00:00
+#SBATCH -t 48:00:00
+#SBATCH --constraint=hsw
 #SBATCH -J auto_cluster_job
 #SBATCH -o auto_cluster_job.out.%j
 #SBATCH -e auto_cluster_job.er.%j

@@ -3,10 +3,10 @@ Variable,Key,Value,Comment
 model_variation,,1,
 neuron_model,,'EIF',
 excitation_model,,'SIMPLE_E',
-inhibition_model,,'SIMPLE_I',
+inhibition_model,,'SIMPLE_I_GABAB',
 pc_neuron_model,,'EIF',
 pc_excitation_model,,'SIMPLE_E',
-pc_inhibition_model,,'SIMPLE_I',
+pc_inhibition_model,,'SIMPLE_I_GABAB',
 ,,,
 ### SYNAPTIC PARAMETERS ###,,,
 calcium_concentration,,2,
@@ -48,8 +48,8 @@ tau_i_alpha_GLOBAL,,0.0* ms,# not used
 tau_e_GLOBAL,,3.0*ms,
 tau_i_GLOBAL,,8.3*ms,
 scaling_alpha_GLOBAL,,9999,# not used
-scaling_nmda_GLOBAL,,0,# change
-scaling_gabab_GLOBAL,,0,# change
+scaling_nmda_GLOBAL,,0.4,# change
+scaling_gabab_GLOBAL,,0.2,# change
 E_nmda_GLOBAL,,0*mV,
 E_gabab_GLOBAL,,-93*mV,
 tau_decay_nmda_GLOBAL,,43*ms,

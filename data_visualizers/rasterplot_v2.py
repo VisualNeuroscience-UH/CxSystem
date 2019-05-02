@@ -503,7 +503,7 @@ class SimulationData(object):
             ax.scatter(spike_df.time, spike_df.neuron_index, s=0.6, c='gray')
 
 
-    def publicationplot(self, sampling_factor=30, time_rounding=3, time_limits=None, plot_type=0, ax=None):
+    def publicationplot(self, sampling_factor=30, time_rounding=3, time_limits=None, plot_type=2, ax=None):
         """
         Plots a simplified rasterplot with only layers labeled, not neuron groups. Takes relative amount of
         neurons in each group into account. Possibly useful for publications.
@@ -562,7 +562,7 @@ class SimulationData(object):
             spike_df = pd.DataFrame(data={'time':[0], 'neuron_index':[0]})  # if there's nothing to concat, create an empty df
 
         #q = neurons_per_group
-        if plot_type == 0:
+        if plot_type == 2:
             # NEEDS FIXIN
             q1 = sum(max_neurons_per_group[13-1:N_neurongroups])
             q2 = sum(max_neurons_per_group[10-1:N_neurongroups])
@@ -571,13 +571,21 @@ class SimulationData(object):
             q5 = sum(max_neurons_per_group[0:N_neurongroups])
             ticklabels = ['VI', 'V', 'IV', 'II/III', 'I']
 
+        elif plot_type == 1:
+            q1 = sum(max_neurons_per_group[42-1:N_neurongroups])
+            q2 = sum(max_neurons_per_group[29-1:N_neurongroups])
+            q3 = sum(max_neurons_per_group[17-1:N_neurongroups])
+            q4 = sum(max_neurons_per_group[7-1:N_neurongroups])
+            q5 = sum(max_neurons_per_group[0:N_neurongroups])
+            ticklabels = ['VI', 'V', 'IV', 'II/III', 'I']
+
         if ax is None:
 
             plt.scatter(spike_df.time, spike_df.neuron_index, color='k', s=0.5)
 
-            if plot_type == 0:
-                plt.yticks([q1, q2, q3, q4, q5], ticklabels, fontsize=16)
-                plt.ylim([0, q5])
+
+            plt.yticks([q1, q2, q3, q4, q5], ticklabels, fontsize=16)
+            plt.ylim([0, q5])
 
             plt.xticks(np.arange(runtime + 0.1, step=1), fontsize=12)
             plt.xlabel('Time (s)', fontsize=12)
@@ -586,10 +594,10 @@ class SimulationData(object):
 
         else:
             ax.scatter(spike_df.time, spike_df.neuron_index, color='k', s=0.5)
-            if plot_type == 0:
-                ax.set_yticks([q1, q2, q3, q4, q5])
-                ax.set_ylim([0, q5])
-                ax.set_yticklabels(ticklabels, fontsize=12, fontweight='bold')
+            #if plot_type == 0:
+            ax.set_yticks([q1, q2, q3, q4, q5])
+            ax.set_ylim([0, q5])
+            ax.set_yticklabels(ticklabels, fontsize=12, fontweight='bold')
 
             ax.set_xticks(np.arange(runtime + 0.1, step=1))
             ax.set_xlabel('Time [s]', fontsize=12, fontweight='bold')
@@ -1705,8 +1713,8 @@ if __name__ == '__main__':
     #a = SimulationData('/opt3/tmp/rev2_test/betaconfig_test2_20180919_19332474_background_rate0.6H_k1.4_python_5000ms.bz2')
     #a.publicationplot()
 
-    exp = ExperimentData('/opt3/tmp/rev2_gamma/', 'step2_eifstp_Jeigeneric')
-    exp.computestats('stats_step2_eifstp_Jeigeneric.csv', ['calcium_concentration', 'J', 'k', 'background_rate'])
+    exp = ExperimentData('/opt3/tmp/rev2_gamma/', 'step2_lowcalcium2_dep100_eifstp_gabab_Jeigeneric')
+    exp.computestats('stats_step2_lowcalcium2_dep100_eifstp_gabab_Jeigeneric.csv', ['calcium_concentration', 'J', 'k', 'background_rate'])
 
 
     ###### Depol x calcium plot ######

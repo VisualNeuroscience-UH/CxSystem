@@ -8,8 +8,6 @@ under the terms of the GNU General Public License.
 Copyright 2017 Vafa Andalibi, Henri Hokkanen and Simo Vanni.
 '''
 
-
-from networkx.drawing import layout
 from brian2  import *
 from parameter_parser import *
 import random as rnd
