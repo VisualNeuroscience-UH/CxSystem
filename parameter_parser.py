@@ -54,7 +54,7 @@ class synapse_parser(object):
         synapse_parser.type_ref = array (['STDP','STDP_with_scaling', 'Fixed', 'Fixed_calcium', 'Fixed_normal', 'Depressing', 'Facilitating'])
         assert output_synapse['type'] in synapse_parser.type_ref, " -  Synapse type '%s' is not defined." % output_synapse['type']
         self.output_namespace = {}
-        # Commeted Cp and Cd out because not used in this branch /HH
+        # Commented Cp and Cd out because not used in this branch /HH
         # self.output_namespace['Cp'] = self.value_extractor(self.physio_config_df,'Cp')
         # self.output_namespace['Cd'] = self.value_extractor(self.physio_config_df,'Cd')
         try:
@@ -62,7 +62,7 @@ class synapse_parser(object):
         except:
             pass
 
-        # Commeted ilam out because not used in this branch /HH
+        # Commented ilam out because not used in this branch /HH
         # self.ilam = self.value_extractor(self.physio_config_df,'ilam_%s_%s' % (output_synapse['pre_group_type'], output_synapse['post_group_type']))
 
         self.calcium_concentration = self.value_extractor(self.physio_config_df, 'calcium_concentration' )
@@ -368,7 +368,7 @@ class neuron_parser (object):
     'This class embeds all parameter sets associated to all neuron types and will return it as a namespace in form of dictionary'
     def __init__(self, output_neuron,physio_config_df):
         self.physio_config_df = physio_config_df
-        neuron_parser.type_ref = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM'])
+        neuron_parser.type_ref = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM','HH_E','HH_I'])
         assert output_neuron['type'] in neuron_parser.type_ref, " -  Cell type '%s' is not defined." % output_neuron['category']
 
         # Handling of "neuron subtype" parameters; new since Aug 2018
@@ -408,6 +408,7 @@ class neuron_parser (object):
         # total capacitance in compartments. The *2 comes from Markram et al Cell 2015: corrects for the dendritic spine area
         if 'spine_factor' not in self.output_namespace:
             self.output_namespace['spine_factor'] = 2
+            # Should print something
 
         self.output_namespace['C']= self.output_namespace['fract_areas'][output_neuron['dend_comp_num']] * self.output_namespace['Cm'] * self.output_namespace['Area_tot_pyram'] * self.output_namespace['spine_factor']
         # if output_neuron['soma_layer'] in [6]: # neuroelectro portal layer5/6 capacitance ??????
@@ -432,6 +433,11 @@ class neuron_parser (object):
         pass
 
     def _SS(self,output_neuron):
+        pass
+
+    def _HH_E(self, output_neuron):
+        pass
+    def _HH_I(self, output_neuron):
         pass
 
     def value_extractor(self, df, key_name):

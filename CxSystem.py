@@ -924,6 +924,8 @@ class CxSystem(object):
                     self.save_output_data.creat_key('spikes_all')  # Create a key in save_data() object
                     # for that specific StateMonitor variable.
                     Mon_name = monitor_options[mon_tag][0] + str(self.monitor_idx) + '_' + object_name
+                    # self.save_output_data.syntax_bank.append(
+                    #     "self.save_output_data.data['spikes_all']['%s'] = asarray(%s.it)" % (object_name, Mon_name))
                     self.save_output_data.syntax_bank.append(
                         "self.save_output_data.data['spikes_all']['%s'] = %s.get_states()" % (object_name, Mon_name))
                     Mon_str = Mon_name + Mon_str
@@ -933,6 +935,9 @@ class CxSystem(object):
                     Mon_name = monitor_options[mon_tag][0] + \
                         str(self.monitor_idx) + '_' + object_name + '__' + sub_mon_arg[0]
                     # After simulation, the following syntax will be used to save this specific monitor's result:
+                    # self.save_output_data.syntax_bank.append("self.save_output_data.data['%s_all']"
+                    #                                          "['%s'] = %s.%s"
+                    #                                          %(sub_mon_arg[0], object_name, Mon_name, sub_mon_arg[0]))
                     self.save_output_data.syntax_bank.append("self.save_output_data.data['%s_all']"
                                                              "['%s'] = %s.get_states()"
                                                              %(sub_mon_arg[0], object_name, Mon_name))
@@ -1698,7 +1703,7 @@ class CxSystem(object):
         After the simulation and using the syntaxes that are previously prepared in the syntax_bank of save_data() object, this method saves the collected data to a file.
 
         '''
-        print " -  Generating the syntaxes for saving CX output ..."
+        print " -  Generating the syntaxes for saving CX output:"
         for syntax in self.save_output_data.syntax_bank:
             tmp_monitor = syntax.split(' ')[-1]
             print "     -> Gathering data for " + tmp_monitor.split('.')[0]
@@ -1743,10 +1748,8 @@ if __name__ == '__main__' :
         except IndexError:
             CM = CxSystem(net_config, phys_config)
     except IndexError:
-        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/Rev2_Step1alpha_Anatomy_config_taito.csv', \
-                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Rev2_Step1alpha_Physiology_config.csv', )
-    #    CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/CUBA_config.csv', \
-    #                 os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_CUBA.csv', )
+        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/COBAHH_config.csv', \
+                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_COBAHH.csv', )
     CM.run()
     # from data_visualizers.data_visualization import DataVisualization
     #

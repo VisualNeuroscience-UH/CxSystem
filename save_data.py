@@ -47,7 +47,7 @@ class save_data(object):
         self.data = {}
         self.syntax_bank = []
 
-    def creat_key(self,key):
+    def create_key(self,key):
         '''
         In case the user wants to save a peculiar variable, this method can be used to check and create a new key in data dictionary (if does not exist).
 

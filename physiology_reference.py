@@ -43,7 +43,7 @@ class neuron_reference(object):
 
         # <editor-fold desc="...General neuron model initialization">
         self.physio_config_df = physio_config_df
-        neuron_reference._celltypes = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM'])
+        neuron_reference._celltypes = array(['PC', 'SS', 'BC', 'MC', 'L1i', 'VPM','HH_I','HH_E'])
         assert general_grid_radius > min_distance , ' -  The distance between cells should be less than the grid radius'
         assert cell_type in neuron_reference._celltypes, " -  Cell type '%s' is not defined" % cell_type  # check cell type
         assert len(layers_idx) < 3, " -  Length of layers_idx array is larger than 2"  # check layer index
@@ -469,6 +469,7 @@ class neuron_reference(object):
 
         self.output_neuron['equation'] += Equations('''x : meter
             y : meter''')
+
 
     def MC(self):
         '''
