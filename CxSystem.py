@@ -11,7 +11,7 @@ Copyright 2017 Vafa Andalibi, Henri Hokkanen and Simo Vanni.
 
 
 from brian2 import *
-# import brian2genn # pytest tmp mod
+#import brian2genn
 import os
 import sys
 from physiology_reference import *
@@ -155,10 +155,10 @@ class CxSystem(object):
         self.profiling = 0
         self.array_run_in_cluster = array_run_in_cluster
         self.awaited_conf_lines = []
-        self.physio_config_df = pandas.read_csv(physiology_config) if any(type(physiology_config) == str  or type(physiology_config) == unicode) else physiology_config # pytest mod unicode
+        self.physio_config_df = pandas.read_csv(physiology_config) if issubclass(type(physiology_config), basestring) else physiology_config 
         self.physio_config_df = self.physio_config_df.applymap(lambda x: NaN if str(x)[0] == '#' else x)
-        self.anat_and_sys_conf_df = pandas.read_csv(anatomy_and_system_config,header=None) if any(type(anatomy_and_system_config) == str or type(anatomy_and_system_config) == unicode) else anatomy_and_system_config # pytest mod unicode
-        self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.applymap(lambda x: x.strip() if any(type(x) == str or type(x) == unicode) else x) # pytest mod unicode
+        self.anat_and_sys_conf_df = pandas.read_csv(anatomy_and_system_config,header=None) if issubclass(type(anatomy_and_system_config), basestring) else anatomy_and_system_config 
+        self.anat_and_sys_conf_df = self.anat_and_sys_conf_df.applymap(lambda x: x.strip() if issubclass(type(x), basestring) else x) 
         ## dropping the commented lines :
         self.anat_and_sys_conf_df =  self.anat_and_sys_conf_df.drop(self.anat_and_sys_conf_df[0].index[self.anat_and_sys_conf_df[0][self.anat_and_sys_conf_df[0].str.contains('#') == True].index.tolist()]).reset_index(drop=True)
         self.physio_config_df = self.physio_config_df.drop(self.physio_config_df['Variable'].index[self.physio_config_df['Variable'][self.physio_config_df['Variable'].str.contains('#') == True].index.tolist()]).reset_index(drop=True)
@@ -1694,9 +1694,9 @@ if __name__ == '__main__' :
         except IndexError:
             CM = CxSystem(net_config, phys_config)
     except IndexError:
-        # CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/tests/config_files/pytest_COBAEIF_config.csv', \
-        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/tests/config_files/pytest_COBAEIF_config_make_connection.csv', \
-                      os.path.dirname(os.path.realpath(__file__)) + '/tests/config_files/pytest_Physiological_Parameters_for_COBAEIF.csv', )
+		CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/test.csv', \
+        # CM=CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/CUBA_config.csv', \
+                os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_CUBA.csv', )
     CM.run()
     # from data_visualizers.data_visualization import DataVisualization
     #
