@@ -53,5 +53,3 @@ tests/__pycache__
 # Output data files which may be big
 *.gz
 
-# Own temp notes
-tests/TAHAN_JAIT.txt

@@ -224,7 +224,6 @@ class CxSystem(object):
            self.configuration_executor()
         print " -  Cortical Module initialization Done."
 
-
     def configuration_executor(self):
         definition_lines_idx = self.anat_and_sys_conf_df.loc[:,0][self.anat_and_sys_conf_df.loc[:,0]=='row_type'].index
         order_of_lines = ['params','IN','G','S']
@@ -297,7 +296,6 @@ class CxSystem(object):
     def integration(self,*args):
         self.numerical_integration_method = args[0].lower()
         assert self.numerical_integration_method in ['exact','exponential_euler','euler','rk2','rk4','heun','milstein']
-
 
     def set_device(self,*args):
         self.device = args[0]
@@ -516,7 +514,6 @@ class CxSystem(object):
     def set_profiling(self,*args):
         assert int(args[0]) in [0,1] , " -  Profiling flag should be either 0 or 1"
         self.profiling = int(args[0])
-
 
     def neuron_group(self, *args):
         '''

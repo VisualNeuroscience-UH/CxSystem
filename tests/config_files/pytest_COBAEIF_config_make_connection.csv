@@ -6,7 +6,7 @@ row_type,sys_mode,grid_radius,load_positions_only,output_path_and_filename,multi
 params,local,210*um,1,./tests/temp_output_files/output.gz,0,,,
 ,,,,,,,,
 row_type,device,scale,number_of_processes,connections_saving_path_and_filename,connections_loading_path_and_filename,,,
-params,python,1,1,./tests/connection_files/connections.gz,./tests/connection_files/connections_20190501_05351467_python_2000ms.gz,,,
+params,python,1,1,./tests/temp_connection_files/connections.gz,./tests/connection_files/connections_20190501_05351467_python_2000ms.gz,,,
 row_type,idx,type,number_of_neurons,radius,spike_times,monitors,,
 IN,0,VPM,60,92*um,[3.6]*second,[Sp],,
 ,,,,,,,,

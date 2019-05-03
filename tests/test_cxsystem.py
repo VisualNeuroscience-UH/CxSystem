@@ -207,6 +207,8 @@ def cxsystem_run_fixture():
 	#Executing teardown code
 	[os.remove(os.path.join(CM.output_folder,item)) for item in os.listdir(CM.output_folder) if item.startswith('output')]
 	os.rmdir(CM.output_folder)
+	[os.remove(os.path.join(CM.save_brian_data_folder,item)) for item in os.listdir(CM.save_brian_data_folder) if item.startswith('connections')]
+	os.rmdir(CM.save_brian_data_folder)
 	
 # @pytest.mark.skip(reason="too slow")
 def test_outputfile(cxsystem_run_fixture):
