@@ -4,8 +4,6 @@ import sys
 import CxSystem as cx
 import numpy as np
 import pdb
-from mock import MagicMock
-import inspect
 from brian2.units import *
 import brian2
 
