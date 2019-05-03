@@ -8,6 +8,9 @@ from brian2.units import *
 import brian2
 
 '''
+To use this test you need to pip install -U pytest. 
+Note that the -U will upgrade necessary dependencies for pytest.
+
 Run pytest at CxSystem root, such as git repo root.
 Only Python device is tested currently, cpp and GeNN devices are not tested.
 Defaultclock cannot be tested, because I dont know how to access defaultclock.dt in CxSystem.set_default_clock
