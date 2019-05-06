@@ -435,8 +435,8 @@ class CxSystem(object):
         self.output_file_extension = '.'+self.output_path.split('.')[-1]
         self.StartTime_str += '_' + self.device.lower() + '_' + str(int((self.runtime / second) * 1000)) + 'ms'
         self.save_output_data = save_data(self.output_path,self.StartTime_str)  # This is for saving the output
-        self.save_output_data.creat_key('positions_all')
-        self.save_output_data.creat_key('Neuron_Groups_Parameters')
+        self.save_output_data.create_key('positions_all')
+        self.save_output_data.create_key('Neuron_Groups_Parameters')
         self.save_output_data.data['Anatomy_configuration'] = self.conf_df_to_save
         self.save_output_data.data['Physiology_configuration'] = self.physio_df_to_save
         self.save_output_data.data['time_vector'] = arange(0,self.runtime,defaultclock.dt)
@@ -921,7 +921,7 @@ class CxSystem(object):
                     assert len(sub_mon_arg) == len(sub_mon_tags) + 1, ' -  Error in monitor tag definition.'
                 if sub_mon_arg[0] == '':
                     assert mon_tag == '[Sp]', ' -  The monitor state variable is not defined properly'
-                    self.save_output_data.creat_key('spikes_all')  # Create a key in save_data() object
+                    self.save_output_data.create_key('spikes_all')  # Create a key in save_data() object
                     # for that specific StateMonitor variable.
                     Mon_name = monitor_options[mon_tag][0] + str(self.monitor_idx) + '_' + object_name
                     # self.save_output_data.syntax_bank.append(
@@ -930,7 +930,7 @@ class CxSystem(object):
                         "self.save_output_data.data['spikes_all']['%s'] = %s.get_states()" % (object_name, Mon_name))
                     Mon_str = Mon_name + Mon_str
                 else:
-                    self.save_output_data.creat_key('%s_all' % sub_mon_arg[0])  # Create a key in save_data()
+                    self.save_output_data.create_key('%s_all' % sub_mon_arg[0])  # Create a key in save_data()
                     # object for that specific StateMonitor variable.
                     Mon_name = monitor_options[mon_tag][0] + \
                         str(self.monitor_idx) + '_' + object_name + '__' + sub_mon_arg[0]
@@ -1320,7 +1320,7 @@ class CxSystem(object):
             if (self.default_save_flag == 1 or (self.default_save_flag == -1 and _do_save )) and \
                     hasattr(self, 'save_brian_data_path') :
                 self.do_save_connections = 1
-                self.save_brian_data.creat_key(_syn_ref_name)
+                self.save_brian_data.create_key(_syn_ref_name)
                 self.save_brian_data.syntax_bank.append('self.save_brian_data.data["%s"]["data"] = \
                 csr_matrix((%s.wght[:],(%s.i[:],%s.j[:])),shape=(len(%s.source),len(%s.target)))' \
                                                         %(_syn_ref_name,_dyn_syn_name,_dyn_syn_name,_dyn_syn_name,_dyn_syn_name,_dyn_syn_name))
@@ -1713,7 +1713,7 @@ class CxSystem(object):
             print " -  Generating the syntaxes for saving connection data ..."
             for syntax in self.save_brian_data.syntax_bank:
                 exec syntax
-            self.save_brian_data.creat_key('positions_all')
+            self.save_brian_data.create_key('positions_all')
             self.save_brian_data.data['positions_all']['w_coord'] = self.save_output_data.data['positions_all']['w_coord']
             self.save_brian_data.data['positions_all']['z_coord'] = self.save_output_data.data['positions_all']['z_coord']
             self.save_brian_data.save_to_file()
