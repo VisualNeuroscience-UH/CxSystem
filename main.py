@@ -24,4 +24,4 @@ duration_total = int((time_end - time_start).total_seconds())
 
 print 'Duration of network generation: %d min %d s' % (duration_generation//60, duration_generation%60)
 print 'Duration of actual simulation: %d min %d s' % (duration_simulation//60, duration_simulation%60)
-print 'TOTAL %d min %d s' % (duration_total//60, duration_total%60) #d
+print 'TOTAL %d min %d s' % (duration_total//60, duration_total%60)
