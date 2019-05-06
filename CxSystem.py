@@ -673,12 +673,20 @@ class CxSystem(object):
 
         # <editor-fold desc="...Poisson-distributed background input">
         # Add Poisson-distributed background input
+
         background_rate = self.physio_config_df.ix[where(self.physio_config_df.values == 'background_rate')[0]]['Value'].item()
         background_rate_inhibition = self.physio_config_df.ix[where(self.physio_config_df.values == 'background_rate_inhibition')[0]]['Value'].item()
 
         # For changing connection weight of background input according to calcium level
-        ca = self.value_extractor(self.physio_config_df, 'calcium_concentration')
-        flag_bg_calcium_scaling = self.value_extractor(self.physio_config_df, 'flag_background_calcium_scaling')
+        try:
+            ca = self.value_extractor(self.physio_config_df, 'calcium_concentration')
+        except ValueError:
+            ca = 2.0  # default value that doesn't scale connection weights
+
+        try:
+            flag_bg_calcium_scaling = self.value_extractor(self.physio_config_df, 'flag_background_calcium_scaling')
+        except ValueError:
+            flag_bg_calcium_scaling = 0
 
         bg_synapse = synapse_parser({'type': 'Fixed', 'pre_group_type': 'PC', 'post_group_type': neuron_type},
                                     self.physio_config_df)
@@ -695,6 +703,9 @@ class CxSystem(object):
 
                 background_weight_inhibition = \
                 repr(bg_synapse_inh._scale_by_calcium(ca, background_weight_inhibition))
+            else:
+                background_weight = repr(background_weight)
+                background_weight_inhibition = repr(background_weight_inhibition)
 
         else:
             background_weight = self.value_extractor(self.physio_config_df, 'background_E_E_weight')
@@ -706,6 +717,9 @@ class CxSystem(object):
 
                 background_weight_inhibition = \
                 repr(bg_synapse_inh._scale_by_calcium(ca, background_weight_inhibition))
+            else:
+                background_weight = repr(background_weight)
+                background_weight_inhibition = repr(background_weight_inhibition)
 
 
         # print 'Adding Poisson background input with params: '+n_background_inputs+', '+background_rate+', '+background_weight
@@ -713,8 +727,16 @@ class CxSystem(object):
 
 
         if neuron_type != 'PC':
-            excitation_model = self.value_extractor(self.physio_config_df, 'excitation_model')
-            inhibition_model = self.value_extractor(self.physio_config_df, 'inhibition_model')
+            try:
+                excitation_model = self.value_extractor(self.physio_config_df, 'excitation_model')
+            except ValueError:
+                excitation_model = 'SIMPLE_E'
+
+            try:
+                inhibition_model = self.value_extractor(self.physio_config_df, 'inhibition_model')
+            except ValueError:
+                inhibition_model = 'SIMPLE_I'
+
             exc_receptors = eqt.EquationHelper.BackgroundReceptors[excitation_model]
             inh_receptors = eqt.EquationHelper.BackgroundReceptors[inhibition_model]
 
@@ -725,6 +747,7 @@ class CxSystem(object):
                 exec "%s = PoissonInput(target=%s, target_var='%s_soma', N=%s, rate=%s, weight=%s)" \
                      % (poisson_target, _dyn_neurongroup_name, receptor, n_background_inputs,
                         background_rate, background_weight)
+
                 try:
                     setattr(self.Cxmodule, poisson_target, eval(poisson_target))
                 except AttributeError:
@@ -743,8 +766,15 @@ class CxSystem(object):
                     print 'Error in generating PoissonInput'
 
         else:
-            pc_excitation_model = self.value_extractor(self.physio_config_df, 'pc_excitation_model')
-            pc_inhibition_model = self.value_extractor(self.physio_config_df, 'pc_inhibition_model')
+            try:
+                pc_excitation_model = self.value_extractor(self.physio_config_df, 'pc_excitation_model')
+            except ValueError:
+                pc_excitation_model = 'SIMPLE_E'
+            try:
+                pc_inhibition_model = self.value_extractor(self.physio_config_df, 'pc_inhibition_model')
+            except ValueError:
+                pc_inhibition_model = 'SIMPLE_I'
+
             exc_receptors = eqt.EquationHelper.BackgroundReceptors[pc_excitation_model]
             inh_receptors = eqt.EquationHelper.BackgroundReceptors[pc_inhibition_model]
 
