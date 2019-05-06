@@ -16,7 +16,7 @@ CM = cxs.CxSystem(anatomy_and_system_config = os.path.dirname(os.path.realpath(_
 
 time_before_run = datetime.datetime.now()
 CM.run()
-time_end = datetime.datetime.now() #  b
+time_end = datetime.datetime.now()
 
 duration_generation = int((time_before_run - time_start).total_seconds())
 duration_simulation = int((time_end - time_before_run).total_seconds())
