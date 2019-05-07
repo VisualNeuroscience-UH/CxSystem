@@ -25,9 +25,11 @@ value_extractor not tested -- the example conf file simulation never goes there
 
 cwd = os.getcwd()
 path, file = os.path.split(cx.__file__)
-# anatomy_and_system_config = os.path.join(path, 'tests', 'config_files', 'pytest_COBAEIF_config.csv')
-anatomy_and_system_config = os.path.join(path, 'tests', 'config_files', 'pytest_COBAEIF_config_make_connection.csv')
-physiology_config = os.path.join(path, 'tests', 'config_files', 'pytest_Physiological_Parameters_for_COBAEIF.csv')
+# # anatomy_and_system_config = os.path.join(path, 'tests', 'config_files', 'pytest_COBAEIF_config.csv')
+# anatomy_and_system_config = os.path.join(path, 'tests', 'config_files', 'pytest_COBAEIF_config_make_connection.csv')
+# physiology_config = os.path.join(path, 'tests', 'config_files', 'pytest_Physiological_Parameters_for_COBAEIF.csv')
+anatomy_and_system_config = os.path.join(path, 'tests', 'config_files', 'pytest_Rev2_Step2gamma_Anatomy_config_local.csv')
+physiology_config = os.path.join(path, 'tests', 'config_files', 'pytest_Rev2_Step2gamma_Physiology_config.csv')
 CM = cx.CxSystem(anatomy_and_system_config, physiology_config, instantiated_from_array_run=0)
 
 def test_cwd():
@@ -48,7 +50,7 @@ def test_dataframe_delimiters():
 class TestInit:
 	# @pytest.mark.xfail()
 	def test_csv_shape(self):
-		assert CM.anat_and_sys_conf_df.shape[1] == 36
+		assert CM.anat_and_sys_conf_df.shape[1] == 19
 		
 
 	def test_number_of_input_arguments(self):
@@ -78,22 +80,22 @@ class TestConfigurationExecutor:
 		'''Test that indeces are the same given the constant configuration file.
 			If you add/remove items in the conf file, this is expected to fail.'''
 		assert all(CM.anat_and_sys_conf_df.loc[:,0][CM.anat_and_sys_conf_df.loc[:,0]=='row_type'].index \
-				== np.array([1, 5, 8, 12]))
+				== np.array([0, 3, 7, 16]))
 	
 	def test_set_runtime_parameters(self):
 		'''Note, cpp and GeNN devices are not tested '''
-		assert CM.runtime == 2000*ms
+		assert CM.runtime == 200. * msecond
 		assert CM.device.lower() == 'python'
 		assert CM.sys_mode == 'local'
 		
 	def test_relay(self):
 		''' This is expected to fail if corresponding parameters in the 
 			configuration file changes'''
-		pdb.set_trace()
-		assert len(CM.customized_neurons_list) == 3
+		# pdb.set_trace()
+		assert len(CM.customized_neurons_list) == 6
 		assert len(CM.customized_neurons_list[0]['z_positions']) == 60
-		assert len(CM.customized_neurons_list[1]['z_positions']) == 320
-		assert len(CM.customized_neurons_list[2]['z_positions']) == 80
+		assert len(CM.customized_neurons_list[1]['z_positions']) == 267
+		assert len(CM.customized_neurons_list[2]['z_positions']) == 109
 		assert type(CM.customized_neurons_list[0]['z_positions'][0]) == np.complex128
 		assert CM.customized_neurons_list[0].keys() == [
 			'z_positions', 'w_positions', 'equation', 'type', 'idx']
@@ -150,8 +152,11 @@ class TestConfigurationExecutor:
 		'''
 		Test the monitor names. Expected to fail if the neurongroups are modified.
 		'''
-		assert CM.monitor_name_bank['NG2_BC_L4'] == ['SpMon2_NG2_BC_L4']
-		assert CM.monitor_name_bank['NG1_SS_L4'] == ['SpMon1_NG1_SS_L4']
+		assert CM.monitor_name_bank['NG1_L4_PC1_L4toL1'] == ['SpMon1_NG1_L4_PC1_L4toL1']
+		assert CM.monitor_name_bank['NG3_L4_SS_L4'] == ['SpMon3_NG3_L4_SS_L4']
+		assert CM.monitor_name_bank['NG2_L4_PC2_L4toL1'] == ['SpMon2_NG2_L4_PC2_L4toL1']
+		assert CM.monitor_name_bank['NG5_L4_MC_L4'] == ['SpMon5_NG5_L4_MC_L4']
+		assert CM.monitor_name_bank['NG4_L4_BC_L4'] == ['SpMon4_NG4_L4_BC_L4']
 		assert CM.monitor_name_bank['NG0_relay_vpm'] == ['SpMon0_NG0_relay_vpm']
 		
 	def test_synapse(self):
@@ -180,15 +185,15 @@ class TestPhysiologyReference:
 		assert CM.customized_neurons_list[2]['z_positions'] == map(
 			lambda x: np.e ** (x/17) - 1,CM.customized_neurons_list[2]['w_positions'] )
 			
-	def test_BC(self):
+	def test_PC2(self):
 		'''Testing only some parts'''
-		assert 'BC' in CM.customized_neurons_list[2]['object_name']
+		assert 'PC2' in CM.customized_neurons_list[2]['object_name']
 		assert '-ge_soma/tau_e' in \
 			str(CM.customized_neurons_list[2]['equation'].eq_expressions)
 
-	def test_SS(self):
+	def test_PC1(self):
 		'''Testing only some parts'''
-		assert 'SS' in CM.customized_neurons_list[1]['object_name']
+		assert 'PC1' in CM.customized_neurons_list[1]['object_name']
 		assert '-ge_soma/tau_e' in \
 			str(CM.customized_neurons_list[1]['equation'].eq_expressions)
 			
