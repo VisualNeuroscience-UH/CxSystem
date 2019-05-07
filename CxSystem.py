@@ -1781,7 +1781,3 @@ if __name__ == '__main__' :
         CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/COBAHH_config.csv', \
                       os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_COBAHH.csv', )
     CM.run()
-    # from data_visualizers.data_visualization import DataVisualization
-    #
-    # dv = DataVisualization()
-    # dv.make_figure()
