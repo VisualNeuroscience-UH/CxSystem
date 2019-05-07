@@ -89,6 +89,7 @@ class TestConfigurationExecutor:
 	def test_relay(self):
 		''' This is expected to fail if corresponding parameters in the 
 			configuration file changes'''
+		pdb.set_trace()
 		assert len(CM.customized_neurons_list) == 3
 		assert len(CM.customized_neurons_list[0]['z_positions']) == 60
 		assert len(CM.customized_neurons_list[1]['z_positions']) == 320
@@ -98,12 +99,12 @@ class TestConfigurationExecutor:
 			'z_positions', 'w_positions', 'equation', 'type', 'idx']
 		assert CM.customized_neurons_list[1].keys() == [
 			'reset', 'w_positions', 'total_comp_num', 'soma_layer', 
-			'idx', 'dends_layer', 'z_positions', 'equation', 
+			'idx', 'subtype', 'z_positions', 'equation', 'dends_layer', 
 			'namespace', 'refractory', 'object_name', 'dend_comp_num', 
 			'w_center', 'threshold', 'number_of_neurons', 'type', 'z_center']
 		assert CM.customized_neurons_list[2].keys() == [
 			'reset', 'w_positions', 'total_comp_num', 'soma_layer', 
-			'idx', 'dends_layer', 'z_positions', 'equation', 
+			'idx', 'subtype', 'z_positions', 'equation', 'dends_layer', 
 			'namespace', 'refractory', 'object_name', 'dend_comp_num', 
 			'w_center', 'threshold', 'number_of_neurons', 'type', 'z_center']
 
