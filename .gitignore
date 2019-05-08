@@ -52,5 +52,5 @@ docs/_build/
 tests/__pycache__
 
 # Output data files which may be big
-*.gz
+
 
