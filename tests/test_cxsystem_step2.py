@@ -6,6 +6,8 @@ import numpy as np
 import pdb
 from brian2.units import *
 import brian2
+import equation_templates as eqt
+
 
 '''
 To use this test you need to pip install -U pytest. 
@@ -198,6 +200,27 @@ class TestPhysiologyReference:
 			str(CM.customized_neurons_list[1]['equation'].eq_expressions)
 			
 #TAHAN JAIT TEST SYNAPSE REFERENCE
+
+class TestEquationHelper:
+
+	def test_neuron_model(self):
+		assert eqt.EquationHelper.NeuronModels.keys() == ['ADEX_PC', 'ADEX', 'EIF_PC', 'EIF']
+		assert isinstance(eqt.EquationHelper.NeuronModels['EIF'],dict)
+		
+		
+	excitation_model = CM.value_extractor(CM.physio_config_df, 'excitation_model')
+	inhibition_model = CM.value_extractor(CM.physio_config_df, 'inhibition_model')
+
+	def test_excitation_model(self):
+		assert self.excitation_model == 'SIMPLE_E'
+	def test_inhibition_model(self):
+		assert self.inhibition_model == 'SIMPLE_I_GABAB'
+	def test_exc_receptors(self):
+		exc_receptors = eqt.EquationHelper.BackgroundReceptors[self.excitation_model]
+		assert exc_receptors==['ge']
+	def test_inh_receptors(self):
+		inh_receptors = eqt.EquationHelper.BackgroundReceptors[self.inhibition_model]
+		assert inh_receptors==['gi']
 
 ###################
 # Integration tests
