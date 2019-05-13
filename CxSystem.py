@@ -35,6 +35,7 @@ import array_run
 import multiprocessing
 import equation_templates as eqt
 
+
 class CxSystem(object):
     '''
     The main object of cortical system module for building and running a customized model of cortical module based on \
