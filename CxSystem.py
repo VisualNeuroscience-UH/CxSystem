@@ -34,7 +34,6 @@ import threading
 import array_run
 import multiprocessing
 import equation_templates as eqt
-import pdb
 
 class CxSystem(object):
     '''
@@ -162,7 +161,6 @@ class CxSystem(object):
         self.anat_and_sys_conf_df =  self.anat_and_sys_conf_df.drop(self.anat_and_sys_conf_df[0].index[self.anat_and_sys_conf_df[0][self.anat_and_sys_conf_df[0].str.contains('#') == True].index.tolist()]).reset_index(drop=True)
         self.physio_config_df = self.physio_config_df.drop(self.physio_config_df['Variable'].index[self.physio_config_df['Variable'][self.physio_config_df['Variable'].str.contains('#') == True].index.tolist()]).reset_index(drop=True)
         # merging the params lines into one row:
-        pdb.set_trace()
         params_indices = where(self.anat_and_sys_conf_df.values == 'params')
         if params_indices[0].size > 1:
             for row_idx in params_indices[0][1:]:
