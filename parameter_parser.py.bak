@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+from __future__ import division
 
 __author__ = 'Andalibi, V., Hokkanen H., Vanni, S.'
 
@@ -74,7 +74,7 @@ class synapse_parser(object):
     def value_extractor(self, df, key_name):
         non_dict_indices = df['Variable'].dropna()[df['Key'].isnull()].index.tolist()
         for non_dict_idx in non_dict_indices:
-            exec("%s=%s" % (df['Variable'][non_dict_idx], df['Value'][non_dict_idx]))
+            exec "%s=%s" % (df['Variable'][non_dict_idx], df['Value'][non_dict_idx])
         try:
             return eval(key_name)
         except (NameError, TypeError):
@@ -154,7 +154,7 @@ class synapse_parser(object):
             elif self.output_synapse['pre_group_type'] in inhibitory_groups:
                 self.output_namespace['U'] = self._scale_by_calcium(ca, U_I)
             else:
-                print('Warning! Unrecognized group type %s will have outbound synapses with averaged utilization factor' % self.output_synapse['pre_group_type'])
+                print 'Warning! Unrecognized group type %s will have outbound synapses with averaged utilization factor' % self.output_synapse['pre_group_type']
                 U = np.average([U_E, U_I])
                 self.output_namespace['U'] = self._scale_by_calcium(ca, U)
 
@@ -238,7 +238,7 @@ class synapse_parser(object):
 
         try:
             mean_wght = eval(self.output_synapse['custom_weight']) /nS
-            print(' ! Using custom weight: %f nS' % mean_wght)
+            print ' ! Using custom weight: %f nS' % mean_wght
         except:
             mean_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
 
@@ -299,7 +299,7 @@ class synapse_parser(object):
         # GET weight params
         try:
             mean_wght = eval(self.output_synapse['custom_weight']) /nS
-            print(' ! Using custom weight: %f nS' % mean_wght)
+            print ' ! Using custom weight: %f nS' % mean_wght
         except:
             mean_wght = self.value_extractor(self.physio_config_df, 'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
 
@@ -332,7 +332,7 @@ class synapse_parser(object):
         # GET weight params
         try:
             mean_wght = eval(self.output_synapse['custom_weight']) /nS
-            print(' ! Using custom weight: %f nS' % mean_wght)
+            print ' ! Using custom weight: %f nS' % mean_wght
         except:
             mean_wght = self.value_extractor(self.physio_config_df,'cw_%s_%s' % (self.output_synapse['pre_group_type'], self.output_synapse['post_group_type'])) / nS
 
@@ -443,7 +443,7 @@ class neuron_parser (object):
     def value_extractor(self, df, key_name):
         non_dict_indices = df['Variable'].dropna()[df['Key'].isnull()].index.tolist()
         for non_dict_idx in non_dict_indices:
-            exec("%s=%s" % (df['Variable'][non_dict_idx], df['Value'][non_dict_idx]))
+            exec "%s=%s" % (df['Variable'][non_dict_idx], df['Value'][non_dict_idx])
         try:
             return eval(key_name)
         except (NameError, TypeError):
@@ -466,7 +466,7 @@ class neuron_parser (object):
                     df_reset_index = df_reset_index[0:df_reset_index[df_reset_index['Key'] == key_name].index[0]]
                     for neural_parameter in df_reset_index['Key'].dropna():
                         if neural_parameter  in df['Value'][df['Key'] == key_name].item():
-                            exec("%s =self.value_extractor(df,neural_parameter)" % (neural_parameter))
+                            exec "%s =self.value_extractor(df,neural_parameter)" % (neural_parameter)
                     return eval(df['Value'][df['Key'] == key_name].item())
                 except TypeError:
                     raise TypeError('The syntax %s is not a valid syntax for physiological configuration file or the elements that comprise this syntax are not defined.'%df['Value'][df['Key'] == key_name].item())

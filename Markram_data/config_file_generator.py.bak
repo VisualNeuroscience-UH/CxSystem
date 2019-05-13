@@ -43,8 +43,8 @@ with open('./Markram_config_file.csv', 'w') as config_file:
     UMi_dict = {}
     for item in simo_data['vanni_pre'].unique():
         layer_str = item[0:item.index('_')]
-        layer_idx = [layer_options[lay] for lay in list(layer_options.keys()) if lay in layer_str][0]
-        N_type = [NG_options[opt] for opt in list(NG_options.keys()) if opt in item][0]
+        layer_idx = [layer_options[lay] for lay in layer_options.keys() if lay in layer_str][0]
+        N_type = [NG_options[opt] for opt in NG_options.keys() if opt in item][0]
         NN = sum(np.unique(simo_data.ix[np.where(simo_data['vanni_pre'] == item)[0]]['neuron_number_pre']))
         if N_type == 'UMi' or N_type == 'BC' or N_type == 'MC':
             try:
@@ -88,8 +88,8 @@ with open('./Markram_config_file.csv', 'w') as config_file:
 
     for item in sorted_groups:
         layer_str = item[0:item.index('_')]
-        layer_idx = [layer_options[lay] for lay in list(layer_options.keys()) if lay in layer_str][0]
-        N_type = [NG_options[opt] for opt in list(NG_options.keys()) if opt in item][0]
+        layer_idx = [layer_options[lay] for lay in layer_options.keys() if lay in layer_str][0]
+        N_type = [NG_options[opt] for opt in NG_options.keys() if opt in item][0]
         if N_type == 'PC':
             # print item
             if len(item[item.index('_')+1:])>2:
@@ -129,7 +129,7 @@ with open('./Markram_config_file.csv', 'w') as config_file:
         syn_name_post = syn_name[syn_name.index(':')+1:]
         if 'UM' in syn_name_pre or 'UM' in syn_name_post :
             continue
-        receptor =  [receptor_options[NG_type] for NG_type in list(receptor_options.keys()) if NG_type in syn_name_pre][0]
+        receptor =  [receptor_options[NG_type] for NG_type in receptor_options.keys() if NG_type in syn_name_pre][0]
         line += receptor + ','
         pre_group_item = [it for it in group_items if syn_name_pre == it][0]
         pre_group_idx = group_items.index(pre_group_item)
@@ -143,11 +143,11 @@ with open('./Markram_config_file.csv', 'w') as config_file:
                 pre_layer_idx = '2'
             post_layer_start_idx = post_group_item[1:post_group_item.index('_')] if int(post_group_item[1:post_group_item.index('_')]) != 23 else '2'
             if post_layer_start_idx == '4' or post_layer_start_idx == '6':
-                post_group_layers_list = list(range(int(post_layer_start_idx ), int(PC_layer_options[post_layer_start_idx + post_group_item[-1]])-1,-1))
+                post_group_layers_list = range(int(post_layer_start_idx ), int(PC_layer_options[post_layer_start_idx + post_group_item[-1]])-1,-1)
                 if 3 in post_group_layers_list :
                     del post_group_layers_list[post_group_layers_list.index(3)]
             else:
-                post_group_layers_list = list(range(int(post_layer_start_idx ),int(PC_layer_options[post_layer_start_idx])-1,-1))
+                post_group_layers_list = range(int(post_layer_start_idx ),int(PC_layer_options[post_layer_start_idx])-1,-1)
                 if 3 in post_group_layers_list :
                     del post_group_layers_list[post_group_layers_list.index(3)]
             if receptor == 'gi':

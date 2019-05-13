@@ -6,7 +6,7 @@ import scipy.io as spio
 import scipy.stats as st
 from tabulate import tabulate
 import matplotlib.pyplot as plt
-import pickle as pickle
+import cPickle as pickle
 import zlib
 import bz2
 from brian2 import *
@@ -32,7 +32,7 @@ class illustrator:
             # self.final_data['runtime'] = self.loadmat(os.path.join(self.CXOutputPath, self.final_data['FileList'][0]))['runtime']
             dict_ = self.data_loader(os.path.join(self.CXOutputPath, self.final_data['FileList'][0]))
             self.final_data['runtime'] = dict_['runtime']
-            self.final_data['NeuronGroupList'] = [GroupName for GroupName in list(dict_['spikes_all'].keys()) if not 'vpm' in GroupName]
+            self.final_data['NeuronGroupList'] = [GroupName for GroupName in dict_['spikes_all'].keys() if not 'vpm' in GroupName]
             self.final_data['SortedGroupsList'] = []
             layers = np.unique([group[group.index('L') + 1] for group in self.final_data['NeuronGroupList']])
             for layer in layers:
@@ -55,7 +55,7 @@ class illustrator:
                 else:
                     self.final_data['SortedGroupsList'].extend(tmp_groups)
             self.final_data['InputTime'] = InputTime
-            print("Building up data for plots")
+            print "Building up data for plots"
             self.final_data['GroupsSpikes'] = {}
 
             for Group in self.final_data['SortedGroupsList'] :
@@ -107,19 +107,19 @@ class illustrator:
                                 if not Neuron in self.final_data['GroupDelays'][Group]:
                                     self.final_data['GroupDelays'][Group][Neuron] = []
                                 self.final_data['GroupDelays'][Group][Neuron].append(uniqued_latency[itemidx])
-                    print('\r%d out of %d file finished.' % (idx + 1, len(self.final_data['FileList'])), end=' ')
+                    print '\r%d out of %d file finished.' % (idx + 1, len(self.final_data['FileList'])),
 
-            for group in list(self.final_data['GroupDelays'].keys()):
-                for neuron in list(self.final_data['GroupDelays'][group].keys()):
+            for group in self.final_data['GroupDelays'].keys():
+                for neuron in self.final_data['GroupDelays'][group].keys():
                     self.final_data['GroupDelays'][group][neuron] = np.mean(self.final_data['GroupDelays'][group][neuron])
             self.final_data['box_data'] = []
             self.final_data['box_labels'] = []
             for group in self.final_data['SortedGroupsList'][::-1]:
-                tmp_latencies = [self.final_data['GroupDelays'][group][key] for key in list(self.final_data['GroupDelays'][group].keys())]
+                tmp_latencies = [self.final_data['GroupDelays'][group][key] for key in self.final_data['GroupDelays'][group].keys()]
                 if tmp_latencies:
                     self.final_data['box_labels'].append(group[group.index('_') + 1:])
                     self.final_data['box_data'].append(np.array([self.final_data['GroupDelays'][group][key] for key in
-                                                list(self.final_data['GroupDelays'][group].keys())]))
+                                                self.final_data['GroupDelays'][group].keys()]))
             if not os.path.isdir(self.IllustratorOutputFolder):
                 os.mkdir(self.IllustratorOutputFolder)
             self.data_saver(self.IllustratorOutputFile,self.final_data)

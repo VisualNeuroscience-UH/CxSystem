@@ -17,7 +17,7 @@ import os
 import pandas as pd
 import zlib
 import bz2
-import pickle as pickle
+import cPickle as pickle
 import sys
 import itertools
 
@@ -51,7 +51,7 @@ class array_run(object):
             self.number_of_process = int(self.parameter_finder(self.anatomy_df, 'number_of_process'))
         except TypeError:
             self.number_of_process = int(multiprocessing.cpu_count() * 3 / 4)
-            print(" -  number_of_process is not defined in the configuration file, the default number of processes are 3/4*number of CPU cores: %d processes" % self.number_of_process)
+            print " -  number_of_process is not defined in the configuration file, the default number of processes are 3/4*number of CPU cores: %d processes" % self.number_of_process
         try:
             self.do_benchmark = int(self.parameter_finder(self.anatomy_df,'do_benchmark'))
         except (TypeError,NameError) as e:
@@ -59,12 +59,12 @@ class array_run(object):
         try:
             self.trials_per_config = int(self.parameter_finder(self.anatomy_df,'trials_per_config'))
         except TypeError:
-            print(" - trials_per_config is not defined in the configuration file, the default value is 1")
+            print " - trials_per_config is not defined in the configuration file, the default value is 1"
             self.trials_per_config = 1
         try:
             self.device = self.parameter_finder(self.anatomy_df, 'device')
         except TypeError:
-            print(" -    device is not defined in the configuration file, the default value is 'Python'")
+            print " -    device is not defined in the configuration file, the default value is 'Python'"
             self.device = 'Python'
         try:
             self.run_in_cluster = int(self.parameter_finder(self.anatomy_df, 'run_in_cluster'))
@@ -151,7 +151,7 @@ class array_run(object):
         self.all_titles = self.anat_titles + self.physio_titles
 
         if not self.df_anat_final_array and not self.df_phys_final_array:
-            print(" -  no array_run variable found, the default configurations are going to be simulated %d times"%self.trials_per_config)
+            print " -  no array_run variable found, the default configurations are going to be simulated %d times"%self.trials_per_config
             # trial_per_conf_idx = where(anatomy_default.values == 'trials_per_config')
             # anatomy_default[int(trial_per_conf_idx[1])][int(trial_per_conf_idx[0])] = ''
             self.df_anat_final_array = [anatomy_default] * self.trials_per_config
@@ -161,7 +161,7 @@ class array_run(object):
             self.all_titles = ['default_config']
 
         if self.multidimension_array_run :
-            self.tmp_df  = pd.DataFrame(list(itertools.product(*list(self.metadata_dict.values()))), columns=list(self.metadata_dict.keys()))
+            self.tmp_df  = pd.DataFrame(list(itertools.product(*self.metadata_dict.values())), columns=self.metadata_dict.keys())
             self.tmp_df = self.tmp_df[self.all_titles]
             self.tmp_df = self.tmp_df.sort_values(by=self.all_titles).reset_index(drop=True)
             self.final_metadata_df = self.final_metadata_df.reindex(self.tmp_df.index)
@@ -169,8 +169,8 @@ class array_run(object):
                 self.final_metadata_df['Dimension-%d Parameter'%(col_idx+1)] = col_title
                 self.final_metadata_df['Dimension-%d Value' % (col_idx + 1)] = self.tmp_df[col_title]
         else:
-            index_len = len([item for sublist in list(self.metadata_dict.values()) for item in sublist])
-            self.final_metadata_df= self.final_metadata_df.reindex(list(range(index_len)))
+            index_len = len([item for sublist in self.metadata_dict.values() for item in sublist])
+            self.final_metadata_df= self.final_metadata_df.reindex(range(index_len))
             counter = 0
             for par_idx,parameter in enumerate(self.all_titles):
                 for val in self.metadata_dict[parameter]:
@@ -178,7 +178,7 @@ class array_run(object):
                     self.final_metadata_df['Dimension-1 Value'][counter] = val
                     counter+=1
 
-        print(" -  array of Dataframes for anatomical and physiological configuration are ready")
+        print " -  array of Dataframes for anatomical and physiological configuration are ready"
         if self.run_in_cluster==1 and self.cluster_start_idx == -1 and self.cluster_step == -1: # this runs to run the Cxsystems over the cluster
             self.total_configs = len(self.df_anat_final_array)* self.trials_per_config
             self.config_per_node = self.total_configs / self.cluster_number_of_nodes
@@ -211,8 +211,8 @@ class array_run(object):
                 shutil.rmtree(os.path.join(os.environ['USERPROFILE'],'AppData','Local','Temp',os.environ['USERNAME'],'python27_compiled'))
             else:
                 shutil.rmtree(os.path.join(os.environ['HOME'],'.cache/scipy'))
-            print(" -  scipy cache deleted to prevent benchmarking issues.")
-        print("################### Trial %d/%d started running for simulation number %d: %s ##########################" % (tr+1,self.trials_per_config,idx,self.final_messages[idx][1:]))
+            print " -  scipy cache deleted to prevent benchmarking issues."
+        print "################### Trial %d/%d started running for simulation number %d: %s ##########################" % (tr+1,self.trials_per_config,idx,self.final_messages[idx][1:])
         cm = CX.CxSystem(self.df_anat_final_array[idx], self.df_phys_final_array[idx], output_file_suffix = self.final_messages[idx],
                          instantiated_from_array_run=1,array_run_in_cluster=self.array_run_in_cluster)
         cm.run()
@@ -223,8 +223,8 @@ class array_run(object):
         '''
         Spawns processes each dedicated to an instance of CxSystem.
         '''
-        print(" -  Following configurations are going to be simulated with %d processes using %s device (printed only in letters and numbers): " \
-              "\n %s"%(self.number_of_process,self.device,str(self.final_messages).replace('_','')))
+        print " -  Following configurations are going to be simulated with %d processes using %s device (printed only in letters and numbers): " \
+              "\n %s"%(self.number_of_process,self.device,str(self.final_messages).replace('_',''))
         manager = multiprocessing.Manager()
         jobs = []
         working = manager.Value('i', 0)
@@ -243,10 +243,10 @@ class array_run(object):
         for j in jobs:
             j.join()
 
-        for item in list(paths.keys()):
+        for item in paths.keys():
             self.final_metadata_df['Full path'][item] = paths[item]
-        self.data_saver(os.path.join(os.path.dirname(paths[list(paths.keys())[0]]),self.metadata_filename),self.final_metadata_df)
-        print(" -  Array run metadata saved at: %s"%os.path.join(os.path.dirname(paths[list(paths.keys())[0]]),self.metadata_filename))
+        self.data_saver(os.path.join(os.path.dirname(paths[paths.keys()[0]]),self.metadata_filename),self.final_metadata_df)
+        print " -  Array run metadata saved at: %s"%os.path.join(os.path.dirname(paths[paths.keys()[0]]),self.metadata_filename)
 
     def parameter_finder(self,df,keyword):
         location = where(df.values == keyword)
@@ -280,7 +280,7 @@ class array_run(object):
             colon_idx = array_variable.index(':')
             array_variable = array_variable.replace(array_variable[opening_braket_idx + 1:colon_idx + 1],'') # removing default value
         elif ':' in array_variable:
-            print(" -  The default value set for %s is omitted since the array run is multidimentional (multidimension_array_run flag is set to 1)" %array_variable)
+            print " -  The default value set for %s is omitted since the array run is multidimentional (multidimension_array_run flag is set to 1)" %array_variable
             colon_idx = array_variable.index(':')
             array_variable = array_variable.replace(array_variable[opening_braket_idx + 1:colon_idx + 1], '')  # removing default value
         closing_braket_idx = array_variable.index('}')
@@ -363,7 +363,7 @@ class array_run(object):
             elif df_type == 'physiology':
                 if title not in self.physio_titles:
                     self.physio_titles.append(title)
-            if title in list(self.metadata_dict.keys()):
+            if title in self.metadata_dict.keys():
                 if value not in self.metadata_dict[title]:
                     self.metadata_dict[title].append(value)
             else:

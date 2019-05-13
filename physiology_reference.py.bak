@@ -63,7 +63,7 @@ class neuron_reference(object):
         self.output_neuron['soma_layer'] = int(layers_idx[0])
         # _comparts_tmp1 & 2 are for extracting the layer of the compartments if applicable
         if self.output_neuron['type'] == 'PC':
-            self._comparts_tmp1 = array(list(range(layers_idx[0] - 1, layers_idx[1] - 1, -1)))
+            self._comparts_tmp1 = array(range(layers_idx[0] - 1, layers_idx[1] - 1, -1))
             self._comparts_tmp2 = delete(self._comparts_tmp1, where(
                 self._comparts_tmp1 == 3)) if 3 in self._comparts_tmp1 else self._comparts_tmp1
             self.output_neuron['dends_layer'] = self._comparts_tmp2
@@ -85,28 +85,28 @@ class neuron_reference(object):
             self.model_variation = self.value_extractor(self.physio_config_df, 'model_variation')
 
             if self.model_variation == 1:
-                print(' -  Model variation is set ON')
+                print ' -  Model variation is set ON'
                 # For non-pyramidal groups
                 try:
                     self.neuron_model = self.value_extractor(self.physio_config_df, 'neuron_model').upper()
-                    print(' -  Neuron model is %s ' % self.neuron_model)
+                    print ' -  Neuron model is %s ' % self.neuron_model
                     if self.neuron_model == 'ADEX':
                         self.output_neuron['reset'] += '; w=w+'+repr(self.output_neuron['namespace']['b'])
                 except:
                     self.neuron_model = 'EIF'
-                    print(' !  No point neuron model defined, using EIF')
+                    print ' !  No point neuron model defined, using EIF'
 
                 try:
                     self.excitation_model = self.value_extractor(self.physio_config_df, 'excitation_model').upper()
                 except:
                     self.excitation_model = 'SIMPLE_E'
-                    print(' !  No point neuron excitation model defined, using simple')
+                    print ' !  No point neuron excitation model defined, using simple'
 
                 try:
                     self.inhibition_model = self.value_extractor(self.physio_config_df, 'inhibition_model').upper()
                 except:
                     self.inhibition_model = 'SIMPLE_I'
-                    print(' !  No point neuron inhibition model defined, using simple')
+                    print ' !  No point neuron inhibition model defined, using simple'
 
                 # For pyramidal groups
                 try:
@@ -115,19 +115,19 @@ class neuron_reference(object):
                         self.output_neuron['reset'] += '; w=w+'+repr(self.output_neuron['namespace']['b'])
                 except:
                     self.pc_neuron_model = self.neuron_model
-                    print(' !  No pyramidal cell neuron model defined, using %s' % self.neuron_model)
+                    print ' !  No pyramidal cell neuron model defined, using %s' % self.neuron_model
 
                 try:
                     self.pc_excitation_model = self.value_extractor(self.physio_config_df, 'pc_excitation_model').upper()
                 except:
                     self.pc_excitation_model = self.excitation_model
-                    print(' !  No pyramidal cell excitation model defined, using %s' % self.excitation_model)
+                    print ' !  No pyramidal cell excitation model defined, using %s' % self.excitation_model
 
                 try:
                     self.pc_inhibition_model = self.value_extractor(self.physio_config_df, 'pc_inhibition_model').upper()
                 except:
                     self.pc_inhibition_model = self.inhibition_model
-                    print(' !  No pyramidal cell inhibition model defined, using %s' % self.inhibition_model)
+                    print ' !  No pyramidal cell inhibition model defined, using %s' % self.inhibition_model
 
             else:
                 self.model_variation = False
@@ -157,9 +157,9 @@ class neuron_reference(object):
         self.output_neuron['w_positions'] = self._get_w_positions(self.output_neuron['number_of_neurons'],
                                                                 'fixed_grid', general_grid_radius,min_distance)
         # self.output_neuron['w_positions'] = 17 * log(self.output_neuron['z_positions'] + 1)
-        self.output_neuron['z_positions'] =  [e ** (x/17) - 1 for x in self.output_neuron['w_positions']]
-        print(" -  Customized " + str(cell_type) + " neuron in layer " + str(layers_idx) + " initialized with " + \
-              str(self.output_neuron['number_of_neurons']) + " neurons.")
+        self.output_neuron['z_positions'] =  map(lambda x: e ** (x/17) - 1,self.output_neuron['w_positions'] )
+        print " -  Customized " + str(cell_type) + " neuron in layer " + str(layers_idx) + " initialized with " + \
+              str(self.output_neuron['number_of_neurons']) + " neurons."
         # </editor-fold>
 
 
@@ -168,7 +168,7 @@ class neuron_reference(object):
         r = general_grid_radius / mm
         possible_pos_idx = arange (-r,r,min_distance/mm)
         if layout == 'fixed_grid':
-            _positions = [(rnd.choice(possible_pos_idx),rnd.choice(possible_pos_idx)) for a1,a2 in zip(list(range(N)),list(range(N)))]
+            _positions = [(rnd.choice(possible_pos_idx),rnd.choice(possible_pos_idx)) for a1,a2 in zip(range(N),range(N))]
             for idx,item in enumerate(_positions):
                 while sqrt(_positions[idx][0]**2 + _positions[idx][1]**2)>r:
                     _positions[idx] =  (rnd.choice(possible_pos_idx),rnd.choice(possible_pos_idx))
@@ -544,7 +544,7 @@ class neuron_reference(object):
     def value_extractor(self, df, key_name):
         non_dict_indices = df['Variable'].dropna()[df['Key'].isnull()].index.tolist()
         for non_dict_idx in non_dict_indices:
-            exec("%s=%s" % (df['Variable'][non_dict_idx], df['Value'][non_dict_idx]))
+            exec "%s=%s" % (df['Variable'][non_dict_idx], df['Value'][non_dict_idx])
         try:
             return eval(key_name)
         except (NameError, TypeError):
@@ -567,10 +567,10 @@ class neuron_reference(object):
                     df_reset_index = df_reset_index[0:df_reset_index[df_reset_index['Key'] == key_name].index[0]]
                     for neural_parameter in df_reset_index['Key'].dropna():
                         if neural_parameter  in df['Value'][df['Key'] == key_name].item():
-                            exec("%s =self.value_extractor(df,neural_parameter)" % (neural_parameter))
+                            exec "%s =self.value_extractor(df,neural_parameter)" % (neural_parameter)
                     return eval(df['Value'][df['Key'] == key_name].item())
                 else:
-                    raise 'The syntax %s is not a valid syntax for physiological configuration file or the elements that comprise this syntax are not defined.'
+                    raise('The syntax %s is not a valid syntax for physiological configuration file or the elements that comprise this syntax are not defined.'%df['Value'][df['Key'] == key_name].item())
 
         except NameError:
             new_key = df['Value'][df['Key'] == key_name].item().replace("']", "").split("['")
@@ -866,7 +866,7 @@ class synapse_reference(object):
     def value_extractor(self, df, key_name):
         non_dict_indices = df['Variable'].dropna()[df['Key'].isnull()].index.tolist()
         for non_dict_idx in non_dict_indices:
-            exec("%s=%s" % (df['Variable'][non_dict_idx], df['Value'][non_dict_idx]))
+            exec "%s=%s" % (df['Variable'][non_dict_idx], df['Value'][non_dict_idx])
         try:
             return eval(key_name)
         except (NameError, TypeError):
@@ -889,10 +889,10 @@ class synapse_reference(object):
                     df_reset_index = df_reset_index[0:df_reset_index[df_reset_index['Key'] == key_name].index[0]]
                     for neural_parameter in df_reset_index['Key'].dropna():
                         if neural_parameter  in df['Value'][df['Key'] == key_name].item():
-                            exec("%s =self.value_extractor(df,neural_parameter)" % (neural_parameter))
+                            exec "%s =self.value_extractor(df,neural_parameter)" % (neural_parameter)
                     return eval(df['Value'][df['Key'] == key_name].item())
                 else:
-                    raise 'The syntax %s is not a valid syntax for physiological configuration file or the elements that comprise this syntax are not defined.'
+                    raise('The syntax %s is not a valid syntax for physiological configuration file or the elements that comprise this syntax are not defined.'%df['Value'][df['Key'] == key_name].item())
 
         except NameError:
             new_key = df['Value'][df['Key'] == key_name].item().replace("']", "").split("['")

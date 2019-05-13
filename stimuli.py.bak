@@ -13,7 +13,7 @@ from brian2  import *
 # import scipy.io as sio
 from scipy import io
 import os
-import pickle as pickle
+import cPickle as pickle
 import zlib
 import bz2
 import shutil
@@ -55,7 +55,7 @@ class stimuli(object):
         self.calculate_input_seqs()
 
     def initialize_inputs(self,  freq):
-        print(" -  Initializing stimuli ...")
+        print " -  Initializing stimuli ..."
 
         #type : video
         _V1_mats = {}
@@ -80,12 +80,12 @@ class stimuli(object):
         frames = TimedArray(np.transpose(sparse_stimulus),
                             dt=frameduration * ms)  # video_data has to be shape (frames, neurons), dt=frame rate
         self.frames = frames
-        exec('self.factor = %s' %freq)
+        exec 'self.factor = %s' %freq
         self.i_patterns[len(self.i_patterns)] = frames.values * self.factor  # These must be final firing rates
         _all_stim = squeeze(_V1_mats['stimulus'])
         if len(_all_stim.shape) == 2:
             slash_indices = [idx for idx, ltr in enumerate(self.input_mat_path) if ltr == '/']
-            print(' -  One video stimulus found in file ' + self.input_mat_path[slash_indices[-1]+1:])
+            print ' -  One video stimulus found in file ' + self.input_mat_path[slash_indices[-1]+1:]
 
     def calculate_input_seqs(self):
         '''
@@ -112,7 +112,7 @@ class stimuli(object):
         shutil.rmtree(os.path.join(self.output_folder,'Input_cpp_run'+ self.output_file_suffix))
 
     def save_input_sequence(self,spike_mons, save_path):
-        print(" -  Saving the generated video input...")
+        print " -  Saving the generated video input..."
         self.generated_input_folder = save_path + self.output_file_extension
         data_to_save = {}
         for ii in range(len(spike_mons)):
@@ -138,7 +138,7 @@ class stimuli(object):
         new_spikes = self.loaded_data['spikes_0']
         neuron_positions_in_cortex = io.loadmat(self.input_mat_path, variable_names='w_coord')
         number_of_neurons = len(neuron_positions_in_cortex['w_coord'])
-        print(" -  Video input loaded")
+        print " -  Video input loaded"
         return new_spikes[0], new_spikes[1], number_of_neurons
 
 

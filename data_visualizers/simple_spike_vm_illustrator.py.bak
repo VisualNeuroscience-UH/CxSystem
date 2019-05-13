@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import pickle as pickle
+import cPickle as pickle
 import zlib
 import os
 import bz2
@@ -31,7 +31,7 @@ ThisTrial = data_loader(os.path.join(path,FileName))
 # BC = ThisTrial['spikes_all'][ 'NG3_BC_L2']
 # MC = ThisTrial['spikes_all'][ 'NG9_MC_L4']
 
-for pltkey in list(ThisTrial['spikes_all'].keys()):
+for pltkey in ThisTrial['spikes_all'].keys():
     plt.figure();plt.scatter(ThisTrial['spikes_all'][pltkey ][1],ThisTrial['spikes_all'][pltkey ][0],s=0.3);plt.title(pltkey)
 # plt.figure();plt.scatter(PC[1],PC[0],s=0.4);plt.title('PC4-2 Noise 40mV')
 # plt.figure();plt.scatter(BC[1],BC[0],s=0.4);plt.title('BC Noise 5mV')

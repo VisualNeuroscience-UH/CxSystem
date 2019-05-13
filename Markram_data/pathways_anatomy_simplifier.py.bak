@@ -10,7 +10,7 @@
 # (**) Article on the simplified system
 
 
-
+from __future__ import division
 import pandas as pd
 import re
 import json
@@ -174,7 +174,7 @@ def _compute_connection_parameters(connection_index, preprocessed_data): # TODO 
     -------
     conn_params - parameters corresponding to connection_index (connection between Vanni neuron groups)
     '''
-    print('Working on ' + connection_index)
+    print 'Working on ' + connection_index
 
     data = preprocessed_data
 
@@ -529,21 +529,21 @@ def create_json_from_synapse_numbers(input_file = internal_synapse_numbers_markr
     :return:
     """
     ### Part I: Create dataframe with total_synapse_count & mean_number_of_synapse_per_connection
-    syn_numbers_data = pd.read_csv(input_file, index_col=0, usecols=list(range(56)))
+    syn_numbers_data = pd.read_csv(input_file, index_col=0, usecols=range(56))
     syn_numbers_dict = dict()
 
     mean_syns_per_conn_dict = dict()
 
     markram_data = pd.read_json(file_pathways_anatomy_markram, orient='index')
 
-    print('Taking an intersection of original pathways_anatomy and Reimann data...')
+    print 'Taking an intersection of original pathways_anatomy and Reimann data...'
 
     n_dropped_connections = 0
     for row in syn_numbers_data.iterrows():
         presynaptic_type = row[0]
         postsynaptic_groups = row[1]
 
-        for post_group in postsynaptic_groups.items():
+        for post_group in postsynaptic_groups.iteritems():
             connection_key = presynaptic_type + ':' + post_group[0]
 
             syn_numbers_dict[connection_key] = post_group[1]
@@ -569,14 +569,14 @@ def create_json_from_synapse_numbers(input_file = internal_synapse_numbers_markr
         # -> DF with 1932 rows (1093 dropped)
         # total_synapse_count.sum() = 35 346 785 (vs 36 401 589 in Reimann's data => 1 054 804 dropped out)
 
-    print('Total synapse count is ' + str(new_markram_data.total_synapse_count.sum()))
-    print('Total connections dropped is ' + str(n_dropped_connections))
+    print 'Total synapse count is ' + str(new_markram_data.total_synapse_count.sum())
+    print 'Total connections dropped is ' + str(n_dropped_connections)
 
 
     ### Part II: Calculate connection probabilities
     conn_prob_dict = dict()
 
-    print('Calculating connection probabilities...')
+    print 'Calculating connection probabilities...'
     for row in new_markram_data.iterrows():
         connection_key = row[0]
         pre_group, post_group = connection_key.split(':')
@@ -591,10 +591,10 @@ def create_json_from_synapse_numbers(input_file = internal_synapse_numbers_markr
     conn_prob_df.columns = ['connection_probability']
     new_markram_data = new_markram_data.join(conn_prob_df)
 
-    print('Feeding new data to create_simplified_json()')
+    print 'Feeding new data to create_simplified_json()'
     create_simplified_json(filename = output_file, input_data = new_markram_data)
 
-    print('DONE!')
+    print 'DONE!'
 
 
 if __name__ == '__main__':

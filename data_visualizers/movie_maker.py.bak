@@ -16,13 +16,13 @@ from scipy.sparse import csr_matrix
 import copy
 import zlib
 import bz2
-import pickle as pickle
+import cPickle as pickle
 
 INPUT_SOURCE = 'spikes'
 
 def _status_printer(str):
     cleaner = ' ' * 100
-    print('\r' + cleaner + '\r' + str, end=' ')
+    print '\r' + cleaner + '\r' + str,
 
 
 def nD_list_creator(*args,**kwargs):
@@ -53,7 +53,7 @@ def spike_to_frame(groups, spikes, X_axis, Y_axis, w_coord, axis_precision, d_t 
                ,(0.01,0.41,0.8),(0.2, 0.2, 1),(0.41,0.01,0.8),(0.01,0.01,0.8),(1,0.4,0.7),(0.8,0.01,0.8),(0.8,0.01,0.41),(0.62,0.62,0.62),(0.41,0.41,0.41),(0.01,0.01,0.01)]
     while len(colors_) < number_of_groups:
         tmp_color = tuple(map(operator.add, rnd.choice(colors_), random.random(3)))
-        tmp_color = tuple([1 if x>1 else x for x in tmp_color])
+        tmp_color = tuple(map(lambda x: 1 if x>1 else x,tmp_color))
         colors_.append(tmp_color)
     coverage_range = 2 # defines how many pixels in proximity of the target pixel will be colored as well
     for group_idx,group in enumerate(groups):
@@ -138,7 +138,7 @@ class Animator:
 
     def _status_printer(self, str):
         cleaner = ' ' * 100
-        print('\r' + cleaner + '\r' + str, end=' ')
+        print '\r' + cleaner + '\r' + str,
 
 
 ### MAIN BEGINS HERE
@@ -153,7 +153,7 @@ if __name__ == '__main__':
     data = data_loader(filepath)
     NNs = data['number_of_neurons']
     layers_NN = zeros([6])
-    for group in list(NNs.keys()):
+    for group in NNs.keys():
         current_layer = int(group[group.index('_L') + 2:group.index('_L') + 3] if not INPUT_SOURCE in group else 0)
         current_layer = current_layer - 1 if current_layer > 2 else current_layer
         layers_NN[current_layer] = layers_NN[current_layer] + NNs[group]
@@ -161,7 +161,7 @@ if __name__ == '__main__':
     positions = data['positions_all']
     spikes = data['spikes_all']
     w_coord = positions['w_coord']
-    groups = list(w_coord.keys())
+    groups = w_coord.keys()
     min_x = 0
     max_x = 0
     min_y = 0
