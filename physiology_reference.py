@@ -809,18 +809,24 @@ class synapse_reference(object):
         """
 
         self.output_synapse['equation'] = Equations('''
+        dR/dt = (1-R)/tau_d : 1 (event-driven)
         wght : siemens
-        R : 1
         ''')
 
         if self.model_variation is False:
             self.output_synapse['pre_eq'] = '''
-            R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_d))
             %s += R * U * wght
             R = R - U * R
             ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
+            # Old version, fixed in 5/2019 for Brian 2.1.3->
+            # self.output_synapse['pre_eq'] = '''
+            # R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_d))
+            # %s += R * U * wght
+            # R = R - U * R
+            # ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
         else:
-            pre_eq_lines = ['R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_d))\n']
+            #pre_eq_lines = ['R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_d))\n']
+            pre_eq_lines = []
             for true_receptor in self.true_receptors:
                 new_line = '%s += R * U * wght\n' % (true_receptor + self.output_synapse['post_comp_name'] + '_post')
                 pre_eq_lines.append(new_line)
@@ -835,24 +841,32 @@ class synapse_reference(object):
         """
 
         self.output_synapse['equation'] = Equations('''
+        dR/dt = (1-R)/tau_fd : 1 (event-driven)
+        du/dt = (U_f-u)/tau_f : 1 (event-driven) 
         wght : siemens
-        R : 1
-        u : 1
         ''')
 
         if self.model_variation is False:
+
             self.output_synapse['pre_eq'] = '''
-            R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_fd))
-            u = u + (U_f-u)*(1 - exp(-(t-lastupdate)/tau_f))
             %s += R * u * wght
             R = R - u * R
             u = u + U_f * (1-u)
             ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
+            # Old version, fixed in 5/2019 for Brian 2.1.3->
+            # self.output_synapse['pre_eq'] = '''
+            # R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_fd))
+            # u = u + (U_f-u)*(1 - exp(-(t-lastupdate)/tau_f))
+            # %s += R * u * wght
+            # R = R - u * R
+            # u = u + U_f * (1-u)
+            # ''' % (self.output_synapse['receptor'] + self.output_synapse['post_comp_name'] + '_post')
         else:
-            pre_eq_lines = ['''
-            R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_fd))
-            u = u + (U_f-u)*(1 - exp(-(t-lastupdate)/tau_f))
-            ''']
+            # pre_eq_lines = ['''
+            # R = R + (1-R)*(1 - exp(-(t-lastupdate)/tau_fd))
+            # u = u + (U_f-u)*(1 - exp(-(t-lastupdate)/tau_f))
+            # ''']
+            pre_eq_lines = []
             for true_receptor in self.true_receptors:
                 new_line = '%s += R * u * wght\n' % (true_receptor + self.output_synapse['post_comp_name'] + '_post')
                 pre_eq_lines.append(new_line)
