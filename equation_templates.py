@@ -11,6 +11,82 @@ Copyright 2017 Vafa Andalibi, Henri Hokkanen and Simo Vanni.
 from string import Template
 import brian2 as br2
 
+# <editor-fold desc="Abstract neuron model">
+class AbstractPointNeuron(object):
+
+    membrane_eq_template = '''
+    dvm/dt = (($I_NEURON_MODEL $I_SYNAPTIC_EXC $I_SYNAPTIC_INH $I_TONIC)/C) $VM_NOISE : volt $BRIAN2_FLAGS
+    $NEURON_MODEL_EQ
+    $SYNAPTIC_EXC_EQ
+    $SYNAPTIC_INH_EQ
+    $TONIC_EQ
+    '''
+
+    DefaultModelParams = dict()
+    DefaultModelParams = {'I_NEURON_MODEL': 'gL*(EL-vm) + gL * DeltaT * exp((vm-VT) / DeltaT)',
+                          'NEURON_MODEL_EQ': ''}
+
+    def __init__(self, dont_simulate=False):
+        pass
+
+    def getMembraneEquation(self, return_string=False):
+
+        membrane_equation = Template(EquationHelper.membrane_eq_template)
+        #all_membrane_model_strings = dict(self.neuron_model_strings)
+        #all_membrane_model_strings.update(self.synaptic_excinh_model_strings)
+        #if self.custom_strings is not None:
+        #    all_membrane_model_strings.update(self.custom_strings)
+
+        try:
+            membrane_equation = membrane_equation.substitute(all_membrane_model_strings)
+        except KeyError:
+            print 'Undefined key in membrane equation'
+        membrane_equation = str(membrane_equation)
+
+        eq_lines = membrane_equation.splitlines()
+        eq_lines = [line.strip()+'\n' for line in eq_lines if len(line.strip()) > 0]
+
+        final_membrane_equation = ''.join(eq_lines)
+
+        # Return as either string or Brian2 Equations
+        if return_string is True:
+            return final_membrane_equation
+        else:
+            substitutables = {k: k+'_'+self.compartment for k in self.comp_specific_vars}
+            compartment_eq = br2.Equations(final_membrane_equation, **substitutables)
+
+            return compartment_eq
+
+    def getting_started(self):
+        pass
+
+    def simulate_neuron(self):
+        pass
+# </editor-fold>
+
+# <editor-fold desc="Specific neuron models">
+class AdexPointNeuron(AbstractPointNeuron):
+
+    def simulate_AdEx_neuron(self):
+        pass
+
+    def plot_adex_state(self):
+        pass
+
+
+class EifPointNeuron(AbstractPointNeuron):
+
+    def simulate_exponential_IF_neuron(self):
+        pass
+
+class LifPointNeuron(AbstractPointNeuron):
+    pass
+
+class HodgkinHuxleyPointNeuron(AbstractPointNeuron):
+    pass
+
+# </editor-fold>
+
 class EquationHelper(object):
     """
     Helper class for switching swiftly between neuron/synaptic current/synapse models in CxSystem.
