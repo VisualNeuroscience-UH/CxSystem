@@ -576,7 +576,11 @@ class CxSystem(object):
                 tmp_value_idx = self.current_parameters_list[self.current_parameters_list==column].index.item()
                 exec("%s=self.current_values_list[tmp_value_idx]" % column)
             except ValueError:
-                exec("%s='--'" % column)
+                gl=dict();lo=dict()
+                exec("%s='--'" % column, gl, lo)
+                print(f'column = {column}')
+                print(f'{column} ='), print(eval(f'{column}'))
+                import pdb; pdb.set_trace()
         assert idx not in self.NG_indices, \
             " -  Multiple indices with same values exist in the configuration file."
         self.NG_indices.append(idx)
@@ -1515,7 +1519,8 @@ class CxSystem(object):
             spike_times = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='spike_times'].index.item()].replace(' ',',')
             spike_times_list = ast.literal_eval(spike_times[0:spike_times.index('*')])
             spike_times_unit = spike_times[spike_times.index('*')+1:]
-            exec('spike_times_ = spike_times_list * %s' %(spike_times_unit), globals(), locals())
+#            exec('spike_times_ = spike_times_list * %s' %(spike_times_unit), globals(), locals())
+            spike_times_ = spike_times_list * eval(spike_times_unit) # 2to3 mod
             try:
                 net_center = self.current_values_list[self.current_parameters_list[self.current_parameters_list=='net_center'].index.item()]
                 net_center = complex(net_center)
@@ -1778,6 +1783,12 @@ if __name__ == '__main__' :
         except IndexError:
             CM = CxSystem(net_config, phys_config)
     except IndexError:
-        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/COBAHH_config.csv', \
-                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_COBAHH.csv', )
+#        CM = CxSystem(os.path.dirname(os.path.realpath(__file__)) + '/config_files/COBAHH_config.csv', \
+#                      os.path.dirname(os.path.realpath(__file__)) + '/config_files/Physiological_Parameters_for_COBAHH.csv', )
+        path = os.getcwd()
+        anatomy_and_system_config = os.path.join(path, 'tests', 'config_files', 'pytest_Rev2_Step2gamma_Anatomy_config_local.csv')
+        physiology_config = os.path.join(path, 'tests', 'config_files', 'pytest_Rev2_Step2gamma_Physiology_config.csv')
+        CM = CxSystem(anatomy_and_system_config, physiology_config, instantiated_from_array_run=0)
+
     CM.run()
+
